@@ -1,0 +1,5 @@
+coverage
+coveralls
+isort
+flake8
+responses

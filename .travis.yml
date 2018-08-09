@@ -1,0 +1,31 @@
+language: python
+sudo: false
+cache: pip
+
+python:
+  - "3.4"
+
+env:
+  - DJANGO="django>=2.0,<2.1"
+
+branches:
+  only:
+    - master
+
+# command to install requirements
+install:
+  - pip install $DJANGO
+  - python setup.py -q develop
+  - pip install -r requirements-test.txt
+
+before_script:
+#  - ./runflake8
+  - ./runisort
+
+# command to run tests, e.g. python setup.py test
+script:
+  - coverage run --source=openwisp_radius runtests.py
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"; fi
+
+after_success:
+  coveralls
