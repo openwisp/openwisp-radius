@@ -1,11 +1,11 @@
 from django_freeradius.tests import ApiParamsMixin as BaseApiParamsMixin
-from django_freeradius.tests import CreateObjectsMixin as BaseCreateObjectsMixin
-from django_freeradius.tests.utils import CallCommandMixin as BaseCallCommandMixin
+from django_freeradius.tests import CallCommandMixin as BaseCallCommandMixin
+from django_freeradius.tests import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
 
 from openwisp_users.models import Organization
 
 
-class CreateObjectsMixin(BaseCreateObjectsMixin):
+class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
     def _create_org(self, **kwargs):
         options = dict(name='test-organization')
         options.update(kwargs)
