@@ -78,10 +78,10 @@ class RadiusProfile(OrgMixin, AbstractRadiusProfile):
 
 
 class RadiusUserProfile(OrgMixin, AbstractRadiusUserProfile):
-    def _create_radcheck(self, **kwargs):
+    def _get_instance(self, **kwargs):
         options = dict(organization=self.organization)
         options.update(kwargs)
-        return super(RadiusUserProfile, self)._create_radcheck(**options)
+        return super(RadiusUserProfile, self)._get_instance(**options)
 
     class Meta(AbstractRadiusUserProfile.Meta):
         abstract = False
