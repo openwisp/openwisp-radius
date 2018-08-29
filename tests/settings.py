@@ -123,3 +123,9 @@ DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = "openwisp_radius.RadiusPostAuth"
 DJANGO_FREERADIUS_RADIUSBATCH_MODEL = "openwisp_radius.RadiusBatch"
 DJANGO_FREERADIUS_RADIUSPROFILE_MODEL = "openwisp_radius.RadiusProfile"
 DJANGO_FREERADIUS_RADIUSUSERPROFILE_MODEL = "openwisp_radius.RadiusUserProfile"
+
+# local settings must be imported before test runner otherwise they'll be ignored
+try:
+    from local_settings import *
+except ImportError:
+    pass
