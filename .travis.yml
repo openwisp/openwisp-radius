@@ -3,29 +3,30 @@ sudo: false
 cache: pip
 
 python:
-  - "3.4"
+  - "3.5"
 
 env:
-  - DJANGO="django>=2.0,<2.1"
+  - DJANGO="django>=2.0,<2.2"
 
 branches:
   only:
     - master
 
-# command to install requirements
 install:
+  - # TODO: this is temporary, remove it when django-freeradius 0.1 is released
+  - pip install https://github.com/openwisp/django-freeradius/tarball/master
   - pip install $DJANGO
   - python setup.py -q develop
   - pip install -r requirements-test.txt
 
 before_script:
-#  - ./runflake8
+  - ./runflake8
   - ./runisort
+  # ensure there are no pending migrations
+  - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
 
-# command to run tests, e.g. python setup.py test
 script:
   - coverage run --source=openwisp_radius runtests.py
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"; fi
 
 after_success:
   coveralls

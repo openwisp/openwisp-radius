@@ -1,5 +1,5 @@
 from django_freeradius.api.views import BatchView as BaseBatchView
-from django_freeradius.api.views import accounting, authorize, postauth
+from django_freeradius.api.views import accounting, authorize, postauth  # noqa
 
 from openwisp_users.models import Organization
 

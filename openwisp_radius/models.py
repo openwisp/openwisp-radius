@@ -1,11 +1,8 @@
-from django.db import models
-from django.db.models import signals
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroupCheck,
                                            AbstractRadiusGroupReply, AbstractRadiusPostAuth,
                                            AbstractRadiusProfile, AbstractRadiusReply,
                                            AbstractRadiusUserGroup, AbstractRadiusUserProfile)
-from django_freeradius.utils import set_default_limits
 from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin

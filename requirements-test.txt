@@ -3,3 +3,4 @@ coveralls
 isort
 flake8
 responses
+freezegun
