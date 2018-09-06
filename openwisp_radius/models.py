@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import signals
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
@@ -86,6 +85,3 @@ class RadiusUserProfile(OrgMixin, AbstractRadiusUserProfile):
     class Meta(AbstractRadiusUserProfile.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'RadiusUserProfile')
-
-
-signals.post_save.connect(set_default_limits, sender=get_user_model())
