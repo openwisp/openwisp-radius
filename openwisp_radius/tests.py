@@ -1,7 +1,4 @@
-import os
-from unittest import skipUnless
-
-import swapper
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_freeradius.tests import FileMixin
@@ -18,10 +15,10 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from openwisp_users.models import Organization
-from openwisp_users.tests.test_admin import TestUsersAdmin
 
 from .mixins import ApiParamsMixin, CallCommandMixin, CreateRadiusObjectsMixin
-from .models import *
+from .models import (Nas, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroupCheck, RadiusGroupReply,
+                     RadiusPostAuth, RadiusProfile, RadiusReply, RadiusUserGroup, RadiusUserProfile)
 
 _SUPERUSER = {'username': 'gino', 'password': 'cic', 'email': 'giggi_vv@gmail.it'}
 _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
@@ -30,53 +27,57 @@ _RADCHECK_ENTRY_PW_UPDATE = {'username': 'Monica', 'new_value': 'Cam0_liX',
                              'attribute': 'NT-Password'}
 
 
-class TestNas(BaseTestNas, TestCase, CreateRadiusObjectsMixin):
+class BaseTestCase(CreateRadiusObjectsMixin, TestCase):
+    pass
+
+
+class TestNas(BaseTestNas, BaseTestCase):
     nas_model = Nas
 
 
-class TestRadiusAccounting(BaseTestRadiusAccounting, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusAccounting(BaseTestRadiusAccounting, BaseTestCase):
     radius_accounting_model = RadiusAccounting
 
 
-class TestRadiusCheck(BaseTestRadiusCheck, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusCheck(BaseTestRadiusCheck, BaseTestCase):
     radius_check_model = RadiusCheck
 
 
-class TestRadiusReply(BaseTestRadiusReply, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusReply(BaseTestRadiusReply, BaseTestCase):
     radius_reply_model = RadiusReply
 
 
-class TestRadiusGroupReply(BaseTestRadiusGroupReply, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusGroupReply(BaseTestRadiusGroupReply, BaseTestCase):
     radius_groupreply_model = RadiusGroupReply
 
 
-class TestRadiusGroupCheck(BaseTestRadiusGroupCheck, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusGroupCheck(BaseTestRadiusGroupCheck, BaseTestCase):
     radius_groupcheck_model = RadiusGroupCheck
 
 
-class TestRadiusUserGroup(BaseTestRadiusUserGroup, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusUserGroup(BaseTestRadiusUserGroup, BaseTestCase):
     radius_usergroup_model = RadiusUserGroup
 
 
-class TestRadiusPostAuth(BaseTestRadiusPostAuth, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusPostAuth(BaseTestRadiusPostAuth, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
 
 
-class TestRadiusBatch(BaseTestRadiusBatch, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusBatch(BaseTestRadiusBatch, BaseTestCase):
     radius_batch_model = RadiusBatch
 
 
-class TestRadiusProfile(BaseTestRadiusProfile, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusProfile(BaseTestRadiusProfile, BaseTestCase):
     radius_profile_model = RadiusProfile
 
 
-class TestRadiusUserProfile(BaseTestRadiusUserProfile, TestCase, CreateRadiusObjectsMixin):
+class TestRadiusUserProfile(BaseTestRadiusUserProfile, BaseTestCase):
     radius_profile_model = RadiusProfile
     radius_userprofile_model = RadiusUserProfile
     radius_check_model = RadiusCheck
 
 
-class TestAdmin(BaseTestAdmin, TestCase, CreateRadiusObjectsMixin,
+class TestAdmin(BaseTestAdmin, BaseTestCase,
                 FileMixin, CallCommandMixin):
     app_name = "openwisp_radius"
     nas_model = Nas
@@ -107,21 +108,25 @@ class TestAdmin(BaseTestAdmin, TestCase, CreateRadiusObjectsMixin,
         return data
 
 
-class TestApi(BaseTestApi, TestCase, CreateRadiusObjectsMixin, ApiParamsMixin):
+auth_header = 'Bearer {}'.format(settings.DJANGO_FREERADIUS_API_TOKEN)
+
+
+class TestApi(BaseTestApi, ApiParamsMixin, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
     user_model = get_user_model()
+    auth_header = auth_header
 
     def setUp(self):
         self._create_org()
 
 
-class TestApiReject(BaseTestApiReject, TestCase, CreateRadiusObjectsMixin):
-    pass
+class TestApiReject(BaseTestApiReject, BaseTestCase):
+    auth_header = auth_header
 
 
-class TestCommands(BaseTestCommands, TestCase, CreateRadiusObjectsMixin,
+class TestCommands(BaseTestCommands, BaseTestCase,
                    FileMixin, CallCommandMixin):
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
@@ -133,9 +138,5 @@ class TestCSVUpload(BaseTestCSVUpload, TestCase,
     radius_batch_model = RadiusBatch
 
 
-class TestUtils(BaseTestUtils, TestCase, CreateRadiusObjectsMixin, FileMixin):
-    pass
-
-
-class TestUsersIntegration(TestUsersAdmin):
+class TestUtils(BaseTestUtils, FileMixin, BaseTestCase):
     pass

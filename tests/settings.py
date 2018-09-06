@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     # rest framework
     'rest_framework',
-    'django_filters'
+    'django_filters',
 ]
 
 EXTENDED_APPS = ['django_freeradius']
