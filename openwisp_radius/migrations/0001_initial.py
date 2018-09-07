@@ -104,6 +104,7 @@ class Migration(migrations.Migration):
                 'swappable': 'OPENWISP_RADIUS_RADIUSBATCH_MODEL',
                 'verbose_name_plural': 'batch user creation operations',
                 'abstract': False,
+                'unique_together': {('name', 'organization')}
             },
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
@@ -212,6 +213,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'swappable': 'OPENWISP_RADIUS_RADIUSPROFILE_MODEL',
                 'verbose_name_plural': 'limit profiles',
+                'unique_together': {('name', 'organization')}
             },
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),

@@ -1,3 +1,4 @@
+from django.db import models
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroupCheck,
                                            AbstractRadiusGroupReply, AbstractRadiusPostAuth,
@@ -56,13 +57,32 @@ class Nas(OrgMixin, AbstractNas):
         swappable = swappable_setting('openwisp_radius', 'Nas')
 
 
+batch_name = AbstractRadiusBatch._meta.get_field('name')
+
+
 class RadiusBatch(OrgMixin, AbstractRadiusBatch):
+    name = models.CharField(batch_name.verbose_name,
+                            max_length=batch_name.max_length,
+                            help_text=batch_name.help_text,
+                            db_index=batch_name.db_index,
+                            unique=False)
+
     class Meta(AbstractRadiusBatch.Meta):
         abstract = False
+        unique_together = ('name', 'organization')
         swappable = swappable_setting('openwisp_radius', 'RadiusBatch')
 
 
+profile_name = AbstractRadiusProfile._meta.get_field('name')
+
+
 class RadiusProfile(OrgMixin, AbstractRadiusProfile):
+    name = models.CharField(profile_name.verbose_name,
+                            max_length=profile_name.max_length,
+                            help_text=profile_name.help_text,
+                            db_index=profile_name.db_index,
+                            unique=False)
+
     def _create_user_profile(self, **kwargs):
         options = dict(organization=self.organization)
         options.update(kwargs)
@@ -70,6 +90,7 @@ class RadiusProfile(OrgMixin, AbstractRadiusProfile):
 
     class Meta(AbstractRadiusProfile.Meta):
         abstract = False
+        unique_together = ('name', 'organization')
         swappable = swappable_setting('openwisp_radius', 'RadiusProfile')
 
 
