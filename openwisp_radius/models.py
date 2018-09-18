@@ -1,4 +1,10 @@
+import uuid
+
+from django.core.cache import cache
+from django.core.validators import RegexValidator, _lazy_re_compile
 from django.db import models
+from django.utils.crypto import get_random_string
+from django.utils.translation import ugettext_lazy as _
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroupCheck,
                                            AbstractRadiusGroupReply, AbstractRadiusPostAuth,
@@ -103,3 +109,31 @@ class RadiusUserProfile(OrgMixin, AbstractRadiusUserProfile):
     class Meta(AbstractRadiusUserProfile.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'RadiusUserProfile')
+
+
+key_validator = RegexValidator(
+    _lazy_re_compile('^[^\s/\.]+$'),
+    message=_('Key must not contain spaces, dots or slashes.'),
+    code='invalid',
+)
+
+
+def generate_token():
+    return get_random_string(length=32)
+
+
+class OrganizationRadiusSettings(OrgMixin, models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    token = models.CharField(max_length=32,
+                             unique=True,
+                             validators=[key_validator],
+                             default=generate_token)
+
+    def save(self, *args, **kwargs):
+        super(OrganizationRadiusSettings, self).save(*args, **kwargs)
+        cache.set(self.pk, self.token)
+
+    def delete(self, *args, **kwargs):
+        pk = self.pk
+        super(OrganizationRadiusSettings, self).delete(*args, **kwargs)
+        cache.delete(pk)

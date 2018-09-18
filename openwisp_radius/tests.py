@@ -1,6 +1,8 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 from django_freeradius.tests import FileMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
 from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject
@@ -17,8 +19,9 @@ from django_freeradius.tests.base.test_utils import BaseTestUtils
 from openwisp_users.models import Organization
 
 from .mixins import ApiParamsMixin, CallCommandMixin, CreateRadiusObjectsMixin
-from .models import (Nas, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroupCheck, RadiusGroupReply,
-                     RadiusPostAuth, RadiusProfile, RadiusReply, RadiusUserGroup, RadiusUserProfile)
+from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
+                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusProfile, RadiusReply,
+                     RadiusUserGroup, RadiusUserProfile)
 
 _SUPERUSER = {'username': 'gino', 'password': 'cic', 'email': 'giggi_vv@gmail.it'}
 _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
@@ -108,22 +111,28 @@ class TestAdmin(BaseTestAdmin, BaseTestCase,
         return data
 
 
-auth_header = 'Bearer {}'.format(settings.DJANGO_FREERADIUS_API_TOKEN)
-
-
 class TestApi(BaseTestApi, ApiParamsMixin, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
     user_model = get_user_model()
-    auth_header = auth_header
 
     def setUp(self):
-        self._create_org()
+        org = self._create_org()
+        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
+                                                        organization=org)
+        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
+        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
 
 
 class TestApiReject(BaseTestApiReject, BaseTestCase):
-    auth_header = auth_header
+
+    def setUp(self):
+        org = self._create_org()
+        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
+                                                        organization=org)
+        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
+        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
 
 
 class TestCommands(BaseTestCommands, BaseTestCase,
@@ -140,3 +149,40 @@ class TestCSVUpload(BaseTestCSVUpload, TestCase,
 
 class TestUtils(BaseTestUtils, FileMixin, BaseTestCase):
     pass
+
+
+class TestOgranizationRadiusSettings(BaseTestCase):
+    user_model = get_user_model()
+
+    def setUp(self):
+        self.org = self._create_org()
+
+    def test_default_token(self):
+        rad = OrganizationRadiusSettings.objects.create(organization=self.org)
+        self.assertEqual(32, len(rad.token))
+
+    def test_bad_token(self):
+        try:
+            rad = OrganizationRadiusSettings(token='bad.t.o.k.e.n', organization=self.org)
+            rad.full_clean()
+        except ValidationError as e:
+            self.assertEqual(e.message_dict['token'][0],
+                             'Key must not contain spaces, dots or slashes.')
+
+    def test_cache(self):
+        # clear cache set from previous tests
+        cache.clear()
+        rad = OrganizationRadiusSettings.objects.create(token='12345', organization=self.org)
+        options = dict(username='molly', password='barbar')
+        self._create_user(**options)
+        token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
+        post_url = "{}{}".format(reverse('freeradius:authorize'), token_querystring)
+        self.client.post(post_url, {'username': 'molly', 'password': 'barbar'})
+        self.assertEqual(rad.token, cache.get(rad.pk))
+        # test update
+        rad.token = '1234567'
+        rad.save()
+        self.assertEqual(rad.token, cache.get(rad.pk))
+        # test delete
+        rad.delete()
+        self.assertEqual(None, cache.get(rad.pk))
