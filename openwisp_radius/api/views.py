@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.utils.translation import ugettext_lazy as _
 from django_freeradius.api.views import AccountingView as BaseAccountingView
 from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
@@ -11,35 +12,34 @@ from openwisp_users.models import Organization
 
 from ..models import OrganizationRadiusSettings
 
+_TOKEN_AUTH_FAILED = _('Token authentication failed')
+
 
 class TokenAuthentication(BaseTokenAuthentication):
     def authenticate(self, request):
-        uuid = None
-        token = None
-        if request.META.get('HTTP_AUTHORIZATION'):
-            headers = request.META.get('HTTP_AUTHORIZATION').split(',')
-            for header in headers:
-                try:
-                    uuid = header.split(' ')[1]
-                    token = header.split(' ')[2]
-                except IndexError:
-                    raise AuthenticationFailed('Token authentication failed')
-        elif request.GET.get('token') and request.GET.get('uuid'):
-            uuid = request.GET.get('uuid')
-            token = request.GET.get('token')
-
-        if not uuid or not token:
-            raise AuthenticationFailed('Token authentication failed')
-
-        if cache.get(uuid) == token:
-            pass
-        else:
+        # default to GET params
+        uuid = request.GET.get('uuid')
+        token = request.GET.get('token')
+        # inspect authorization header
+        if 'HTTP_AUTHORIZATION' in request.META:
+            parts = request.META['HTTP_AUTHORIZATION'].split(' ')
             try:
-                instance = OrganizationRadiusSettings.objects.get(organization=uuid,
-                                                                  token=token)
+                uuid = parts[1]
+                token = parts[2]
+            except IndexError:
+                pass
+        if not uuid or not token:
+            raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
+        # check cache too
+        if uuid not in cache:
+            try:
+                opts = dict(organization=uuid, token=token)
+                instance = OrganizationRadiusSettings.objects.get(**opts)
                 cache.set(instance.pk, instance.token)
             except OrganizationRadiusSettings.DoesNotExist:
-                raise AuthenticationFailed('Token authentication failed')
+                raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
+        elif cache.get(uuid) != token:
+            raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         return (AnonymousUser(), None)
 
 
