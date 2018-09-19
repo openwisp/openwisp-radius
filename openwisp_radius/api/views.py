@@ -47,7 +47,7 @@ class TokenAuthorizationMixin(object):
     authentication_classes = (TokenAuthentication,)
 
 
-class BatchView(BaseBatchView):
+class BatchView(TokenAuthorizationMixin, BaseBatchView):
     def _create_batch(self, serializer, **kwargs):
         org_id = serializer.data.get('organization')
         org = Organization.objects.get(pk=org_id)
