@@ -7,8 +7,6 @@ DEBUG = True
 
 SECRET_KEY = '&a@f(0@lrl%606smticbu20=pvribdvubk5=gjti8&n1y%bi&4'
 
-DJANGO_FREERADIUS_API_TOKEN = "gsoc2018djfapitoken"
-
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
@@ -112,17 +110,16 @@ STATIC_URL = '/static/'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Swapper model definitions
-DJANGO_FREERADIUS_RADIUSREPLY_MODEL = "openwisp_radius.RadiusReply"
-DJANGO_FREERADIUS_RADIUSGROUPREPLY_MODEL = "openwisp_radius.RadiusGroupReply"
-DJANGO_FREERADIUS_RADIUSCHECK_MODEL = "openwisp_radius.RadiusCheck"
-DJANGO_FREERADIUS_RADIUSGROUPCHECK_MODEL = "openwisp_radius.RadiusGroupCheck"
-DJANGO_FREERADIUS_RADIUSACCOUNTING_MODEL = "openwisp_radius.RadiusAccounting"
-DJANGO_FREERADIUS_NAS_MODEL = "openwisp_radius.Nas"
-DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = "openwisp_radius.RadiusUserGroup"
-DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = "openwisp_radius.RadiusPostAuth"
-DJANGO_FREERADIUS_RADIUSBATCH_MODEL = "openwisp_radius.RadiusBatch"
-DJANGO_FREERADIUS_RADIUSPROFILE_MODEL = "openwisp_radius.RadiusProfile"
-DJANGO_FREERADIUS_RADIUSUSERPROFILE_MODEL = "openwisp_radius.RadiusUserProfile"
+DJANGO_FREERADIUS_RADIUSREPLY_MODEL = 'openwisp_radius.RadiusReply'
+DJANGO_FREERADIUS_RADIUSGROUPREPLY_MODEL = 'openwisp_radius.RadiusGroupReply'
+DJANGO_FREERADIUS_RADIUSCHECK_MODEL = 'openwisp_radius.RadiusCheck'
+DJANGO_FREERADIUS_RADIUSGROUPCHECK_MODEL = 'openwisp_radius.RadiusGroupCheck'
+DJANGO_FREERADIUS_RADIUSACCOUNTING_MODEL = 'openwisp_radius.RadiusAccounting'
+DJANGO_FREERADIUS_NAS_MODEL = 'openwisp_radius.Nas'
+DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = 'openwisp_radius.RadiusUserGroup'
+DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = 'openwisp_radius.RadiusPostAuth'
+DJANGO_FREERADIUS_RADIUSBATCH_MODEL = 'openwisp_radius.RadiusBatch'
+DJANGO_FREERADIUS_RADIUSGROUP_MODEL = 'openwisp_radius.RadiusGroup'
 
 # local settings must be imported before test runner otherwise they'll be ignored
 try:

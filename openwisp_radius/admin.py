@@ -1,111 +1,125 @@
 from django.contrib import admin
 from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
                                           AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
-                                          AbstractRadiusGroupCheckAdmin, AbstractRadiusGroupReplyAdmin,
-                                          AbstractRadiusPostAuthAdmin, AbstractRadiusProfileAdmin,
+                                          AbstractRadiusGroupAdmin, AbstractRadiusGroupCheckAdmin,
+                                          AbstractRadiusGroupReplyAdmin, AbstractRadiusPostAuthAdmin,
                                           AbstractRadiusReplyAdmin, AbstractRadiusUserGroupAdmin,
-                                          AbstractRadiusUserProfileInline)
+                                          RadiusUserGroupInline)
 
 from openwisp_users.admin import UserAdmin
 from openwisp_utils.admin import MultitenantAdminMixin, MultitenantOrgFilter
 
-from .models import (Nas, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroupCheck, RadiusGroupReply,
-                     RadiusPostAuth, RadiusProfile, RadiusReply, RadiusUserGroup, RadiusUserProfile)
+from .models import (Nas, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup, RadiusGroupCheck,
+                     RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
+
+
+class OrganizationFirstMixin(MultitenantAdminMixin):
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj=None)
+        fields.remove('organization')
+        fields.insert(0, 'organization')
+        return fields
 
 
 @admin.register(RadiusCheck)
-class RadiusCheckAdmin(MultitenantAdminMixin, AbstractRadiusCheckAdmin):
+class RadiusCheckAdmin(MultitenantAdminMixin,
+                       AbstractRadiusCheckAdmin):
     pass
 
 
-RadiusCheckAdmin.list_display += ('organization',)
-RadiusCheckAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 RadiusCheckAdmin.fields.insert(1, 'organization')
+RadiusCheckAdmin.list_display.insert(1, 'organization')
+RadiusCheckAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusReply)
-class RadiusReplyAdmin(MultitenantAdminMixin, AbstractRadiusReplyAdmin):
+class RadiusReplyAdmin(MultitenantAdminMixin,
+                       AbstractRadiusReplyAdmin):
     pass
 
 
+RadiusReplyAdmin.fields.insert(1, 'organization')
 RadiusReplyAdmin.list_display += ('organization',)
 RadiusReplyAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusAccounting)
-class RadiusAccountingAdmin(MultitenantAdminMixin, AbstractRadiusAccountingAdmin):
+class RadiusAccountingAdmin(OrganizationFirstMixin,
+                            AbstractRadiusAccountingAdmin):
     pass
 
 
-RadiusAccountingAdmin.list_display += ('organization',)
+RadiusAccountingAdmin.list_display.insert(1, 'organization',)
 RadiusAccountingAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
-@admin.register(Nas)
-class NasAdmin(MultitenantAdminMixin, AbstractNasAdmin):
+@admin.register(RadiusGroup)
+class RadiusGroupAdmin(OrganizationFirstMixin,
+                       AbstractRadiusGroupAdmin):
     pass
 
 
-NasAdmin.list_display += ('organization',)
-NasAdmin.list_filter += (('organization', MultitenantOrgFilter),)
+RadiusGroupAdmin.list_display.insert(1, 'organization')
+RadiusGroupAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusUserGroup)
-class RadiusUserGroupAdmin(MultitenantAdminMixin, AbstractRadiusUserGroupAdmin):
+class RadiusUserGroupAdmin(MultitenantAdminMixin,
+                           AbstractRadiusUserGroupAdmin):
     pass
-
-
-RadiusUserGroupAdmin.list_display += ('organization',)
-RadiusUserGroupAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusGroupReply)
-class RadiusGroupReplyAdmin(MultitenantAdminMixin, AbstractRadiusGroupReplyAdmin):
+class RadiusGroupReplyAdmin(MultitenantAdminMixin,
+                            AbstractRadiusGroupReplyAdmin):
     pass
-
-
-RadiusGroupReplyAdmin.list_display += ('organization',)
-RadiusGroupReplyAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusGroupCheck)
-class RadiusGroupCheckAdmin(MultitenantAdminMixin, AbstractRadiusGroupCheckAdmin):
+class RadiusGroupCheckAdmin(MultitenantAdminMixin,
+                            AbstractRadiusGroupCheckAdmin):
     pass
 
 
-RadiusGroupCheckAdmin.list_display += ('organization',)
-RadiusGroupCheckAdmin.list_filter += (('organization', MultitenantOrgFilter),)
+@admin.register(Nas)
+class NasAdmin(MultitenantAdminMixin,
+               AbstractNasAdmin):
+    pass
+
+
+NasAdmin.fieldsets[0][1]['fields'] = ('organization',) + NasAdmin.fieldsets[0][1]['fields']
+NasAdmin.list_display.insert(1, 'organization')
+NasAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusPostAuth)
-class RadiusPostAuthAdmin(MultitenantAdminMixin, AbstractRadiusPostAuthAdmin):
+class RadiusPostAuthAdmin(OrganizationFirstMixin,
+                          AbstractRadiusPostAuthAdmin):
     pass
 
 
-RadiusPostAuthAdmin.list_display += ('organization',)
+RadiusPostAuthAdmin.list_display.insert(1, 'organization')
 RadiusPostAuthAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusBatch)
-class RadiusBatchAdmin(MultitenantAdminMixin, AbstractRadiusBatchAdmin):
+class RadiusBatchAdmin(MultitenantAdminMixin,
+                       AbstractRadiusBatchAdmin):
     pass
 
 
-RadiusBatchAdmin.list_display += ('organization',)
+RadiusBatchAdmin.fields.insert(0, 'organization')
+RadiusBatchAdmin.list_display.insert(1, 'organization')
 RadiusBatchAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
-@admin.register(RadiusProfile)
-class RadiusProfileAdmin(MultitenantAdminMixin, AbstractRadiusProfileAdmin):
-    pass
+def get_inline_instances(modeladmin, request, obj=None):
+    inlines = super(UserAdmin, modeladmin).get_inline_instances(request, obj)
+    if obj:
+        usergroup = RadiusUserGroupInline(modeladmin.model,
+                                          modeladmin.admin_site)
+        inlines.append(usergroup)
+    return inlines
 
 
-RadiusProfileAdmin.list_display += ('organization',)
-RadiusProfileAdmin.list_filter += (('organization', MultitenantOrgFilter),)
-
-
-class RadiusUserProfileInline(AbstractRadiusUserProfileInline):
-    model = RadiusUserProfile
-
-
-UserAdmin.inlines.append(RadiusUserProfileInline)
+UserAdmin.get_inline_instances = get_inline_instances

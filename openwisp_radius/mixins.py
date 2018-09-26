@@ -1,22 +1,27 @@
-from django_freeradius.tests import ApiParamsMixin as BaseApiParamsMixin
 from django_freeradius.tests import CallCommandMixin as BaseCallCommandMixin
 from django_freeradius.tests import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
+from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 
 from openwisp_users.models import Organization
 
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
     def _create_org(self, **kwargs):
-        options = dict(name='test-organization')
+        options = dict(name='test-organization',
+                       slug='test-organization')
         options.update(kwargs)
-        org = Organization(**options)
-        org.save()
+        try:
+            org = Organization.objects.get(**options)
+        except Organization.DoesNotExist:
+            org = Organization(**options)
+            org.full_clean()
+            org.save()
         return org
 
-    def _get_extra_fields(self, **kwargs):
-        org = Organization.objects.get_or_create(name='test-organization')
-        options = dict(organization=org[0])
-        return options
+    def _get_defaults(self, options, model=None):
+        if not model or hasattr(model, 'organization'):
+            options.update({'organization': self._create_org()})
+        return super()._get_defaults(options, model)
 
 
 class CallCommandMixin(BaseCallCommandMixin):
@@ -27,9 +32,8 @@ class CallCommandMixin(BaseCallCommandMixin):
         super(CallCommandMixin, self)._call_command(command, **kwargs)
 
 
-class ApiParamsMixin(BaseApiParamsMixin):
-    def _get_extra_params(self, **kwargs):
-        org = Organization.objects.get_or_create(name='test-organization')
-        options = dict(organization=str(org[0].pk))
-        options.update(**kwargs)
-        return options
+class PostParamsMixin(BasePostParamsMixin):
+    def _get_post_defaults(self, options, model=None):
+        if not model or hasattr(model, 'organization'):
+            options.update({'organization': str(self._create_org().pk)})
+        return super()._get_post_defaults(options, model)

@@ -10,18 +10,15 @@ from django_freeradius.tests.base.test_batch_add_users import BaseTestCSVUpload
 from django_freeradius.tests.base.test_commands import BaseTestCommands
 from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiusAccounting,
                                                       BaseTestRadiusBatch, BaseTestRadiusCheck,
-                                                      BaseTestRadiusGroupCheck, BaseTestRadiusGroupReply,
-                                                      BaseTestRadiusPostAuth, BaseTestRadiusProfile,
-                                                      BaseTestRadiusReply, BaseTestRadiusUserGroup,
-                                                      BaseTestRadiusUserProfile)
+                                                      BaseTestRadiusGroup, BaseTestRadiusPostAuth,
+                                                      BaseTestRadiusReply)
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from openwisp_users.models import Organization
 
-from .mixins import ApiParamsMixin, CallCommandMixin, CreateRadiusObjectsMixin
-from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
-                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusProfile, RadiusReply,
-                     RadiusUserGroup, RadiusUserProfile)
+from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
+from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
+                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
 
 _SUPERUSER = {'username': 'gino', 'password': 'cic', 'email': 'giggi_vv@gmail.it'}
 _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
@@ -50,15 +47,10 @@ class TestRadiusReply(BaseTestRadiusReply, BaseTestCase):
     radius_reply_model = RadiusReply
 
 
-class TestRadiusGroupReply(BaseTestRadiusGroupReply, BaseTestCase):
+class TestRadiusGroup(BaseTestRadiusGroup, BaseTestCase):
+    radius_group_model = RadiusGroup
     radius_groupreply_model = RadiusGroupReply
-
-
-class TestRadiusGroupCheck(BaseTestRadiusGroupCheck, BaseTestCase):
     radius_groupcheck_model = RadiusGroupCheck
-
-
-class TestRadiusUserGroup(BaseTestRadiusUserGroup, BaseTestCase):
     radius_usergroup_model = RadiusUserGroup
 
 
@@ -70,19 +62,9 @@ class TestRadiusBatch(BaseTestRadiusBatch, BaseTestCase):
     radius_batch_model = RadiusBatch
 
 
-class TestRadiusProfile(BaseTestRadiusProfile, BaseTestCase):
-    radius_profile_model = RadiusProfile
-
-
-class TestRadiusUserProfile(BaseTestRadiusUserProfile, BaseTestCase):
-    radius_profile_model = RadiusProfile
-    radius_userprofile_model = RadiusUserProfile
-    radius_check_model = RadiusCheck
-
-
-class TestAdmin(BaseTestAdmin, BaseTestCase,
-                FileMixin, CallCommandMixin):
-    app_name = "openwisp_radius"
+class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
+                BaseTestAdmin, BaseTestCase):
+    app_name = 'openwisp_radius'
     nas_model = Nas
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
@@ -92,7 +74,7 @@ class TestAdmin(BaseTestAdmin, BaseTestCase,
     radius_postauth_model = RadiusPostAuth
     radius_reply_model = RadiusReply
     radius_usergroup_model = RadiusUserGroup
-    radius_profile_model = RadiusProfile
+    radius_group_model = RadiusGroup
 
     def setUp(self):
         self._create_org()
@@ -111,7 +93,7 @@ class TestAdmin(BaseTestAdmin, BaseTestCase,
         return data
 
 
-class TestApi(BaseTestApi, ApiParamsMixin, BaseTestCase):
+class TestApi(BaseTestApi, PostParamsMixin, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
@@ -142,8 +124,8 @@ class TestCommands(BaseTestCommands, BaseTestCase,
     radius_postauth_model = RadiusPostAuth
 
 
-class TestCSVUpload(BaseTestCSVUpload, TestCase,
-                    CreateRadiusObjectsMixin, FileMixin):
+class TestCSVUpload(BaseTestCSVUpload, CreateRadiusObjectsMixin,
+                    FileMixin, TestCase):
     radius_batch_model = RadiusBatch
 
 
@@ -176,7 +158,7 @@ class TestOgranizationRadiusSettings(BaseTestCase):
         options = dict(username='molly', password='barbar')
         self._create_user(**options)
         token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
-        post_url = "{}{}".format(reverse('freeradius:authorize'), token_querystring)
+        post_url = '{}{}'.format(reverse('freeradius:authorize'), token_querystring)
         self.client.post(post_url, {'username': 'molly', 'password': 'barbar'})
         self.assertEqual(rad.token, cache.get(rad.pk))
         # test update
