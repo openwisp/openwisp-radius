@@ -95,12 +95,25 @@ def generate_token():
     return get_random_string(length=32)
 
 
-class OrganizationRadiusSettings(OrgMixin, models.Model):
-    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+class OrganizationRadiusSettings(models.Model):
+    id = models.UUIDField(default=uuid.uuid4,
+                          primary_key=True,
+                          editable=False)
+    organization = models.OneToOneField('openwisp_users.Organization',
+                                        verbose_name=_('organization'),
+                                        related_name='config_settings',
+                                        on_delete=models.CASCADE)
     token = models.CharField(max_length=32,
                              unique=True,
                              validators=[key_validator],
                              default=generate_token)
+
+    class Meta:
+        verbose_name = _('Organization radius settings')
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.organization.name
 
     def save(self, *args, **kwargs):
         super(OrganizationRadiusSettings, self).save(*args, **kwargs)
