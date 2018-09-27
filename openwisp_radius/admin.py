@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
                                           AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
@@ -6,11 +7,11 @@ from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccoun
                                           AbstractRadiusReplyAdmin, AbstractRadiusUserGroupAdmin,
                                           RadiusUserGroupInline)
 
-from openwisp_users.admin import UserAdmin
+from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_utils.admin import MultitenantAdminMixin, MultitenantOrgFilter
 
-from .models import (Nas, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup, RadiusGroupCheck,
-                     RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
+from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
+                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
 
 
 class OrganizationFirstMixin(MultitenantAdminMixin):
@@ -123,3 +124,26 @@ def get_inline_instances(modeladmin, request, obj=None):
 
 
 UserAdmin.get_inline_instances = get_inline_instances
+
+
+# TODO: remove this once AlwaysHasChangedMixin is available in openwisp-utils
+class AlwaysHasChangedForm(forms.ModelForm):
+    def has_changed(self):
+        """
+        This django-admin trick ensures the settings
+        are saved even if default values are unchanged
+        (without this trick new setting objects won't be
+        created unless users change the default values)
+        """
+        if self.instance._state.adding:
+            return True
+        return super(AlwaysHasChangedForm, self).has_changed()
+
+
+class OrganizationRadiusSettingsInline(admin.StackedInline):
+    model = OrganizationRadiusSettings
+    form = AlwaysHasChangedForm
+
+
+OrganizationAdmin.save_on_top = True
+OrganizationAdmin.inlines.insert(0, OrganizationRadiusSettingsInline)
