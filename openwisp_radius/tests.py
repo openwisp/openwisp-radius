@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django_freeradius.tests import FileMixin
+from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
 from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject
 from django_freeradius.tests.base.test_batch_add_users import BaseTestCSVUpload
@@ -13,8 +14,6 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
                                                       BaseTestRadiusGroup, BaseTestRadiusPostAuth,
                                                       BaseTestRadiusReply)
 from django_freeradius.tests.base.test_utils import BaseTestUtils
-
-from openwisp_users.models import Organization
 
 from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
 from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
@@ -77,59 +76,76 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
     radius_group_model = RadiusGroup
 
     def setUp(self):
-        self._create_org()
+        self.default_org = self._create_org()
         super(TestAdmin, self).setUp()
 
     def _get_csv_post_data(self):
         data = super(TestAdmin, self)._get_csv_post_data()
-        org = Organization.objects.first()
-        data['organization'] = org.pk
+        data['organization'] = self.default_org.pk
         return data
 
     def _get_prefix_post_data(self):
         data = super(TestAdmin, self)._get_prefix_post_data()
-        org = Organization.objects.first()
-        data['organization'] = org.pk
+        data['organization'] = self.default_org.pk
         return data
 
 
-class TestApi(BaseTestApi, PostParamsMixin, BaseTestCase):
+class ApiTokenMixin(BasePostParamsMixin):
+    """
+    we don't automatically set the organization
+    in this mixin, because it must be inferred
+    from the token authentication
+    """
+    def setUp(self):
+        org = self._create_org()
+        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
+                                                        organization=org)
+        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
+        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
+        self.default_org = org
+
+
+class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
     user_model = get_user_model()
 
-    def setUp(self):
-        org = self._create_org()
-        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
-                                                        organization=org)
-        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
-        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
+    def assertAcctData(self, ra, data):
+        # we don't expect the organization field
+        # because it will be inferred from the auth token
+        self.assertNotIn('organization', data)
+        # but we still want to ensure the
+        # organization is filled correctly
+        data['organization'] = self.default_org
+        return super().assertAcctData(ra, data)
+
+    def test_accounting_start_201(self):
+        data = self.acct_post_data
+        data['status_type'] = 'Start'
+        data['organization'] = str(self.default_org.pk)
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('setting the organization', response.data['detail'])
 
 
-class TestApiReject(BaseTestApiReject, BaseTestCase):
-
-    def setUp(self):
-        org = self._create_org()
-        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
-                                                        organization=org)
-        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
-        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
+class TestApiReject(ApiTokenMixin, BaseTestApiReject, BaseTestCase):
+    pass
 
 
-class TestCommands(BaseTestCommands, BaseTestCase,
-                   FileMixin, CallCommandMixin):
+class TestCommands(FileMixin, CallCommandMixin,
+                   BaseTestCommands, BaseTestCase):
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
     radius_postauth_model = RadiusPostAuth
 
 
-class TestCSVUpload(BaseTestCSVUpload, CreateRadiusObjectsMixin,
-                    FileMixin, TestCase):
+class TestCSVUpload(FileMixin, BaseTestCSVUpload, BaseTestCase):
     radius_batch_model = RadiusBatch
 
 
-class TestUtils(BaseTestUtils, FileMixin, BaseTestCase):
+class TestUtils(FileMixin, BaseTestUtils, BaseTestCase):
     pass
 
 

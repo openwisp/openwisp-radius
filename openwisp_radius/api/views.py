@@ -17,17 +17,8 @@ _TOKEN_AUTH_FAILED = _('Token authentication failed')
 
 class TokenAuthentication(BaseTokenAuthentication):
     def authenticate(self, request):
-        # default to GET params
-        uuid = request.GET.get('uuid')
-        token = request.GET.get('token')
-        # inspect authorization header
-        if 'HTTP_AUTHORIZATION' in request.META:
-            parts = request.META['HTTP_AUTHORIZATION'].split(' ')
-            try:
-                uuid = parts[1]
-                token = parts[2]
-            except IndexError:
-                pass
+        self.check_organization(request)
+        uuid, token = self.get_uuid_token(request)
         if not uuid or not token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # check cache too
@@ -40,17 +31,46 @@ class TokenAuthentication(BaseTokenAuthentication):
                 raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         elif cache.get(uuid) != token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
-        return (AnonymousUser(), None)
+        # if execution gets here the auth token is good
+        # we include the organization id in the auth info
+        return (AnonymousUser(), uuid)
+
+    def check_organization(self, request):
+        if 'organization' in request.data:
+            raise AuthenticationFailed(_('setting the organization parameter '
+                                         'explicitly is not allowed'))
+
+    def get_uuid_token(self, request):
+        # default to GET params
+        uuid = request.GET.get('uuid')
+        token = request.GET.get('token')
+        # inspect authorization header
+        if 'HTTP_AUTHORIZATION' in request.META:
+            parts = request.META['HTTP_AUTHORIZATION'].split(' ')
+            try:
+                uuid = parts[1]
+                token = parts[2]
+            except IndexError:
+                pass
+        return uuid, token
 
 
 class TokenAuthorizationMixin(object):
     authentication_classes = (TokenAuthentication,)
 
+    def get_serializer(self, *args, **kwargs):
+        # supply organization uuid got from authentication
+        if 'data' in kwargs:
+            # request.data is immutable so we'll use a normal dict
+            data = kwargs['data'].copy()
+            data['organization'] = self.request.auth
+            kwargs['data'] = data
+        return super().get_serializer(*args, **kwargs)
+
 
 class BatchView(TokenAuthorizationMixin, BaseBatchView):
     def _create_batch(self, serializer, **kwargs):
-        org_id = serializer.data.get('organization')
-        org = Organization.objects.get(pk=org_id)
+        org = Organization.objects.get(pk=self.request.auth)
         options = dict(organization=org)
         options.update(kwargs)
         return super(BatchView, self)._create_batch(serializer, **options)
