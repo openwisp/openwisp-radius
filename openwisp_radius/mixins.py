@@ -23,6 +23,12 @@ class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
             options.update({'organization': self._create_org()})
         return super()._get_defaults(options, model)
 
+    def _create_user(self, **kwargs):
+        user = super()._create_user(**kwargs)
+        org = self._create_org()
+        org.add_user(user)
+        return user
+
 
 class CallCommandMixin(BaseCallCommandMixin):
     def _call_command(self, command, **kwargs):

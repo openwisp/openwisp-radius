@@ -8,7 +8,7 @@ from django_freeradius.api.views import PostAuthView as BasePostAuthView
 from django_freeradius.api.views import TokenAuthentication as BaseTokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-from openwisp_users.models import Organization
+from openwisp_users.models import Organization, OrganizationUser
 
 from ..models import OrganizationRadiusSettings
 
@@ -80,7 +80,15 @@ batch = BatchView.as_view()
 
 
 class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
-    pass
+    def get_user(self, request):
+        user = super().get_user(request)
+        # ensure user is member of the authenticated org
+        if not OrganizationUser.objects.filter(
+            user=user,
+            organization_id=request.auth
+        ).exists():
+            return None
+        return user
 
 
 authorize = AuthorizeView.as_view()
