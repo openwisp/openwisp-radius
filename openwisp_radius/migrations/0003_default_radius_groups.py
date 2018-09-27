@@ -1,11 +1,17 @@
+# Manually Created
+
 from django.db import migrations
 
 from django_freeradius.migrations import add_default_groups, add_default_group_to_existing_users
 
 
 class Migration(migrations.Migration):
+    """
+    Set default group and move existing 
+    users to the default group
+    """
     dependencies = [
-        ('openwisp_radius', '0001_initial'),
+        ('openwisp_radius', '0002_initial_openwisp_radius'),
     ]
 
     operations = [

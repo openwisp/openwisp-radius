@@ -15,6 +15,8 @@ branches:
 install:
   - # TODO: this is temporary, remove it when django-freeradius 0.1 is released
   - pip install https://github.com/openwisp/django-freeradius/tarball/master
+  - # TODO: this is temporary, remove it when openwisp-users > 0.1.10 is released
+  - pip install https://github.com/openwisp/openwisp-users/tarball/master
   - pip install $DJANGO
   - python setup.py -q develop
   - pip install -r requirements-test.txt
