@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django_freeradius import settings as app_settings
 from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
                                           AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
                                           AbstractRadiusGroupAdmin, AbstractRadiusGroupCheckAdmin,
@@ -113,17 +114,7 @@ RadiusBatchAdmin.fields.insert(0, 'organization')
 RadiusBatchAdmin.list_display.insert(1, 'organization')
 RadiusBatchAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
-
-def get_inline_instances(modeladmin, request, obj=None):
-    inlines = super(UserAdmin, modeladmin).get_inline_instances(request, obj)
-    if obj:
-        usergroup = RadiusUserGroupInline(modeladmin.model,
-                                          modeladmin.admin_site)
-        inlines.append(usergroup)
-    return inlines
-
-
-UserAdmin.get_inline_instances = get_inline_instances
+UserAdmin.inlines.append(RadiusUserGroupInline)
 
 
 # TODO: remove this once AlwaysHasChangedMixin is available in openwisp-utils
@@ -146,4 +137,34 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
 
 
 OrganizationAdmin.save_on_top = True
-OrganizationAdmin.inlines.insert(0, OrganizationRadiusSettingsInline)
+OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
+
+
+# avoid cluttering the admin with too many models, leave only the
+# minimum required to configure social login and check if it's working
+if app_settings.SOCIAL_LOGIN_ENABLED:
+    from django.apps import apps
+    from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
+
+    Token = apps.get_model('authtoken', 'Token')
+
+    admin.site.unregister(Token)
+    admin.site.register(SocialApp, SocialAppAdmin)
+
+    class AuthTokenInline(admin.StackedInline):
+        model = Token
+        extra = 0
+        readonly_fields = ('key',)
+
+        def has_add_permission(self, request, obj=None):
+            return False
+
+    class SocialAccountInline(admin.StackedInline):
+        model = SocialAccount
+        extra = 0
+        readonly_fields = ('provider', 'uid', 'extra_data')
+
+        def has_add_permission(self, request, obj=None):
+            return False
+
+    UserAdmin.inlines += [SocialAccountInline, AuthTokenInline]
