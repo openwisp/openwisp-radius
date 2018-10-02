@@ -25,6 +25,8 @@ _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
 _RADCHECK_ENTRY_PW_UPDATE = {'username': 'Monica', 'new_value': 'Cam0_liX',
                              'attribute': 'NT-Password'}
 
+User = get_user_model()
+
 
 class BaseTestCase(CreateRadiusObjectsMixin, TestCase):
     pass
@@ -109,7 +111,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
-    user_model = get_user_model()
+    user_model = User
 
     def assertAcctData(self, ra, data):
         # we don't expect the organization field
@@ -150,7 +152,7 @@ class TestUtils(FileMixin, BaseTestUtils, BaseTestCase):
 
 
 class TestOgranizationRadiusSettings(BaseTestCase):
-    user_model = get_user_model()
+    user_model = User
 
     def setUp(self):
         self.org = self._create_org()

@@ -5,7 +5,7 @@ from django_freeradius.api.views import AccountingView as BaseAccountingView
 from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
-from django_freeradius.api.views import TokenAuthentication as BaseTokenAuthentication
+from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
 from openwisp_users.models import Organization, OrganizationUser
@@ -15,7 +15,7 @@ from ..models import OrganizationRadiusSettings
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 
 
-class TokenAuthentication(BaseTokenAuthentication):
+class TokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
@@ -68,17 +68,6 @@ class TokenAuthorizationMixin(object):
         return super().get_serializer(*args, **kwargs)
 
 
-class BatchView(TokenAuthorizationMixin, BaseBatchView):
-    def _create_batch(self, serializer, **kwargs):
-        org = Organization.objects.get(pk=self.request.auth)
-        options = dict(organization=org)
-        options.update(kwargs)
-        return super(BatchView, self)._create_batch(serializer, **options)
-
-
-batch = BatchView.as_view()
-
-
 class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
     def get_user(self, request):
         user = super().get_user(request)
@@ -106,3 +95,14 @@ class AccountingView(TokenAuthorizationMixin, BaseAccountingView):
 
 
 accounting = AccountingView.as_view()
+
+
+class BatchView(TokenAuthorizationMixin, BaseBatchView):
+    def _create_batch(self, serializer, **kwargs):
+        org = Organization.objects.get(pk=self.request.auth)
+        options = dict(organization=org)
+        options.update(kwargs)
+        return super(BatchView, self)._create_batch(serializer, **options)
+
+
+batch = BatchView.as_view()

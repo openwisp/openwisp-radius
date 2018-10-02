@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 ]
 
 EXTENDED_APPS = ['django_freeradius']
+LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTH_USER_MODEL = 'openwisp_users.User'
 SITE_ID = '1'
@@ -95,6 +96,9 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# WARNING: for development only!
+AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'Europe/Rome'
