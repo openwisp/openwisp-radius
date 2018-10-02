@@ -21,14 +21,20 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    # rest framework
+    'rest_framework',
+    'django_filters',
+    # registration
+    'rest_framework.authtoken',
+    'rest_auth',
+    'rest_auth.registration',
+    # social login
+    'allauth.socialaccount.providers.facebook',
     # openwisp2 modules
     'openwisp_users',
     'openwisp_radius',
     # admin
     'django.contrib.admin',
-    # rest framework
-    'rest_framework',
-    'django_filters',
 ]
 
 EXTENDED_APPS = ['django_freeradius']
@@ -124,6 +130,24 @@ DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = 'openwisp_radius.RadiusUserGroup'
 DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = 'openwisp_radius.RadiusPostAuth'
 DJANGO_FREERADIUS_RADIUSBATCH_MODEL = 'openwisp_radius.RadiusBatch'
 DJANGO_FREERADIUS_RADIUSGROUP_MODEL = 'openwisp_radius.RadiusGroup'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'facebook': {
+        'METHOD': 'oauth2',
+        'SCOPE': ['email', 'public_profile'],
+        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+        'INIT_PARAMS': {'cookie': True},
+        'FIELDS': [
+            'id',
+            'email',
+            'name',
+            'first_name',
+            'last_name',
+            'verified',
+        ],
+        'VERIFIED_EMAIL': True,
+    }
+}
 
 # local settings must be imported before test runner otherwise they'll be ignored
 try:

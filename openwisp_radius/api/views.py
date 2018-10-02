@@ -72,7 +72,7 @@ class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
     def get_user(self, request):
         user = super().get_user(request)
         # ensure user is member of the authenticated org
-        if not OrganizationUser.objects.filter(
+        if user and not OrganizationUser.objects.filter(
             user=user,
             organization_id=request.auth
         ).exists():

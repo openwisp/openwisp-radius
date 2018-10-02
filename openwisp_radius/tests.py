@@ -13,6 +13,7 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
                                                       BaseTestRadiusBatch, BaseTestRadiusCheck,
                                                       BaseTestRadiusGroup, BaseTestRadiusPostAuth,
                                                       BaseTestRadiusReply)
+from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
@@ -149,6 +150,30 @@ class TestCSVUpload(FileMixin, BaseTestCSVUpload, BaseTestCase):
 
 class TestUtils(FileMixin, BaseTestUtils, BaseTestCase):
     pass
+
+
+class TestSocial(ApiTokenMixin, BaseTestSocial, BaseTestCase):
+    def get_url(self):
+        return reverse(self.view_name, args=[self.default_org.slug])
+
+    def test_redirect_cp_404(self):
+        u = self._create_social_user()
+        self.client.force_login(u)
+        r = self.client.get(reverse(self.view_name, args=['wrong']), {'cp': 'test'})
+        self.assertEqual(r.status_code, 404)
+
+    def test_redirect_cp_suspicious_400(self):
+        u = self._create_social_user()
+        u.is_staff = True
+        u.save()
+        self.client.force_login(u)
+        r = self.client.get(self.get_url(), {'cp': 'test'})
+        self.assertEqual(r.status_code, 400)
+
+    def test_redirect_cp_301(self):
+        super().test_redirect_cp_301()
+        u = User.objects.filter(username='socialuser').first()
+        self.assertIn((self.default_org.pk, ), u.organizations_pk)
 
 
 class TestOgranizationRadiusSettings(BaseTestCase):
