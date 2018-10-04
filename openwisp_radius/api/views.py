@@ -1,10 +1,12 @@
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.http import Http404
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius.api.views import AccountingView as BaseAccountingView
 from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
+from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -106,3 +108,20 @@ class BatchView(TokenAuthorizationMixin, BaseBatchView):
 
 
 batch = BatchView.as_view()
+
+
+class RegisterView(BaseRegisterView):
+    def dispatch(self, *args, **kwargs):
+        try:
+            self.organization = Organization.objects.get(slug=kwargs['slug'])
+        except Organization.DoesNotExist:
+            raise Http404()
+        return super().dispatch(*args, **kwargs)
+
+    def perform_create(self, serializer):
+        user = super().perform_create(serializer)
+        self.organization.add_user(user)
+        return user
+
+
+register = RegisterView.as_view()

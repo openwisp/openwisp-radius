@@ -132,6 +132,31 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn('setting the organization', response.data['detail'])
 
+    def test_register_201(self):
+        self.assertEqual(User.objects.count(), 0)
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password'
+        })
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('key', r.data)
+        self.assertEqual(User.objects.count(), 1)
+        user = User.objects.first()
+        self.assertIn((self.default_org.pk,), user.organizations_pk)
+
+    def test_register_404(self):
+        url = reverse('freeradius:rest_register', args=['madeup'])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password'
+        })
+        self.assertEqual(r.status_code, 404)
+
 
 class TestApiReject(ApiTokenMixin, BaseTestApiReject, BaseTestCase):
     pass
