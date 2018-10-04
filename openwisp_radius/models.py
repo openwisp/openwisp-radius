@@ -101,7 +101,7 @@ class OrganizationRadiusSettings(models.Model):
                           editable=False)
     organization = models.OneToOneField('openwisp_users.Organization',
                                         verbose_name=_('organization'),
-                                        related_name='config_settings',
+                                        related_name='radius_settings',
                                         on_delete=models.CASCADE)
     token = models.CharField(max_length=32,
                              validators=[key_validator],

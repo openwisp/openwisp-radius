@@ -186,7 +186,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='organization',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='config_settings', to='openwisp_users.Organization', verbose_name='organization'),
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='radius_settings', to='openwisp_users.Organization', verbose_name='organization'),
         ),
 
         # Set null=True for organization field to allow
