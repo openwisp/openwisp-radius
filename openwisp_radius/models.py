@@ -104,7 +104,6 @@ class OrganizationRadiusSettings(models.Model):
                                         related_name='config_settings',
                                         on_delete=models.CASCADE)
     token = models.CharField(max_length=32,
-                             unique=True,
                              validators=[key_validator],
                              default=generate_token)
 
