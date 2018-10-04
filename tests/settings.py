@@ -15,12 +15,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # openwisp admin theme
     'openwisp_utils.admin_theme',
     # all-auth
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'openwisp_users',
+    # admin
+    'django.contrib.admin',
     # rest framework
     'rest_framework',
     'django_filters',
@@ -31,11 +35,8 @@ INSTALLED_APPS = [
     # social login
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.google',
-    # openwisp2 modules
-    'openwisp_users',
+    # openwisp radius
     'openwisp_radius',
-    # admin
-    'django.contrib.admin',
 ]
 
 EXTENDED_APPS = ['django_freeradius']
@@ -88,21 +89,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'openwisp_radius.db'),
     }
 }
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
 
 # WARNING: for development only!
 AUTH_PASSWORD_VALIDATORS = []
