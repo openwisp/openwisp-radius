@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     # social login
     'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.google',
     # openwisp2 modules
     'openwisp_users',
     'openwisp_radius',
@@ -146,6 +147,15 @@ SOCIALACCOUNT_PROVIDERS = {
             'verified',
         ],
         'VERIFIED_EMAIL': True,
+    },
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
     }
 }
 
