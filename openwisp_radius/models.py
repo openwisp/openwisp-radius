@@ -12,6 +12,7 @@ from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting
 from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin, ShareableOrgMixin
+from openwisp_users.models import OrganizationUser
 
 
 class RadiusCheck(OrgMixin, AbstractRadiusCheck):
@@ -77,6 +78,12 @@ class RadiusBatch(OrgMixin, AbstractRadiusBatch):
                             help_text=batch_name.help_text,
                             db_index=batch_name.db_index,
                             unique=False)
+
+    def save_user(self, user):
+        super().save_user(user)
+        obj = OrganizationUser(user=user, organization=self.organization, is_admin=False)
+        obj.full_clean()
+        obj.save()
 
     class Meta(AbstractRadiusBatch.Meta):
         abstract = False

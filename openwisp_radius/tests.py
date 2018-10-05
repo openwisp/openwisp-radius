@@ -16,6 +16,8 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
 from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
+from openwisp_users.models import OrganizationUser
+
 from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
 from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
                      RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
@@ -91,6 +93,16 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
         data = super(TestAdmin, self)._get_prefix_post_data()
         data['organization'] = self.default_org.pk
         return data
+
+    def test_radiusbatch_org_user(self):
+        self.assertEqual(self.radius_batch_model.objects.count(), 0)
+        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_name))
+        data = self._get_csv_post_data()
+        self.client.post(add_url, data, follow=True)
+        self.assertEqual(OrganizationUser.objects.all().count(), 3)
+        for u in OrganizationUser.objects.all():
+            self.assertEqual(u.organization,
+                             self.radius_batch_model.objects.first().organization)
 
 
 class ApiTokenMixin(BasePostParamsMixin):
