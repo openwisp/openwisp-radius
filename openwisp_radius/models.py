@@ -11,7 +11,7 @@ from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting
                                            AbstractRadiusReply, AbstractRadiusUserGroup)
 from swapper import swappable_setting
 
-from openwisp_users.mixins import OrgMixin, ShareableOrgMixin
+from openwisp_users.mixins import OrgMixin
 from openwisp_users.models import OrganizationUser
 
 
@@ -33,7 +33,17 @@ class RadiusAccounting(OrgMixin, AbstractRadiusAccounting):
         swappable = swappable_setting('openwisp_radius', 'RadiusAccounting')
 
 
-class RadiusGroup(ShareableOrgMixin, AbstractRadiusGroup):
+class RadiusGroup(OrgMixin, AbstractRadiusGroup):
+    def get_default_queryset(self):
+        return super().get_default_queryset() \
+                      .filter(organization_id=self.organization.pk)
+
+    def clean(self):
+        super().clean()
+        if not self.name.startswith('{}-'.format(self.organization.slug)):
+            self.name = '{}-{}'.format(self.organization.slug,
+                                       self.name)
+
     class Meta(AbstractRadiusGroup.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'RadiusGroup')

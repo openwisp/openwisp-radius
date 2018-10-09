@@ -3,6 +3,8 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
+from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
+                                          SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
 from django_freeradius.tests import FileMixin
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
@@ -57,6 +59,80 @@ class TestRadiusGroup(BaseTestRadiusGroup, BaseTestCase):
     radius_groupcheck_model = RadiusGroupCheck
     radius_usergroup_model = RadiusUserGroup
 
+    def test_default_groups(self):
+        default_org = Organization.objects.first()
+        queryset = self.radius_group_model.objects.filter(organization=default_org)
+        self.assertEqual(queryset.count(), 2)
+        self.assertEqual(queryset.filter(name='default-users').count(), 1)
+        self.assertEqual(queryset.filter(name='default-power-users').count(), 1)
+        self.assertEqual(queryset.filter(default=True).count(), 1)
+        users = queryset.get(name='default-users')
+        self.assertTrue(users.default)
+        self.assertEqual(users.radiusgroupcheck_set.count(), 2)
+        check = users.radiusgroupcheck_set.get(attribute=SESSION_TIME_ATTRIBUTE)
+        self.assertEqual(check.value, DEFAULT_SESSION_TIME_LIMIT)
+        check = users.radiusgroupcheck_set.get(attribute=SESSION_TRAFFIC_ATTRIBUTE)
+        self.assertEqual(check.value, DEFAULT_SESSION_TRAFFIC_LIMIT)
+        power_users = queryset.get(name='default-power-users')
+        self.assertEqual(power_users.radiusgroupcheck_set.count(), 0)
+
+    def test_create_organization_default_group(self):
+        new_org = self._create_org(name='new org', slug='new-org')
+        queryset = self.radius_group_model.objects.filter(organization=new_org)
+        self.assertEqual(queryset.count(), 2)
+        self.assertEqual(queryset.filter(name='new-org-users').count(), 1)
+        self.assertEqual(queryset.filter(name='new-org-power-users').count(), 1)
+        self.assertEqual(queryset.filter(default=True).count(), 1)
+        group = queryset.filter(default=True).first()
+        self.assertEqual(group.radiusgroupcheck_set.count(), 2)
+        self.assertEqual(group.radiusgroupreply_set.count(), 0)
+
+    def test_change_default_group(self):
+        org1 = self._create_org(name='org1', slug='org1')
+        org2 = self._create_org(name='org2', slug='org2')
+        new_default_org1 = self.radius_group_model(name='org1-new',
+                                                   organization=org1,
+                                                   description='test',
+                                                   default=True)
+        new_default_org1.full_clean()
+        new_default_org1.save()
+        new_default_org2 = self.radius_group_model(name='org2-new',
+                                                   organization=org2,
+                                                   description='test',
+                                                   default=True)
+        new_default_org2.full_clean()
+        new_default_org2.save()
+        queryset = self.radius_group_model.objects.filter(default=True,
+                                                          organization=org1)
+        self.assertEqual(queryset.count(), 1)
+        self.assertEqual(queryset.filter(name='org1-new').count(), 1)
+        # org2
+        queryset = self.radius_group_model.objects.filter(default=True,
+                                                          organization=org2)
+        self.assertEqual(queryset.count(), 1)
+        self.assertEqual(queryset.filter(name='org2-new').count(), 1)
+
+    def test_new_user_default_group(self):
+        org = Organization.objects.get(slug='default')
+        u = get_user_model()(username='test',
+                             email='test@test.org',
+                             password='test')
+        u.full_clean()
+        u.save()
+        org.add_user(u)
+        u.refresh_from_db()
+        usergroup_set = u.radiususergroup_set.all()
+        self.assertEqual(usergroup_set.count(), 1)
+        ug = usergroup_set.first()
+        self.assertTrue(ug.group.default)
+
+    def test_auto_prefix(self):
+        org = self._create_org(name='Cool WiFi')
+        rg = self.radius_group_model(name='guests',
+                                     organization=org)
+        rg.full_clean()
+        self.assertEqual(rg.name, '{}-guests'.format(org.slug))
+
 
 class TestRadiusPostAuth(BaseTestRadiusPostAuth, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
@@ -81,7 +157,7 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
     radius_group_model = RadiusGroup
 
     def setUp(self):
-        self.default_org = self._create_org()
+        self.default_org = Organization.objects.get(slug='default')
         super(TestAdmin, self).setUp()
 
     def _get_csv_post_data(self):

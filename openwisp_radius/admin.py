@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.utils.translation import ugettext_lazy as _
 from django_freeradius import settings as app_settings
 from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
                                           AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
@@ -58,9 +59,15 @@ RadiusAccountingAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 @admin.register(RadiusGroup)
 class RadiusGroupAdmin(OrganizationFirstMixin,
                        AbstractRadiusGroupAdmin):
-    pass
+    select_related = ('organization',)
+
+    def get_group_name(self, obj):
+        return obj.name.replace('{}-'.format(obj.organization.slug), '')
+
+    get_group_name.short_description = _('Group name')
 
 
+RadiusGroupAdmin.list_display[0] = 'get_group_name'
 RadiusGroupAdmin.list_display.insert(1, 'organization')
 RadiusGroupAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 

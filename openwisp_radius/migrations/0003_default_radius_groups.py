@@ -2,12 +2,12 @@
 
 from django.db import migrations
 
-from django_freeradius.migrations import add_default_groups, add_default_group_to_existing_users
+from . import add_default_groups, add_default_group_to_existing_users
 
 
 class Migration(migrations.Migration):
     """
-    Set default group and move existing 
+    Set default group and move existing
     users to the default group
     """
     dependencies = [

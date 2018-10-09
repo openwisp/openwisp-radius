@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(db_index=True, max_length=255, unique=True, verbose_name='group name')),
                 ('description', models.CharField(blank=True, max_length=64, null=True, verbose_name='description')),
                 ('default', models.BooleanField(default=False, help_text='The default group is automatically assigned to new users; changing the default group has only effect on new users (existing users will keep being members of their current group)', verbose_name='is default?')),
-                ('organization', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
+                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
             ],
             options={
                 'verbose_name': 'group',
