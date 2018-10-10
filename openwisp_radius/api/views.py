@@ -93,7 +93,8 @@ postauth = PostAuthView.as_view()
 
 
 class AccountingView(TokenAuthorizationMixin, BaseAccountingView):
-    pass
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.auth)
 
 
 accounting = AccountingView.as_view()
