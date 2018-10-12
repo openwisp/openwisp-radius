@@ -16,7 +16,7 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
 from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
-from openwisp_users.models import OrganizationUser
+from openwisp_users.models import Organization, OrganizationUser
 
 from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
 from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
@@ -168,6 +168,27 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
             'password2': 'password'
         })
         self.assertEqual(r.status_code, 404)
+
+    def test_api_show_only_token_org(self):
+        org = Organization.objects.create(name='org1')
+        self.assertEqual(self.radius_accounting_model.objects.count(), 0)
+        nas_ip = '127.0.0.1'
+        test1 = self.radius_accounting_model(session_id='asd1',
+                                             organization=org,
+                                             nas_ip_address=nas_ip,
+                                             unique_id='123')
+        test1.full_clean()
+        test1.save()
+        test2 = self.radius_accounting_model(session_id='asd2',
+                                             organization=self.default_org,
+                                             nas_ip_address=nas_ip,
+                                             unique_id='1234')
+        test2.full_clean()
+        test2.save()
+        data = self.client.get(self._acct_url,
+                               HTTP_AUTHORIZATION=self.auth_header)
+        self.assertEqual(len(data.json()), 1)
+        self.assertEqual(data.json()[0]['organization'], str(self.default_org.pk))
 
 
 class TestApiReject(ApiTokenMixin, BaseTestApiReject, BaseTestCase):
