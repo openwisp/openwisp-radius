@@ -12,4 +12,4 @@ if __name__ == "__main__":
     args = sys.argv
     args.insert(1, "test")
     args.insert(2, "openwisp_radius")
-execute_from_command_line(args)
+    execute_from_command_line(args)
