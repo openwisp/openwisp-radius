@@ -1,6 +1,8 @@
 import os
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TESTING = sys.argv[1] == 'test'
 
 # Set DEBUG to False in production
 DEBUG = True
@@ -144,6 +146,11 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+if TESTING:
+    DJANGO_FREERADIUS_GROUPCHECK_ADMIN = True
+    DJANGO_FREERADIUS_GROUPREPLY_ADMIN = True
+    DJANGO_FREERADIUS_USERGROUP_ADMIN = True
 
 # local settings must be imported before test runner otherwise they'll be ignored
 try:

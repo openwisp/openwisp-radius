@@ -72,22 +72,25 @@ RadiusGroupAdmin.list_display.insert(1, 'organization')
 RadiusGroupAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
-@admin.register(RadiusUserGroup)
-class RadiusUserGroupAdmin(MultitenantAdminMixin,
-                           AbstractRadiusUserGroupAdmin):
-    pass
+if app_settings.USERGROUP_ADMIN:
+    @admin.register(RadiusUserGroup)
+    class RadiusUserGroupAdmin(MultitenantAdminMixin,
+                               AbstractRadiusUserGroupAdmin):
+        multitenant_parent = 'group'
 
 
-@admin.register(RadiusGroupReply)
-class RadiusGroupReplyAdmin(MultitenantAdminMixin,
-                            AbstractRadiusGroupReplyAdmin):
-    pass
+if app_settings.GROUPREPLY_ADMIN:
+    @admin.register(RadiusGroupReply)
+    class RadiusGroupReplyAdmin(MultitenantAdminMixin,
+                                AbstractRadiusGroupReplyAdmin):
+        multitenant_parent = 'group'
 
 
-@admin.register(RadiusGroupCheck)
-class RadiusGroupCheckAdmin(MultitenantAdminMixin,
-                            AbstractRadiusGroupCheckAdmin):
-    pass
+if app_settings.GROUPCHECK_ADMIN:
+    @admin.register(RadiusGroupCheck)
+    class RadiusGroupCheckAdmin(MultitenantAdminMixin,
+                                AbstractRadiusGroupCheckAdmin):
+        multitenant_parent = 'group'
 
 
 @admin.register(Nas)
@@ -120,6 +123,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin,
 RadiusBatchAdmin.fields.insert(0, 'organization')
 RadiusBatchAdmin.list_display.insert(1, 'organization')
 RadiusBatchAdmin.list_filter += (('organization', MultitenantOrgFilter),)
+
 
 UserAdmin.inlines.append(RadiusUserGroupInline)
 
