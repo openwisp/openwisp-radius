@@ -22,8 +22,8 @@ install:
   - pip install -r requirements-test.txt
 
 before_script:
-  - ./runflake8
-  - ./runisort
+  - flake8
+  - isort --check-only --recursive --diff
   # ensure there are no pending migrations
   - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
 
