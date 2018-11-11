@@ -5,8 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
-from django_freeradius.tests import FileMixin
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
+from django_freeradius.tests import FileMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
 from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject
 from django_freeradius.tests.base.test_batch_add_users import BaseTestCSVUpload

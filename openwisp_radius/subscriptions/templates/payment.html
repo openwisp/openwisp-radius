@@ -1,0 +1,11 @@
+{% extends "account/base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+<form action="{{ form.action }}" method="{{ form.method }}">
+    {{ form.as_p }}
+    <p><input type="submit" value="{% trans 'Proceed' %}" /></p>
+    {% csrf_token %}
+</form>
+{% endblock %}
