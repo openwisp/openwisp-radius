@@ -1,3 +1,5 @@
+from allauth.account import app_settings as allauth_settings
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.http import Http404
@@ -6,6 +8,7 @@ from django_freeradius.api.views import AccountingView as BaseAccountingView
 from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
+from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -123,6 +126,22 @@ class RegisterView(BaseRegisterView):
         user = super().perform_create(serializer)
         self.organization.add_user(user)
         return user
+
+    def get_response_data(self, user):
+        if allauth_settings.EMAIL_VERIFICATION == \
+                allauth_settings.EmailVerificationMethod.MANDATORY:
+            return {"detail": _("Verification e-mail sent.")}
+
+        context = self.get_serializer_context()
+
+        if getattr(settings, 'REST_USE_JWT', False):
+            data = {
+                'user': user,
+                'token': self.token
+            }
+            return JWTSerializer(data, context=context).data
+        else:
+            return TokenSerializer(user.auth_token, context=context).data
 
 
 register = RegisterView.as_view()
