@@ -11,7 +11,7 @@ from django_freeradius.api.views import PostAuthView as BasePostAuthView
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, ParseError
 
 from openwisp_users.models import Organization, OrganizationUser
 
@@ -56,7 +56,7 @@ class TokenAuthentication(BaseAuthentication):
                 uuid = parts[1]
                 token = parts[2]
             except IndexError:
-                pass
+                raise ParseError('Invalid token')
         return uuid, token
 
 
