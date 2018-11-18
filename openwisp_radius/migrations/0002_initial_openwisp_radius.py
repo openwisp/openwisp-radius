@@ -16,11 +16,11 @@ import openwisp_users.mixins
 
 class Migration(migrations.Migration):
     """
-    Initial migration for openwisp-radius models 
+    Initial migration for openwisp-radius models
     Note (It's Manually Edited):
-    - settings._OPENWISP_DEFAULT_ORG_UUID must be set before 
+    - settings._OPENWISP_DEFAULT_ORG_UUID must be set before
       running; as done in 'openwisp_users'->'0003_default_organization'
-    - Custom logic for setting default organization in all existing 
+    - Custom logic for setting default organization in all existing
       relevent records (read comments)
     """
     dependencies = [
@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(db_index=True, max_length=255, unique=True, verbose_name='group name')),
                 ('description', models.CharField(blank=True, max_length=64, null=True, verbose_name='description')),
                 ('default', models.BooleanField(default=False, help_text='The default group is automatically assigned to new users; changing the default group has only effect on new users (existing users will keep being members of their current group)', verbose_name='is default?')),
-                ('organization', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
+                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
             ],
             options={
                 'verbose_name': 'group',
@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
             name='OrganizationRadiusSettings',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False)),
-                ('token', models.CharField(default=openwisp_radius.models.generate_token, max_length=32, unique=True, validators=[django.core.validators.RegexValidator(re.compile('^[^\\s/\\.]+$'), code='invalid', message='Key must not contain spaces, dots or slashes.')])),
+                ('token', models.CharField(default=openwisp_radius.models.generate_token, max_length=32, validators=[django.core.validators.RegexValidator(re.compile('^[^\\s/\\.]+$'), code='invalid', message='Key must not contain spaces, dots or slashes.')])),
                 ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
             ],
             options={
@@ -186,7 +186,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='organization',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='config_settings', to='openwisp_users.Organization', verbose_name='organization'),
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='radius_settings', to='openwisp_users.Organization', verbose_name='organization'),
         ),
 
         # Set null=True for organization field to allow

@@ -1,12 +1,17 @@
+from allauth.account import app_settings as allauth_settings
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.http import Http404
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius.api.views import AccountingView as BaseAccountingView
 from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
-from django_freeradius.api.views import TokenAuthentication as BaseTokenAuthentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_auth.app_settings import JWTSerializer, TokenSerializer
+from rest_auth.registration.views import RegisterView as BaseRegisterView
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed, ParseError
 
 from openwisp_users.models import Organization, OrganizationUser
 
@@ -15,7 +20,7 @@ from ..models import OrganizationRadiusSettings
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 
 
-class TokenAuthentication(BaseTokenAuthentication):
+class TokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
@@ -51,7 +56,7 @@ class TokenAuthentication(BaseTokenAuthentication):
                 uuid = parts[1]
                 token = parts[2]
             except IndexError:
-                pass
+                raise ParseError('Invalid token')
         return uuid, token
 
 
@@ -68,22 +73,11 @@ class TokenAuthorizationMixin(object):
         return super().get_serializer(*args, **kwargs)
 
 
-class BatchView(TokenAuthorizationMixin, BaseBatchView):
-    def _create_batch(self, serializer, **kwargs):
-        org = Organization.objects.get(pk=self.request.auth)
-        options = dict(organization=org)
-        options.update(kwargs)
-        return super(BatchView, self)._create_batch(serializer, **options)
-
-
-batch = BatchView.as_view()
-
-
 class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
     def get_user(self, request):
         user = super().get_user(request)
         # ensure user is member of the authenticated org
-        if not OrganizationUser.objects.filter(
+        if user and not OrganizationUser.objects.filter(
             user=user,
             organization_id=request.auth
         ).exists():
@@ -102,7 +96,52 @@ postauth = PostAuthView.as_view()
 
 
 class AccountingView(TokenAuthorizationMixin, BaseAccountingView):
-    pass
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.auth)
 
 
 accounting = AccountingView.as_view()
+
+
+class BatchView(TokenAuthorizationMixin, BaseBatchView):
+    def _create_batch(self, serializer, **kwargs):
+        org = Organization.objects.get(pk=self.request.auth)
+        options = dict(organization=org)
+        options.update(kwargs)
+        return super(BatchView, self)._create_batch(serializer, **options)
+
+
+batch = BatchView.as_view()
+
+
+class RegisterView(BaseRegisterView):
+    def dispatch(self, *args, **kwargs):
+        try:
+            self.organization = Organization.objects.get(slug=kwargs['slug'])
+        except Organization.DoesNotExist:
+            raise Http404()
+        return super().dispatch(*args, **kwargs)
+
+    def perform_create(self, serializer):
+        user = super().perform_create(serializer)
+        self.organization.add_user(user)
+        return user
+
+    def get_response_data(self, user):
+        if allauth_settings.EMAIL_VERIFICATION == \
+                allauth_settings.EmailVerificationMethod.MANDATORY:
+            return {"detail": _("Verification e-mail sent.")}
+
+        context = self.get_serializer_context()
+
+        if getattr(settings, 'REST_USE_JWT', False):
+            data = {
+                'user': user,
+                'token': self.token
+            }
+            return JWTSerializer(data, context=context).data
+        else:
+            return TokenSerializer(user.auth_token, context=context).data
+
+
+register = RegisterView.as_view()

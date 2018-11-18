@@ -11,7 +11,8 @@ from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting
                                            AbstractRadiusReply, AbstractRadiusUserGroup)
 from swapper import swappable_setting
 
-from openwisp_users.mixins import OrgMixin, ShareableOrgMixin
+from openwisp_users.mixins import OrgMixin
+from openwisp_users.models import OrganizationUser
 
 
 class RadiusCheck(OrgMixin, AbstractRadiusCheck):
@@ -32,7 +33,17 @@ class RadiusAccounting(OrgMixin, AbstractRadiusAccounting):
         swappable = swappable_setting('openwisp_radius', 'RadiusAccounting')
 
 
-class RadiusGroup(ShareableOrgMixin, AbstractRadiusGroup):
+class RadiusGroup(OrgMixin, AbstractRadiusGroup):
+    def get_default_queryset(self):
+        return super().get_default_queryset() \
+                      .filter(organization_id=self.organization.pk)
+
+    def clean(self):
+        super().clean()
+        if not self.name.startswith('{}-'.format(self.organization.slug)):
+            self.name = '{}-{}'.format(self.organization.slug,
+                                       self.name)
+
     class Meta(AbstractRadiusGroup.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'RadiusGroup')
@@ -78,6 +89,12 @@ class RadiusBatch(OrgMixin, AbstractRadiusBatch):
                             db_index=batch_name.db_index,
                             unique=False)
 
+    def save_user(self, user):
+        super().save_user(user)
+        obj = OrganizationUser(user=user, organization=self.organization, is_admin=False)
+        obj.full_clean()
+        obj.save()
+
     class Meta(AbstractRadiusBatch.Meta):
         abstract = False
         unique_together = ('name', 'organization')
@@ -101,10 +118,9 @@ class OrganizationRadiusSettings(models.Model):
                           editable=False)
     organization = models.OneToOneField('openwisp_users.Organization',
                                         verbose_name=_('organization'),
-                                        related_name='config_settings',
+                                        related_name='radius_settings',
                                         on_delete=models.CASCADE)
     token = models.CharField(max_length=32,
-                             unique=True,
                              validators=[key_validator],
                              default=generate_token)
 

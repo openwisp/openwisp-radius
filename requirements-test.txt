@@ -4,3 +4,4 @@ isort
 flake8
 responses
 freezegun
+openwisp-utils>=0.2.1

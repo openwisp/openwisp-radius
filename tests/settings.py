@@ -1,6 +1,8 @@
 import os
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TESTING = sys.argv[1] == 'test'
 
 # Set DEBUG to False in production
 DEBUG = True
@@ -15,23 +17,32 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # openwisp admin theme
     'openwisp_utils.admin_theme',
     # all-auth
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    # openwisp2 modules
     'openwisp_users',
-    'openwisp_radius',
     # admin
     'django.contrib.admin',
     # rest framework
     'rest_framework',
     'django_filters',
+    # registration
+    'rest_framework.authtoken',
+    'rest_auth',
+    'rest_auth.registration',
+    # social login
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.google',
+    # openwisp radius
+    'openwisp_radius',
 ]
 
 EXTENDED_APPS = ['django_freeradius']
+LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTH_USER_MODEL = 'openwisp_users.User'
 SITE_ID = '1'
@@ -81,20 +92,8 @@ DATABASES = {
     }
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+# WARNING: for development only!
+AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'Europe/Rome'
@@ -120,6 +119,38 @@ DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = 'openwisp_radius.RadiusUserGroup'
 DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = 'openwisp_radius.RadiusPostAuth'
 DJANGO_FREERADIUS_RADIUSBATCH_MODEL = 'openwisp_radius.RadiusBatch'
 DJANGO_FREERADIUS_RADIUSGROUP_MODEL = 'openwisp_radius.RadiusGroup'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'facebook': {
+        'METHOD': 'oauth2',
+        'SCOPE': ['email', 'public_profile'],
+        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+        'INIT_PARAMS': {'cookie': True},
+        'FIELDS': [
+            'id',
+            'email',
+            'name',
+            'first_name',
+            'last_name',
+            'verified',
+        ],
+        'VERIFIED_EMAIL': True,
+    },
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
+
+if TESTING:
+    DJANGO_FREERADIUS_GROUPCHECK_ADMIN = True
+    DJANGO_FREERADIUS_GROUPREPLY_ADMIN = True
+    DJANGO_FREERADIUS_USERGROUP_ADMIN = True
 
 # local settings must be imported before test runner otherwise they'll be ignored
 try:
