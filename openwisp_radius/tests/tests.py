@@ -20,9 +20,10 @@ from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from openwisp_users.models import Organization, OrganizationUser
 
+from ..models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
+                      RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
+                      RadiusUserGroup)
 from .mixins import CallCommandMixin, CreateRadiusObjectsMixin, PostParamsMixin
-from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
-                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
 
 _SUPERUSER = {'username': 'gino', 'password': 'cic', 'email': 'giggi_vv@gmail.it'}
 _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
