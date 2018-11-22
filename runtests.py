@@ -11,5 +11,8 @@ if __name__ == "__main__":
     from django.core.management import execute_from_command_line
     args = sys.argv
     args.insert(1, "test")
-    args.insert(2, "openwisp_radius")
+    if 'settings_subscriptions' in sys.argv:
+        args.insert(2, "openwisp_radius.subscriptions")
+    else:
+        args.insert(2, "openwisp_radius.tests")
     execute_from_command_line(args)
