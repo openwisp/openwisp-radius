@@ -24,6 +24,7 @@ install:
 before_script:
   - flake8
   - isort --check-only --recursive --diff
+  - ./runcheckmigration
   # ensure there are no pending migrations
   - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
 
