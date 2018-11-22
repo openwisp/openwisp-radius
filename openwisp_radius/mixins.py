@@ -7,8 +7,8 @@ from openwisp_users.models import Organization
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
     def _create_org(self, **kwargs):
-        options = dict(name='test-organization',
-                       slug='test-organization')
+        options = dict(name='default',
+                       slug='default')
         options.update(kwargs)
         try:
             org = Organization.objects.get(**options)

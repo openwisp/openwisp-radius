@@ -47,6 +47,7 @@ class TestRadiusAccounting(BaseTestRadiusAccounting, BaseTestCase):
 
 class TestRadiusCheck(BaseTestRadiusCheck, BaseTestCase):
     radius_check_model = RadiusCheck
+    test_create_radius_check_model = None
 
 
 class TestRadiusReply(BaseTestRadiusReply, BaseTestCase):
@@ -127,7 +128,7 @@ class TestRadiusGroup(BaseTestRadiusGroup, BaseTestCase):
         self.assertTrue(ug.group.default)
 
     def test_auto_prefix(self):
-        org = self._create_org(name='Cool WiFi')
+        org = self._create_org(name='Cool WiFi', slug='cool-wifi')
         rg = self.radius_group_model(name='guests',
                                      organization=org)
         rg.full_clean()
@@ -159,6 +160,12 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
     def setUp(self):
         self.default_org = Organization.objects.get(slug='default')
         super(TestAdmin, self).setUp()
+
+    @property
+    def _RADCHECK_ENTRY_PW_UPDATE(self):  # noqa
+        data = BaseTestAdmin._RADCHECK_ENTRY_PW_UPDATE
+        data['organization'] = str(self.default_org.pk)
+        return data
 
     def _get_csv_post_data(self):
         data = super(TestAdmin, self)._get_csv_post_data()
