@@ -3,9 +3,13 @@ from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SE
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
 
 
+def load_model(model):
+    return swapper.load_model('openwisp_radius', model)
+
+
 def create_default_groups(organization):
-    RadiusGroup = swapper.load_model('django_freeradius', 'RadiusGroup')
-    RadiusGroupCheck = swapper.load_model('django_freeradius', 'RadiusGroupCheck')
+    RadiusGroup = load_model('RadiusGroup')
+    RadiusGroupCheck = load_model('RadiusGroupCheck')
     default = RadiusGroup(organization_id=organization.pk,
                           name='{}-users'.format(organization.slug),
                           description='Regular users',

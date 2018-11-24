@@ -114,6 +114,17 @@ class TestRadiusGroup(BaseTestRadiusGroup, BaseTestCase):
         self.assertEqual(queryset.count(), 1)
         self.assertEqual(queryset.filter(name='org2-new').count(), 1)
 
+    def test_rename_organization(self):
+        default_org = Organization.objects.first()
+        default_org.name = 'renamed'
+        default_org.slug = default_org.name
+        default_org.full_clean()
+        default_org.save()
+        queryset = self.radius_group_model.objects.filter(organization=default_org)
+        self.assertEqual(queryset.count(), 2)
+        self.assertEqual(queryset.filter(name='renamed-users').count(), 1)
+        self.assertEqual(queryset.filter(name='renamed-power-users').count(), 1)
+
     def test_new_user_default_group(self):
         org = Organization.objects.get(slug='default')
         u = get_user_model()(username='test',
