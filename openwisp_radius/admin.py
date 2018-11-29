@@ -162,14 +162,6 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
     admin.site.unregister(Token)
     admin.site.register(SocialApp, SocialAppAdmin)
 
-    class AuthTokenInline(admin.StackedInline):
-        model = Token
-        extra = 0
-        readonly_fields = ('key',)
-
-        def has_add_permission(self, request, obj=None):
-            return False
-
     class SocialAccountInline(admin.StackedInline):
         model = SocialAccount
         extra = 0
@@ -178,4 +170,4 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         def has_add_permission(self, request, obj=None):
             return False
 
-    UserAdmin.inlines += [SocialAccountInline, AuthTokenInline]
+    UserAdmin.inlines += [SocialAccountInline]
