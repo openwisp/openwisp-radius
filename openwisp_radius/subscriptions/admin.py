@@ -1,6 +1,7 @@
 from django.contrib import admin
+from django.forms.models import BaseInlineFormSet
+from django.urls import reverse
 from django_freeradius.base.admin import ReadOnlyAdmin
-
 from plans.admin import OrderAdmin, PlanAdmin, PlanPricingInline
 from plans.models import BillingInfo, Invoice, Pricing, Quota, UserPlan
 
@@ -68,8 +69,16 @@ class PricingAdmin(admin.ModelAdmin):
     exclude = ('url', )
 
 
+class InvoiceInlineFormSet(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        invoice_type = self.model.INVOICE_TYPES.INVOICE
+        self.queryset = self.model.objects.filter(type=invoice_type)
+
+
 class InvoiceInline(admin.StackedInline):
     model = Invoice
+    formset = InvoiceInlineFormSet
     extra = 0
     exclude = ('rebate',
                'shipping_name',
@@ -84,14 +93,17 @@ class InvoiceInline(admin.StackedInline):
             return [f.name for f in Invoice._meta.get_fields() if f.name not in self.exclude]
         return tuple()
 
+    def view_on_site(self, obj):
+        return reverse('subscriptions:download_invoice', args=[obj.pk])
 
-def get_order_readonly_fields(self, request, obj):
+
+def order_get_readonly_fields(self, request, obj):
     if obj:
         return self.fields
     return tuple()
 
 
-OrderAdmin.get_readonly_fields = get_order_readonly_fields
+OrderAdmin.get_readonly_fields = order_get_readonly_fields
 OrderAdmin.inlines = (InvoiceInline,)
 OrderAdmin.fields = ('user',
                      'status',
@@ -102,6 +114,11 @@ OrderAdmin.fields = ('user',
                      'currency',
                      'created',
                      'completed')
+OrderAdmin.list_display = (
+    'user', 'plan', 'pricing',
+    'status', 'created', 'completed',
+)
+OrderAdmin.list_display_links = OrderAdmin.list_display
 PricingAdmin.exclude = ('url',)
 
 

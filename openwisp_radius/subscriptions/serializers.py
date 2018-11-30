@@ -1,16 +1,17 @@
 from django.utils.translation import ugettext_lazy as _
-from payments import PaymentStatus
-from plans.models import BillingInfo, Order, PlanPricing, UserPlan
+from plans.models import BillingInfo, PlanPricing, UserPlan
 from rest_auth.registration.serializers import RegisterSerializer as BaseRegisterSerializer
 from rest_auth.serializers import TokenSerializer as BaseTokenSerializer
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from openwisp_radius.models import RadiusGroup, RadiusUserGroup
+from openwisp_radius.utils import load_model
 
 from . import settings as app_settings
+from .utils import create_order, get_or_create_temporary_radius_group
 
-from .models import Payment
+RadiusGroup = load_model('RadiusGroup')
+RadiusUserGroup = load_model('RadiusUserGroup')
 
 
 class TokenSerializer(BaseTokenSerializer):
@@ -22,15 +23,11 @@ class TokenSerializer(BaseTokenSerializer):
     Meta.fields = Meta.fields + ('payment_url',)
 
     def get_payment_url(self, obj):
-        order = obj.user.order_set.filter(status=Order.STATUS.NEW) \
-                                  .first()  # default ordering is created DESC
-        if not order:
-            return None
-        payment = order.payment_set.filter(status=PaymentStatus.WAITING) \
-                                   .order_by('-created') \
-                                   .first()
-        return reverse('process_payment',
-                       args=[payment.pk],
+        view = self.context['view']
+        if not hasattr(view, 'payment'):
+            return
+        return reverse('subscriptions:process_payment',
+                       args=[view.payment.pk],
                        request=self.context['request'])
 
 
@@ -88,40 +85,23 @@ class RegisterSerializer(BaseRegisterSerializer):
     def _create_premium_subscription(self, user, plan_pricing):
         user.radiususergroup_set.all().delete()
         organization = self.context['view'].organization
-        group_name = '{}-temporary'.format(organization.slug)
-        try:
-            group = RadiusGroup.objects.get(name=group_name)
-        except RadiusGroup.DoesNotExist as e:
-            # TODO: log
-            raise e
-        ug = RadiusUserGroup(user=user,
-                             group=group)
-        ug.full_clean()
-        ug.save()
+        group = get_or_create_temporary_radius_group(organization)
+        rug = RadiusUserGroup(user=user,
+                              group=group)
+        rug.full_clean()
+        rug.save()
         # billing info
         billing_info_data = self.validated_data['billing_info']
         billing_info_data['user'] = user
         billing_info = BillingInfo(**billing_info_data)
         billing_info.full_clean()
         billing_info.save()
-        order = Order(user=user,
-                      plan=plan_pricing.plan,
-                      pricing=plan_pricing.pricing,
-                      created=user.date_joined,
-                      amount=plan_pricing.price,
-                      tax=app_settings.TAX,
-                      currency=app_settings.CURRENCY)
-        order.full_clean()
-        order.save()
-        ip_address = self.context['request'].META['REMOTE_ADDR']
-        payment = Payment(organization=organization,
-                          order=order,
-                          currency=order.currency,
-                          total=order.total(),
-                          tax=order.tax_total(),
-                          customer_ip_address=ip_address)
-        payment.full_clean()
-        payment.save()
+        payment = create_order(user,
+                               plan_pricing,
+                               self.context['request'].META['REMOTE_ADDR'],
+                               organization)
+        # will be used in TokenSerializer.get_payment_url
+        self.context['view'].payment = payment
 
 
 class PlanPricingSerializer(serializers.ModelSerializer):

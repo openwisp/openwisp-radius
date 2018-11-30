@@ -1,0 +1,14 @@
+{% load i18n %}{% autoescape off %}
+{% trans "Hi" %} {% firstof user.get_full_name user.username %},
+
+{% blocktrans %}your subscription to our "{{ plan }}" plan has expired.
+
+You can renew it by using the following link:
+
+{{ url }}.
+{% endblocktrans %}
+
+{% trans "Thank you very much for choosing our service!" %}
+--
+{% blocktrans %}{{ site_name }}{% endblocktrans %}
+{% endautoescape %}

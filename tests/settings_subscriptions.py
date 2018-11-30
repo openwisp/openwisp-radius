@@ -1,18 +1,21 @@
-from settings import *  # noqa
-
 from decimal import Decimal
 
+from settings import *  # noqa
 
-INSTALLED_APPS += [
-    'payments',
+INSTALLED_APPS += [  # noqa
+    'openwisp_radius.subscriptions',
     'ordered_model',
     'plans',
-    'openwisp_radius.subscriptions'
+    'payments',
 ]
+
+MIGRATION_MODULES = {
+    'plans': 'openwisp_radius.subscriptions.plans_migrations'
+}
 
 PAYMENT_HOST = '10.40.0.54:8000'
 PAYMENT_USES_SSL = False
-PAYMENT_MODEL = 'subscriptions.Payment'
+PAYMENT_MODEL = 'plans.Payment'
 PAYMENT_VARIANTS = {
     'dummy': ('payments.dummy.DummyProvider', {}),
     'default': ('payments.paypal.PaypalProvider', {
@@ -26,17 +29,21 @@ PAYMENT_SUCCESS_URL = 'http://10.40.0.54/oxynet-captivepage/success.html'
 PAYMENT_FAILURE_URL = 'http://10.40.0.54/oxynet-captivepage/failure.html'
 PAYMENT_ADMIN_EDITABLE = True
 
+if TESTING:
+    PAYMENT_VARIANTS['default'] = PAYMENT_VARIANTS['dummy']
+
+PLANS_APP_VERBOSE_NAME = 'Subscriptions'
 PLANS_INVOICE_COUNTER_RESET = 3
 PLANS_INVOICE_ISSUER = {
-    'issuer_name': 'Joe Doe Company',
-    'issuer_street': 'Django street, 34',
+    'issuer_name': 'OpenWISP Test',
+    'issuer_street': 'Test street, 123',
     'issuer_zipcode': '123-3444',
     'issuer_city': 'SolarCity',
     'issuer_country': 'EE',
     'issuer_tax_number': '1222233334444555',
 }
-
-PLANS_TAX = Decimal('22.0')
+PLANS_INVOICE_TEMPLATE = 'invoice.html'
+PLANS_TAX = Decimal('20.0')
 PLANS_CURRENCY = 'EUR'
 
 REST_AUTH_REGISTER_SERIALIZERS = {

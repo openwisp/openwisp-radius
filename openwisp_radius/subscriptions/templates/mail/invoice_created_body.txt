@@ -1,0 +1,9 @@
+{% load i18n %}{% autoescape off %}
+{% trans "Hi" %} {% firstof user.get_full_name user.username %},
+
+{% blocktrans %}attached to this email you can find {{ invoice_type }} {{ invoice_number }}.{% endblocktrans %}
+
+{% trans "Thank you very much for choosing our service!" %}
+--
+{% blocktrans %}{{ site_name }}{% endblocktrans %}
+{% endautoescape %}
