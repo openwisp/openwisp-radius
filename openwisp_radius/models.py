@@ -40,6 +40,8 @@ class RadiusGroup(OrgMixin, AbstractRadiusGroup):
 
     def clean(self):
         super().clean()
+        if not hasattr(self, 'organization'):
+            return
         if not self.name.startswith('{}-'.format(self.organization.slug)):
             self.name = '{}-{}'.format(self.organization.slug,
                                        self.name)

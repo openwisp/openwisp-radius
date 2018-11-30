@@ -146,6 +146,19 @@ class TestRadiusGroup(BaseTestRadiusGroup, BaseTestCase):
         rg.full_clean()
         self.assertEqual(rg.name, '{}-guests'.format(org.slug))
 
+    def test_org_none(self):
+        rg = self.radius_group_model(name='guests')
+        try:
+            rg.full_clean()
+        except ValidationError as e:
+            self.assertIn('organization', e.message_dict)
+        except Exception as e:
+            name = e.__class__.__name__
+            self.fail('ValidationError not raised, '
+                      'got "{}: {}" instead'.format(name, e))
+        else:
+            self.fail('ValidationError not raised')
+
 
 class TestRadiusPostAuth(BaseTestRadiusPostAuth, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
