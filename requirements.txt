@@ -1,4 +1,4 @@
 django-freeradius>=0.1.0a
-openwisp-users>=0.1.8,< 0.2
-openwisp-utils>=0.2,< 0.3
+openwisp-users>=0.1.8,<0.2
+openwisp-utils>=0.2,<0.3
 django-rest-auth>=0.9.3,<0.12.0

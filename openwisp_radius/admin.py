@@ -10,7 +10,7 @@ from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccoun
                                           RadiusUserGroupInline)
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
-from openwisp_utils.admin import MultitenantAdminMixin, MultitenantOrgFilter
+from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
 
 from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
                      RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
