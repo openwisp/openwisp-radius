@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
@@ -277,6 +277,36 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         })
         self.assertEqual(r.status_code, 404)
 
+    @override_settings(
+        ACCOUNT_EMAIL_VERIFICATION='mandatory',
+        ACCOUNT_EMAIL_REQUIRED=True
+    )
+    def test_email_verification_sent(self):
+        self.assertEqual(User.objects.count(), 0)
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password'
+        })
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['detail'], "Verification e-mail sent.")
+
+    @override_settings(REST_USE_JWT=True)
+    def test_registration_with_jwt(self):
+        user_count = User.objects.all().count()
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password'
+        })
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('token', r.data)
+        self.assertEqual(User.objects.all().count(), user_count + 1)
+
     def test_api_show_only_token_org(self):
         org = Organization.objects.create(name='org1')
         self.assertEqual(self.radius_accounting_model.objects.count(), 0)
@@ -348,6 +378,10 @@ class TestOgranizationRadiusSettings(BaseTestCase):
     def setUp(self):
         self.org = self._create_org()
 
+    def test_string_representation(self):
+        rad = OrganizationRadiusSettings.objects.create(organization=self.org)
+        self.assertEqual(str(rad), rad.organization.name)
+
     def test_default_token(self):
         rad = OrganizationRadiusSettings.objects.create(organization=self.org)
         self.assertEqual(32, len(rad.token))
@@ -377,3 +411,25 @@ class TestOgranizationRadiusSettings(BaseTestCase):
         # test delete
         rad.delete()
         self.assertEqual(None, cache.get(rad.pk))
+
+    def test_no_org_radius_setting(self):
+        cache.clear()
+        options = dict(username='molly', password='barbar')
+        self._create_user(**options)
+        token_querystring = '?token={0}&uuid={1}'.format('12345', str(self.org.pk))
+        post_url = '{}{}'.format(reverse('freeradius:authorize'), token_querystring)
+        r = self.client.post(post_url, {'username': 'molly', 'password': 'barbar'})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.data, {'detail': 'Token authentication failed'})
+
+    def test_uuid_in_cache(self):
+        rad = OrganizationRadiusSettings.objects.create(token='12345', organization=self.org)
+        cache.set('uuid', str(self.org.pk), 30)
+        options = dict(username='molly', password='barbar')
+        self._create_user(**options)
+        token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
+        post_url = '{}{}'.format(reverse('freeradius:authorize'), token_querystring)
+        r = self.client.post(post_url, {'username': 'molly', 'password': 'barbar'})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.data, {'detail': 'Token authentication failed'})
+        cache.clear()
