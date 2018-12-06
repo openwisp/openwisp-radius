@@ -3,3 +3,4 @@ coveralls
 responses
 freezegun
 openwisp-utils[qa]>=0.2.1
+djangorestframework-jwt
