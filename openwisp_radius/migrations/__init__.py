@@ -1,5 +1,8 @@
 from django.conf import settings
+from django.contrib.auth.management import create_permissions
+
 from django_freeradius.migrations import get_swapped_model
+
 from ..utils import create_default_groups
 
 
@@ -42,3 +45,10 @@ def add_default_group_to_existing_users(apps, schema_editor):
                                                  username=user.username,
                                                  group_id=default_group.id)
                     user_group.save()
+
+def create_default_permissions(apps, schema_editor):
+    for app_config in apps.get_app_configs():
+        app_config.models_module = True
+        create_permissions(app_config, apps=apps, verbosity=0)
+        app_config.models_module = None
+
