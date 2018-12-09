@@ -20,6 +20,7 @@ install:
   - pip install $DJANGO
   - python setup.py -q develop
   - pip install -r requirements-test.txt
+  - pip install -e git+git://github.com/openwisp/openwisp-utils#egg=openwisp_utils
 
 before_script:
   - flake8
