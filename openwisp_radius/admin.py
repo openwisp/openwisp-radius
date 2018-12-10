@@ -11,6 +11,7 @@ from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccoun
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
+from openwisp_utils.admin import AlwaysHasChangedMixin
 
 from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
                      RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
@@ -128,18 +129,8 @@ RadiusBatchAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 UserAdmin.inlines.append(RadiusUserGroupInline)
 
 
-# TODO: remove this once AlwaysHasChangedMixin is available in openwisp-utils
-class AlwaysHasChangedForm(forms.ModelForm):
-    def has_changed(self):
-        """
-        This django-admin trick ensures the settings
-        are saved even if default values are unchanged
-        (without this trick new setting objects won't be
-        created unless users change the default values)
-        """
-        if self.instance._state.adding:
-            return True
-        return super(AlwaysHasChangedForm, self).has_changed()
+class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
+    pass
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
