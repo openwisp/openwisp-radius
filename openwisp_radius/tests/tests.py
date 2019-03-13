@@ -8,7 +8,7 @@ from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SE
 from django_freeradius.tests import FileMixin
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
-from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject
+from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject, BaseTestAutoGroupname
 from django_freeradius.tests.base.test_batch_add_users import BaseTestCSVUpload
 from django_freeradius.tests.base.test_commands import BaseTestCommands
 from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiusAccounting,
@@ -331,6 +331,12 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
 
 class TestApiReject(ApiTokenMixin, BaseTestApiReject, BaseTestCase):
     pass
+
+
+class TestAutoGroupname(ApiTokenMixin, BaseTestAutoGroupname, BaseTestCase):
+    radius_accounting_model = RadiusAccounting
+    radius_usergroup_model = RadiusUserGroup
+    user_model = get_user_model()
 
 
 class TestCommands(FileMixin, CallCommandMixin,
