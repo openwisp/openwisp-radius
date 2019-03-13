@@ -12,6 +12,7 @@ from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, ParseError
+from rest_framework.serializers import Serializer
 
 from openwisp_users.models import Organization, OrganizationUser
 
@@ -83,6 +84,11 @@ class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
         ).exists():
             return None
         return user
+
+    def get_serializer(self, *args, **kwargs):
+        # needed to avoid `'super' object has no attribute 'get_serializer'`
+        # exception, raised in TokenAuthorizationMixin.get_serializer
+        return Serializer(*args, **kwargs)
 
 
 authorize = AuthorizeView.as_view()
