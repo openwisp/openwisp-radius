@@ -8,8 +8,8 @@ from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SE
 from django_freeradius.tests import FileMixin
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 from django_freeradius.tests.base.test_admin import BaseTestAdmin
-from django_freeradius.tests.base.test_api import (BaseTestApi, BaseTestApiReject, BaseTestAutoGroupname,
-                                                   BaseTestAutoGroupnameDisabled)
+from django_freeradius.tests.base.test_api import (BaseTestApi, BaseTestApiReject, BaseTestApiUserToken,
+                                                   BaseTestAutoGroupname, BaseTestAutoGroupnameDisabled)
 from django_freeradius.tests.base.test_batch_add_users import BaseTestCSVUpload
 from django_freeradius.tests.base.test_commands import BaseTestCommands
 from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiusAccounting,
@@ -350,6 +350,35 @@ class TestAutoGroupnameDisabled(ApiTokenMixin,
     radius_accounting_model = RadiusAccounting
     radius_usergroup_model = RadiusUserGroup
     user_model = get_user_model()
+
+
+class TestApiUserToken(ApiTokenMixin,
+                       BaseTestApiUserToken,
+                       BaseTestCase):
+    user_model = User
+
+    def _get_url(self):
+        return reverse('freeradius:user_token',
+                       args=[self.default_org.slug])
+
+    def test_user_auth_token_400_organization(self):
+        url = self._get_url()
+        opts = dict(username='tester',
+                    password='tester')
+        self._create_user(**opts)
+        OrganizationUser.objects.all().delete()
+        r = self.client.post(url, opts)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('is not member',
+                      r.json()['non_field_errors'][0])
+
+    def test_user_auth_token_404(self):
+        url = reverse('freeradius:user_token',
+                      args=['wrong'])
+        opts = dict(username='tester',
+                    password='tester')
+        r = self.client.post(url, opts)
+        self.assertEqual(r.status_code, 404)
 
 
 class TestCommands(FileMixin, CallCommandMixin,

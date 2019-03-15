@@ -8,5 +8,11 @@ urlpatterns = [
     url(r'^accounting/$', views.accounting, name='accounting'),
     url(r'^batch/$', views.batch, name='batch'),
     # registration differentiated by organization
-    url(r'^registration/(?P<slug>[\w-]+)/$', views.register, name='rest_register'),
+    url(r'^registration/(?P<slug>[\w-]+)/$',
+        views.register,
+        name='rest_register'),
+    # obtaining the user token is also different for every org
+    url(r'^user-token/(?P<slug>[\w-]+)/$',
+        views.obtain_auth_token,
+        name='user_token'),
 ]
