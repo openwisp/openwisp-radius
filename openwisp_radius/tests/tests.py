@@ -329,6 +329,20 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         self.assertEqual(len(data.json()), 1)
         self.assertEqual(data.json()[0]['organization'], str(self.default_org.pk))
 
+    def test_api_batch_add_users(self):
+        post_url = '{}{}'.format(reverse('freeradius:batch'), self.token_querystring)
+        response = self.client.post(post_url, {
+            'name': 'test_name',
+            'prefix': 'test',
+            'number_of_users': 5,
+            'strategy': 'prefix',
+        })
+        users = response.json()['users']
+        for user in users:
+            test_user = self.user_model.objects.get(pk=user['id'])
+            with self.subTest(test_user=test_user):
+                self.assertIn((self.default_org.pk,), test_user.organizations_pk)
+
 
 class TestApiReject(ApiTokenMixin,
                     BaseTestApiReject,
