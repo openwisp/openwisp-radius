@@ -20,6 +20,7 @@ from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from openwisp_users.models import Organization, OrganizationUser
+from openwisp_utils.tests.utils import TestMultitenantAdminMixin
 
 from ..models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
                       RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
@@ -170,7 +171,7 @@ class TestRadiusBatch(BaseTestRadiusBatch, BaseTestCase):
 
 
 class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
-                BaseTestAdmin, BaseTestCase):
+                BaseTestAdmin, BaseTestCase, TestMultitenantAdminMixin):
     app_name = 'openwisp_radius'
     nas_model = Nas
     radius_accounting_model = RadiusAccounting
@@ -182,6 +183,16 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
     radius_reply_model = RadiusReply
     radius_usergroup_model = RadiusUserGroup
     radius_group_model = RadiusGroup
+    user_model = User
+    operator_permission_filters = [
+        {'codename__endswith': 'nas'},
+        {'codename__endswith': 'accounting'},
+        {'codename__endswith': 'batch'},
+        {'codename__endswith': 'check'},
+        {'codename__endswith': 'reply'},
+        {'codename__endswith': 'group'},
+        {'codename__endswith': 'user'},
+    ]
 
     def setUp(self):
         self.default_org = Organization.objects.get(slug='default')
@@ -203,6 +214,18 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
         data['organization'] = self.default_org.pk
         return data
 
+    def _login(self, username='admin', password='tester'):
+        self.client.force_login(self.user_model.objects.get(username=username))
+
+    def _get_url(self, url, user=False, group=False):
+        response = self.client.get(url)
+        user_url = '/admin/openwisp_users/user/autocomplete/'
+        group_url = '/admin/openwisp_radius/radiusgroup/autocomplete/'
+        if user_url in str(response.content) and user:
+            return user_url
+        if group_url in str(response.content) and group:
+            return group_url
+
     def test_radiusbatch_org_user(self):
         self.assertEqual(self.radius_batch_model.objects.count(), 0)
         add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_name))
@@ -212,6 +235,320 @@ class TestAdmin(FileMixin, CallCommandMixin, PostParamsMixin,
         for u in OrganizationUser.objects.all():
             self.assertEqual(u.organization,
                              self.radius_batch_model.objects.first().organization)
+
+    def _create_multitenancy_test_env(self,
+                                      usergroup=False,
+                                      groupcheck=False,
+                                      groupreply=False):
+        org1 = self._create_org(name='testorg1',
+                                is_active=True,
+                                slug='testorg1')
+        org2 = self._create_org(name='testorg2',
+                                is_active=True,
+                                slug='testorg2')
+        inactive = self._create_org(name='inactive org',
+                                    is_active=False,
+                                    slug='inactive-org')
+        operator = self._create_operator()
+        org1.add_user(operator, is_admin=True)
+        inactive.add_user(operator)
+        user11 = User.objects.create(username='user11',
+                                     password='User_11',
+                                     email='user11@g.com',)
+        user22 = User.objects.create(username='user22',
+                                     password='User_22',
+                                     email='user22@g.com')
+        user33 = User.objects.create(username='user33',
+                                     password='User_33',
+                                     email='user33@g.com')
+        org1.add_user(user11)
+        org2.add_user(user22)
+        inactive.add_user(user33)
+        rc1 = RadiusCheck.objects.create(username='user1',
+                                         attribute='NT-Password',
+                                         value='User_1',
+                                         organization=org1)
+        rc2 = RadiusCheck.objects.create(username='user2',
+                                         attribute='NT-Password',
+                                         value='User_2',
+                                         organization=org2)
+        rc3 = RadiusCheck.objects.create(username='user3',
+                                         attribute='NT-Password',
+                                         value='User_3',
+                                         organization=inactive)
+        rr1 = RadiusReply.objects.create(username='user1',
+                                         attribute='NT-Password',
+                                         value='User_1',
+                                         organization=org1)
+        rr2 = RadiusReply.objects.create(username='user2',
+                                         attribute='NT-Password',
+                                         value='User_2',
+                                         organization=org2)
+        rr3 = RadiusReply.objects.create(username='user3',
+                                         attribute='NT-Password',
+                                         value='User_3',
+                                         organization=inactive)
+        rg1 = RadiusGroup.objects.create(name='radiusgroup1org', organization=org1)
+        rg2 = RadiusGroup.objects.create(name='radiusgroup2org', organization=org2)
+        rg3 = RadiusGroup.objects.create(name='radiusgroup3-inactive', organization=inactive)
+        nas1 = Nas.objects.create(name='nas1org',
+                                  short_name='nas1org',
+                                  secret='nas1-secret',
+                                  type='Other',
+                                  organization=org1)
+        nas2 = Nas.objects.create(name='nas2org',
+                                  short_name='nas2org',
+                                  secret='nas2-secret',
+                                  type='Other',
+                                  organization=org2)
+        nas3 = Nas.objects.create(name='nas3-inactive',
+                                  short_name='nas3org',
+                                  secret='nas3-secret',
+                                  type='Other',
+                                  organization=inactive)
+        ra1 = RadiusAccounting.objects.create(username='user1',
+                                              nas_ip_address='172.16.64.92',
+                                              unique_id='001',
+                                              session_id='001',
+                                              organization=org1)
+        ra2 = RadiusAccounting.objects.create(username='user2',
+                                              nas_ip_address='172.16.64.93',
+                                              unique_id='002',
+                                              session_id='002',
+                                              organization=org2)
+        ra3 = RadiusAccounting.objects.create(username='user3',
+                                              nas_ip_address='172.16.64.95',
+                                              unique_id='003',
+                                              session_id='003',
+                                              organization=inactive)
+        rb1 = RadiusBatch.objects.create(name='radiusbacth1org',
+                                         organization=org1,
+                                         strategy='prefix',
+                                         prefix='test-prefix1')
+        rb2 = RadiusBatch.objects.create(name='radiusbacth2org',
+                                         organization=org2,
+                                         strategy='prefix',
+                                         prefix='test-prefix2')
+        rb3 = RadiusBatch.objects.create(name='radiusbacth3-inactive',
+                                         organization=inactive,
+                                         strategy='prefix',
+                                         prefix='test-prefix3')
+        data = dict(rb1=rb1, rb2=rb2, rb3=rb3,
+                    nas1=nas1, nas2=nas2, nas3=nas3,
+                    rg1=rg1, rg2=rg2, rg3=rg3,
+                    rr1=rr1, rr2=rr2, rr3=rr3,
+                    rc1=rc1, rc2=rc2, rc3=rc3,
+                    ra1=ra1, ra2=ra2, ra3=ra3,
+                    org1=org1, org2=org2,
+                    inactive=inactive,
+                    user11=user11, user22=user22, user33=user33,
+                    operator=operator)
+        if usergroup:
+            ug1 = self._create_radius_usergroup(user=user11, group=rg1)
+            ug2 = self._create_radius_usergroup(user=user22, group=rg2)
+            ug3 = self._create_radius_usergroup(user=user33, group=rg3)
+            data.update(dict(ug1=ug1, ug2=ug2, ug3=ug3))
+        if groupcheck:
+            gc1 = self._create_radius_groupcheck(group=rg1,
+                                                 attribute='test-attr1',
+                                                 value='1')
+            gc2 = self._create_radius_groupcheck(group=rg2,
+                                                 attribute='test-attr2',
+                                                 value='2')
+            gc3 = self._create_radius_groupcheck(group=rg3,
+                                                 attribute='test-attr3',
+                                                 value='3')
+            data.update(dict(gc1=gc1, gc2=gc2, gc3=gc3))
+        if groupreply:
+            gr1 = self._create_radius_groupreply(group=rg1,
+                                                 attribute='test-attr1',
+                                                 value='1')
+            gr2 = self._create_radius_groupreply(group=rg2,
+                                                 attribute='test-attr2',
+                                                 value='2')
+            gr3 = self._create_radius_groupreply(group=rg3,
+                                                 attribute='test-attr3',
+                                                 value='3')
+            data.update(dict(gr1=gr1, gr2=gr2, gr3=gr3))
+        return data
+
+    def test_radiuscheck_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiuscheck_changelist'.format(self.app_name)),
+            visible=[data['rc1'].username, data['org1'].name],
+            hidden=[data['rc2'].username, data['org2'].name,
+                    data['rc3'].username]
+        )
+
+    def test_radiuscheck_organization_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiuscheck_add'.format(self.app_name)),
+            visible=[data['org1'].name],
+            hidden=[data['org2'].name, data['inactive']],
+            select_widget=True
+        )
+
+    def test_radiuscheck_user_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiuscheck_add'.format(self.app_name)), user=True),
+            visible=[data['user11']],
+            hidden=[data['user22']],
+        )
+
+    def test_radiusreply_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusreply_changelist'.format(self.app_name)),
+            visible=[data['rr1'].username, data['org1'].name],
+            hidden=[data['rr2'].username, data['org2'],
+                    data['rr3'].username]
+        )
+
+    def test_radiusreply_organization_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusreply_add'.format(self.app_name)),
+            visible=[data['org1'].name],
+            hidden=[data['org2'].name, data['inactive']],
+            select_widget=True
+        )
+
+    def test_radiusreply_user_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiusreply_add'.format(self.app_name)), user=True),
+            visible=[data['user11']],
+            hidden=[data['user22']],
+        )
+
+    def test_radiusgroup_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusgroup_changelist'.format(self.app_name)),
+            visible=[data['rg1'].name, data['org1'].name],
+            hidden=[data['org2'].name, data['rg2'].name,
+                    data['rg3'].name]
+        )
+
+    def test_radiusgroup_organization_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=(reverse('admin:{0}_radiusgroup_add'.format(self.app_name))),
+            visible=[data['org1'].name],
+            hidden=[data['org2'].name, data['inactive']],
+            select_widget=True
+        )
+
+    def test_nas_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_nas_changelist'.format(self.app_name)),
+            visible=[data['nas1'].name, data['org1'].name],
+            hidden=[data['nas2'].name, data['org2'].name,
+                    data['nas3'].name]
+        )
+
+    def test_nas_organization_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_nas_add'.format(self.app_name)),
+            visible=[data['org1'].name],
+            hidden=[data['org2'].name, data['inactive']],
+            select_widget=True
+        )
+
+    def test_radiusaccounting_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusaccounting_changelist'.format(self.app_name)),
+            visible=[data['ra1'].username, data['org1'].name],
+            hidden=[data['ra2'].username, data['org2'].name,
+                    data['ra3'].username]
+        )
+
+    def test_radiusbatch_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusbatch_changelist'.format(self.app_name)),
+            visible=[data['rb1'].name, data['org1'].name],
+            hidden=[data['rb2'].name, data['org2'].name,
+                    data['rb3'].name]
+        )
+
+    def test_radiusbatch_organization_fk_queryset(self):
+        data = self._create_multitenancy_test_env()
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusbatch_add'.format(self.app_name)),
+            visible=[data['org1'].name],
+            hidden=[data['org2'].name, data['inactive']],
+            select_widget=True
+        )
+
+    def test_radius_usergroup_queryset(self):
+        data = self._create_multitenancy_test_env(usergroup=True)
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiususergroup_changelist'.format(self.app_name)),
+            visible=[data['ug1'].group, data['ug1'].user],
+            hidden=[data['ug2'].group, data['ug2'].user,
+                    data['ug3'].user]
+        )
+
+    def test_radius_usergroup_group_fk_queryset(self):
+        data = self._create_multitenancy_test_env(usergroup=True)
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiususergroup_add'.format(self.app_name)),
+                              group=True),
+            visible=[data['rg1']],
+            hidden=[data['rg2']]
+        )
+
+    def test_radius_usergroup_user_fk_queryset(self):
+        data = self._create_multitenancy_test_env(usergroup=True)
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiususergroup_add'.format(self.app_name)),
+                              user=True),
+            visible=[data['user11']],
+            hidden=[data['user22']]
+        )
+
+    def test_radius_groupcheck_queryset(self):
+        data = self._create_multitenancy_test_env(groupcheck=True)
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusgroupcheck_changelist'.format(self.app_name)),
+            visible=[data['gc1'].group, data['gc1'].attribute],
+            hidden=[data['gc2']. group, data['gc2'].attribute,
+                    data['gc3']]
+        )
+
+    def test_radius_groupcheck_group_fk_queryset(self):
+        data = self._create_multitenancy_test_env(groupcheck=True)
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiusgroupcheck_add'.format(self.app_name)),
+                              group=True),
+            visible=[data['rg1']],
+            hidden=[data['rg2']]
+        )
+
+    def test_radius_groupreply_queryset(self):
+        data = self._create_multitenancy_test_env(groupreply=True)
+        self._test_multitenant_admin(
+            url=reverse('admin:{0}_radiusgroupreply_changelist'.format(self.app_name)),
+            visible=[data['gr1'].group, data['gr1'].attribute],
+            hidden=[data['gr2'].group, data['gr2'].attribute,
+                    data['gr3']]
+        )
+
+    def test_radius_groupreply_group_fk_queryset(self):
+        data = self._create_multitenancy_test_env(groupreply=True)
+        self._test_multitenant_admin(
+            url=self._get_url(reverse('admin:{0}_radiusgroupreply_add'.format(self.app_name)),
+                              group=True),
+            visible=[data['rg1']],
+            hidden=[data['rg2']]
+        )
 
 
 class ApiTokenMixin(BasePostParamsMixin):
