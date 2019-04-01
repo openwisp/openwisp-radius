@@ -1,8 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils.encoding import force_bytes, force_text
+from django.utils.http import urlsafe_base64_encode
 from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
 from django_freeradius.tests import FileMixin
@@ -18,6 +22,8 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
                                                       BaseTestRadiusReply)
 from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
 
 from openwisp_users.models import Organization, OrganizationUser
 from openwisp_utils.tests.utils import TestMultitenantAdminMixin
@@ -557,6 +563,7 @@ class ApiTokenMixin(BasePostParamsMixin):
     in this mixin, because it must be inferred
     from the token authentication
     """
+
     def setUp(self):
         org = self._create_org()
         rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
@@ -679,6 +686,174 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
             test_user = self.user_model.objects.get(pk=user['id'])
             with self.subTest(test_user=test_user):
                 self.assertIn((self.default_org.pk,), test_user.organizations_pk)
+
+    def test_api_password_change(self):
+        test_user = self.user_model.objects.create_user(
+            username='test_name',
+            password='test_password',
+        )
+        self.default_org.add_user(test_user)
+        login_payload = {
+            'username': 'test_name',
+            'password': 'test_password'
+        }
+        login_url = reverse('freeradius:user_token', args=(self.default_org.slug,))
+        login_response = self.client.post(login_url, data=login_payload)
+        token = login_response.json()['key']
+
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token))
+
+        # invalid organization
+        password_change_url = reverse('freeradius:rest_password_change', args=('invalid-org',))
+        new_password_payload = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password'
+        }
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 404)
+
+        # user not a member of the organization
+        test_user1 = self.user_model.objects.create_user(
+            username='test_name1',
+            password='test_password1',
+            email='test1@email.com'
+        )
+        token1 = Token.objects.create(user=test_user1)
+        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token1))
+        password_change_url = reverse('freeradius:rest_password_change', args=(self.default_org.slug,))
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 400)
+
+        # pass1 and pass2 are not equal
+        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token))
+        password_change_url = reverse('freeradius:rest_password_change', args=(self.default_org.slug,))
+        new_password_payload = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password_different'
+        }
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("The two password fields didn't match.", response.data['new_password2'])
+
+        # Password successfully changed
+        new_password_payload = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password'
+        }
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('New password has been saved.', response.data['detail'])
+
+        # user should not be able to login using old password
+        login_response = self.client.post(login_url, data=login_payload)
+        self.assertEqual(login_response.status_code, 400)
+
+        # new password should work
+        login_payload['password'] = new_password_payload['new_password1']
+        login_response = self.client.post(login_url, data=login_payload)
+        token = login_response.json()['key']
+        self.assertEqual(login_response.status_code, 200)
+
+    def test_api_password_reset(self):
+        test_user = self.user_model.objects.create_user(
+            username='test_name',
+            password='test_password',
+            email='test@email.com'
+        )
+        self.default_org.add_user(test_user)
+        mail_count = len(mail.outbox)
+        reset_payload = {'email': 'test@email.com'}
+
+        # wrong org
+        password_reset_url = reverse('freeradius:rest_password_reset', args=['wrong-org'])
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 404)
+
+        # email does not exist in database
+        password_reset_url = reverse('freeradius:rest_password_reset', args=[self.default_org.slug])
+        reset_payload = {'email': 'wrong@email.com'}
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 404)
+
+        # email not registered with org
+        self.user_model.objects.create_user(
+            username='test_name1',
+            password='test_password',
+            email='test1@email.com'
+        )
+        reset_payload = {'email': 'test1@email.com'}
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 400)
+
+        # valid payload
+        reset_payload = {'email': 'test@email.com'}
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(len(mail.outbox), mail_count + 1)
+
+        url_kwargs = {
+            'uid': urlsafe_base64_encode(force_bytes(test_user.pk)),
+            'token': default_token_generator.make_token(test_user)
+        }
+        password_confirm_url = reverse('freeradius:rest_password_reset_confirm', args=[self.default_org.slug])
+
+        # wrong token
+        data = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password',
+            'uid': force_text(url_kwargs['uid']),
+            'token': '-wrong-token-'
+        }
+        confirm_response = self.client.post(password_confirm_url, data=data)
+        self.assertEqual(confirm_response.status_code, 400)
+
+        # wrong uid
+        data = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password',
+            'uid': '-wrong-uid-',
+            'token': url_kwargs['token']
+        }
+        confirm_response = self.client.post(password_confirm_url, data=data)
+        self.assertEqual(confirm_response.status_code, 404)
+
+        # wrong token and uid
+        data = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password',
+            'uid': '-wrong-uid-',
+            'token': '-wrong-token-'
+        }
+        confirm_response = self.client.post(password_confirm_url, data=data)
+        self.assertEqual(confirm_response.status_code, 404)
+
+        # valid payload
+        data = {
+            'new_password1': 'test_new_password',
+            'new_password2': 'test_new_password',
+            'uid': force_text(url_kwargs['uid']),
+            'token': url_kwargs['token']
+        }
+        confirm_response = self.client.post(password_confirm_url, data=data)
+        self.assertEqual(confirm_response.status_code, 200)
+        self.assertIn('Password has been reset with the new password.', confirm_response.data['detail'])
+
+        # user should not be able to login with old password
+        login_payload = {
+            'username': 'test_name',
+            'password': 'test_password'
+        }
+        login_url = reverse('freeradius:user_token', args=(self.default_org.slug,))
+        login_response = self.client.post(login_url, data=login_payload)
+        self.assertEqual(login_response.status_code, 400)
+
+        # user should be able to login with new password
+        login_payload = {
+            'username': 'test_name',
+            'password': 'test_new_password'
+        }
+        login_response = self.client.post(login_url, data=login_payload)
+        self.assertEqual(login_response.status_code, 200)
 
 
 class TestApiReject(ApiTokenMixin,

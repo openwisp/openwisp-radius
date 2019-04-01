@@ -161,3 +161,14 @@ try:
     from local_settings import *
 except ImportError:
     pass
+
+REST_AUTH_SERIALIZERS = {
+    'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
+}
+
+PASSWORD_RESET_URLS = {
+    # fallback in case the specific org page is not defined
+    'default': 'https://example.com/{organization}/password/reset/{uid}/{token}',
+    # use the uuid because the slug can change
+    # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://organization.com/{organization}/password/reset/{uid}/{token}',
+}
