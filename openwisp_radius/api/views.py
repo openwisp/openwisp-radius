@@ -1,10 +1,15 @@
 import logging
+from uuid import UUID
 
 from allauth.account import app_settings as allauth_settings
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.http import Http404
+from django.utils.encoding import force_bytes, force_text
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_freeradius.api.views import AccountingView as BaseAccountingView
@@ -14,7 +19,11 @@ from django_freeradius.api.views import ObtainAuthTokenView as BaseObtainAuthTok
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
+from rest_auth.views import PasswordChangeView as BasePasswordChangeView
+from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
+from rest_auth.views import PasswordResetView as BasePasswordResetView
 from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import TokenAuthentication as BaseTokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed, ParseError, ValidationError
 from rest_framework.serializers import Serializer
 
@@ -24,6 +33,7 @@ from ..models import OrganizationRadiusSettings
 
 logger = logging.getLogger(__name__)
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
+User = get_user_model()
 
 
 class TokenAuthentication(BaseAuthentication):
@@ -133,6 +143,13 @@ class DispatchOrgMixin(object):
             raise Http404()
         return super().dispatch(*args, **kwargs)
 
+    def validate_membership(self, user):
+        if (self.organization.pk,) not in user.organizations_pk:
+            message = _('User "{}" is not member '
+                        'of "{}"').format(user.username, self.organization.slug)
+            logger.warning(message)
+            raise ValidationError({'non_field_errors': [message]})
+
 
 class RegisterView(DispatchOrgMixin, BaseRegisterView):
     def perform_create(self, serializer):
@@ -163,12 +180,73 @@ register = RegisterView.as_view()
 class ObtainAuthTokenView(DispatchOrgMixin, BaseObtainAuthTokenView):
     def get_user(self, serializer, *args, **kwargs):
         user = serializer.validated_data['user']
-        if (self.organization.pk,) not in user.organizations_pk:
-            message = _('User "{}" is not member '
-                        'of "{}"').format(user.username, kwargs['slug'])
-            logger.warning(message)
-            raise ValidationError({'non_field_errors': [message]})
+        self.validate_membership(user)
         return user
 
 
 obtain_auth_token = csrf_exempt(ObtainAuthTokenView.as_view())
+
+
+class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
+    authentication_classes = (BaseTokenAuthentication,)
+
+    def post(self, request, *args, **kwargs):
+        self.validate_membership(request.user)
+        return super().post(request, *args, **kwargs)
+
+
+password_change = PasswordChangeView.as_view()
+
+
+class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
+    def get_serializer_context(self):
+        user = self.get_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+        token = default_token_generator.make_token(user)
+
+        default_url = settings.PASSWORD_RESET_URLS.get('default')
+        password_reset_url = settings.PASSWORD_RESET_URLS.get(str(self.organization.pk), default_url)
+        password_reset_url = password_reset_url.format(
+            organization=self.organization.slug,
+            uid=uid,
+            token=token
+        )
+
+        context = {
+            'request': self.request,
+            'password_reset_url': password_reset_url
+        }
+        return context
+
+    def get_user(self, *args, **kwargs):
+        if self.request.POST.get('email', None):
+            email = self.request.POST['email']
+            try:
+                user = User.objects.get(email=email)
+                self.validate_membership(user)
+                return user
+            except User.DoesNotExist:
+                raise Http404()
+
+
+password_reset = PasswordResetView.as_view()
+
+
+class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
+    def post(self, request, *args, **kwargs):
+        self.validate_user()
+        return super().post(request, *args, **kwargs)
+
+    def validate_user(self, *args, **kwargs):
+        if self.request.POST.get('uid', None):
+            try:
+                uid = force_text(urlsafe_base64_decode(self.request.POST['uid']))
+                uid = UUID(str(uid))
+                user = User.objects.get(pk=uid)
+                self.validate_membership(user)
+                return user
+            except (User.DoesNotExist, ValueError):
+                raise Http404()
+
+
+password_reset_confirm = PasswordResetConfirmView.as_view()
