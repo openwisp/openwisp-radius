@@ -29,6 +29,7 @@ from rest_framework.serializers import Serializer
 
 from openwisp_users.models import Organization, OrganizationUser
 
+from .. import settings as app_settings
 from ..models import OrganizationRadiusSettings
 
 logger = logging.getLogger(__name__)
@@ -203,15 +204,15 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         user = self.get_user()
         uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
         token = default_token_generator.make_token(user)
-
-        default_url = settings.PASSWORD_RESET_URLS.get('default')
-        password_reset_url = settings.PASSWORD_RESET_URLS.get(str(self.organization.pk), default_url)
+        password_reset_urls = app_settings.PASSWORD_RESET_URLS
+        default_url = password_reset_urls.get('default')
+        password_reset_url = password_reset_urls.get(str(self.organization.pk),
+                                                     default_url)
         password_reset_url = password_reset_url.format(
             organization=self.organization.slug,
             uid=uid,
             token=token
         )
-
         context = {
             'request': self.request,
             'password_reset_url': password_reset_url
@@ -223,10 +224,10 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
             email = self.request.POST['email']
             try:
                 user = User.objects.get(email=email)
-                self.validate_membership(user)
-                return user
             except User.DoesNotExist:
                 raise Http404()
+            self.validate_membership(user)
+            return user
 
 
 password_reset = PasswordResetView.as_view()
@@ -243,10 +244,10 @@ class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
                 uid = force_text(urlsafe_base64_decode(self.request.POST['uid']))
                 uid = UUID(str(uid))
                 user = User.objects.get(pk=uid)
-                self.validate_membership(user)
-                return user
             except (User.DoesNotExist, ValueError):
                 raise Http404()
+            self.validate_membership(user)
+            return user
 
 
 password_reset_confirm = PasswordResetConfirmView.as_view()

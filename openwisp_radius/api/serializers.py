@@ -16,6 +16,5 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
                 'password_reset_url': password_reset_url
             }
         }
-
         opts.update(self.get_email_options())
         self.reset_form.save(**opts)
