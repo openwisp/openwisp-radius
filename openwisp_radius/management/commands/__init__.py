@@ -1,4 +1,5 @@
 import sys
+
 from openwisp_users.models import Organization
 
 
