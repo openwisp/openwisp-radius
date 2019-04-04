@@ -25,7 +25,7 @@ try:  # pragma: no cover
             '{organization}' in value,
             '{uid}' in value,
             '{token}' in value,
-        ]), ('{} must contain '.format(value) +
+        ]), ('{} must contain '.format(value) +  # noqa
              '{organization}, {uid} and {token}')
 except AssertionError as e:
     raise ImproperlyConfigured(
