@@ -17,6 +17,7 @@ from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import ObtainAuthTokenView as BaseObtainAuthTokenView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
+from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_auth.views import PasswordChangeView as BasePasswordChangeView
@@ -179,6 +180,8 @@ register = RegisterView.as_view()
 
 
 class ObtainAuthTokenView(DispatchOrgMixin, BaseObtainAuthTokenView):
+    serializer_class = rest_auth_settings.TokenSerializer
+
     def get_user(self, serializer, *args, **kwargs):
         user = serializer.validated_data['user']
         self.validate_membership(user)
