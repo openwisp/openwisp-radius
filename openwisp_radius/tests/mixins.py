@@ -1,8 +1,11 @@
+from django.test import TestCase
 from django_freeradius.tests import CallCommandMixin as BaseCallCommandMixin
 from django_freeradius.tests import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 
 from openwisp_users.models import Organization
+
+from ..models import OrganizationRadiusSettings
 
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
@@ -43,3 +46,25 @@ class PostParamsMixin(BasePostParamsMixin):
         if not model or hasattr(model, 'organization'):
             options.update({'organization': str(self._create_org().pk)})
         return super()._get_post_defaults(options, model)
+
+
+class DefaultOrgMixin(object):
+    def setUp(self):
+        self.default_org = Organization.objects.get(slug='default')
+        super().setUp()
+
+
+class ApiTokenMixin(BasePostParamsMixin):
+    def setUp(self):
+        super().setUp()
+        org = self.default_org
+        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
+                                                        organization=org)
+        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
+        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
+
+
+class BaseTestCase(DefaultOrgMixin,
+                   CreateRadiusObjectsMixin,
+                   TestCase):
+    pass
