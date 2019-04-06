@@ -12,6 +12,8 @@ from openwisp_users.mixins import OrgMixin
 from openwisp_users.models import OrganizationUser
 from openwisp_utils.base import KeyField, UUIDModel
 
+from . import settings as app_settings
+
 
 class RadiusCheck(OrgMixin, AbstractRadiusCheck):
     class Meta(AbstractRadiusCheck.Meta):
@@ -123,6 +125,10 @@ class OrganizationRadiusSettings(UUIDModel):
                                         related_name='radius_settings',
                                         on_delete=models.CASCADE)
     token = KeyField(max_length=32)
+    sms_verification = models.BooleanField(default=app_settings.DEFAULT_SMS_VERIFICATION,
+                                           help_text=_('whether users who sign up should '
+                                                       'be required to verify their mobile '
+                                                       'phone number via SMS'))
 
     class Meta:
         verbose_name = _('Organization radius settings')

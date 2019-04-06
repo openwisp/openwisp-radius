@@ -11,7 +11,7 @@ PASSWORD_RESET_URLS = {
 }
 
 PASSWORD_RESET_URLS.update(getattr(settings, 'OPENWISP_RADIUS_PASSWORD_RESET_URLS', {}))
-
+DEFAULT_SMS_VERIFICATION = getattr(settings, 'OPENWISP_RADIUS_DEFAULT_SMS_VERIFICATION', False)
 
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS

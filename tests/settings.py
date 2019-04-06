@@ -162,6 +162,10 @@ REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
 }
 
+REST_AUTH_REGISTER_SERIALIZERS = {
+    'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer',
+}
+
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # fallback in case the specific org page is not defined
 #     'default': 'https://example.com/{organization}/password/reset/{uid}/{token}',

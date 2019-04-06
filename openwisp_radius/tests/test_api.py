@@ -57,6 +57,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.first()
         self.assertIn((self.default_org.pk,), user.organizations_pk)
+        self.assertTrue(user.is_active)
 
     def test_register_404(self):
         url = reverse('freeradius:rest_register', args=['madeup'])
@@ -361,3 +362,41 @@ class TestApiValidateToken(ApiTokenMixin,
         )
         self.default_org.add_user(user)
         return user
+
+
+class TestSmsVerification(ApiTokenMixin, BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.default_org.radius_settings.sms_verification = True
+        self.default_org.radius_settings.save()
+
+    def test_register_phone_required(self):
+        self.assertEqual(User.objects.count(), 0)
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password',
+            'mobile_phone': ''
+        })
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('mobile_phone', r.data)
+
+    def test_register_201(self):
+        self.assertEqual(User.objects.count(), 0)
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password',
+            'mobile_phone': '+393664255801'
+        })
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('key', r.data)
+        self.assertEqual(User.objects.count(), 1)
+        user = User.objects.first()
+        self.assertIn((self.default_org.pk,), user.organizations_pk)
+        self.assertEqual(user.phone_number, '+393664255801')
+        self.assertFalse(user.is_active)
