@@ -18,6 +18,7 @@ from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiu
                                                       BaseTestRadiusReply, BaseTestRadiusToken)
 from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
+from freezegun import freeze_time
 
 from openwisp_users.models import Organization, OrganizationUser
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
@@ -34,6 +35,7 @@ _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
                    'attribute': 'NT-Password'}
 _RADCHECK_ENTRY_PW_UPDATE = {'username': 'Monica', 'new_value': 'Cam0_liX',
                              'attribute': 'NT-Password'}
+_TEST_DATE = datetime.now().date()
 
 User = get_user_model()
 
@@ -752,6 +754,7 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail('Exception not raised')
 
+    @freeze_time(_TEST_DATE)
     def test_expired(self):
         token = self._create_token()
         token.valid_until = timezone.now() - timedelta(days=1)
@@ -764,6 +767,7 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail('Exception not raised')
 
+    @freeze_time(_TEST_DATE)
     def test_user_limit(self):
         token = self._create_token()
         self._create_token(user=token.user)
@@ -775,6 +779,7 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail('ValidationError not raised')
 
+    @freeze_time(_TEST_DATE)
     def test_ip_limit(self):
         token = self._create_token()
         self._create_token(user=token.user)
@@ -788,5 +793,19 @@ class TestPhoneToken(BaseTestCase):
             self._create_token(user=user2)
         except ValidationError as e:
             self.assertIn('ip', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
+
+    def test_user_without_phone(self):
+        user = self._create_user(
+            username='tester',
+            password='tester',
+        )
+        try:
+            self._create_token(user=user)
+        except ValidationError as e:
+            self.assertIn('user', e.message_dict)
+            self.assertIn('does not have a phone number',
+                          str(e.message_dict['user']))
         else:
             self.fail('ValidationError not raised')

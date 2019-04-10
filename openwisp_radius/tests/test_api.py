@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
@@ -7,14 +9,18 @@ from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode
 from django_freeradius.tests.base.test_api import (BaseTestApi, BaseTestApiReject, BaseTestApiUserToken,
                                                    BaseTestApiValidateToken)
+from freezegun import freeze_time
+
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from openwisp_users.models import Organization, OrganizationUser
 
-from ..models import RadiusAccounting, RadiusBatch, RadiusPostAuth, RadiusToken
+from ..models import PhoneToken, RadiusAccounting, RadiusBatch, RadiusPostAuth, RadiusToken
+from .. import settings as app_settings
 from .mixins import ApiTokenMixin, BaseTestCase
 
+_TEST_DATE = datetime.now().date()
 User = get_user_model()
 
 
@@ -203,6 +209,11 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         token = login_response.json()['key']
         self.assertEqual(login_response.status_code, 200)
 
+        # authorization required
+        client.credentials(HTTP_AUTHORIZATION='Token wrong')
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 401)
+
     def test_api_password_reset(self):
         test_user = self.user_model.objects.create_user(
             username='test_name',
@@ -365,6 +376,8 @@ class TestApiValidateToken(ApiTokenMixin,
 
 
 class TestSmsVerification(ApiTokenMixin, BaseTestCase):
+    user_model = User
+
     def setUp(self):
         super().setUp()
         self.default_org.radius_settings.sms_verification = True
@@ -400,3 +413,57 @@ class TestSmsVerification(ApiTokenMixin, BaseTestCase):
         self.assertIn((self.default_org.pk,), user.organizations_pk)
         self.assertEqual(user.phone_number, '+393664255801')
         self.assertFalse(user.is_active)
+
+    def test_create_phone_token_401(self):
+        url = reverse('freeradius:phone_token', args=[self.default_org.slug])
+        r = self.client.post(url)
+        self.assertEqual(r.status_code, 401)
+
+    def test_create_phone_token_201(self):
+        self.test_register_201()
+        token = Token.objects.last()
+        url = reverse('freeradius:phone_token', args=[self.default_org.slug])
+        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        self.assertEqual(r.status_code, 201)
+        phonetoken = PhoneToken.objects.first()
+        self.assertIsNotNone(phonetoken)
+
+    def test_create_phone_token_400_not_member(self):
+        self.test_register_201()
+        OrganizationUser.objects.all().delete()
+        token = Token.objects.last()
+        url = reverse('freeradius:phone_token', args=[self.default_org.slug])
+        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('non_field_errors', r.data)
+        self.assertIn('is not member', str(r.data['non_field_errors']))
+
+    def test_create_phone_token_400_validation_error(self):
+        user = self._create_user(**{
+            'username': 'tester',
+            'password': 'tester'
+        })
+        token = Token.objects.create(user=user)
+        url = reverse('freeradius:phone_token', args=[self.default_org.slug])
+        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('user', r.data)
+        self.assertIn('does not have a phone number', str(r.data['user']))
+
+    @freeze_time(_TEST_DATE)
+    def test_create_phone_token_400_limit_reached(self):
+        self.test_register_201()
+        token = Token.objects.last()
+        token_header = 'Token {}'.format(token.key)
+        max_value = app_settings.SMS_TOKEN_MAX_USER_DAILY
+        url = reverse('freeradius:phone_token', args=[self.default_org.slug])
+        for n in range(1, max_value + 2):
+            r = self.client.post(
+                url,
+                HTTP_AUTHORIZATION=token_header
+            )
+            if n > max_value:
+                self.assertEqual(r.status_code, 400)
+                self.assertIn('user', r.data)
+            else:
+                self.assertEqual(r.status_code, 201)

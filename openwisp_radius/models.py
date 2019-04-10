@@ -1,5 +1,7 @@
 import logging
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -182,11 +184,16 @@ class PhoneToken(TimeStampedEditableModel):
         )
 
     def clean(self):
-        qs = PhoneToken.objects.filter(
-            created__year=self.created.year,
-            created__month=self.created.month,
-            created__day=self.created.day
-        )
+        if not hasattr(self, 'user'):
+            return
+        if not self.user.phone_number:
+            message = 'user does not have a phone number'
+            logger.warning(message)
+            raise ValidationError({'user': _(message)})
+        date_start = self.created.date()
+        date_end = date_start + timedelta(days=1)
+        qs = PhoneToken.objects.filter(created__range=[date_start,
+                                                       date_end])
         # limit generation of tokens per day by user
         user_token_count = qs.filter(user=self.user) \
                              .count()

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -24,15 +25,20 @@ from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_auth.views import PasswordChangeView as BasePasswordChangeView
 from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from rest_auth.views import PasswordResetView as BasePasswordResetView
+from rest_framework import serializers
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.authentication import TokenAuthentication as BaseTokenAuthentication
-from rest_framework.exceptions import AuthenticationFailed, ParseError, ValidationError
-from rest_framework.serializers import Serializer
+from rest_framework.authentication import TokenAuthentication as UserTokenAuthentication
+from rest_framework.authtoken.models import Token as UserToken
+from rest_framework.exceptions import AuthenticationFailed, ParseError
+from rest_framework.generics import CreateAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_users.models import Organization, OrganizationUser
 
 from .. import settings as app_settings
-from ..models import OrganizationRadiusSettings
+from ..models import OrganizationRadiusSettings, PhoneToken
 
 logger = logging.getLogger(__name__)
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
@@ -106,7 +112,7 @@ class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
     def get_serializer(self, *args, **kwargs):
         # needed to avoid `'super' object has no attribute 'get_serializer'`
         # exception, raised in TokenAuthorizationMixin.get_serializer
-        return Serializer(*args, **kwargs)
+        return serializers.Serializer(*args, **kwargs)
 
 
 authorize = AuthorizeView.as_view()
@@ -151,7 +157,7 @@ class DispatchOrgMixin(object):
             message = _('User "{}" is not member '
                         'of "{}"').format(user.username, self.organization.slug)
             logger.warning(message)
-            raise ValidationError({'non_field_errors': [message]})
+            raise serializers.ValidationError({'non_field_errors': [message]})
 
 
 class RegisterView(DispatchOrgMixin, BaseRegisterView):
@@ -200,7 +206,7 @@ validate_auth_token = (ValidateAuthTokenView.as_view())
 
 
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
-    authentication_classes = (BaseTokenAuthentication,)
+    authentication_classes = (UserTokenAuthentication,)
 
     def post(self, request, *args, **kwargs):
         self.validate_membership(request.user)
@@ -266,3 +272,41 @@ class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
 
 
 password_reset_confirm = PasswordResetConfirmView.as_view()
+
+
+class InactiveUserTokenAuthentication(UserTokenAuthentication):
+    """
+    Overrides the default User Token Authentication
+    of Django REST Framework to allow inactive users
+    to authenticate against some specific API endpoints.
+    """
+    def authenticate_credentials(self, key):
+        try:
+            token = UserToken.objects.select_related('user') \
+                                     .get(key=key)
+        except UserToken.DoesNotExist:
+            raise AuthenticationFailed(_('Invalid token.'))
+        else:
+            return (token.user, token)
+
+
+class CreatePhoneTokenView(BaseThrottle, DispatchOrgMixin, CreateAPIView):
+    authentication_classes = (InactiveUserTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, *args, **kwargs):
+        request = self.request
+        self.validate_membership(request.user)
+        phone_token = PhoneToken(
+            user=request.user,
+            ip=self.get_ident(request)
+        )
+        try:
+            phone_token.full_clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+        phone_token.save()
+        return Response(None, status=201)
+
+
+create_phone_token = CreatePhoneTokenView.as_view()
