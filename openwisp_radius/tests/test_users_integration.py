@@ -23,6 +23,11 @@ class TestUsersIntegration(TestBasicUsersIntegration):
             'socialaccount_set-INITIAL_FORMS': 0,
             'socialaccount_set-MIN_NUM_FORMS': 0,
             'socialaccount_set-MAX_NUM_FORMS': 0,
+            # phone token inline
+            'phonetoken_set-TOTAL_FORMS': 0,
+            'phonetoken_set-INITIAL_FORMS': 0,
+            'phonetoken_set-MIN_NUM_FORMS': 0,
+            'phonetoken_set-MAX_NUM_FORMS': 0,
         })
         return params
 

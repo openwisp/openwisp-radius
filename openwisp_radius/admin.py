@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.admin import StackedInline
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius import settings as app_settings
 from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
@@ -11,10 +12,11 @@ from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccoun
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
-from openwisp_utils.admin import AlwaysHasChangedMixin
+from openwisp_utils.admin import AlwaysHasChangedMixin, TimeReadonlyAdminMixin
 
-from .models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck, RadiusGroup,
-                     RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply, RadiusUserGroup)
+from .models import (Nas, OrganizationRadiusSettings, PhoneToken, RadiusAccounting, RadiusBatch, RadiusCheck,
+                     RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
+                     RadiusUserGroup)
 
 
 class OrganizationFirstMixin(MultitenantAdminMixin):
@@ -126,7 +128,19 @@ RadiusBatchAdmin.list_display.insert(1, 'organization')
 RadiusBatchAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
-UserAdmin.inlines.append(RadiusUserGroupInline)
+class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
+    model = PhoneToken
+    extra = 0
+    readonly_fields = ('verified', 'valid_until', 'attempts', 'ip')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+UserAdmin.inlines += [RadiusUserGroupInline, PhoneTokenInline]
 
 
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
@@ -159,6 +173,9 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         readonly_fields = ('provider', 'uid', 'extra_data')
 
         def has_add_permission(self, request, obj=None):
+            return False
+
+        def has_delete_permission(self, request, obj=None):
             return False
 
     UserAdmin.inlines += [SocialAccountInline]

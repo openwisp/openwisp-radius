@@ -1,6 +1,12 @@
+import logging
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroup, AbstractRadiusGroupCheck,
@@ -10,9 +16,14 @@ from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin
 from openwisp_users.models import OrganizationUser
-from openwisp_utils.base import KeyField, UUIDModel
 
+from openwisp_utils.base import KeyField, UUIDModel, TimeStampedEditableModel
+
+from . import exceptions
 from . import settings as app_settings
+from .utils import generate_sms_token, get_sms_default_valid_until
+
+logger = logging.getLogger(__name__)
 
 
 class RadiusCheck(OrgMixin, AbstractRadiusCheck):
@@ -125,7 +136,7 @@ class OrganizationRadiusSettings(UUIDModel):
                                         related_name='radius_settings',
                                         on_delete=models.CASCADE)
     token = KeyField(max_length=32)
-    sms_verification = models.BooleanField(default=app_settings.DEFAULT_SMS_VERIFICATION,
+    sms_verification = models.BooleanField(default=app_settings.SMS_DEFAULT_VERIFICATION,
                                            help_text=_('whether users who sign up should '
                                                        'be required to verify their mobile '
                                                        'phone number via SMS'))
@@ -145,3 +156,62 @@ class OrganizationRadiusSettings(UUIDModel):
         pk = self.organization.pk
         super().delete(*args, **kwargs)
         cache.delete(pk)
+
+
+class PhoneToken(TimeStampedEditableModel):
+    """
+    Phone Verification Token (sent via SMS)
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    valid_until = models.DateTimeField(default=get_sms_default_valid_until)
+    attempts = models.PositiveIntegerField(default=0)
+    verified = models.BooleanField(default=False)
+    token = models.CharField(max_length=8,
+                             editable=False,
+                             default=generate_sms_token)
+    ip = models.GenericIPAddressField()
+
+    class Meta:
+        verbose_name = _('Phone verification token')
+        verbose_name_plural = _('Phone verification tokens')
+        ordering = ('-created',)
+        index_together = (
+            ('user', 'created'),
+            ('user', 'created', 'ip'),
+        )
+
+    def clean(self):
+        qs = PhoneToken.objects.filter(
+            created__year=self.created.year,
+            created__month=self.created.month,
+            created__day=self.created.day
+        )
+        # limit generation of tokens per day by user
+        user_token_count = qs.filter(user=self.user) \
+                             .count()
+        if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
+            message = 'maximum daily limit reached'
+            logger.warning(message)
+            raise ValidationError({'user': _(message)})
+        # limit generation of tokens per day by ip
+        ip_token_count = qs.filter(ip=self.ip).count()
+        if ip_token_count >= app_settings.SMS_TOKEN_MAX_IP_DAILY:
+            message = 'maximum daily limit reached ' \
+                      'from this ip address'
+            logger.warning(message)
+            raise ValidationError({'ip': _(message)})
+
+    def is_valid(self, token):
+        self.attempts += 1
+        if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
+            self.save()
+            raise exceptions.MaxAttemptsException()
+        if timezone.now() > self.valid_until:
+            self.save()
+            raise exceptions.ExpiredTokenException()
+        valid = token == self.token
+        if valid:
+            self.verified = True
+        self.save()
+        return valid

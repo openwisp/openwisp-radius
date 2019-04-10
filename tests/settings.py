@@ -173,6 +173,8 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 #     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://organization.com/{organization}/password/reset/{uid}/{token}',
 # }
 
+OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY = 4
+
 # CORS headers, useful during development and testing
 try:
     import corsheaders  # noqa

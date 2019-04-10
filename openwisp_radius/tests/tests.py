@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.utils import timezone
 from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
 from django_freeradius.tests import FileMixin
@@ -19,7 +22,9 @@ from django_freeradius.tests.base.test_utils import BaseTestUtils
 from openwisp_users.models import Organization, OrganizationUser
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
-from ..models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
+from .. import exceptions
+from .. import settings as app_settings
+from ..models import (Nas, OrganizationRadiusSettings, PhoneToken, RadiusAccounting, RadiusBatch, RadiusCheck,
                       RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
                       RadiusToken, RadiusUserGroup)
 from .mixins import ApiTokenMixin, BaseTestCase, CallCommandMixin, PostParamsMixin
@@ -689,3 +694,99 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
 
 class TestRadiusToken(BaseTestRadiusToken, BaseTestCase):
     radius_token_model = RadiusToken
+
+
+class TestPhoneToken(BaseTestCase):
+    user_model = User
+
+    def _create_token(self, user=None, ip='127.0.0.1'):
+        if not user:
+            user = self._create_user(
+                username='tester',
+                email='tester@tester.com',
+                password='tester',
+                phone_number='+393664351805',
+            )
+        token = PhoneToken(user=user, ip=ip)
+        token.full_clean()
+        token.save()
+        return token
+
+    def test_valid_until(self):
+        token = PhoneToken()
+        expected = timezone.now() + timedelta(minutes=app_settings.SMS_TOKEN_DEFAULT_VALIDITY)
+        self.assertIsInstance(token.valid_until, datetime)
+        self.assertEqual(token.valid_until.replace(microsecond=0),
+                         expected.replace(microsecond=0))
+
+    def test_token(self):
+        token = PhoneToken()
+        self.assertIsNotNone(token.token)
+        self.assertEqual(len(token.token), app_settings.SMS_TOKEN_LENGTH)
+        self.assertIsInstance(token.token, str)
+        self.assertIsInstance(int(token.token), int)
+
+    def test_is_valid(self):
+        token = self._create_token()
+        self.assertTrue(token.is_valid(token.token))
+        self.assertEqual(token.attempts, 1)
+        self.assertTrue(token.verified)
+
+    def test_max_attempts(self):
+        token = self._create_token()
+        self.assertEqual(token.attempts, 0)
+        self.assertFalse(token.is_valid('000000'))
+        self.assertEqual(token.attempts, 1)
+        self.assertFalse(token.verified)
+        self.assertFalse(token.is_valid('000000'))
+        self.assertEqual(token.attempts, 2)
+        self.assertFalse(token.verified)
+        self.assertFalse(token.is_valid('000000'))
+        self.assertEqual(token.attempts, 3)
+        self.assertFalse(token.verified)
+        try:
+            token.is_valid('000000')
+        except exceptions.MaxAttemptsException:
+            self.assertEqual(token.attempts, 4)
+            self.assertFalse(token.verified)
+        else:
+            self.fail('Exception not raised')
+
+    def test_expired(self):
+        token = self._create_token()
+        token.valid_until = timezone.now() - timedelta(days=1)
+        token.save()
+        try:
+            token.is_valid(token.token)
+        except exceptions.ExpiredTokenException:
+            self.assertEqual(token.attempts, 1)
+            self.assertFalse(token.verified)
+        else:
+            self.fail('Exception not raised')
+
+    def test_user_limit(self):
+        token = self._create_token()
+        self._create_token(user=token.user)
+        self._create_token(user=token.user)
+        try:
+            self._create_token(user=token.user)
+        except ValidationError as e:
+            self.assertIn('user', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
+
+    def test_ip_limit(self):
+        token = self._create_token()
+        self._create_token(user=token.user)
+        self._create_token(user=token.user)
+        user2 = self._create_user(username='user2',
+                                  email='test2@test.com',
+                                  password='tester',
+                                  phone_number='+393664351806')
+        self._create_token(user=user2)
+        try:
+            self._create_token(user=user2)
+        except ValidationError as e:
+            self.assertIn('ip', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
