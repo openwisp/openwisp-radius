@@ -29,7 +29,10 @@ urlpatterns = [
         views.validate_auth_token,
         name='validate_auth_token'),
     # generate new sms phone token
-    url(r'^phone-token/(?P<slug>[\w-]+)/$',
+    url(r'^create-phone-token/(?P<slug>[\w-]+)/$',
         views.create_phone_token,
-        name='phone_token'),
+        name='phone_token_create'),
+    url(r'^validate-phone-token/(?P<slug>[\w-]+)/$',
+        views.validate_phone_token,
+        name='phone_token_validate'),
 ]

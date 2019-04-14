@@ -186,10 +186,21 @@ class PhoneToken(TimeStampedEditableModel):
     def clean(self):
         if not hasattr(self, 'user'):
             return
+        if self.user.is_active:
+            logger.warning(
+                'user {} is already active'.format(self.user)
+            )
+            raise ValidationError(
+                _('This user is already active.')
+            )
         if not self.user.phone_number:
-            message = 'user does not have a phone number'
-            logger.warning(message)
-            raise ValidationError({'user': _(message)})
+            logger.warning(
+                'user {} does not have a '
+                'phone number'.format(self.user)
+            )
+            raise ValidationError(
+                _('This user does not have a phone number.')
+            )
         date_start = self.created.date()
         date_end = date_start + timedelta(days=1)
         qs = PhoneToken.objects.filter(created__range=[date_start,
@@ -198,27 +209,62 @@ class PhoneToken(TimeStampedEditableModel):
         user_token_count = qs.filter(user=self.user) \
                              .count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
-            message = 'maximum daily limit reached'
-            logger.warning(message)
-            raise ValidationError({'user': _(message)})
+            logger.warning(
+                'user {} has reached the maximum '
+                'daily SMS limit'.format(self.user)
+            )
+            raise ValidationError(_('Maximum daily limit reached.'))
         # limit generation of tokens per day by ip
         ip_token_count = qs.filter(ip=self.ip).count()
         if ip_token_count >= app_settings.SMS_TOKEN_MAX_IP_DAILY:
-            message = 'maximum daily limit reached ' \
-                      'from this ip address'
-            logger.warning(message)
-            raise ValidationError({'ip': _(message)})
+            logger.warning(logger.warning(
+                'user {} has reached the maximum '
+                'daily SMS limit from ip address {}'.format(
+                    self.user, self.ip
+                )
+            ))
+            raise ValidationError(
+                _('Maximum daily limit reached '
+                  'from this ip address.')
+            )
 
     def is_valid(self, token):
         self.attempts += 1
-        if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
+        try:
+            self.verified = self.__check(token)
+        except exceptions.PhoneTokenException as e:
             self.save()
-            raise exceptions.MaxAttemptsException()
-        if timezone.now() > self.valid_until:
-            self.save()
-            raise exceptions.ExpiredTokenException()
-        valid = token == self.token
-        if valid:
-            self.verified = True
+            raise e
         self.save()
-        return valid
+        return self.verified
+
+    def __check(self, token):
+        if self.user.is_active:
+            logger.warning(
+                'user {} is already active'.format(self.user.pk)
+            )
+            raise exceptions.UserAlreadyActive(
+                _('This user is already active.')
+            )
+        if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
+            logger.warning(
+                'user {} has reached the max attempt '
+                'limit for token {}'.format(self.user,
+                                            self.pk)
+            )
+            raise exceptions.MaxAttemptsException(
+                _('Maximum number of allowed attempts reached '
+                  'for this verification code, please send a '
+                  'new code and try again.')
+            )
+        if timezone.now() > self.valid_until:
+            logger.warning(
+                'user {} has tried to verify '
+                'an expired token: {}'.format(self.user,
+                                              self.pk)
+            )
+            raise exceptions.ExpiredTokenException(
+                _('This verification code has expired, '
+                  'Please send a new code and try again.')
+            )
+        return token == self.token

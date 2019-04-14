@@ -30,7 +30,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import TokenAuthentication as UserTokenAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.exceptions import AuthenticationFailed, ParseError
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
@@ -38,7 +38,9 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from openwisp_users.models import Organization, OrganizationUser
 
 from .. import settings as app_settings
+from ..exceptions import PhoneTokenException
 from ..models import OrganizationRadiusSettings, PhoneToken
+from .serializers import ValidatePhoneTokenSerializer
 
 logger = logging.getLogger(__name__)
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
@@ -304,9 +306,54 @@ class CreatePhoneTokenView(BaseThrottle, DispatchOrgMixin, CreateAPIView):
         try:
             phone_token.full_clean()
         except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict)
+            error_dict = self._get_error_dict(e)
+            raise serializers.ValidationError(error_dict)
         phone_token.save()
         return Response(None, status=201)
 
+    def _get_error_dict(self, error):
+        dict_ = error.message_dict.copy()
+        if '__all__' in dict_:
+            dict_['non_field_errors'] = dict_.pop('__all__')
+        return dict_
+
 
 create_phone_token = CreatePhoneTokenView.as_view()
+
+
+class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
+    authentication_classes = (InactiveUserTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ValidatePhoneTokenSerializer
+
+    def _error_response(self, message,
+                        key='non_field_errors',
+                        status=400):
+        return Response({key: [message]}, status=status)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        self.validate_membership(user)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone_token = PhoneToken.objects.filter(user=user) \
+                                        .order_by('-created') \
+                                        .first()
+        if not phone_token:
+            return self._error_response(
+                _('No verification code found in '
+                  'the system for this user.')
+            )
+        try:
+            is_valid = phone_token.is_valid(serializer.data['code'])
+        except PhoneTokenException as e:
+            return self._error_response(str(e))
+        if not is_valid:
+            return self._error_response(_('Invalid code.'))
+        else:
+            user.is_active = True
+            user.save()
+            return Response(None, status=200)
+
+
+validate_phone_token = ValidatePhoneTokenView.as_view()

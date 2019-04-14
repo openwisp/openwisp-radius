@@ -708,6 +708,7 @@ class TestPhoneToken(BaseTestCase):
                 email='tester@tester.com',
                 password='tester',
                 phone_number='+393664351805',
+                is_active=False
             )
         token = PhoneToken(user=user, ip=ip)
         token.full_clean()
@@ -775,7 +776,7 @@ class TestPhoneToken(BaseTestCase):
         try:
             self._create_token(user=token.user)
         except ValidationError as e:
-            self.assertIn('user', e.message_dict)
+            self.assertIn('Maximum daily', str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
 
@@ -787,12 +788,13 @@ class TestPhoneToken(BaseTestCase):
         user2 = self._create_user(username='user2',
                                   email='test2@test.com',
                                   password='tester',
-                                  phone_number='+393664351806')
+                                  phone_number='+393664351806',
+                                  is_active=False)
         self._create_token(user=user2)
         try:
             self._create_token(user=user2)
         except ValidationError as e:
-            self.assertIn('ip', e.message_dict)
+            self.assertIn('ip address', str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
 
@@ -800,12 +802,12 @@ class TestPhoneToken(BaseTestCase):
         user = self._create_user(
             username='tester',
             password='tester',
+            is_active=False
         )
         try:
             self._create_token(user=user)
         except ValidationError as e:
-            self.assertIn('user', e.message_dict)
             self.assertIn('does not have a phone number',
-                          str(e.message_dict['user']))
+                          str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
