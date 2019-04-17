@@ -173,15 +173,16 @@ REST_AUTH_SERIALIZERS = {
 #     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://organization.com/{organization}/password/reset/{uid}/{token}',
 # }
 
+# CORS headers, useful during development and testing
 try:
-    import corsheaders
+    import corsheaders  # noqa
 
-    INSTALLED_APPS[:0] = ['corsheaders']
-
-    MIDDLEWARE[:0] = ['corsheaders.middleware.CorsMiddleware', 'django.middleware.common.CommonMiddleware']
-
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.middleware.common.CommonMiddleware'),
+        'corsheaders.middleware.CorsMiddleware'
+    )
     # WARNING: for development only!
     CORS_ORIGIN_ALLOW_ALL = True
-
 except ImportError:
     pass
