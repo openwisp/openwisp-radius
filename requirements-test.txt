@@ -4,3 +4,4 @@ responses
 freezegun
 openwisp-utils[qa]>=0.2.1
 djangorestframework-jwt
+django-cors-headers>=2.5.2

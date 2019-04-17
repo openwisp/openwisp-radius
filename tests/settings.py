@@ -172,3 +172,16 @@ REST_AUTH_SERIALIZERS = {
 #     # use the uuid because the slug can change
 #     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://organization.com/{organization}/password/reset/{uid}/{token}',
 # }
+
+try:
+    import corsheaders
+
+    INSTALLED_APPS[:0] = ['corsheaders']
+
+    MIDDLEWARE[:0] = ['corsheaders.middleware.CorsMiddleware', 'django.middleware.common.CommonMiddleware']
+
+    # WARNING: for development only!
+    CORS_ORIGIN_ALLOW_ALL = True
+
+except ImportError:
+    pass
