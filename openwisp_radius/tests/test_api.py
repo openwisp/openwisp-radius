@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 
+import mock
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
@@ -381,8 +382,15 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.default_org.radius_settings.sms_verification = True
-        self.default_org.radius_settings.save()
+        radius_settings = self.default_org.radius_settings
+        radius_settings.sms_verification = True
+        radius_settings.sms_phone_number = '+595972157632'
+        radius_settings.sms_meta_data = {
+            'clientId': 3,
+            'clientSecret': 'p8pVUoqz7T4ArPEu1rcgzlsYJmnGCkkWHs2WAqqm'
+        }
+        radius_settings.full_clean()
+        radius_settings.save()
 
     def test_register_phone_required(self):
         self.assertEqual(User.objects.count(), 0)
@@ -400,19 +408,20 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
     def test_register_201(self):
         self.assertEqual(User.objects.count(), 0)
         url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        phone_number = '+393664255801'
         r = self.client.post(url, {
             'username': 'test@test.org',
             'email': 'test@test.org',
             'password1': 'password',
             'password2': 'password',
-            'mobile_phone': '+393664255801'
+            'mobile_phone': phone_number
         })
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.first()
         self.assertIn((self.default_org.pk,), user.organizations_pk)
-        self.assertEqual(user.phone_number, '+393664255801')
+        self.assertEqual(user.phone_number, phone_number)
         self.assertFalse(user.is_active)
 
     def test_create_phone_token_401(self):
@@ -420,7 +429,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(url)
         self.assertEqual(r.status_code, 401)
 
-    def test_create_phone_token_201(self):
+    @mock.patch('openwisp_radius.utils.SmsMessage.send')
+    def test_create_phone_token_201(self, send_messages_mock):
         self.test_register_201()
         token = Token.objects.last()
         url = reverse('freeradius:phone_token_create', args=[self.default_org.slug])
@@ -428,6 +438,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 201)
         phonetoken = PhoneToken.objects.first()
         self.assertIsNotNone(phonetoken)
+        send_messages_mock.assert_called_once()
 
     def test_create_phone_token_400_not_member(self):
         self.test_register_201()
@@ -641,7 +652,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('No verification code found in the system',
                       str(r.data['non_field_errors']))
 
-    def test_validate_phone_token_400_missing_code(self):
+    def test_validate_phone_token_400_code_blank(self):
         self.test_register_201()
         user = User.objects.first()
         user_token = Token.objects.filter(user=user).last()

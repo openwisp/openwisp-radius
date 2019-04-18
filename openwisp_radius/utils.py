@@ -6,6 +6,8 @@ from django.conf import settings
 from django.utils import timezone
 from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
+from sendsms.message import SmsMessage as BaseSmsMessage
+from sendsms.signals import sms_post_send
 
 from . import settings as app_settings
 
@@ -54,3 +56,24 @@ def generate_sms_token():
     hash_.update(os.urandom(16))
     token = str(int(hash_.hexdigest(), 16))[-length:]
     return token
+
+
+class SmsMessage(BaseSmsMessage):
+    def send(self, fail_silently=False, meta_data=None):
+        """
+        Customized send method that allows passing
+        custom meta data configuration to the SMS backend
+        """
+        if not self.to:
+            return 0
+        backend_instance = self.get_connection(fail_silently)
+        args = [[self]]
+        if meta_data and getattr(backend_instance,
+                                 'supports_meta_data', False):
+            args.append(meta_data)
+        res = backend_instance.send_messages(*args)
+        sms_post_send.send(sender=self,
+                           to=self.to,
+                           from_phone=self.from_phone,
+                           body=self.body)
+        return res

@@ -154,6 +154,8 @@ if TESTING:
     DJANGO_FREERADIUS_GROUPREPLY_ADMIN = True
     DJANGO_FREERADIUS_USERGROUP_ADMIN = True
 
+SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
+
 DJANGO_FREERADIUS_EXTRA_NAS_TYPES = (
     ('cisco', 'Cisco Router'),
 )

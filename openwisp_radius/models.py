@@ -14,6 +14,8 @@ from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting
                                            AbstractRadiusCheck, AbstractRadiusGroup, AbstractRadiusGroupCheck,
                                            AbstractRadiusGroupReply, AbstractRadiusPostAuth,
                                            AbstractRadiusReply, AbstractRadiusToken, AbstractRadiusUserGroup)
+from jsonfield import JSONField
+from phonenumber_field.modelfields import PhoneNumberField
 from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin
@@ -23,7 +25,7 @@ from openwisp_utils.base import KeyField, UUIDModel, TimeStampedEditableModel
 
 from . import exceptions
 from . import settings as app_settings
-from .utils import generate_sms_token, get_sms_default_valid_until
+from .utils import SmsMessage, generate_sms_token, get_sms_default_valid_until
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +144,13 @@ class OrganizationRadiusSettings(UUIDModel):
                                            help_text=_('whether users who sign up should '
                                                        'be required to verify their mobile '
                                                        'phone number via SMS'))
+    sms_phone_number = PhoneNumberField(blank=True, null=True,
+                                        help_text=_('phone number used as sender for SMS '
+                                                    'sent by this organization'))
+    sms_meta_data = JSONField(null=True,
+                              blank=True,
+                              help_text=_('Additional configuration for SMS '
+                                          'backend in JSON format, if needed'))
 
     class Meta:
         verbose_name = _('Organization radius settings')
@@ -149,6 +158,13 @@ class OrganizationRadiusSettings(UUIDModel):
 
     def __str__(self):
         return self.organization.name
+
+    def clean(self):
+        if self.sms_verification and not self.sms_phone_number:
+            raise ValidationError({
+                'sms_phone_number': _('if SMS verification is enabled '
+                                      'this field is required.')
+            })
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -227,6 +243,31 @@ class PhoneToken(TimeStampedEditableModel):
                 _('Maximum daily limit reached '
                   'from this ip address.')
             )
+
+    def save(self, *args, **kwargs):
+        created = self._state.adding
+        result = super().save(*args, **kwargs)
+        if created:
+            self.send_token()
+        return result
+
+    def send_token(self):
+        org_user = OrganizationUser.objects.filter(user=self.user).first()
+        if not org_user:
+            raise exceptions.NoOrgException(
+                'User {} is not member '
+                'of any organization'.format(self.user)
+            )
+        org_radius_settings = org_user.organization.radius_settings
+        message = _('{} verification code: {}').format(
+            org_radius_settings.organization.name, self.token
+        )
+        sms_message = SmsMessage(
+            body=message,
+            from_phone=str(org_radius_settings.sms_phone_number),
+            to=[str(self.user.phone_number)]
+        )
+        sms_message.send(meta_data=org_radius_settings.sms_meta_data)
 
     def is_valid(self, token):
         self.attempts += 1

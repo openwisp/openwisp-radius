@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import mock
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -693,6 +694,17 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         self.assertTrue(hasattr(org, 'radius_settings'))
         self.assertIsInstance(org.radius_settings, OrganizationRadiusSettings)
 
+    def test_sms_phone_required(self):
+        radius_settings = OrganizationRadiusSettings(organization=self.org,
+                                                     sms_verification=True,
+                                                     sms_phone_number='')
+        try:
+            radius_settings.full_clean()
+        except ValidationError as e:
+            self.assertIn('sms_phone_number', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
+
 
 class TestRadiusToken(BaseTestRadiusToken, BaseTestCase):
     radius_token_model = RadiusToken
@@ -700,6 +712,14 @@ class TestRadiusToken(BaseTestRadiusToken, BaseTestCase):
 
 class TestPhoneToken(BaseTestCase):
     user_model = User
+
+    def setUp(self):
+        super().setUp()
+        OrganizationRadiusSettings.objects.create(
+            organization=self.default_org,
+            sms_verification=True,
+            sms_phone_number='+595972157632'
+        )
 
     def _create_token(self, user=None, ip='127.0.0.1'):
         if not user:
@@ -811,3 +831,10 @@ class TestPhoneToken(BaseTestCase):
                           str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
+
+    @mock.patch('openwisp_radius.utils.SmsMessage.send')
+    def test_send_token_called_once(self, send_messages_mock):
+        token = self._create_token()
+        token.valid_until += timedelta(hours=1)  # change anything to save
+        token.save()
+        send_messages_mock.assert_called_once()

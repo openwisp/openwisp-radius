@@ -12,3 +12,7 @@ class MaxAttemptsException(PhoneTokenException):
 
 class ExpiredTokenException(PhoneTokenException):
     pass
+
+
+class NoOrgException(PhoneTokenException):
+    pass

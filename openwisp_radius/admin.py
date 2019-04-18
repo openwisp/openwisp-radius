@@ -150,6 +150,19 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
     form = AlwaysHasChangedForm
+    fieldsets = (
+        (None, {
+            'fields': (
+                'token',
+                'sms_verification',
+                'sms_phone_number',
+            )
+        }),
+        (_('Advanced options'), {
+            'classes': ('collapse',),
+            'fields': ('sms_meta_data',),
+        }),
+    )
 
 
 OrganizationAdmin.save_on_top = True

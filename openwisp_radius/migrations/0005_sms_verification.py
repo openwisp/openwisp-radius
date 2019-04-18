@@ -6,7 +6,9 @@ import model_utils.fields
 from django.conf import settings
 from django.db import migrations, models
 
+import phonenumber_field.modelfields
 import openwisp_radius.utils
+import jsonfield.fields
 
 from .. import settings as app_settings
 
@@ -27,6 +29,21 @@ class Migration(migrations.Migration):
                 default=app_settings.SMS_DEFAULT_VERIFICATION,
                 help_text=('whether users who sign up should be required to '
                            'verify their mobile phone number via SMS')),
+        ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='sms_phone_number',
+            field=phonenumber_field.modelfields.PhoneNumberField(
+                blank=True, max_length=128,
+                null=True, region=None,
+                help_text=('phone number used as sender for '
+                           'SMS sent by this organization'),
+            ),
+        ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='sms_meta_data',
+            field=jsonfield.fields.JSONField(blank=True, help_text='Additional configuration for SMS backend in JSON format, if needed', null=True),
         ),
         migrations.CreateModel(
             name='PhoneToken',
