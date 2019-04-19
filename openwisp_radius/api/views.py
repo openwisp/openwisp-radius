@@ -41,6 +41,7 @@ from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..models import OrganizationRadiusSettings, PhoneToken
 from .serializers import ValidatePhoneTokenSerializer
+from .utils import ErrorDictMixin
 
 logger = logging.getLogger(__name__)
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
@@ -163,11 +164,6 @@ class DispatchOrgMixin(object):
 
 
 class RegisterView(DispatchOrgMixin, BaseRegisterView):
-    def perform_create(self, serializer):
-        user = super().perform_create(serializer)
-        self.organization.add_user(user)
-        return user
-
     def get_response_data(self, user):
         if allauth_settings.EMAIL_VERIFICATION == \
                 allauth_settings.EmailVerificationMethod.MANDATORY:
@@ -292,7 +288,7 @@ class InactiveUserTokenAuthentication(UserTokenAuthentication):
             return (token.user, token)
 
 
-class CreatePhoneTokenView(BaseThrottle, DispatchOrgMixin, CreateAPIView):
+class CreatePhoneTokenView(ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView):
     authentication_classes = (InactiveUserTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -310,12 +306,6 @@ class CreatePhoneTokenView(BaseThrottle, DispatchOrgMixin, CreateAPIView):
             raise serializers.ValidationError(error_dict)
         phone_token.save()
         return Response(None, status=201)
-
-    def _get_error_dict(self, error):
-        dict_ = error.message_dict.copy()
-        if '__all__' in dict_:
-            dict_['non_field_errors'] = dict_.pop('__all__')
-        return dict_
 
 
 create_phone_token = CreatePhoneTokenView.as_view()

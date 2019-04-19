@@ -400,10 +400,10 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             'email': 'test@test.org',
             'password1': 'password',
             'password2': 'password',
-            'mobile_phone': ''
+            'phone_number': ''
         })
         self.assertEqual(r.status_code, 400)
-        self.assertIn('mobile_phone', r.data)
+        self.assertIn('phone_number', r.data)
 
     def test_register_201(self):
         self.assertEqual(User.objects.count(), 0)
@@ -414,7 +414,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             'email': 'test@test.org',
             'password1': 'password',
             'password2': 'password',
-            'mobile_phone': phone_number
+            'phone_number': phone_number
         })
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
@@ -423,6 +423,20 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn((self.default_org.pk,), user.organizations_pk)
         self.assertEqual(user.phone_number, phone_number)
         self.assertFalse(user.is_active)
+
+    def test_register_400_duplicate_phone_number(self):
+        self.test_register_201()
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test2@test.org',
+            'email': 'test2@test.org',
+            'password1': 'password',
+            'password2': 'password',
+            'phone_number': '+393664255801'
+        })
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('phone_number', r.data)
+        self.assertEqual(User.objects.count(), 1)
 
     def test_create_phone_token_401(self):
         url = reverse('freeradius:phone_token_create', args=[self.default_org.slug])
