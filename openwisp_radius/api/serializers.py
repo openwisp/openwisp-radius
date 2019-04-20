@@ -33,11 +33,11 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
     phone_number = PhoneNumberField(allow_blank=True,
                                     default='')
 
-    def validate_phone_number(self, mobile):
+    def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
-        if org.radius_settings.sms_verification and not mobile:
+        if org.radius_settings.sms_verification and not phone_number:
             raise serializers.ValidationError(_('This field is required'))
-        return mobile
+        return phone_number
 
     def save(self, request):
         adapter = get_adapter()
@@ -67,3 +67,31 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
 
 class ValidatePhoneTokenSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=8)
+
+
+class ChangePhoneNumberSerializer(ErrorDictMixin, serializers.Serializer):
+    phone_number = PhoneNumberField()
+
+    @property
+    def user(self):
+        return self.context['request'].user
+
+    def validate_phone_number(self, phone_number):
+        if self.user.phone_number == phone_number:
+            raise serializers.ValidationError(
+                _('The new phone number must be '
+                  'different than the old one.')
+            )
+        return phone_number
+
+    def validate(self, data):
+        self.user.phone_number = data['phone_number']
+        try:
+            self.user.full_clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(self._get_error_dict(e))
+        return data
+
+    def save(self):
+        self.user.is_active = False
+        self.user.save()

@@ -35,4 +35,8 @@ urlpatterns = [
     url(r'^validate-phone-token/(?P<slug>[\w-]+)/$',
         views.validate_phone_token,
         name='phone_token_validate'),
+    # allow changing phone number
+    url(r'^phone-number/change/(?P<slug>[\w-]+)/$',
+        views.change_phone_number,
+        name='phone_token_change_number'),
 ]

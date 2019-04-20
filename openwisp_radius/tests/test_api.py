@@ -692,3 +692,82 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('code', r.data)
+
+    def test_change_phone_number_200(self):
+        self.test_create_phone_token_201()
+        user = User.objects.first()
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        self.assertEqual(phone_token_qs.count(), 1)
+        url = reverse('freeradius:phone_token_change_number',
+                      args=[self.default_org.slug])
+        new_phone_number = '+595972157444'
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': new_phone_number}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(phone_token_qs.count(), 2)
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+        self.assertEqual(user.phone_number, new_phone_number)
+
+    def test_change_phone_number_400_same_number(self):
+        self.test_create_phone_token_201()
+        user = User.objects.first()
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        self.assertEqual(phone_token_qs.count(), 1)
+        url = reverse('freeradius:phone_token_change_number',
+                      args=[self.default_org.slug])
+        new_phone_number = '+393664255801'
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': new_phone_number}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(phone_token_qs.count(), 1)
+        self.assertIn('phone_number', r.data)
+        self.assertIn('must be different',
+                      str(r.data['phone_number']))
+
+    def test_change_phone_number_400_not_blank(self):
+        self.test_create_phone_token_201()
+        user = User.objects.first()
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        self.assertEqual(phone_token_qs.count(), 1)
+        url = reverse('freeradius:phone_token_change_number',
+                      args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': ''}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(phone_token_qs.count(), 1)
+        self.assertIn('phone_number', r.data)
+        self.assertIn('not be blank', str(r.data['phone_number']))
+
+    def test_change_phone_number_400_required(self):
+        self.test_create_phone_token_201()
+        user = User.objects.first()
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        self.assertEqual(phone_token_qs.count(), 1)
+        url = reverse('freeradius:phone_token_change_number',
+                      args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(phone_token_qs.count(), 1)
+        self.assertIn('phone_number', r.data)
+        self.assertIn('required', str(r.data['phone_number']))

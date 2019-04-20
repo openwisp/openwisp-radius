@@ -40,7 +40,7 @@ from openwisp_users.models import Organization, OrganizationUser
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..models import OrganizationRadiusSettings, PhoneToken
-from .serializers import ValidatePhoneTokenSerializer
+from .serializers import ChangePhoneNumberSerializer, ValidatePhoneTokenSerializer
 from .utils import ErrorDictMixin
 
 logger = logging.getLogger(__name__)
@@ -288,7 +288,8 @@ class InactiveUserTokenAuthentication(UserTokenAuthentication):
             return (token.user, token)
 
 
-class CreatePhoneTokenView(ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView):
+class CreatePhoneTokenView(ErrorDictMixin, BaseThrottle,
+                           DispatchOrgMixin, CreateAPIView):
     authentication_classes = (InactiveUserTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -347,3 +348,27 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
 
 
 validate_phone_token = ValidatePhoneTokenView.as_view()
+
+
+class ChangePhoneNumberView(CreatePhoneTokenView):
+    authentication_classes = (InactiveUserTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangePhoneNumberSerializer
+
+    def create(self, *args, **kwargs):
+        serializer = self.get_serializer(data=self.request.data,
+                                         context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        # attempt to create the phone token before
+        # the new number is saved, so that if the
+        # creation of the phone token fails, the
+        # phone number remains unchanged
+        self.create_phone_token(*args, **kwargs)
+        serializer.save()
+        return Response(None, status=200)
+
+    def create_phone_token(self, *args, **kwargs):
+        return super().create(*args, **kwargs)
+
+
+change_phone_number = ChangePhoneNumberView.as_view()
