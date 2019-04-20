@@ -28,6 +28,7 @@ before_script:
   - ./runcheckmigration
   # ensure there are no pending migrations
   - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
+  - mkdir tests/media
 
 script:
   - coverage run --source=openwisp_radius runtests.py
