@@ -141,7 +141,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
             'username': 'test_name',
             'password': 'test_password'
         }
-        login_url = reverse('freeradius:user_token', args=(self.default_org.slug,))
+        login_url = reverse('freeradius:user_auth_token', args=(self.default_org.slug,))
         login_response = self.client.post(login_url, data=login_payload)
         token = login_response.json()['key']
 
@@ -287,7 +287,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
             'username': 'test_name',
             'password': 'test_password'
         }
-        login_url = reverse('freeradius:user_token', args=(self.default_org.slug,))
+        login_url = reverse('freeradius:user_auth_token', args=(self.default_org.slug,))
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 400)
 
@@ -312,7 +312,7 @@ class TestApiUserToken(ApiTokenMixin,
     user_model = User
 
     def _get_url(self):
-        return reverse('freeradius:user_token',
+        return reverse('freeradius:user_auth_token',
                        args=[self.default_org.slug])
 
     def test_user_auth_token_400_organization(self):
@@ -327,7 +327,7 @@ class TestApiUserToken(ApiTokenMixin,
                       r.json()['non_field_errors'][0])
 
     def test_user_auth_token_404(self):
-        url = reverse('freeradius:user_token',
+        url = reverse('freeradius:user_auth_token',
                       args=['wrong'])
         opts = dict(username='tester',
                     password='tester')
