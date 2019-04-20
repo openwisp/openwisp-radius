@@ -36,7 +36,9 @@ _RADCHECK_ENTRY = {'username': 'Monica', 'value': 'Cam0_liX',
                    'attribute': 'NT-Password'}
 _RADCHECK_ENTRY_PW_UPDATE = {'username': 'Monica', 'new_value': 'Cam0_liX',
                              'attribute': 'NT-Password'}
-_TEST_DATE = datetime.now().date()
+# it's 21 of April on UTC, this date is fabricated on purpose
+# to test possible timezone related bugs in the date filtering
+_TEST_DATE = '2019-04-20T22:14:09-04:00'
 
 User = get_user_model()
 
@@ -721,7 +723,7 @@ class TestPhoneToken(BaseTestCase):
             sms_phone_number='+595972157632'
         )
 
-    def _create_token(self, user=None, ip='127.0.0.1'):
+    def _create_token(self, user=None, ip='127.0.0.1', created=None):
         if not user:
             user = self._create_user(
                 username='tester',
@@ -731,6 +733,9 @@ class TestPhoneToken(BaseTestCase):
                 is_active=False
             )
         token = PhoneToken(user=user, ip=ip)
+        if created:
+            token.created = created
+            token.modified = created
         token.full_clean()
         token.save()
         return token
@@ -788,23 +793,40 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail('Exception not raised')
 
-    @freeze_time(_TEST_DATE)
-    def test_user_limit(self):
+    def _create_tokens_limit_test(self):
         token = self._create_token()
-        self._create_token(user=token.user)
-        self._create_token(user=token.user)
+        # old tokens, should not influence the query
+        self._create_token(user=token.user,
+                           created=token.created - timedelta(days=1))
+        self._create_token(user=token.user,
+                           created=token.created - timedelta(days=7))
+        # tokens of today, should be filtered by the query
+        self._create_token(user=token.user,
+                           created=token.created - timedelta(hours=2))
+        self._create_token(user=token.user,
+                           created=token.created - timedelta(minutes=5))
+        return token.user
+
+    def _test_user_limit(self):
+        user = self._create_tokens_limit_test()
         try:
-            self._create_token(user=token.user)
+            self._create_token(user=user)
         except ValidationError as e:
             self.assertIn('Maximum daily', str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
 
     @freeze_time(_TEST_DATE)
+    def test_user_limit_timezone_causes_change_of_date(self):
+        self._test_user_limit()
+
+    @freeze_time('2019-04-20T15:05:13-04:00')
+    def test_user_limit(self):
+        self._test_user_limit()
+
+    @freeze_time(_TEST_DATE)
     def test_ip_limit(self):
-        token = self._create_token()
-        self._create_token(user=token.user)
-        self._create_token(user=token.user)
+        self._create_tokens_limit_test()
         user2 = self._create_user(username='user2',
                                   email='test2@test.com',
                                   password='tester',

@@ -217,13 +217,11 @@ class PhoneToken(TimeStampedEditableModel):
             raise ValidationError(
                 _('This user does not have a phone number.')
             )
-        date_start = self.created.date()
+        date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
-        qs = PhoneToken.objects.filter(created__range=[date_start,
-                                                       date_end])
+        qs = PhoneToken.objects.filter(created__range=[date_start, date_end])
         # limit generation of tokens per day by user
-        user_token_count = qs.filter(user=self.user) \
-                             .count()
+        user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
             logger.warning(
                 'user {} has reached the maximum '

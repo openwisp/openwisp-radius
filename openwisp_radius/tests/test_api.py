@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import mock
 from django.contrib.auth import get_user_model
@@ -22,7 +22,9 @@ from ..models import PhoneToken, RadiusAccounting, RadiusBatch, RadiusPostAuth, 
 from .. import settings as app_settings
 from .mixins import ApiTokenMixin, BaseTestCase
 
-_TEST_DATE = datetime.now().date()
+# it's 21 of April on UTC, this date is fabricated on purpose
+# to test possible timezone related bugs in the date filtering
+_TEST_DATE = '2019-04-20T22:14:09-04:00'
 User = get_user_model()
 
 
