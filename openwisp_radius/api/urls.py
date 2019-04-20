@@ -29,14 +29,14 @@ urlpatterns = [
         views.validate_auth_token,
         name='validate_auth_token'),
     # generate new sms phone token
-    url(r'^create-phone-token/(?P<slug>[\w-]+)/$',
+    url(r'^(?P<slug>[\w-]+)/account/phone/token/$',
         views.create_phone_token,
         name='phone_token_create'),
-    url(r'^validate-phone-token/(?P<slug>[\w-]+)/$',
+    url(r'^(?P<slug>[\w-]+)/account/phone/verify/$',
         views.validate_phone_token,
         name='phone_token_validate'),
     # allow changing phone number
-    url(r'^phone-number/change/(?P<slug>[\w-]+)/$',
+    url(r'^(?P<slug>[\w-]+)/account/phone/change/$',
         views.change_phone_number,
-        name='phone_token_change_number'),
+        name='phone_number_change'),
 ]

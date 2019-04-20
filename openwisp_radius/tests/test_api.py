@@ -701,7 +701,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('freeradius:phone_token_change_number',
+        url = reverse('freeradius:phone_number_change',
                       args=[self.default_org.slug])
         new_phone_number = '+595972157444'
         r = self.client.post(
@@ -722,7 +722,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('freeradius:phone_token_change_number',
+        url = reverse('freeradius:phone_number_change',
                       args=[self.default_org.slug])
         new_phone_number = '+393664255801'
         r = self.client.post(
@@ -743,7 +743,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('freeradius:phone_token_change_number',
+        url = reverse('freeradius:phone_number_change',
                       args=[self.default_org.slug])
         r = self.client.post(
             url,
@@ -762,7 +762,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('freeradius:phone_token_change_number',
+        url = reverse('freeradius:phone_number_change',
                       args=[self.default_org.slug])
         r = self.client.post(
             url,
