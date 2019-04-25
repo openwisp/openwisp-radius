@@ -24,7 +24,6 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'openwisp_users',
     # admin
     'django.contrib.admin',
     # rest framework
@@ -39,6 +38,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     # openwisp radius
     'openwisp_radius',
+    'openwisp_users',
 ]
 
 EXTENDED_APPS = ['django_freeradius']
@@ -80,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'openwisp_utils.admin_theme.context_processor.menu_items'
             ],
         },
     },
@@ -156,12 +157,6 @@ DJANGO_FREERADIUS_EXTRA_NAS_TYPES = (
     ('cisco', 'Cisco Router'),
 )
 
-# local settings must be imported before test runner otherwise they'll be ignored
-try:
-    from local_settings import *
-except ImportError:
-    pass
-
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
 }
@@ -184,5 +179,11 @@ try:
     )
     # WARNING: for development only!
     CORS_ORIGIN_ALLOW_ALL = True
+except ImportError:
+    pass
+
+# local settings must be imported before test runner otherwise they'll be ignored
+try:
+    from local_settings import *
 except ImportError:
     pass
