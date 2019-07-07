@@ -12,7 +12,7 @@ from django_freeradius.tests.base.test_commands import BaseTestCommands
 from django_freeradius.tests.base.test_models import (BaseTestNas, BaseTestRadiusAccounting,
                                                       BaseTestRadiusBatch, BaseTestRadiusCheck,
                                                       BaseTestRadiusGroup, BaseTestRadiusPostAuth,
-                                                      BaseTestRadiusReply)
+                                                      BaseTestRadiusReply, BaseTestRadiusToken)
 from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
@@ -21,7 +21,7 @@ from openwisp_utils.tests.utils import TestMultitenantAdminMixin
 
 from ..models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
                       RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
-                      RadiusUserGroup)
+                      RadiusToken, RadiusUserGroup)
 from .mixins import ApiTokenMixin, BaseTestCase, CallCommandMixin, PostParamsMixin
 
 _SUPERUSER = {'username': 'gino', 'password': 'cic', 'email': 'giggi_vv@gmail.it'}
@@ -169,6 +169,7 @@ class TestAdmin(BaseTestCase, FileMixin, CallCommandMixin, PostParamsMixin,
     nas_model = Nas
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
+    radius_token_model = RadiusToken
     radius_check_model = RadiusCheck
     radius_groupcheck_model = RadiusGroupCheck
     radius_groupreply_model = RadiusGroupReply
@@ -543,6 +544,15 @@ class TestAdmin(BaseTestCase, FileMixin, CallCommandMixin, PostParamsMixin,
             hidden=[data['rg2']]
         )
 
+    def test_radius_token_creation_form(self):
+        pass
+
+    def test_radius_token_change(self):
+        pass
+
+    def test_radius_token_delete_selected(self):
+        pass
+
 
 class TestAutoGroupname(ApiTokenMixin,
                         BaseTestAutoGroupname,
@@ -576,6 +586,8 @@ class TestUtils(FileMixin, BaseTestUtils, BaseTestCase):
 
 
 class TestSocial(ApiTokenMixin, BaseTestSocial, BaseTestCase):
+    radius_token_model = RadiusToken
+
     def get_url(self):
         return reverse(self.view_name, args=[self.default_org.slug])
 
@@ -660,3 +672,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.data, {'detail': 'Token authentication failed'})
         cache.clear()
+
+
+class TestRadiusToken(BaseTestRadiusToken, BaseTestCase):
+    radius_token_model = RadiusToken

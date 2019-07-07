@@ -120,6 +120,7 @@ DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = 'openwisp_radius.RadiusUserGroup'
 DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = 'openwisp_radius.RadiusPostAuth'
 DJANGO_FREERADIUS_RADIUSBATCH_MODEL = 'openwisp_radius.RadiusBatch'
 DJANGO_FREERADIUS_RADIUSGROUP_MODEL = 'openwisp_radius.RadiusGroup'
+DJANGO_FREERADIUS_RADIUSTOKEN_MODEL = 'openwisp_radius.RadiusToken'
 
 SOCIALACCOUNT_PROVIDERS = {
     'facebook': {
