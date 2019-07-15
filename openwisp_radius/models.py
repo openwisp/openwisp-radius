@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroup, AbstractRadiusGroupCheck,
                                            AbstractRadiusGroupReply, AbstractRadiusPostAuth,
-                                           AbstractRadiusReply, AbstractRadiusUserGroup)
+                                           AbstractRadiusReply, AbstractRadiusToken, AbstractRadiusUserGroup)
 from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin
@@ -101,6 +101,12 @@ class RadiusBatch(OrgMixin, AbstractRadiusBatch):
         abstract = False
         unique_together = ('name', 'organization')
         swappable = swappable_setting('openwisp_radius', 'RadiusBatch')
+
+
+class RadiusToken(AbstractRadiusToken):
+    class Meta(AbstractRadiusToken.Meta):
+        abstract = False
+        swappable = swappable_setting('openwisp_radius', 'RadiusToken')
 
 
 key_validator = RegexValidator(

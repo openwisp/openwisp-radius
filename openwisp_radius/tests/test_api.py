@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from openwisp_users.models import Organization, OrganizationUser
 
-from ..models import RadiusAccounting, RadiusBatch, RadiusPostAuth
+from ..models import RadiusAccounting, RadiusBatch, RadiusPostAuth, RadiusToken
 from .mixins import ApiTokenMixin, BaseTestCase
 
 User = get_user_model()
@@ -21,6 +21,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
     radius_postauth_model = RadiusPostAuth
     radius_accounting_model = RadiusAccounting
     radius_batch_model = RadiusBatch
+    radius_token_model = RadiusToken
     user_model = User
 
     def assertAcctData(self, ra, data):
@@ -310,6 +311,7 @@ class TestApiUserToken(ApiTokenMixin,
                        BaseTestApiUserToken,
                        BaseTestCase):
     user_model = User
+    radius_token_model = RadiusToken
 
     def _get_url(self):
         return reverse('freeradius:user_auth_token',
