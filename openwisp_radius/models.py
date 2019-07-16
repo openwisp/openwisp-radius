@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.validators import RegexValidator, _lazy_re_compile
 from django.db import models
@@ -93,9 +94,19 @@ class RadiusBatch(OrgMixin, AbstractRadiusBatch):
 
     def save_user(self, user):
         super().save_user(user)
+        if OrganizationUser.objects.filter(user=user, organization=self.organization).exists():
+            return
         obj = OrganizationUser(user=user, organization=self.organization, is_admin=False)
         obj.full_clean()
         obj.save()
+
+    def get_or_create_user(self, row, users_list, password_length):
+        User = get_user_model()
+        username, password, email, first_name, last_name = row
+        if email and User.objects.filter(email=email).exists():
+            user = User.objects.get(email=email)
+            return user, None
+        return super().get_or_create_user(row, users_list, password_length)
 
     class Meta(AbstractRadiusBatch.Meta):
         abstract = False

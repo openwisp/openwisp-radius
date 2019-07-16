@@ -23,8 +23,8 @@ install:
   - pip install -e git+git://github.com/openwisp/openwisp-utils#egg=openwisp_utils
 
 before_script:
-  - flake8
-  - isort --check-only --recursive --diff
+  - ./runflake8
+  - ./runisort
   - ./runcheckmigration
   # ensure there are no pending migrations
   - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
