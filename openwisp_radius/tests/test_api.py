@@ -215,8 +215,13 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(response.status_code, 404)
 
-        # email does not exist in database
         password_reset_url = reverse('freeradius:rest_password_reset', args=[self.default_org.slug])
+
+        # no payload
+        response = self.client.post(password_reset_url, data={})
+        self.assertEqual(response.status_code, 400)
+
+        # email does not exist in database
         reset_payload = {'email': 'wrong@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(response.status_code, 404)
