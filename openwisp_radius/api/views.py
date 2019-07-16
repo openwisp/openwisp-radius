@@ -231,6 +231,7 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
                 raise Http404()
             self.validate_membership(user)
             return user
+        raise ParseError('email field is required')
 
 
 password_reset = PasswordResetView.as_view()
