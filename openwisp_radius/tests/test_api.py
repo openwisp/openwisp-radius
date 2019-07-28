@@ -5,7 +5,8 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode
-from django_freeradius.tests.base.test_api import BaseTestApi, BaseTestApiReject, BaseTestApiUserToken
+from django_freeradius.tests.base.test_api import (BaseTestApi, BaseTestApiReject, BaseTestApiUserToken,
+                                                   BaseTestApiValidateToken)
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -335,3 +336,22 @@ class TestApiUserToken(ApiTokenMixin,
                     password='tester')
         r = self.client.post(url, opts)
         self.assertEqual(r.status_code, 404)
+
+
+class TestApiValidateToken(ApiTokenMixin,
+                           BaseTestApiValidateToken,
+                           BaseTestCase):
+    user_model = User
+    radius_token_model = RadiusToken
+
+    def _get_url(self):
+        return reverse('freeradius:validate_auth_token',
+                       args=[self.default_org.slug])
+
+    def get_user(self):
+        user = self.user_model.objects.create_user(
+            username='test_name',
+            password='test_password',
+        )
+        self.default_org.add_user(user)
+        return user
