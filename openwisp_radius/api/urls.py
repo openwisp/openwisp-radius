@@ -25,4 +25,7 @@ urlpatterns = [
     url(r'^(?P<slug>[\w-]+)/account/token/$',
         views.obtain_auth_token,
         name='user_auth_token'),
+    url(r'^(?P<slug>[\w-]+)/account/token/validate/$',
+        views.validate_auth_token,
+        name='validate_auth_token'),
 ]

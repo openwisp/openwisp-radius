@@ -17,6 +17,7 @@ from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import ObtainAuthTokenView as BaseObtainAuthTokenView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
+from django_freeradius.api.views import ValidateAuthTokenView as BaseValidateAuthTokenView
 from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
@@ -189,6 +190,13 @@ class ObtainAuthTokenView(DispatchOrgMixin, BaseObtainAuthTokenView):
 
 
 obtain_auth_token = csrf_exempt(ObtainAuthTokenView.as_view())
+
+
+class ValidateAuthTokenView(DispatchOrgMixin, BaseValidateAuthTokenView):
+    pass
+
+
+validate_auth_token = (ValidateAuthTokenView.as_view())
 
 
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
