@@ -1,12 +1,13 @@
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.translation import ugettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_auth.registration.serializers import RegisterSerializer as BaseRegisterSerializer
 from rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSerializer
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 
 from .utils import ErrorDictMixin
 
@@ -33,9 +34,17 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
     phone_number = PhoneNumberField(allow_blank=True,
                                     default='')
 
-    def validate_phone_number(self, phone_number):
+    @property
+    def is_sms_verification_enabled(self):
         org = self.context['view'].organization
-        if org.radius_settings.sms_verification and not phone_number:
+        try:
+            return org.radius_settings.sms_verification
+        except ObjectDoesNotExist:
+            raise APIException('Could not complete operation '
+                               'because of an internal misconfiguration')
+
+    def validate_phone_number(self, phone_number):
+        if self.is_sms_verification_enabled and not phone_number:
             raise serializers.ValidationError(_('This field is required'))
         return phone_number
 
@@ -55,7 +64,7 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
-        if org.radius_settings.sms_verification:
+        if self.is_sms_verification_enabled:
             user.is_active = False
         try:
             user.full_clean()

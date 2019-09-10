@@ -12,14 +12,13 @@ from django.utils.http import urlsafe_base64_encode
 from django_freeradius.tests.base.test_api import (BaseTestApi, BaseTestApiReject, BaseTestApiUserToken,
                                                    BaseTestApiValidateToken)
 from freezegun import freeze_time
-
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from openwisp_users.models import Organization, OrganizationUser
 
-from ..models import PhoneToken, RadiusAccounting, RadiusBatch, RadiusPostAuth, RadiusToken
 from .. import settings as app_settings
+from ..models import PhoneToken, RadiusAccounting, RadiusBatch, RadiusPostAuth, RadiusToken
 from .mixins import ApiTokenMixin, BaseTestCase
 
 # it's 21 of April on UTC, this date is fabricated on purpose
@@ -68,6 +67,19 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         user = User.objects.first()
         self.assertIn((self.default_org.pk,), user.organizations_pk)
         self.assertTrue(user.is_active)
+
+    def test_register_error_missing_radius_settings(self):
+        self.assertEqual(User.objects.count(), 0)
+        self.default_org.radius_settings.delete()
+        url = reverse('freeradius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, {
+            'username': 'test@test.org',
+            'email': 'test@test.org',
+            'password1': 'password',
+            'password2': 'password'
+        })
+        self.assertEqual(r.status_code, 500)
+        self.assertIn('Could not complete operation', r.data['detail'])
 
     def test_register_404(self):
         url = reverse('freeradius:rest_register', args=['madeup'])
