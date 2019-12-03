@@ -1,4 +1,4 @@
-language: python
+language: python3
 sudo: false
 cache: pip
 
@@ -6,7 +6,7 @@ python:
   - "3.5"
 
 env:
-  - DJANGO="django>=2.0,<2.2"
+  - DJANGO="django>="
 
 branches:
   only:
@@ -14,7 +14,7 @@ branches:
 
 install:
   - # TODO: this is temporary, remove it when django-freeradius 0.1 is released
-  - pip install https://github.com/openwisp/django-freeradius/tarball/master
+  - pip install https://github.com/openwisp/django3-freeradius/tarball/master
   - # TODO: this is temporary, remove it when openwisp-users > 0.1.11 is released
   - pip install https://github.com/openwisp/openwisp-users/tarball/master
   - pip install $DJANGO
