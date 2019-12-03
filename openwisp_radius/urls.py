@@ -1,5 +1,5 @@
 from django.conf.urls import include, url
-from django_freeradius import settings as app_settings
+from django3_freeradius import settings as app_settings
 
 from .api import urls as api
 
