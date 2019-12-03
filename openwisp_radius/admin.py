@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
-from django_freeradius import settings as app_settings
-from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
+from django3_freeradius import settings as app_settings
+from django3_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
                                           AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
                                           AbstractRadiusGroupAdmin, AbstractRadiusGroupCheckAdmin,
                                           AbstractRadiusGroupReplyAdmin, AbstractRadiusPostAuthAdmin,
