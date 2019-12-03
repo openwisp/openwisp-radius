@@ -1,5 +1,5 @@
 import swapper
-from django_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
+from django3_freeradius.migrations import (DEFAULT_SESSION_TIME_LIMIT, DEFAULT_SESSION_TRAFFIC_LIMIT,
                                           SESSION_TIME_ATTRIBUTE, SESSION_TRAFFIC_ATTRIBUTE)
 
 
