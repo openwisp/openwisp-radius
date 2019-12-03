@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'openwisp_users',
 ]
 
-EXTENDED_APPS = ['django_freeradius']
+EXTENDED_APPS = ['django3_freeradius']
 LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTH_USER_MODEL = 'openwisp_users.User'
