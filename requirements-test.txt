@@ -3,7 +3,7 @@ coveralls
 responses
 freezegun
 openwisp-utils[qa]>=0.2.1
-djangorestframework-jwt
-django-cors-headers>=2.5.2
+django3restframework-jwt
+django3-cors-headers>=2.5.2
 mock>=2.0.0
 packaging
