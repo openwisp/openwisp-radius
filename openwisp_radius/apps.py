@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.utils.translation import ugettext_lazy as _
-from django_freeradius.apps import DjangoFreeradiusConfig
+from django_freeradius.apps import Django3FreeradiusConfig
 from django_freeradius.utils import update_user_related_records
 
 from .receivers import (create_default_groups_handler, organization_post_save, organization_pre_save,
