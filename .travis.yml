@@ -3,7 +3,12 @@ sudo: false
 cache: pip
 
 python:
+  - "2.7"
+  - "3.4"
   - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 
 env:
   - DJANGO="django>=2.0,<2.2"
