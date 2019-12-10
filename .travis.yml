@@ -1,0 +1,43 @@
+language: python
+cache: pip
+
+python:
+  - "3.5"
+
+env:
+  - DJANGO="django>=2.0,<2.2"
+
+branches:
+  only:
+    - master
+
+install:
+  - # TODO: this is temporary, remove it when django-freeradius 0.1 is released
+  - pip install https://github.com/openwisp/django-freeradius/tarball/master
+  - # TODO: this is temporary, remove it when openwisp-users > 0.1.11 is released
+  - pip install https://github.com/openwisp/openwisp-users/tarball/master
+  - pip install $DJANGO
+  - python setup.py -q develop
+  - pip install -r requirements-test.txt
+  - pip install -e git+git://github.com/openwisp/openwisp-utils#egg=openwisp_utils
+
+before_script:
+  - ./runflake8
+  - ./runisort
+  - ./runcheckmigration
+  # ensure there are no pending migrations
+  - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
+  - mkdir tests/media
+
+script:
+  - coverage run --source=openwisp_radius runtests.py
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+      # gets commit message of last commit before pull request merge
+      COMMIT_MESSAGE=$(git log $TRAVIS_PULL_REQUEST_SHA --format=%B -n 1)
+      printf "Checking commit message:\n\n"
+      printf "$COMMIT_MESSAGE\n\n"
+      checkcommit --message "$COMMIT_MESSAGE"
+    fi
+
+after_success:
+  coveralls
