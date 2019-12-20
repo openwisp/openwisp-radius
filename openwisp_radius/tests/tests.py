@@ -202,12 +202,12 @@ class TestAdmin(BaseTestCase, FileMixin, CallCommandMixin, PostParamsMixin,
         return data
 
     def _get_csv_post_data(self):
-        data = super(TestAdmin, self)._get_csv_post_data()
+        data = super()._get_csv_post_data()
         data['organization'] = self.default_org.pk
         return data
 
     def _get_prefix_post_data(self):
-        data = super(TestAdmin, self)._get_prefix_post_data()
+        data = super()._get_prefix_post_data()
         data['organization'] = self.default_org.pk
         return data
 
