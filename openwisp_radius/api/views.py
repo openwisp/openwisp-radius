@@ -213,7 +213,10 @@ password_change = PasswordChangeView.as_view()
 class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
     def get_serializer_context(self):
         user = self.get_user()
-        uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        # until django 2.1 urlsafe_base64_encode returned a bytestring
+        if not isinstance(uid, str):  # noqa
+            uid = uid.decode()
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')

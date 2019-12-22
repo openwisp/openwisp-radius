@@ -40,6 +40,9 @@ class TestNas(BaseTestNas, BaseTestCase):
 class TestRadiusAccounting(BaseTestRadiusAccounting, BaseTestCase):
     radius_accounting_model = RadiusAccounting
 
+    # no need to repeat this test here
+    test_ipv6_validator = None
+
 
 class TestRadiusCheck(BaseTestRadiusCheck, BaseTestCase):
     radius_check_model = RadiusCheck
