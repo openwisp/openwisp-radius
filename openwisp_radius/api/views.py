@@ -48,9 +48,9 @@ class TokenAuthentication(BaseAuthentication):
         # check cache too
         if not cache.get('uuid'):
             try:
-                opts = dict(organization=uuid, token=token)
+                opts = dict(organization_id=uuid, token=token)
                 instance = OrganizationRadiusSettings.objects.get(**opts)
-                cache.set(instance.pk, instance.token)
+                cache.set(uuid, instance.token)
             except OrganizationRadiusSettings.DoesNotExist:
                 raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         elif cache.get(uuid) != token:
