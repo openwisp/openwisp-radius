@@ -38,7 +38,7 @@ class CallCommandMixin(BaseCallCommandMixin):
         Organization.objects.get_or_create(name='test-organization')
         options = dict(organization='test-organization')
         kwargs.update(options)
-        super(CallCommandMixin, self)._call_command(command, **kwargs)
+        super()._call_command(command, **kwargs)
 
 
 class PostParamsMixin(BasePostParamsMixin):

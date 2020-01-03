@@ -2,10 +2,11 @@ language: python
 cache: pip
 
 python:
-  - "3.5"
+  - "3.6"
+  - "3.7"
 
 env:
-  - DJANGO="django>=2.0,<2.2"
+  - DJANGO="django>=2.2,<3.0"
 
 branches:
   only:

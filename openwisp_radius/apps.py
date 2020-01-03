@@ -13,7 +13,7 @@ class OpenwispRadiusConfig(DjangoFreeradiusConfig):
     name = 'openwisp_radius'
 
     def ready(self, *args, **kwargs):
-        super(OpenwispRadiusConfig, self).ready(*args, **kwargs)
+        super().ready(*args, **kwargs)
         self.add_default_menu_items()
 
     def check_settings(self):

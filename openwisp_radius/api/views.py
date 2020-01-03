@@ -132,7 +132,7 @@ class BatchView(TokenAuthorizationMixin, BaseBatchView):
         org = Organization.objects.get(pk=self.request.auth)
         options = dict(organization=org)
         options.update(kwargs)
-        return super(BatchView, self)._create_batch(serializer, **options)
+        return super()._create_batch(serializer, **options)
 
 
 batch = BatchView.as_view()

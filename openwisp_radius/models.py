@@ -151,10 +151,10 @@ class OrganizationRadiusSettings(models.Model):
         return self.organization.name
 
     def save(self, *args, **kwargs):
-        super(OrganizationRadiusSettings, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         cache.set(self.organization.pk, self.token)
 
     def delete(self, *args, **kwargs):
         pk = self.organization.pk
-        super(OrganizationRadiusSettings, self).delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
         cache.delete(pk)

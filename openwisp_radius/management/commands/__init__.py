@@ -5,7 +5,7 @@ from openwisp_users.models import Organization
 
 class BatchAddMixin(object):
     def add_arguments(self, parser):
-        super(BatchAddMixin, self).add_arguments(parser)
+        super().add_arguments(parser)
         parser.add_argument('--organization',
                             action='store',
                             help='Organization the users belong to')
@@ -17,6 +17,6 @@ class BatchAddMixin(object):
         except Organization.DoesNotExist:
             sys.stdout.write("The organization supplied was not found\n")
             sys.exit(1)
-        batch = super(BatchAddMixin, self)._create_batch(**options)
+        batch = super()._create_batch(**options)
         batch.organization = org
         return batch
