@@ -17,7 +17,7 @@ from django_freeradius.tests.base.test_social import BaseTestSocial
 from django_freeradius.tests.base.test_utils import BaseTestUtils
 
 from openwisp_users.models import Organization, OrganizationUser
-from openwisp_utils.tests.utils import TestMultitenantAdminMixin
+from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
 from ..models import (Nas, OrganizationRadiusSettings, RadiusAccounting, RadiusBatch, RadiusCheck,
                       RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
