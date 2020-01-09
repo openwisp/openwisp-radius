@@ -1,3 +1,0 @@
-#!/bin/bash
-set -e
-checkmigrations --migration-path ./openwisp_radius/migrations/ || exit 1

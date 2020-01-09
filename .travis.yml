@@ -20,23 +20,14 @@ install:
   - pip install -r requirements-test.txt
 
 before_script:
-  - ./runflake8
-  - ./runisort
-  - ./runcheckmigration
-  # ensure there are no pending migrations
-  - ./tests/manage.py makemigrations openwisp_radius --dry-run | grep "No changes detected"
+  - |
+      openwisp-utils-qa-checks \
+        --migration-path "./openwisp_radius/migrations" \
+        --migration-module openwisp_radius
   - mkdir tests/media
 
 script:
   - coverage run --source=openwisp_radius runtests.py
-  - |
-    if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
-      # gets commit message of last commit before pull request merge
-      COMMIT_MESSAGE=$(git log $TRAVIS_PULL_REQUEST_SHA --format=%B -n 1)
-      printf "Checking commit message:\n\n"
-      printf "$COMMIT_MESSAGE\n\n"
-      checkcommit --message "$COMMIT_MESSAGE"
-    fi
 
 after_success:
   coveralls
