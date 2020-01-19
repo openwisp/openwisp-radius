@@ -618,7 +618,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
     user_model = User
 
     def setUp(self):
-        self.org = self._create_org()
+        self.org = self._create_org(name='test', slug='test')
 
     def test_string_representation(self):
         rad = OrganizationRadiusSettings.objects.create(organization=self.org)
@@ -674,6 +674,11 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         r = self.client.post(post_url, {'username': 'molly', 'password': 'barbar'})
         self.assertEqual(r.status_code, 200)
         cache.clear()
+
+    def test_default_organisation_radius_settings(self):
+        org = Organization.objects.get(slug='default')
+        self.assertTrue(hasattr(org, 'radius_settings'))
+        self.assertIsInstance(org.radius_settings, OrganizationRadiusSettings)
 
 
 class TestRadiusToken(BaseTestRadiusToken, BaseTestCase):

@@ -5,8 +5,6 @@ from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 
 from openwisp_users.models import Organization
 
-from ..models import OrganizationRadiusSettings
-
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
     def _create_org(self, **kwargs):
@@ -58,8 +56,7 @@ class ApiTokenMixin(BasePostParamsMixin):
     def setUp(self):
         super().setUp()
         org = self.default_org
-        rad = OrganizationRadiusSettings.objects.create(token='asdfghjklqwerty',
-                                                        organization=org)
+        rad = self.default_org.radius_settings
         self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
         self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
 

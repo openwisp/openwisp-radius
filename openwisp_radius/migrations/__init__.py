@@ -18,6 +18,8 @@ def add_default_organization(apps, schema_editor):
         for record in Model.objects.all().iterator():
             record.organization_id = settings._OPENWISP_DEFAULT_ORG_UUID
             record.save()
+    OrganizationRadiusSettings = apps.get_model('openwisp_radius', 'organizationradiussettings')
+    OrganizationRadiusSettings.objects.create(organization_id=settings._OPENWISP_DEFAULT_ORG_UUID)
 
 
 def add_default_groups(apps, schema_editor):
