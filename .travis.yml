@@ -13,7 +13,7 @@ branches:
     - master
 
 install:
-  - # TODO: this is temporary, remove it when django-freeradius 0.1 is released
+  # TODO: this is temporary, remove it when django-freeradius 0.1 is released
   - pip install https://github.com/openwisp/django-freeradius/tarball/master
   - pip install $DJANGO
   - python setup.py -q develop

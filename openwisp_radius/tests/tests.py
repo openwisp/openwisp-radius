@@ -634,7 +634,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             rad.full_clean()
         except ValidationError as e:
             self.assertEqual(e.message_dict['token'][0],
-                             'Key must not contain spaces, dots or slashes.')
+                             'This value must not contain spaces, dots or slashes.')
 
     def test_cache(self):
         # clear cache set from previous tests

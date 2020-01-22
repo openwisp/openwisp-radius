@@ -7,12 +7,13 @@ import django.core.validators
 import django.db.models.deletion
 import django.utils.timezone
 import model_utils.fields
+import openwisp_utils.base
+import openwisp_users.mixins
+import openwisp_utils.utils
 from django.conf import settings
 from django.db import migrations, models
 from openwisp_radius.migrations import add_default_organization
 
-import openwisp_radius.models
-import openwisp_users.mixins
 
 class Migration(migrations.Migration):
     """
@@ -77,7 +78,7 @@ class Migration(migrations.Migration):
             name='OrganizationRadiusSettings',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False)),
-                ('token', models.CharField(default=openwisp_radius.models.generate_token, max_length=32, validators=[django.core.validators.RegexValidator(re.compile('^[^\\s/\\.]+$'), code='invalid', message='Key must not contain spaces, dots or slashes.')])),
+                ('token', openwisp_utils.base.KeyField(default=openwisp_utils.utils.get_random_key, help_text=None, max_length=32, validators=[django.core.validators.RegexValidator(re.compile('^[^\\s/\\.]+$'), code='invalid', message='This value must not contain spaces, dots or slashes.')])),
                 ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='openwisp_users.Organization', verbose_name='organization')),
             ],
             options={

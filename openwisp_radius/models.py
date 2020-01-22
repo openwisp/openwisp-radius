@@ -1,10 +1,6 @@
-import uuid
-
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.validators import RegexValidator, _lazy_re_compile
 from django.db import models
-from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroup, AbstractRadiusGroupCheck,
@@ -14,6 +10,7 @@ from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin
 from openwisp_users.models import OrganizationUser
+from openwisp_utils.base import KeyField, UUIDModel
 
 
 class RadiusCheck(OrgMixin, AbstractRadiusCheck):
@@ -120,28 +117,12 @@ class RadiusToken(AbstractRadiusToken):
         swappable = swappable_setting('openwisp_radius', 'RadiusToken')
 
 
-key_validator = RegexValidator(
-    _lazy_re_compile('^[^\s/\.]+$'),
-    message=_('Key must not contain spaces, dots or slashes.'),
-    code='invalid',
-)
-
-
-def generate_token():
-    return get_random_string(length=32)
-
-
-class OrganizationRadiusSettings(models.Model):
-    id = models.UUIDField(default=uuid.uuid4,
-                          primary_key=True,
-                          editable=False)
+class OrganizationRadiusSettings(UUIDModel):
     organization = models.OneToOneField('openwisp_users.Organization',
                                         verbose_name=_('organization'),
                                         related_name='radius_settings',
                                         on_delete=models.CASCADE)
-    token = models.CharField(max_length=32,
-                             validators=[key_validator],
-                             default=generate_token)
+    token = KeyField(max_length=32)
 
     class Meta:
         verbose_name = _('Organization radius settings')
