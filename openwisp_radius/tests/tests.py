@@ -556,6 +556,12 @@ class TestAdmin(BaseTestCase, FileMixin, CallCommandMixin, PostParamsMixin,
     def test_radius_token_delete_selected(self):
         pass
 
+    def test_radius_group_delete_default_by_non_superuser(self):
+        org_user = OrganizationUser.objects.create(organization=Organization.objects.get(name="default"),
+                                                   user=User.objects.get(username='admin'))
+        super().test_radius_group_delete_default_by_non_superuser()
+        org_user.delete()
+
 
 class TestAutoGroupname(ApiTokenMixin,
                         BaseTestAutoGroupname,

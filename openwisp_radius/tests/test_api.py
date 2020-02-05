@@ -41,7 +41,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 403)
-        self.assertIn('setting the organization', response.data['detail'])
+        self.assertIn('setting the organization', str(response.data['detail']))
 
     def test_register_201(self):
         self.assertEqual(User.objects.count(), 0)
@@ -180,7 +180,9 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         }
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
-        self.assertIn("The two password fields didn't match.", response.data['new_password2'])
+        self.assertIn("The two password fields didn’t match.",
+                      str(response.data['new_password2']).replace("'", "’")
+                      )
 
         # Password successfully changed
         new_password_payload = {
