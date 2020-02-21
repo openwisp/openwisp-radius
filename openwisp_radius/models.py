@@ -1,5 +1,4 @@
 import logging
-
 from datetime import timedelta
 
 from django.conf import settings
@@ -8,7 +7,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius.base.models import (AbstractNas, AbstractRadiusAccounting, AbstractRadiusBatch,
                                            AbstractRadiusCheck, AbstractRadiusGroup, AbstractRadiusGroupCheck,
@@ -20,8 +18,7 @@ from swapper import swappable_setting
 
 from openwisp_users.mixins import OrgMixin
 from openwisp_users.models import OrganizationUser
-
-from openwisp_utils.base import KeyField, UUIDModel, TimeStampedEditableModel
+from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 
 from . import exceptions
 from . import settings as app_settings

@@ -717,11 +717,10 @@ class TestPhoneToken(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        OrganizationRadiusSettings.objects.create(
-            organization=self.default_org,
-            sms_verification=True,
-            sms_phone_number='+595972157632'
-        )
+        radius_settings = self.default_org.radius_settings
+        radius_settings.sms_verification = True
+        radius_settings.sms_phone_number = '+595972157632'
+        radius_settings.save()
 
     def _create_token(self, user=None, ip='127.0.0.1', created=None):
         if not user:

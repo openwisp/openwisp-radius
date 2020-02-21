@@ -133,7 +133,7 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
     extra = 0
     readonly_fields = ('verified', 'valid_until', 'attempts', 'ip')
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -185,7 +185,7 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         extra = 0
         readonly_fields = ('provider', 'uid', 'extra_data')
 
-        def has_add_permission(self, request, obj=None):
+        def has_add_permission(self, request, obj):
             return False
 
         def has_delete_permission(self, request, obj=None):

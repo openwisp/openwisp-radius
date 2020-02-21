@@ -213,7 +213,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         }
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('New password has been saved.', response.data['detail'])
+        self.assertIn('New password has been saved.', str(response.data['detail']))
 
         # user should not be able to login using old password
         login_response = self.client.post(login_url, data=login_payload)
@@ -316,7 +316,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
         self.assertEqual(confirm_response.status_code, 200)
-        self.assertIn('Password has been reset with the new password.', confirm_response.data['detail'])
+        self.assertIn('Password reset e-mail has been sent.', str(response.data['detail']))
 
         # user should not be able to login with old password
         login_payload = {
