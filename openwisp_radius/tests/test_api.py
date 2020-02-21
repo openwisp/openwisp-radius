@@ -181,8 +181,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn("The two password fields didn’t match.",
-                      str(response.data['new_password2']).replace("'", "’")
-                      )
+                      str(response.data['new_password2']).replace("'", "’"))
 
         # Password successfully changed
         new_password_payload = {
