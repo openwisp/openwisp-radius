@@ -13,13 +13,19 @@ def add_default_organization(apps, schema_editor):
     """
     models = ['nas', 'radiusaccounting', 'radiuscheck', 'radiuspostauth', 'radiusreply']
 
+    if hasattr(settings, '_OPENWISP_DEFAULT_ORG_UUID'):
+        default_org_id = settings._OPENWISP_DEFAULT_ORG_UUID
+    else:  # pragma: no-cover (corner case)
+        Organization = apps.get_model('openwisp_users', 'Organization')
+        default_org_id = Organization.objects.first().pk
+
     for model in models:
         Model = apps.get_model('openwisp_radius', model)
         for record in Model.objects.all().iterator():
-            record.organization_id = settings._OPENWISP_DEFAULT_ORG_UUID
+            record.organization_id = default_org_id
             record.save()
     OrganizationRadiusSettings = apps.get_model('openwisp_radius', 'organizationradiussettings')
-    OrganizationRadiusSettings.objects.create(organization_id=settings._OPENWISP_DEFAULT_ORG_UUID)
+    OrganizationRadiusSettings.objects.create(organization_id=default_org_id)
 
 
 def add_default_groups(apps, schema_editor):
@@ -53,4 +59,3 @@ def create_default_permissions(apps, schema_editor):
         app_config.models_module = True
         create_permissions(app_config, apps=apps, verbosity=0)
         app_config.models_module = None
-
