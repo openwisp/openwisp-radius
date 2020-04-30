@@ -12,7 +12,9 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
     from .social.views import redirect_cp
 
     urlpatterns.append(
-        url(r'^freeradius/social-login/(?P<slug>[\w-]+)/$',
+        url(
+            r'^freeradius/social-login/(?P<slug>[\w-]+)/$',
             redirect_cp,
-            name='redirect_cp')
+            name='redirect_cp',
+        )
     )

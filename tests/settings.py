@@ -80,7 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'openwisp_utils.admin_theme.context_processor.menu_items'
+                'openwisp_utils.admin_theme.context_processor.menu_items',
             ],
         },
     },
@@ -128,25 +128,13 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['email', 'public_profile'],
         'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
         'INIT_PARAMS': {'cookie': True},
-        'FIELDS': [
-            'id',
-            'email',
-            'name',
-            'first_name',
-            'last_name',
-            'verified',
-        ],
+        'FIELDS': ['id', 'email', 'name', 'first_name', 'last_name', 'verified',],
         'VERIFIED_EMAIL': True,
     },
     'google': {
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        }
-    }
+        'SCOPE': ['profile', 'email',],
+        'AUTH_PARAMS': {'access_type': 'online',},
+    },
 }
 
 if TESTING:
@@ -155,10 +143,7 @@ if TESTING:
     DJANGO_FREERADIUS_USERGROUP_ADMIN = True
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
-
-DJANGO_FREERADIUS_EXTRA_NAS_TYPES = (
-    ('cisco', 'Cisco Router'),
-)
+DJANGO_FREERADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
 
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
@@ -184,7 +169,7 @@ try:
     INSTALLED_APPS.append('corsheaders')
     MIDDLEWARE.insert(
         MIDDLEWARE.index('django.middleware.common.CommonMiddleware'),
-        'corsheaders.middleware.CorsMiddleware'
+        'corsheaders.middleware.CorsMiddleware',
     )
     # WARNING: for development only!
     CORS_ORIGIN_ALLOW_ALL = True

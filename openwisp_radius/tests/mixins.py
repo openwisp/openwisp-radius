@@ -1,6 +1,8 @@
 from django.test import TestCase
 from django_freeradius.tests import CallCommandMixin as BaseCallCommandMixin
-from django_freeradius.tests import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
+from django_freeradius.tests import (
+    CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin,
+)
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
 
 from openwisp_users.models import Organization
@@ -8,8 +10,7 @@ from openwisp_users.models import Organization
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
     def _create_org(self, **kwargs):
-        options = dict(name='default',
-                       slug='default')
+        options = dict(name='default', slug='default')
         options.update(kwargs)
         try:
             org = Organization.objects.get(**options)
@@ -61,7 +62,5 @@ class ApiTokenMixin(BasePostParamsMixin):
         self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
 
 
-class BaseTestCase(DefaultOrgMixin,
-                   CreateRadiusObjectsMixin,
-                   TestCase):
+class BaseTestCase(DefaultOrgMixin, CreateRadiusObjectsMixin, TestCase):
     pass

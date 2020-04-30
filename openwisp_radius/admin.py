@@ -3,20 +3,38 @@ from django.contrib import admin
 from django.contrib.admin import StackedInline
 from django.utils.translation import ugettext_lazy as _
 from django_freeradius import settings as app_settings
-from django_freeradius.base.admin import (AbstractNasAdmin, AbstractRadiusAccountingAdmin,
-                                          AbstractRadiusBatchAdmin, AbstractRadiusCheckAdmin,
-                                          AbstractRadiusGroupAdmin, AbstractRadiusGroupCheckAdmin,
-                                          AbstractRadiusGroupReplyAdmin, AbstractRadiusPostAuthAdmin,
-                                          AbstractRadiusReplyAdmin, AbstractRadiusUserGroupAdmin,
-                                          RadiusUserGroupInline)
+from django_freeradius.base.admin import (
+    AbstractNasAdmin,
+    AbstractRadiusAccountingAdmin,
+    AbstractRadiusBatchAdmin,
+    AbstractRadiusCheckAdmin,
+    AbstractRadiusGroupAdmin,
+    AbstractRadiusGroupCheckAdmin,
+    AbstractRadiusGroupReplyAdmin,
+    AbstractRadiusPostAuthAdmin,
+    AbstractRadiusReplyAdmin,
+    AbstractRadiusUserGroupAdmin,
+    RadiusUserGroupInline,
+)
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
 from openwisp_utils.admin import AlwaysHasChangedMixin, TimeReadonlyAdminMixin
 
-from .models import (Nas, OrganizationRadiusSettings, PhoneToken, RadiusAccounting, RadiusBatch, RadiusCheck,
-                     RadiusGroup, RadiusGroupCheck, RadiusGroupReply, RadiusPostAuth, RadiusReply,
-                     RadiusUserGroup)
+from .models import (
+    Nas,
+    OrganizationRadiusSettings,
+    PhoneToken,
+    RadiusAccounting,
+    RadiusBatch,
+    RadiusCheck,
+    RadiusGroup,
+    RadiusGroupCheck,
+    RadiusGroupReply,
+    RadiusPostAuth,
+    RadiusReply,
+    RadiusUserGroup,
+)
 
 
 class OrganizationFirstMixin(MultitenantAdminMixin):
@@ -28,8 +46,7 @@ class OrganizationFirstMixin(MultitenantAdminMixin):
 
 
 @admin.register(RadiusCheck)
-class RadiusCheckAdmin(MultitenantAdminMixin,
-                       AbstractRadiusCheckAdmin):
+class RadiusCheckAdmin(MultitenantAdminMixin, AbstractRadiusCheckAdmin):
     pass
 
 
@@ -39,8 +56,7 @@ RadiusCheckAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusReply)
-class RadiusReplyAdmin(MultitenantAdminMixin,
-                       AbstractRadiusReplyAdmin):
+class RadiusReplyAdmin(MultitenantAdminMixin, AbstractRadiusReplyAdmin):
     pass
 
 
@@ -50,18 +66,18 @@ RadiusReplyAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusAccounting)
-class RadiusAccountingAdmin(OrganizationFirstMixin,
-                            AbstractRadiusAccountingAdmin):
+class RadiusAccountingAdmin(OrganizationFirstMixin, AbstractRadiusAccountingAdmin):
     pass
 
 
-RadiusAccountingAdmin.list_display.insert(1, 'organization',)
+RadiusAccountingAdmin.list_display.insert(
+    1, 'organization',
+)
 RadiusAccountingAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusGroup)
-class RadiusGroupAdmin(OrganizationFirstMixin,
-                       AbstractRadiusGroupAdmin):
+class RadiusGroupAdmin(OrganizationFirstMixin, AbstractRadiusGroupAdmin):
     select_related = ('organization',)
 
     def get_group_name(self, obj):
@@ -76,40 +92,40 @@ RadiusGroupAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 if app_settings.USERGROUP_ADMIN:
+
     @admin.register(RadiusUserGroup)
-    class RadiusUserGroupAdmin(MultitenantAdminMixin,
-                               AbstractRadiusUserGroupAdmin):
+    class RadiusUserGroupAdmin(MultitenantAdminMixin, AbstractRadiusUserGroupAdmin):
         multitenant_parent = 'group'
 
 
 if app_settings.GROUPREPLY_ADMIN:
+
     @admin.register(RadiusGroupReply)
-    class RadiusGroupReplyAdmin(MultitenantAdminMixin,
-                                AbstractRadiusGroupReplyAdmin):
+    class RadiusGroupReplyAdmin(MultitenantAdminMixin, AbstractRadiusGroupReplyAdmin):
         multitenant_parent = 'group'
 
 
 if app_settings.GROUPCHECK_ADMIN:
+
     @admin.register(RadiusGroupCheck)
-    class RadiusGroupCheckAdmin(MultitenantAdminMixin,
-                                AbstractRadiusGroupCheckAdmin):
+    class RadiusGroupCheckAdmin(MultitenantAdminMixin, AbstractRadiusGroupCheckAdmin):
         multitenant_parent = 'group'
 
 
 @admin.register(Nas)
-class NasAdmin(MultitenantAdminMixin,
-               AbstractNasAdmin):
+class NasAdmin(MultitenantAdminMixin, AbstractNasAdmin):
     pass
 
 
-NasAdmin.fieldsets[0][1]['fields'] = ('organization',) + NasAdmin.fieldsets[0][1]['fields']
+NasAdmin.fieldsets[0][1]['fields'] = ('organization',) + NasAdmin.fieldsets[0][1][
+    'fields'
+]
 NasAdmin.list_display.insert(1, 'organization')
 NasAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusPostAuth)
-class RadiusPostAuthAdmin(OrganizationFirstMixin,
-                          AbstractRadiusPostAuthAdmin):
+class RadiusPostAuthAdmin(OrganizationFirstMixin, AbstractRadiusPostAuthAdmin):
     pass
 
 
@@ -118,8 +134,7 @@ RadiusPostAuthAdmin.list_filter += (('organization', MultitenantOrgFilter),)
 
 
 @admin.register(RadiusBatch)
-class RadiusBatchAdmin(MultitenantAdminMixin,
-                       AbstractRadiusBatchAdmin):
+class RadiusBatchAdmin(MultitenantAdminMixin, AbstractRadiusBatchAdmin):
     pass
 
 
@@ -151,17 +166,11 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
     form = AlwaysHasChangedForm
     fieldsets = (
-        (None, {
-            'fields': (
-                'token',
-                'sms_verification',
-                'sms_phone_number',
-            )
-        }),
-        (_('Advanced options'), {
-            'classes': ('collapse',),
-            'fields': ('sms_meta_data',),
-        }),
+        (None, {'fields': ('token', 'sms_verification', 'sms_phone_number',)}),
+        (
+            _('Advanced options'),
+            {'classes': ('collapse',), 'fields': ('sms_meta_data',)},
+        ),
     )
 
 

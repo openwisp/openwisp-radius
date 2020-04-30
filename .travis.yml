@@ -8,7 +8,7 @@ python:
 env:
   - DJANGO="django>=2.2,<3.0"
   - DJANGO="django>=3.0,<3.1"
-  
+
 branches:
   only:
     - master
@@ -19,12 +19,11 @@ install:
   - pip install $DJANGO
   - python setup.py -q develop
   - pip install -r requirements-test.txt
+  # TODO: remove when openwisp-utils 0.5.0 is released
+  - pip install --upgrade https://github.com/openwisp/openwisp-utils/tarball/master#egg=openwisp_utils[qa]
 
 before_script:
-  - |
-      openwisp-utils-qa-checks \
-        --migration-path "./openwisp_radius/migrations" \
-        --migration-module openwisp_radius
+  - ./run-qa-checks
   - mkdir tests/media
 
 script:
