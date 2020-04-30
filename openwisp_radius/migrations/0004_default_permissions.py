@@ -19,8 +19,8 @@ def assign_permissions_to_groups(apps, schema_editor):
     operators_and_admins_can_manage = ['radiuspostauth', 'radiusaccounting']
     operators_read_only_admins_manage = [
         'radiuscheck',
-        'radiusreply', 
-        'radiusgroup', 
+        'radiusreply',
+        'radiusgroup',
         'radiusgroupcheck',
         'radiusgroupreply',
         'radiususergroup',
@@ -44,7 +44,9 @@ def assign_permissions_to_groups(apps, schema_editor):
         except Permission.DoesNotExist:
             pass
         for action in manage_operations:
-            permission_ad = Permission.objects.get(codename='{}_{}'.format(action, model_name))
+            permission_ad = Permission.objects.get(
+                codename='{}_{}'.format(action, model_name)
+            )
             admin.permissions.add(permission_ad.pk)
 
 
@@ -55,7 +57,6 @@ class Migration(migrations.Migration):
     ]
     operations = [
         migrations.RunPython(
-            assign_permissions_to_groups, 
-            reverse_code=migrations.RunPython.noop
+            assign_permissions_to_groups, reverse_code=migrations.RunPython.noop
         )
     ]

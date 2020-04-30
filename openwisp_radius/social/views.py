@@ -1,6 +1,8 @@
 from django.core.exceptions import SuspiciousOperation
 from django.http import Http404
-from django_freeradius.social.views import RedirectCaptivePageView as BaseRedirectCaptivePageView
+from django_freeradius.social.views import (
+    RedirectCaptivePageView as BaseRedirectCaptivePageView,
+)
 
 from openwisp_users.models import Organization
 

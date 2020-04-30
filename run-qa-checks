@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+openwisp-qa-check \
+        --migration-path "./openwisp_radius/migrations" \
+        --migration-module openwisp_radius

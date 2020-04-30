@@ -18,7 +18,9 @@ from django_freeradius.api.views import AuthorizeView as BaseAuthorizeView
 from django_freeradius.api.views import BatchView as BaseBatchView
 from django_freeradius.api.views import ObtainAuthTokenView as BaseObtainAuthTokenView
 from django_freeradius.api.views import PostAuthView as BasePostAuthView
-from django_freeradius.api.views import ValidateAuthTokenView as BaseValidateAuthTokenView
+from django_freeradius.api.views import (
+    ValidateAuthTokenView as BaseValidateAuthTokenView,
+)
 from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
@@ -70,8 +72,9 @@ class TokenAuthentication(BaseAuthentication):
 
     def check_organization(self, request):
         if 'organization' in request.data:
-            raise AuthenticationFailed(_('setting the organization parameter '
-                                         'explicitly is not allowed'))
+            raise AuthenticationFailed(
+                _('setting the organization parameter ' 'explicitly is not allowed')
+            )
 
     def get_uuid_token(self, request):
         # default to GET params
@@ -105,10 +108,12 @@ class AuthorizeView(TokenAuthorizationMixin, BaseAuthorizeView):
     def get_user(self, request):
         user = super().get_user(request)
         # ensure user is member of the authenticated org
-        if user and not OrganizationUser.objects.filter(
-            user=user,
-            organization_id=request.auth
-        ).exists():
+        if (
+            user
+            and not OrganizationUser.objects.filter(
+                user=user, organization_id=request.auth
+            ).exists()
+        ):
             return None
         return user
 
@@ -157,25 +162,25 @@ class DispatchOrgMixin(object):
 
     def validate_membership(self, user):
         if (self.organization.pk,) not in user.organizations_pk:
-            message = _('User "{}" is not member '
-                        'of "{}"').format(user.username, self.organization.slug)
+            message = _('User "{}" is not member ' 'of "{}"').format(
+                user.username, self.organization.slug
+            )
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
 class RegisterView(DispatchOrgMixin, BaseRegisterView):
     def get_response_data(self, user):
-        if allauth_settings.EMAIL_VERIFICATION == \
-                allauth_settings.EmailVerificationMethod.MANDATORY:
+        if (
+            allauth_settings.EMAIL_VERIFICATION
+            == allauth_settings.EmailVerificationMethod.MANDATORY
+        ):
             return {"detail": _("Verification e-mail sent.")}
 
         context = self.get_serializer_context()
 
         if getattr(settings, 'REST_USE_JWT', False):
-            data = {
-                'user': user,
-                'token': self.token
-            }
+            data = {'user': user, 'token': self.token}
             return JWTSerializer(data, context=context).data
         else:
             return TokenSerializer(user.auth_token, context=context).data
@@ -200,7 +205,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, BaseValidateAuthTokenView):
     pass
 
 
-validate_auth_token = (ValidateAuthTokenView.as_view())
+validate_auth_token = ValidateAuthTokenView.as_view()
 
 
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
@@ -224,17 +229,13 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')
-        password_reset_url = password_reset_urls.get(str(self.organization.pk),
-                                                     default_url)
-        password_reset_url = password_reset_url.format(
-            organization=self.organization.slug,
-            uid=uid,
-            token=token
+        password_reset_url = password_reset_urls.get(
+            str(self.organization.pk), default_url
         )
-        context = {
-            'request': self.request,
-            'password_reset_url': password_reset_url
-        }
+        password_reset_url = password_reset_url.format(
+            organization=self.organization.slug, uid=uid, token=token
+        )
+        context = {'request': self.request, 'password_reset_url': password_reset_url}
         return context
 
     def get_user(self, *args, **kwargs):
@@ -278,28 +279,26 @@ class InactiveUserTokenAuthentication(UserTokenAuthentication):
     of Django REST Framework to allow inactive users
     to authenticate against some specific API endpoints.
     """
+
     def authenticate_credentials(self, key):
         try:
-            token = UserToken.objects.select_related('user') \
-                                     .get(key=key)
+            token = UserToken.objects.select_related('user').get(key=key)
         except UserToken.DoesNotExist:
             raise AuthenticationFailed(_('Invalid token.'))
         else:
             return (token.user, token)
 
 
-class CreatePhoneTokenView(ErrorDictMixin, BaseThrottle,
-                           DispatchOrgMixin, CreateAPIView):
+class CreatePhoneTokenView(
+    ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
+):
     authentication_classes = (InactiveUserTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def create(self, *args, **kwargs):
         request = self.request
         self.validate_membership(request.user)
-        phone_token = PhoneToken(
-            user=request.user,
-            ip=self.get_ident(request)
-        )
+        phone_token = PhoneToken(user=request.user, ip=self.get_ident(request))
         try:
             phone_token.full_clean()
         except ValidationError as e:
@@ -317,9 +316,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ValidatePhoneTokenSerializer
 
-    def _error_response(self, message,
-                        key='non_field_errors',
-                        status=400):
+    def _error_response(self, message, key='non_field_errors', status=400):
         return Response({key: [message]}, status=status)
 
     def post(self, request, *args, **kwargs):
@@ -327,13 +324,10 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_token = PhoneToken.objects.filter(user=user) \
-                                        .order_by('-created') \
-                                        .first()
+        phone_token = PhoneToken.objects.filter(user=user).order_by('-created').first()
         if not phone_token:
             return self._error_response(
-                _('No verification code found in '
-                  'the system for this user.')
+                _('No verification code found in ' 'the system for this user.')
             )
         try:
             is_valid = phone_token.is_valid(serializer.data['code'])
@@ -356,8 +350,9 @@ class ChangePhoneNumberView(CreatePhoneTokenView):
     serializer_class = ChangePhoneNumberSerializer
 
     def create(self, *args, **kwargs):
-        serializer = self.get_serializer(data=self.request.data,
-                                         context=self.get_serializer_context())
+        serializer = self.get_serializer(
+            data=self.request.data, context=self.get_serializer_context()
+        )
         serializer.is_valid(raise_exception=True)
         # attempt to create the phone token before
         # the new number is saved, so that if the

@@ -24,7 +24,9 @@ def add_default_organization(apps, schema_editor):
         for record in Model.objects.all().iterator():
             record.organization_id = default_org_id
             record.save()
-    OrganizationRadiusSettings = apps.get_model('openwisp_radius', 'organizationradiussettings')
+    OrganizationRadiusSettings = apps.get_model(
+        'openwisp_radius', 'organizationradiussettings'
+    )
     OrganizationRadiusSettings.objects.create(organization_id=default_org_id)
 
 
@@ -42,17 +44,23 @@ def add_default_group_to_existing_users(apps, schema_editor):
     RadiusUserGroup = get_swapped_model(apps, 'django_freeradius', 'RadiusUserGroup')
     RadiusGroup = get_swapped_model(apps, 'django_freeradius', 'RadiusGroup')
     for organization in Organization.objects.all():
-        default_group = RadiusGroup.objects.filter(organization_id=organization.pk,
-                                                   default=True)
+        default_group = RadiusGroup.objects.filter(
+            organization_id=organization.pk, default=True
+        )
         if default_group.exists():
             default_group = default_group.first()
-            for orguser in OrganizationUser.objects.filter(organization_id=organization.pk):
+            for orguser in OrganizationUser.objects.filter(
+                organization_id=organization.pk
+            ):
                 user = orguser.user
                 if not RadiusUserGroup.objects.filter(user=user).exists():
-                    user_group = RadiusUserGroup(user_id=user.id,
-                                                 username=user.username,
-                                                 group_id=default_group.id)
+                    user_group = RadiusUserGroup(
+                        user_id=user.id,
+                        username=user.username,
+                        group_id=default_group.id,
+                    )
                     user_group.save()
+
 
 def create_default_permissions(apps, schema_editor):
     for app_config in apps.get_app_configs():

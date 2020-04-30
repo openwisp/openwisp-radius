@@ -4,7 +4,9 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.translation import ugettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
-from rest_auth.registration.serializers import RegisterSerializer as BaseRegisterSerializer
+from rest_auth.registration.serializers import (
+    RegisterSerializer as BaseRegisterSerializer,
+)
 from rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
@@ -22,17 +24,14 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
             'email_template_name': ('custom_password_reset_email.html'),
             'request': request,
-            'extra_email_context': {
-                'password_reset_url': password_reset_url
-            }
+            'extra_email_context': {'password_reset_url': password_reset_url},
         }
         opts.update(self.get_email_options())
         self.reset_form.save(**opts)
 
 
 class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
-    phone_number = PhoneNumberField(allow_blank=True,
-                                    default='')
+    phone_number = PhoneNumberField(allow_blank=True, default='')
 
     @property
     def is_sms_verification_enabled(self):
@@ -40,8 +39,10 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
         try:
             return org.radius_settings.sms_verification
         except ObjectDoesNotExist:
-            raise APIException('Could not complete operation '
-                               'because of an internal misconfiguration')
+            raise APIException(
+                'Could not complete operation '
+                'because of an internal misconfiguration'
+            )
 
     def validate_phone_number(self, phone_number):
         if self.is_sms_verification_enabled and not phone_number:
@@ -88,8 +89,7 @@ class ChangePhoneNumberSerializer(ErrorDictMixin, serializers.Serializer):
     def validate_phone_number(self, phone_number):
         if self.user.phone_number == phone_number:
             raise serializers.ValidationError(
-                _('The new phone number must be '
-                  'different than the old one.')
+                _('The new phone number must be ' 'different than the old one.')
             )
         return phone_number
 
