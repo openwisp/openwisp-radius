@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
+from unittest import mock
 
-import mock
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
