@@ -1,6 +1,5 @@
-from django_freeradius.management.commands import BaseBatchAddUsersCommand
-
-from . import BatchAddMixin
+from .base import BatchAddMixin
+from .base.batch_add_users import BaseBatchAddUsersCommand
 
 
 class Command(BatchAddMixin, BaseBatchAddUsersCommand):

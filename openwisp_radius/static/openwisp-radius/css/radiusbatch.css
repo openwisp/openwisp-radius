@@ -1,0 +1,6 @@
+.field-csvfile label,
+.field-prefix label,
+.field-number_of_users label{
+  font-weight: bold;
+  color: #000
+}

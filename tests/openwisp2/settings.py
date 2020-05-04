@@ -39,9 +39,9 @@ INSTALLED_APPS = [
     # openwisp radius
     'openwisp_radius',
     'openwisp_users',
+    'django_extensions',
 ]
 
-EXTENDED_APPS = ['django_freeradius']
 LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTH_USER_MODEL = 'openwisp_users.User'
@@ -63,7 +63,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'urls'
+ROOT_URLCONF = 'openwisp2.urls'
 
 TEMPLATES = [
     {
@@ -83,7 +83,7 @@ TEMPLATES = [
                 'openwisp_utils.admin_theme.context_processor.menu_items',
             ],
         },
-    },
+    }
 ]
 
 DATABASES = {
@@ -109,48 +109,32 @@ STATIC_URL = '/static/'
 # for development only
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Swapper model definitions
-DJANGO_FREERADIUS_RADIUSREPLY_MODEL = 'openwisp_radius.RadiusReply'
-DJANGO_FREERADIUS_RADIUSGROUPREPLY_MODEL = 'openwisp_radius.RadiusGroupReply'
-DJANGO_FREERADIUS_RADIUSCHECK_MODEL = 'openwisp_radius.RadiusCheck'
-DJANGO_FREERADIUS_RADIUSGROUPCHECK_MODEL = 'openwisp_radius.RadiusGroupCheck'
-DJANGO_FREERADIUS_RADIUSACCOUNTING_MODEL = 'openwisp_radius.RadiusAccounting'
-DJANGO_FREERADIUS_NAS_MODEL = 'openwisp_radius.Nas'
-DJANGO_FREERADIUS_RADIUSUSERGROUP_MODEL = 'openwisp_radius.RadiusUserGroup'
-DJANGO_FREERADIUS_RADIUSPOSTAUTH_MODEL = 'openwisp_radius.RadiusPostAuth'
-DJANGO_FREERADIUS_RADIUSBATCH_MODEL = 'openwisp_radius.RadiusBatch'
-DJANGO_FREERADIUS_RADIUSGROUP_MODEL = 'openwisp_radius.RadiusGroup'
-DJANGO_FREERADIUS_RADIUSTOKEN_MODEL = 'openwisp_radius.RadiusToken'
-
 SOCIALACCOUNT_PROVIDERS = {
     'facebook': {
         'METHOD': 'oauth2',
         'SCOPE': ['email', 'public_profile'],
         'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
         'INIT_PARAMS': {'cookie': True},
-        'FIELDS': ['id', 'email', 'name', 'first_name', 'last_name', 'verified',],
+        'FIELDS': ['id', 'email', 'name', 'first_name', 'last_name', 'verified'],
         'VERIFIED_EMAIL': True,
     },
-    'google': {
-        'SCOPE': ['profile', 'email',],
-        'AUTH_PARAMS': {'access_type': 'online',},
-    },
+    'google': {'SCOPE': ['profile', 'email'], 'AUTH_PARAMS': {'access_type': 'online'}},
 }
 
 if TESTING:
-    DJANGO_FREERADIUS_GROUPCHECK_ADMIN = True
-    DJANGO_FREERADIUS_GROUPREPLY_ADMIN = True
-    DJANGO_FREERADIUS_USERGROUP_ADMIN = True
+    OPENWISP_RADIUS_GROUPCHECK_ADMIN = True
+    OPENWISP_RADIUS_GROUPREPLY_ADMIN = True
+    OPENWISP_RADIUS_USERGROUP_ADMIN = True
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
-DJANGO_FREERADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
+OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
 
 REST_AUTH_SERIALIZERS = {
-    'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
+    'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer'
 }
 
 REST_AUTH_REGISTER_SERIALIZERS = {
-    'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer',
+    'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer'
 }
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
@@ -161,6 +145,26 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 # }
 
 OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY = 4
+
+if os.environ.get('SAMPLE_APP', False):
+    INSTALLED_APPS.remove('openwisp_radius',)
+    EXTENDED_APPS = ['openwisp_radius']
+    INSTALLED_APPS.append('openwisp2.sample_radius')
+    OPENWISP_RADIUS_RADIUSREPLY_MODEL = 'sample_radius.RadiusReply'
+    OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = 'sample_radius.RadiusGroupReply'
+    OPENWISP_RADIUS_RADIUSCHECK_MODEL = 'sample_radius.RadiusCheck'
+    OPENWISP_RADIUS_RADIUSGROUPCHECK_MODEL = 'sample_radius.RadiusGroupCheck'
+    OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = 'sample_radius.RadiusAccounting'
+    OPENWISP_RADIUS_NAS_MODEL = 'sample_radius.Nas'
+    OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = 'sample_radius.RadiusUserGroup'
+    OPENWISP_RADIUS_RADIUSPOSTAUTH_MODEL = 'sample_radius.RadiusPostAuth'
+    OPENWISP_RADIUS_RADIUSBATCH_MODEL = 'sample_radius.RadiusBatch'
+    OPENWISP_RADIUS_RADIUSGROUP_MODEL = 'sample_radius.RadiusGroup'
+    OPENWISP_RADIUS_RADIUSTOKEN_MODEL = 'sample_radius.RadiusToken'
+    OPENWISP_RADIUS_PHONETOKEN_MODEL = 'sample_radius.PhoneToken'
+    OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = (
+        'sample_radius.OrganizationRadiusSettings'
+    )
 
 # CORS headers, useful during development and testing
 try:

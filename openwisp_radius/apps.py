@@ -1,9 +1,8 @@
+from django.apps import AppConfig
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.utils.translation import ugettext_lazy as _
-from django_freeradius.apps import DjangoFreeradiusConfig
-from django_freeradius.utils import update_user_related_records
 
 from .receivers import (
     create_default_groups_handler,
@@ -11,17 +10,17 @@ from .receivers import (
     organization_pre_save,
     set_default_group_handler,
 )
+from .utils import update_user_related_records
 
 
-class OpenwispRadiusConfig(DjangoFreeradiusConfig):
+class OpenwispRadiusConfig(AppConfig):
     name = 'openwisp_radius'
+    label = 'openwisp_radius'
+    verbose_name = 'Freeradius'
 
     def ready(self, *args, **kwargs):
-        super().ready(*args, **kwargs)
+        self.connect_signals()
         self.add_default_menu_items()
-
-    def check_settings(self):
-        pass
 
     def connect_signals(self):
         from openwisp_users.models import Organization, OrganizationUser
@@ -56,10 +55,7 @@ class OpenwispRadiusConfig(DjangoFreeradiusConfig):
     def add_default_menu_items(self):
         menu_setting = 'OPENWISP_DEFAULT_ADMIN_MENU_ITEMS'
         items = [
-            {
-                'model': 'openwisp_radius.RadiusAccounting',
-                'label': _('Radius sessions'),
-            },
+            {'model': f'{self.label}.RadiusAccounting', 'label': _('Radius sessions')}
         ]
         if not hasattr(settings, menu_setting):
             setattr(settings, menu_setting, items)

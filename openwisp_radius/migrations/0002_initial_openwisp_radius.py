@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text='The csv file containing the user details to be uploaded',
                         null=True,
-                        upload_to='',
+                        upload_to="",
                         verbose_name='CSV',
                     ),
                 ),
@@ -99,7 +99,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text='The pdf file containing list of usernames and passwords',
                         null=True,
-                        upload_to='',
+                        upload_to="",
                         verbose_name='PDF',
                     ),
                 ),
@@ -249,7 +249,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={'abstract': False,},
+            options={'abstract': False},
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
         migrations.AddField(
@@ -394,7 +394,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterUniqueTogether(
-            name='radiusbatch', unique_together={('name', 'organization')},
+            name='radiusbatch', unique_together={('name', 'organization')}
         ),
         migrations.AlterModelOptions(
             name='organizationradiussettings',

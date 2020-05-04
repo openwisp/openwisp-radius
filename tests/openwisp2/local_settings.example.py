@@ -4,7 +4,7 @@
 # DATABASES = {
 #    'default': {
 #        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': 'freeradius.db',
+#        'NAME': 'openwisp_radius.db',
 #        'USER': '',
 #        'PASSWORD': '',
 #        'HOST': '',

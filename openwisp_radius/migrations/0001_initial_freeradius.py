@@ -1,13 +1,13 @@
 # Manually Created / Similar to freeradius 3 Database
 
 import django.utils.timezone
-import django_freeradius.base.models
+import openwisp_radius.base.models
 import model_utils.fields
 import openwisp_users.mixins
 
 from django.db import migrations, models
 
-from django_freeradius.base.models import RAD_NAS_TYPES
+from ..base.models import RAD_NAS_TYPES
 
 
 class Migration(migrations.Migration):
@@ -448,7 +448,7 @@ class Migration(migrations.Migration):
             },
             bases=(
                 openwisp_users.mixins.ValidateOrgMixin,
-                django_freeradius.base.models.AutoUsernameMixin,
+                openwisp_radius.base.models.AutoUsernameMixin,
                 models.Model,
             ),
         ),
@@ -522,7 +522,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'verbose_name': 'group check',
             },
-            bases=(django_freeradius.base.models.AutoGroupnameMixin, models.Model),
+            bases=(openwisp_radius.base.models.AutoGroupnameMixin, models.Model),
         ),
         migrations.CreateModel(
             name='RadiusGroupReply',
@@ -580,7 +580,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'verbose_name': 'group reply',
             },
-            bases=(django_freeradius.base.models.AutoGroupnameMixin, models.Model),
+            bases=(openwisp_radius.base.models.AutoGroupnameMixin, models.Model),
         ),
         migrations.CreateModel(
             name='RadiusPostAuth',
@@ -699,7 +699,7 @@ class Migration(migrations.Migration):
             },
             bases=(
                 openwisp_users.mixins.ValidateOrgMixin,
-                django_freeradius.base.models.AutoUsernameMixin,
+                openwisp_radius.base.models.AutoUsernameMixin,
                 models.Model,
             ),
         ),
@@ -751,8 +751,8 @@ class Migration(migrations.Migration):
                 'verbose_name': 'user group',
             },
             bases=(
-                django_freeradius.base.models.AutoGroupnameMixin,
-                django_freeradius.base.models.AutoUsernameMixin,
+                openwisp_radius.base.models.AutoGroupnameMixin,
+                openwisp_radius.base.models.AutoUsernameMixin,
                 models.Model,
             ),
         ),

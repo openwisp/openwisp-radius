@@ -1,0 +1,33 @@
+<!DOCTYPE html>{% load i18n %}
+<html>
+<head>
+    <title>{% trans 'WiFi username and passwords' %}</title>
+    <style type="text/css">
+        body {
+            font-size: 15px;
+            font-family: sans-serif
+        }
+        table { width: 100%; border-collapse: collapse }
+        table th { font-weight: bold }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<table>
+    <tr>
+        <th>{% trans 'Username' %}</th>
+        <th>{% trans 'Password' %}</th>
+    </tr>
+    {% for row in users %}
+    <tr>
+	{% for cell in row %}
+        <td>{{ cell }}</td>
+	{% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+</body>
+</html>

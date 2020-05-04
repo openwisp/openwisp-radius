@@ -1,8 +1,61 @@
 import hashlib
+import logging
+import os
 from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+
+logger = logging.getLogger(__name__)
+
+
+def get_settings_value(option, default):
+    if hasattr(settings, f'DJANGO_FREERADIUS_{option}'):  # pragma: no cover
+        logger.warn(
+            f'DJANGO_FREERADIUS_{option} setting is deprecated. It will be removed '
+            f'in the future, please use OPENWISP_CONTROLLER_{option} instead.'
+        )
+        return getattr(settings, f'DJANGO_FREERADIUS_{option}')
+    return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
+
+
+EDITABLE_ACCOUNTING = get_settings_value('EDITABLE_ACCOUNTING', False)
+EDITABLE_POSTAUTH = get_settings_value('EDITABLE_POSTAUTH', False)
+GROUPCHECK_ADMIN = get_settings_value('GROUPCHECK_ADMIN', False)
+GROUPREPLY_ADMIN = get_settings_value('GROUPREPLY_ADMIN', False)
+USERGROUP_ADMIN = get_settings_value('USERGROUP_ADMIN', False)
+DEFAULT_SECRET_FORMAT = get_settings_value('DEFAULT_SECRET_FORMAT', 'NT-Password')
+DISABLED_SECRET_FORMATS = get_settings_value('DISABLED_SECRET_FORMATS', [])
+BATCH_DEFAULT_PASSWORD_LENGTH = get_settings_value('BATCH_DEFAULT_PASSWORD_LENGTH', 8)
+BATCH_DELETE_EXPIRED = get_settings_value('BATCH_DELETE_EXPIRED', 18)
+BATCH_MAIL_SUBJECT = get_settings_value('BATCH_MAIL_SUBJECT', 'Credentials')
+BATCH_MAIL_SENDER = get_settings_value('BATCH_MAIL_SENDER', settings.DEFAULT_FROM_EMAIL)
+API_AUTHORIZE_REJECT = get_settings_value('API_AUTHORIZE_REJECT', False)
+REST_USER_TOKEN_ENABLED = 'rest_framework.authtoken' in settings.INSTALLED_APPS
+SOCIAL_LOGIN_ENABLED = 'allauth.socialaccount' in settings.INSTALLED_APPS
+DISPOSABLE_RADIUS_USER_TOKEN = get_settings_value('DISPOSABLE_RADIUS_USER_TOKEN', True)
+API_ACCOUNTING_AUTO_GROUP = get_settings_value('API_ACCOUNTING_AUTO_GROUP', True)
+EXTRA_NAS_TYPES = get_settings_value('EXTRA_NAS_TYPES', tuple())
+BATCH_PDF_TEMPLATE = get_settings_value(
+    'BATCH_PDF_TEMPLATE',
+    os.path.join(
+        os.path.dirname(__file__), 'templates/openwisp-radius/prefix_pdf.html'
+    ),
+)
+BATCH_MAIL_MESSAGE = get_settings_value(
+    'BATCH_MAIL_MESSAGE', 'username: {}, password: {}'
+)
+RADCHECK_SECRET_VALIDATORS = get_settings_value(
+    'RADCHECK_SECRET_VALIDATORS',
+    {
+        'regexp_lowercase': '[a-z]+',
+        'regexp_uppercase': '[A-Z]+',
+        'regexp_number': '[0-9]+',
+        'regexp_special': '[\!\%\-_+=\[\]\
+                          {\}\:\,\.\?\<\>\(\)\;]+',
+    },
+)
+
 
 # TODO: document this setting
 PASSWORD_RESET_URLS = {

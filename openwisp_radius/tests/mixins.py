@@ -1,12 +1,13 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django_freeradius.tests import CallCommandMixin as BaseCallCommandMixin
-from django_freeradius.tests import (
-    CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin,
-)
-from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
-from django_freeradius.tests.base.test_admin import BaseTestAdmin
 
 from openwisp_users.models import Organization
+
+from . import CallCommandMixin as BaseCallCommandMixin
+from . import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
+from . import PostParamsMixin as BasePostParamsMixin
+
+User = get_user_model()
 
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
@@ -64,4 +65,8 @@ class ApiTokenMixin(BasePostParamsMixin):
 
 
 class BaseTestCase(DefaultOrgMixin, CreateRadiusObjectsMixin, TestCase):
-    _superuser_login = BaseTestAdmin._superuser_login
+    def _superuser_login(self):
+        user = User.objects.create_superuser(
+            username='admin', password='admin', email='test@test.org'
+        )
+        self.client.force_login(user)

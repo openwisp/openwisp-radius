@@ -5,3 +5,23 @@ set -e
 openwisp-qa-check \
         --migration-path "./openwisp_radius/migrations" \
         --migration-module openwisp_radius
+
+echo ''
+echo 'Running checks for SAMPLE_APP'
+SAMPLE_APP=1 openwisp-qa-check \
+        --skip-isort \
+        --skip-flake8 \
+        --skip-black \
+        --skip-checkmigrations \
+        --skip-checkendline \
+        --skip-checkcommit \
+        --migration-path "./tests/openwisp2/sample_radius/migrations" \
+        --migration-module sample_radius
+
+echo ''
+echo 'Checking documentation build status'
+./runsphinx-build
+
+echo ''
+echo 'Check JavaScript Linting'
+jslint ./openwisp_radius/static/openwisp-radius/js/*.js

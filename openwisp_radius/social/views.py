@@ -1,18 +1,36 @@
-from django.core.exceptions import SuspiciousOperation
-from django.http import Http404
-from django_freeradius.social.views import (
-    RedirectCaptivePageView as BaseRedirectCaptivePageView,
-)
+from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.utils.translation import ugettext_lazy as _
+from django.views import View
+from rest_framework.authtoken.models import Token
 
 from openwisp_users.models import Organization
 
+from ..utils import load_model
 
-class RedirectCaptivePageView(BaseRedirectCaptivePageView):
+RadiusToken = load_model('RadiusToken')
+
+
+class RedirectCaptivePageView(View):
+    def get(self, request, *args, **kwargs):
+        """
+        redirect user to captive page
+        with the social auth token in the querystring
+        (which will allow the captive page to send the token to freeradius)
+        """
+        if not request.GET.get('cp'):
+            return HttpResponse(_('missing cp GET param'), status=400)
+        self.authorize(request, *args, **kwargs)
+        return HttpResponseRedirect(self.get_redirect_url(request))
+
     def authorize(self, request, *args, **kwargs):
         """
-        subscribes user to organization
+        authorization logic
+        raises PermissionDenied if user is not authorized
         """
-        super().authorize(request)
+        user = request.user
+        if not user.is_authenticated or not user.socialaccount_set.exists():
+            raise PermissionDenied()
         user = request.user
         slug = kwargs.get('slug')
         try:
@@ -27,6 +45,20 @@ class RedirectCaptivePageView(BaseRedirectCaptivePageView):
         # add user to organization
         if not is_member:
             org.add_user(user)
+
+    def get_redirect_url(self, request):
+        """
+        refreshes token and returns the captive page URL
+        """
+        cp = request.GET.get('cp')
+        user = request.user
+        Token.objects.filter(user=user).delete()
+        RadiusToken.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+        rad_token = RadiusToken.objects.create(user=user)
+        return '{0}?username={1}&token={2}&radius_user_token={3}'.format(
+            cp, user.username, token.key, rad_token.key
+        )
 
 
 redirect_cp = RedirectCaptivePageView.as_view()

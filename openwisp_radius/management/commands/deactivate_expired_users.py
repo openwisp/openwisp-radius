@@ -1,4 +1,4 @@
-from django_freeradius.management.commands import BaseDeactivateExpiredUsersCommand
+from .base.deactivate_expired_users import BaseDeactivateExpiredUsersCommand
 
 
 class Command(BaseDeactivateExpiredUsersCommand):

@@ -1,4 +1,4 @@
-from django_freeradius.management.commands import BaseDeleteOldUsersCommand
+from .base.delete_old_users import BaseDeleteOldUsersCommand
 
 
 class Command(BaseDeleteOldUsersCommand):

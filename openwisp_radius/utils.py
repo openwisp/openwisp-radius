@@ -1,19 +1,28 @@
+import csv
 import os
 from datetime import timedelta
+from io import StringIO
 
 import swapper
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files import File
+from django.core.validators import validate_email
+from django.template.loader import get_template
 from django.utils import timezone
-from django_freeradius.migrations import (
-    DEFAULT_SESSION_TIME_LIMIT,
-    DEFAULT_SESSION_TRAFFIC_LIMIT,
-    SESSION_TIME_ATTRIBUTE,
-    SESSION_TRAFFIC_ATTRIBUTE,
-)
+from django.utils.crypto import get_random_string
+from django.utils.translation import ugettext_lazy as _
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
+from weasyprint import HTML
 
 from . import settings as app_settings
+
+SESSION_TIME_ATTRIBUTE = 'Max-Daily-Session'
+SESSION_TRAFFIC_ATTRIBUTE = 'Max-Daily-Session-Traffic'
+DEFAULT_SESSION_TIME_LIMIT = '10800'  # seconds
+DEFAULT_SESSION_TRAFFIC_LIMIT = '3000000000'  # bytes (octets)
 
 
 def load_model(model):
@@ -87,3 +96,78 @@ class SmsMessage(BaseSmsMessage):
             sender=self, to=self.to, from_phone=self.from_phone, body=self.body
         )
         return res
+
+
+def find_available_username(username, users_list, prefix=False):
+    User = get_user_model()
+    suffix = 1
+    tmp = '{}{}'.format(username, suffix) if prefix else username
+    names_list = map(lambda x: x.username, users_list)
+    while User.objects.filter(username=tmp).exists() or tmp in names_list:
+        suffix += 1 if prefix else 0
+        tmp = '{}{}'.format(username, suffix)
+        suffix += 1 if not prefix else 0
+    return tmp
+
+
+def validate_csvfile(csvfile):
+    csv_data = csvfile.read()
+    try:
+        csv_data = csv_data.decode('utf-8') if isinstance(csv_data, bytes) else csv_data
+    except UnicodeDecodeError:
+        raise ValidationError(
+            _(
+                'Unrecognized file format, the supplied file '
+                'does not look like a CSV file.'
+            )
+        )
+    reader = csv.reader(StringIO(csv_data), delimiter=',')
+    error_message = 'The CSV contains a line with invalid data,\
+                    line number {} triggered the following error: {}'
+    row_count = 1
+    for row in reader:
+        if len(row) == 5:
+            username, password, email, firstname, lastname = row
+            try:
+                validate_email(email)
+            except ValidationError as e:
+                raise ValidationError(
+                    _(error_message.format(str(row_count), e.message))
+                )
+            row_count += 1
+        elif len(row) > 0:
+            raise ValidationError(
+                _(error_message.format(str(row_count), 'Improper CSV format.'))
+            )
+    csvfile.seek(0)
+
+
+def prefix_generate_users(prefix, n, password_length):
+    users_list = []
+    user_password = []
+    User = get_user_model()
+    for i in range(n):
+        username = find_available_username(prefix, users_list, True)
+        password = get_random_string(length=password_length)
+        u = User(username=username)
+        u.set_password(password)
+        users_list.append(u)
+        user_password.append([username, password])
+    return users_list, user_password
+
+
+def generate_pdf(prefix, data):
+    template = get_template(app_settings.BATCH_PDF_TEMPLATE)
+    html = HTML(string=template.render(data))
+    f = open('{}/{}.pdf'.format(settings.MEDIA_ROOT, prefix), 'w+b')
+    html.write_pdf(target=f)
+    f.seek(0)
+    return File(f)
+
+
+def update_user_related_records(sender, instance, created, **kwargs):
+    if created:
+        return
+    instance.radiususergroup_set.update(username=instance.username)
+    instance.radiuscheck_set.update(username=instance.username)
+    instance.radiusreply_set.update(username=instance.username)

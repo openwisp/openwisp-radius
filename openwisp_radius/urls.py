@@ -1,20 +1,29 @@
 from django.conf.urls import include, url
-from django_freeradius import settings as app_settings
 
-from .api import urls as api
+from . import settings as app_settings
+from .api.urls import get_api_urls
 
-app_name = 'freeradius'
-urlpatterns = [
-    url(r'api/v1/', include(api)),
-]
 
-if app_settings.SOCIAL_LOGIN_ENABLED:
-    from .social.views import redirect_cp
-
-    urlpatterns.append(
-        url(
-            r'^freeradius/social-login/(?P<slug>[\w-]+)/$',
-            redirect_cp,
-            name='redirect_cp',
+def get_urls(api_views=None, social_views=None):
+    """
+    Returns a list of urlpatterns
+    Arguements:
+        api_views(optional): views for Radius API
+        social_view(optional): views for social login (if enabled)
+    """
+    if not social_views:
+        from .social import views as social_views
+    urls = [url(r'api/v1/', include(get_api_urls(api_views)))]
+    if app_settings.SOCIAL_LOGIN_ENABLED:
+        urls.append(
+            url(
+                r'^freeradius/social-login/(?P<slug>[\w-]+)/$',
+                social_views.redirect_cp,
+                name='redirect_cp',
+            )
         )
-    )
+    return urls
+
+
+app_name = 'radius'
+urlpatterns = get_urls()

@@ -51,5 +51,5 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'swappable': 'OPENWISP_RADIUS_RADIUSTOKEN_MODEL',
             },
-        ),
+        )
     ]

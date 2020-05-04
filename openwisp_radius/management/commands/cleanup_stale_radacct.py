@@ -1,4 +1,4 @@
-from django_freeradius.management.commands import BaseCleanupRadacctCommand
+from .base.cleanup_stale_radacct import BaseCleanupRadacctCommand
 
 
 class Command(BaseCleanupRadacctCommand):

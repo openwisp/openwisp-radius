@@ -1,4 +1,4 @@
-from django_freeradius.management.commands import BaseDeleteOldRadacctCommand
+from .base.delete_old_radacct import BaseDeleteOldRadacctCommand
 
 
 class Command(BaseDeleteOldRadacctCommand):
