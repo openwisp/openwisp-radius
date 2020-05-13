@@ -170,6 +170,8 @@ class DispatchOrgMixin(object):
 
 
 class RegisterView(DispatchOrgMixin, BaseRegisterView):
+    authentication_classes = tuple()
+
     def get_response_data(self, user):
         if (
             allauth_settings.EMAIL_VERIFICATION
@@ -220,6 +222,8 @@ password_change = PasswordChangeView.as_view()
 
 
 class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
+    authentication_classes = tuple()
+
     def get_serializer_context(self):
         user = self.get_user()
         uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -254,6 +258,8 @@ password_reset = PasswordResetView.as_view()
 
 
 class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
+    authentication_classes = tuple()
+
     def post(self, request, *args, **kwargs):
         self.validate_user()
         return super().post(request, *args, **kwargs)

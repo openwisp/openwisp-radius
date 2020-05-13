@@ -43,6 +43,7 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
     radius_batch_model = RadiusBatch
     radius_token_model = RadiusToken
     user_model = User
+    _test_email = 'test@openwisp.org'
 
     def assertAcctData(self, ra, data):
         # we don't expect the organization field
@@ -63,21 +64,26 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         self.assertIn('setting the organization', str(response.data['detail']))
 
     def test_register_201(self):
-        self.assertEqual(User.objects.count(), 0)
+        # ensure session authentication does not interfere with the API
+        # otherwise users being logged in the admin and testing the API
+        # will get failures. Rather than telling them to log out from the admin
+        # we'll handle this case and avoid the issue altogether
+        self._superuser_login()
+        self.assertEqual(User.objects.count(), 1)
         url = reverse('freeradius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
             },
         )
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
-        self.assertEqual(User.objects.count(), 1)
-        user = User.objects.first()
+        self.assertEqual(User.objects.count(), 2)
+        user = User.objects.get(email=self._test_email)
         self.assertIn((self.default_org.pk,), user.organizations_pk)
         self.assertTrue(user.is_active)
 
@@ -88,8 +94,8 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
             },
@@ -102,8 +108,8 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
             },
@@ -119,8 +125,8 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
             },
@@ -135,8 +141,8 @@ class TestApi(ApiTokenMixin, BaseTestApi, BaseTestCase):
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
             },
@@ -407,6 +413,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestApiValidateToken, BaseTestCase
 
 class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
     user_model = User
+    _test_email = 'test@openwisp.org'
 
     def setUp(self):
         super().setUp()
@@ -426,8 +433,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '',
@@ -437,14 +444,19 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('phone_number', r.data)
 
     def test_register_201(self):
-        self.assertEqual(User.objects.count(), 0)
+        # ensure session authentication does not interfere with the API
+        # otherwise users being logged in the admin and testing the API
+        # will get failures. Rather than telling them to log out from the admin
+        # we'll handle this case and avoid the issue altogether
+        self._superuser_login()
+        self.assertEqual(User.objects.count(), 1)
         url = reverse('freeradius:rest_register', args=[self.default_org.slug])
         phone_number = '+393664255801'
         r = self.client.post(
             url,
             {
-                'username': 'test@test.org',
-                'email': 'test@test.org',
+                'username': self._test_email,
+                'email': self._test_email,
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
@@ -452,8 +464,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
-        self.assertEqual(User.objects.count(), 1)
-        user = User.objects.first()
+        self.assertEqual(User.objects.count(), 2)
+        user = User.objects.get(email=self._test_email)
         self.assertIn((self.default_org.pk,), user.organizations_pk)
         self.assertEqual(user.phone_number, phone_number)
         self.assertFalse(user.is_active)
@@ -473,7 +485,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('phone_number', r.data)
-        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(User.objects.count(), 2)
 
     def test_create_phone_token_401(self):
         url = reverse('freeradius:phone_token_create', args=[self.default_org.slug])
@@ -541,7 +553,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_200(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         # generate entropy to ensure correct token is used
@@ -573,7 +585,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_invalid(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         self.assertEqual(phone_token.attempts, 0)
@@ -593,7 +605,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_expired(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         phone_token.valid_until -= timedelta(days=3)
@@ -617,7 +629,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_max_attempts(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         url = reverse('freeradius:phone_token_validate', args=[self.default_org.slug])
@@ -647,7 +659,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_user_already_active(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user.is_active = True
         user.save()
         user_token = Token.objects.filter(user=user).last()
@@ -664,7 +676,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_no_token(self):
         self.test_register_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         self.assertEqual(PhoneToken.objects.count(), 0)
         url = reverse('freeradius:phone_token_validate', args=[self.default_org.slug])
@@ -681,7 +693,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_code_blank(self):
         self.test_register_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         url = reverse('freeradius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
@@ -692,7 +704,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_phone_token_400_missing_code(self):
         self.test_register_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         url = reverse('freeradius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(user_token.key))
@@ -701,7 +713,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_change_phone_number_200(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
@@ -721,7 +733,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_change_phone_number_400_same_number(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
@@ -740,7 +752,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_change_phone_number_400_not_blank(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
@@ -758,7 +770,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_change_phone_number_400_required(self):
         self.test_create_phone_token_201()
-        user = User.objects.first()
+        user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)

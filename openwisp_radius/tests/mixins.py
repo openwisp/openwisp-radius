@@ -4,6 +4,7 @@ from django_freeradius.tests import (
     CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin,
 )
 from django_freeradius.tests import PostParamsMixin as BasePostParamsMixin
+from django_freeradius.tests.base.test_admin import BaseTestAdmin
 
 from openwisp_users.models import Organization
 
@@ -63,4 +64,4 @@ class ApiTokenMixin(BasePostParamsMixin):
 
 
 class BaseTestCase(DefaultOrgMixin, CreateRadiusObjectsMixin, TestCase):
-    pass
+    _superuser_login = BaseTestAdmin._superuser_login
