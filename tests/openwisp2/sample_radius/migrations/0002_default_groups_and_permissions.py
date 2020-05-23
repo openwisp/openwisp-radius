@@ -8,6 +8,7 @@ from openwisp_radius.migrations import (
     assign_permissions_to_groups,
     add_default_organization,
 )
+import swapper
 
 
 class Migration(migrations.Migration):
@@ -16,7 +17,11 @@ class Migration(migrations.Migration):
     users to the default group
     """
 
-    dependencies = [('sample_radius', '0001_initial')]
+    org_model = swapper.get_model_name('openwisp_radius', 'Nas')
+    model_app_label = swapper.split(org_model)[0]
+    dependencies = [
+        (model_app_label, '0001_initial'),
+    ]
 
     operations = [
         migrations.RunPython(

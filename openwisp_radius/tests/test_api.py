@@ -1184,7 +1184,6 @@ if app_settings.REST_USER_TOKEN_ENABLED:
             self.assertEqual(r.status_code, 400)
             self.assertIn('Unable to log in', r.json()['non_field_errors'][0])
 
-
         def test_user_auth_token_400_organization(self):
             url = self._get_url()
             opts = dict(username='tester', password='tester')
@@ -1199,7 +1198,6 @@ if app_settings.REST_USER_TOKEN_ENABLED:
             opts = dict(username='tester', password='tester')
             r = self.client.post(url, opts)
             self.assertEqual(r.status_code, 404)
-
 
     class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         def _get_url(self):

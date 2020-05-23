@@ -13,7 +13,7 @@ def get_settings_value(option, default):
     if hasattr(settings, f'DJANGO_FREERADIUS_{option}'):  # pragma: no cover
         logger.warn(
             f'DJANGO_FREERADIUS_{option} setting is deprecated. It will be removed '
-            f'in the future, please use OPENWISP_CONTROLLER_{option} instead.'
+            f'in the future, please use OPENWISP_RADIUS_{option} instead.'
         )
         return getattr(settings, f'DJANGO_FREERADIUS_{option}')
     return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
