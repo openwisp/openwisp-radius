@@ -28,5 +28,3 @@ SAMPLE_APP=1 openwisp-qa-check \
         --skip-checkcommit \
         --migration-path "./tests/openwisp2/sample_radius/migrations" \
         --migration-module sample_radius
-
-

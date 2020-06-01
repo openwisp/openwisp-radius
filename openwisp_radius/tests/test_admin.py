@@ -1,8 +1,8 @@
+import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.urls import reverse
 
-from openwisp_users.models import Organization, OrganizationUser
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
 from .. import settings as app_settings
@@ -18,6 +18,8 @@ RadiusCheck = load_model('RadiusCheck')
 RadiusToken = load_model('RadiusToken')
 RadiusGroup = load_model('RadiusGroup')
 RadiusReply = load_model('RadiusReply')
+Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 _RADCHECK_ENTRY = {
     'username': 'Monica',
@@ -40,6 +42,7 @@ class TestAdmin(
 ):
 
     app_label = 'openwisp_radius'
+    app_label_users = 'openwisp_users'
 
     operator_permission_filters = [
         {'codename__endswith': 'nas'},
@@ -534,7 +537,7 @@ class TestAdmin(
 
     def _get_url(self, url, user=False, group=False):
         response = self.client.get(url)
-        user_url = '/admin/openwisp_users/user/autocomplete/'
+        user_url = f'/admin/{self.app_label_users}/user/autocomplete/'
         group_url = f'/admin/{self.app_label}/radiusgroup/autocomplete/'
         if user_url in str(response.content) and user:
             return user_url

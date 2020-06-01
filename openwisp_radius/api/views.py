@@ -2,6 +2,7 @@ import logging
 from uuid import UUID
 
 import drf_link_header_pagination
+import swapper
 from allauth.account import app_settings as allauth_settings
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -37,8 +38,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 from rest_framework.views import APIView
 
-from openwisp_users.models import Organization, OrganizationUser
-
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import load_model
@@ -60,6 +59,8 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
 class TokenAuthentication(BaseAuthentication):

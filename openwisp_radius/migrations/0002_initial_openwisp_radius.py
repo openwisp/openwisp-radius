@@ -13,6 +13,7 @@ import openwisp_utils.utils
 from django.conf import settings
 from django.db import migrations, models
 from openwisp_radius.migrations import add_default_organization
+from swapper import get_model_name
 
 
 class Migration(migrations.Migration):
@@ -125,7 +126,7 @@ class Migration(migrations.Migration):
                     'organization',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='openwisp_users.Organization',
+                        to=get_model_name('openwisp_users', 'Organization'),
                         verbose_name='organization',
                     ),
                 ),
@@ -203,7 +204,7 @@ class Migration(migrations.Migration):
                     'organization',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='openwisp_users.Organization',
+                        to=get_model_name('openwisp_users', 'Organization'),
                         verbose_name='organization',
                     ),
                 ),
@@ -244,7 +245,7 @@ class Migration(migrations.Migration):
                     'organization',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='openwisp_users.Organization',
+                        to=get_model_name('openwisp_users', 'Organization'),
                         verbose_name='organization',
                     ),
                 ),
@@ -416,7 +417,7 @@ class Migration(migrations.Migration):
             field=models.OneToOneField(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name='radius_settings',
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -428,7 +429,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -438,7 +439,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -448,7 +449,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -458,7 +459,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -468,7 +469,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -485,7 +486,7 @@ class Migration(migrations.Migration):
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -496,7 +497,7 @@ class Migration(migrations.Migration):
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -507,7 +508,7 @@ class Migration(migrations.Migration):
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -518,7 +519,7 @@ class Migration(migrations.Migration):
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),
@@ -529,7 +530,7 @@ class Migration(migrations.Migration):
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='openwisp_users.Organization',
+                to=get_model_name('openwisp_users', 'Organization'),
                 verbose_name='organization',
             ),
         ),

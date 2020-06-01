@@ -3,6 +3,7 @@ import os
 from datetime import timedelta
 from unittest import mock
 
+import swapper
 from dateutil import parser
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -20,8 +21,6 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from openwisp_users.models import Organization, OrganizationUser
-
 from .. import settings as app_settings
 from ..utils import load_model
 from . import _TEST_DATE
@@ -35,6 +34,8 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusBatch = load_model('RadiusBatch')
 RadiusUserGroup = load_model('RadiusUserGroup')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
 

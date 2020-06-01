@@ -147,9 +147,16 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY = 4
 
 if os.environ.get('SAMPLE_APP', False):
-    INSTALLED_APPS.remove('openwisp_radius',)
-    EXTENDED_APPS = ['openwisp_radius']
+    INSTALLED_APPS.remove('openwisp_radius')
+    INSTALLED_APPS.remove('openwisp_users')
     INSTALLED_APPS.append('openwisp2.sample_radius')
+    INSTALLED_APPS.append('openwisp2.sample_users')
+    EXTENDED_APPS = ('openwisp_radius', 'openwisp_users')
+    AUTH_USER_MODEL = 'sample_users.User'
+    OPENWISP_USERS_GROUP_MODEL = 'sample_users.Group'
+    OPENWISP_USERS_ORGANIZATION_MODEL = 'sample_users.Organization'
+    OPENWISP_USERS_ORGANIZATIONUSER_MODEL = 'sample_users.OrganizationUser'
+    OPENWISP_USERS_ORGANIZATIONOWNER_MODEL = 'sample_users.OrganizationOwner'
     OPENWISP_RADIUS_RADIUSREPLY_MODEL = 'sample_radius.RadiusReply'
     OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = 'sample_radius.RadiusGroupReply'
     OPENWISP_RADIUS_RADIUSCHECK_MODEL = 'sample_radius.RadiusCheck'
@@ -165,6 +172,14 @@ if os.environ.get('SAMPLE_APP', False):
     OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = (
         'sample_radius.OrganizationRadiusSettings'
     )
+    # Rename sample_app database
+    DATABASES['default']['NAME'] = os.path.join(BASE_DIR, 'sample_radius.db')
+
+if os.environ.get('SAMPLE_APP', False) and TESTING:
+    # Required for openwisp-users tests
+    OPENWISP_ORGANIZATON_USER_ADMIN = True
+    OPENWISP_ORGANIZATON_OWNER_ADMIN = True
+    OPENWISP_USERS_AUTH_API = True
 
 # CORS headers, useful during development and testing
 try:

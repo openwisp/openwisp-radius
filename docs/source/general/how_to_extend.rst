@@ -10,10 +10,16 @@ In order to implement your custom version of *openwisp-radius*,
 you need to perform the steps described in this section.
 
 When in doubt, the code in the `test project <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/>`_ and
-the `sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/>`_
+the `sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/>`_
 will serve you as source of truth:
 just replicate and adapt that code to get a basic derivative of
 *openwisp-radius* working.
+
+If you want to add new users fields, please follow the `tutorial to extend the
+openwisp-users <https://github.com/openwisp/openwisp-users/tree/master#extend-openwisp-users>`_.
+As an example, we have extended *openwisp-users* to *sample_users* app and
+added a field ``social_security_number`` in the `sample_users/models.py
+<https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_users/models.py>`_.
 
 .. note::
     **Premise**: if you plan on using a customized version of this module,
@@ -115,8 +121,8 @@ Add ``openwisp_utils.loaders.DependencyLoader`` to ``TEMPLATES`` in your ``setti
 
 Please refer to the following files in the sample app of the test project:
 
-- `openwisp_radius/__init__.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/__init__.py>`_
-- `openwisp_radius/apps.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/apps.py>`_
+- `sample_radius/__init__.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/__init__.py>`_
+- `sample_radius/apps.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/apps.py>`_
 
 You have to replicate and adapt that code in your project.
 
@@ -127,8 +133,8 @@ You have to replicate and adapt that code in your project.
 7. Create your custom models
 ----------------------------
 
-For the purpose of showing an example, we added a simple "details" field to the
-`models of the sample app in the test project <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/models.py>`_.
+For the purpose of showing an example, we added a simple ``details`` field to the
+`models of the sample app in the test project <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/models.py>`_.
 
 You can add fields in a similar way in your ``models.py`` file.
 
@@ -144,14 +150,14 @@ Once you have created the models, add the following to your ``settings.py``:
 .. code-block:: python
 
     # Setting models for swapper module
-    OPENWISP_RADIUS_RADIUSREPLY_MODEL = "myradius.RadiusReply"
-    OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = "myradius.RadiusGroupReply"
-    OPENWISP_RADIUS_RADIUSCHECK_MODEL = "myradius.RadiusCheck"
-    OPENWISP_RADIUS_RADIUSGROUPCHECK_MODEL = "myradius.RadiusGroupCheck"
-    OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = "myradius.RadiusAccounting"
-    OPENWISP_RADIUS_NAS_MODEL = "myradius.Nas"
-    OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = "myradius.RadiusUserGroup"
-    OPENWISP_RADIUS_RADIUSPOSTAUTHENTICATION_MODEL = "myradius.RadiusPostAuth"
+    OPENWISP_RADIUS_RADIUSREPLY_MODEL = 'myradius.RadiusReply'
+    OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = 'myradius.RadiusGroupReply'
+    OPENWISP_RADIUS_RADIUSCHECK_MODEL = 'myradius.RadiusCheck'
+    OPENWISP_RADIUS_RADIUSGROUPCHECK_MODEL = 'myradius.RadiusGroupCheck'
+    OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = 'myradius.RadiusAccounting'
+    OPENWISP_RADIUS_NAS_MODEL = 'myradius.Nas'
+    OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = 'myradius.RadiusUserGroup'
+    OPENWISP_RADIUS_RADIUSPOSTAUTHENTICATION_MODEL = 'myradius.RadiusPostAuth'
 
 Substitute ``myradius`` with the name you chose in step 1.
 
@@ -175,7 +181,7 @@ Apply database migrations::
 10. Create the admin
 --------------------
 
-Refer to the `admin.py file of the sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/admin.py>`_.
+Refer to the `admin.py file of the sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/admin.py>`_.
 
 To introduce changes to the admin, you can do it in two main ways which are described below.
 
@@ -326,7 +332,7 @@ you're introducing are not breaking some of the existing features of *openwisp-r
 In case you need to add breaking changes, you can overwrite the tests defined
 in the base classes to test your own behavior.
 
-See the `tests of the sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/tests.py>`_
+See the `tests of the sample app <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/tests.py>`_
 to find out how to do this.
 
 You can then run tests with::
@@ -348,7 +354,7 @@ The API view classes can be extended into other django applications as well. Not
 that it is not required for extending *openwisp-radius* to your app and this change
 is required only if you plan to make changes to the API views.
 
-Create a view file as done in `API views.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/api/views.py>`_.
+Create a view file as done in `API views.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/api/views.py>`_.
 
 Remember to use these views in root URL configurations in point 11.
 If you want only extend the API views and not social views, you can use
@@ -366,7 +372,7 @@ The social view classes can be extended into other django applications as well. 
 that it is not required for extending *openwisp-radius* to your app and this change
 is required only if you plan to make changes to the social views.
 
-Create a view file as done in `social views.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/openwisp_radius/social/views.py>`_.
+Create a view file as done in `social views.py <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/sample_radius/social/views.py>`_.
 
 Remember to use these views in root URL configurations in point 11.
 If you want only extend the API views and not social views, you can use

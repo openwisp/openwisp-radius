@@ -36,8 +36,13 @@ from openwisp_radius.tests.test_users_integration import (
 )
 from openwisp_radius.tests.test_utils import TestUtils as BaseTestUtils
 
+additional_fields = [
+    ('social_security_number', '123-45-6789'),
+]
+
 
 class TestAdmin(BaseTestAdmin):
+    app_label_users = 'sample_users'
     app_label = 'sample_radius'
 
 
@@ -106,7 +111,8 @@ class TestUtils(BaseTestUtils):
 
 
 class TestUsersIntegration(BaseTestUsersIntegration):
-    pass
+    app_label = 'sample_users'
+    _additional_user_fields = additional_fields
 
 
 class TestRadiusToken(BaseTestRadiusToken):

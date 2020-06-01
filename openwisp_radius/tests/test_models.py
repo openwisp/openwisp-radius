@@ -1,8 +1,7 @@
+import swapper
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-
-from openwisp_users.models import Organization
 
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
@@ -23,6 +22,7 @@ RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusBatch = load_model('RadiusBatch')
+Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
 class TestNas(BaseTestCase):

@@ -1,10 +1,9 @@
 import os
 
+import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-
-from openwisp_users.models import Organization
 
 from ..utils import load_model
 from . import CallCommandMixin as BaseCallCommandMixin
@@ -13,6 +12,7 @@ from . import PostParamsMixin as BasePostParamsMixin
 
 User = get_user_model()
 RadiusBatch = load_model('RadiusBatch')
+Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
@@ -37,6 +37,51 @@ class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
         org = self._create_org()
         org.add_user(user)
         return user
+
+
+class GetEditFormInlineMixin(object):
+    def _get_edit_form_inline_params(self, user, organization):
+        params = super()._get_edit_form_inline_params(user, organization)
+        rug = user.radiususergroup_set.first()
+        if rug is not None:
+            params.update(
+                {
+                    # radius user group inline
+                    'radiususergroup_set-TOTAL_FORMS': 1,
+                    'radiususergroup_set-INITIAL_FORMS': 1,
+                    'radiususergroup_set-MIN_NUM_FORMS': 0,
+                    'radiususergroup_set-MAX_NUM_FORMS': 1000,
+                    'radiususergroup_set-0-priority': 1,
+                    'radiususergroup_set-0-group': str(rug.group.pk),
+                    'radiususergroup_set-0-id': str(rug.pk),
+                    'radiususergroup_set-0-user': str(rug.user.pk),
+                }
+            )
+        else:
+            params.update(
+                {
+                    # radius user group inline
+                    'radiususergroup_set-TOTAL_FORMS': 0,
+                    'radiususergroup_set-INITIAL_FORMS': 0,
+                    'radiususergroup_set-MIN_NUM_FORMS': 0,
+                    'radiususergroup_set-MAX_NUM_FORMS': 0,
+                }
+            )
+        params.update(
+            {
+                # social account inline
+                'socialaccount_set-TOTAL_FORMS': 0,
+                'socialaccount_set-INITIAL_FORMS': 0,
+                'socialaccount_set-MIN_NUM_FORMS': 0,
+                'socialaccount_set-MAX_NUM_FORMS': 0,
+                # phone token inline
+                'phonetoken_set-TOTAL_FORMS': 0,
+                'phonetoken_set-INITIAL_FORMS': 0,
+                'phonetoken_set-MIN_NUM_FORMS': 0,
+                'phonetoken_set-MAX_NUM_FORMS': 0,
+            }
+        )
+        return params
 
 
 class CallCommandMixin(BaseCallCommandMixin):
