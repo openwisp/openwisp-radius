@@ -261,9 +261,7 @@ Login (Obtain User Auth Token)
   This endpoint does not require the sending of the `API Token <#api-token>`_
   described in the beginning of this document.
 
-Responds only to **POST**, this endpoint is enabled only
-if ``rest_framework.authtoken`` is in ``settings.INSTALLED_APPS``
-(which is optional).
+Responds only to **POST**.
 
 Returns the user access token, which can be used to authenticate
 the user via the freeradius authorization mechanism.

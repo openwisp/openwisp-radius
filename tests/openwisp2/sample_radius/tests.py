@@ -1,4 +1,3 @@
-from openwisp_radius import settings as app_settings
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
 from openwisp_radius.tests.test_api import TestApi as BaseTestApi
 from openwisp_radius.tests.test_api import TestApiPhoneToken as BaseTestApiPhoneToken
@@ -122,13 +121,12 @@ class TestSocial(BaseTestSocial):
     pass
 
 
-if app_settings.REST_USER_TOKEN_ENABLED:
+class TestApiUserToken(BaseTestApiUserToken):
+    pass
 
-    class TestApiUserToken(BaseTestApiUserToken):
-        pass
 
-    class TestApiValidateToken(BaseTestApiValidateToken):
-        pass
+class TestApiValidateToken(BaseTestApiValidateToken):
+    pass
 
 
 del BaseTestAdmin

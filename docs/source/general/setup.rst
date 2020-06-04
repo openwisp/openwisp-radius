@@ -63,16 +63,47 @@ If you want to contribute, install your cloned fork:
 Setup (integrate in an existing django project)
 -----------------------------------------------
 
-In the django ``settings.py`` file of your project, do the following:
-
-- add ``openwisp_radius`` and ``django_filters`` to ``INSTALLED_APPS``
+The ``settings.py`` file of your project should have at least the following
+modules listed ``INSTALLED_APPS``:
 
 .. code-block:: python
 
     INSTALLED_APPS = [
-        # other apps
-        'openwisp_radius',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        # openwisp admin theme
+        'openwisp_utils.admin_theme',
+        # all-auth
+        'django.contrib.sites',
+        'allauth',
+        'allauth.account',
+        # admin
+        'django.contrib.admin',
+        # rest framework
+        'rest_framework',
         'django_filters',
+        # registration
+        'rest_framework.authtoken',
+        'rest_auth',
+        'rest_auth.registration',
+        # openwisp radius
+        'openwisp_radius',
+        'openwisp_users',
+    ]
+
+These modules are optional, add them only if you need the
+`social login <./social_login.html>`_. feature:
+
+.. code-block:: python
+
+    INSTALLED_APPS += [
+        # social login
+        'allauth.socialaccount',
+        'allauth.socialaccount.providers.facebook',
+        'allauth.socialaccount.providers.google',
     ]
 
 Add the URLs to your main ``urls.py``:

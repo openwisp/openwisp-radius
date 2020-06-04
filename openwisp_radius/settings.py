@@ -31,7 +31,6 @@ BATCH_DELETE_EXPIRED = get_settings_value('BATCH_DELETE_EXPIRED', 18)
 BATCH_MAIL_SUBJECT = get_settings_value('BATCH_MAIL_SUBJECT', 'Credentials')
 BATCH_MAIL_SENDER = get_settings_value('BATCH_MAIL_SENDER', settings.DEFAULT_FROM_EMAIL)
 API_AUTHORIZE_REJECT = get_settings_value('API_AUTHORIZE_REJECT', False)
-REST_USER_TOKEN_ENABLED = 'rest_framework.authtoken' in settings.INSTALLED_APPS
 SOCIAL_LOGIN_ENABLED = 'allauth.socialaccount' in settings.INSTALLED_APPS
 DISPOSABLE_RADIUS_USER_TOKEN = get_settings_value('DISPOSABLE_RADIUS_USER_TOKEN', True)
 API_ACCOUNTING_AUTO_GROUP = get_settings_value('API_ACCOUNTING_AUTO_GROUP', True)

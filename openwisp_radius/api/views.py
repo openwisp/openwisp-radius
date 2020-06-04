@@ -27,6 +27,8 @@ from rest_framework import generics, serializers, status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import TokenAuthentication as UserTokenAuthentication
 from rest_framework.authtoken.models import Token as UserToken
+from rest_framework.authtoken.serializers import AuthTokenSerializer
+from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import AuthenticationFailed, ParseError
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.generics import CreateAPIView, GenericAPIView
@@ -403,75 +405,73 @@ class RegisterView(DispatchOrgMixin, BaseRegisterView):
 
 register = RegisterView.as_view()
 
-if app_settings.REST_USER_TOKEN_ENABLED:
-    from rest_framework.authtoken.models import Token
-    from rest_framework.authtoken.serializers import AuthTokenSerializer
-    from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 
-    class RadiusTokenMixin(object):
-        def get_or_create_radius_token(self, user):
-            """
-            Designed to be overridden by extensions
-            """
-            radius_token, rad_token_created = self.radius_token.objects.get_or_create(
-                user=user
-            )
-            return radius_token
+class RadiusTokenMixin(object):
+    def get_or_create_radius_token(self, user):
+        """
+        Designed to be overridden by extensions
+        """
+        radius_token, rad_token_created = self.radius_token.objects.get_or_create(
+            user=user
+        )
+        return radius_token
 
-    class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
-        serializer_class = rest_auth_settings.TokenSerializer
-        auth_serializer_class = AuthTokenSerializer
-        authentication_classes = []
-        radius_token = RadiusToken
 
-        @method_decorator(csrf_exempt)
-        def dispatch(self, request, *args, **kwargs):
-            return super(ObtainAuthTokenView, self).dispatch(request, *args, **kwargs)
+class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
+    serializer_class = rest_auth_settings.TokenSerializer
+    auth_serializer_class = AuthTokenSerializer
+    authentication_classes = []
+    radius_token = RadiusToken
 
-        def post(self, request, *args, **kwargs):
-            serializer = self.auth_serializer_class(
-                data=request.data, context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            user = self.get_user(serializer, *args, **kwargs)
-            token, created = Token.objects.get_or_create(user=user)
-            radius_token = self.get_or_create_radius_token(user)
-            context = {'view': self, 'request': request, 'token_login': True}
-            serializer = self.serializer_class(instance=token, context=context)
-            response = {'radius_user_token': radius_token.key}
-            response.update(serializer.data)
-            return Response(response)
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(ObtainAuthTokenView, self).dispatch(request, *args, **kwargs)
 
-        def get_user(self, serializer, *args, **kwargs):
-            user = serializer.validated_data['user']
-            self.validate_membership(user)
-            return user
+    def post(self, request, *args, **kwargs):
+        serializer = self.auth_serializer_class(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = self.get_user(serializer, *args, **kwargs)
+        token, created = UserToken.objects.get_or_create(user=user)
+        radius_token = self.get_or_create_radius_token(user)
+        context = {'view': self, 'request': request, 'token_login': True}
+        serializer = self.serializer_class(instance=token, context=context)
+        response = {'radius_user_token': radius_token.key}
+        response.update(serializer.data)
+        return Response(response)
 
-    obtain_auth_token = ObtainAuthTokenView.as_view()
+    def get_user(self, serializer, *args, **kwargs):
+        user = serializer.validated_data['user']
+        self.validate_membership(user)
+        return user
 
-    class ValidateAuthTokenView(
-        DispatchOrgMixin, RadiusTokenMixin, generics.CreateAPIView
-    ):
-        radius_token = RadiusToken
 
-        def post(self, request, *args, **kwargs):
-            request_token = request.data.get('token')
-            response = {'response_code': 'BLANK_OR_INVALID_TOKEN'}
-            if request_token:
-                try:
-                    token = Token.objects.get(key=request_token)
-                    radius_token = self.get_or_create_radius_token(token.user)
-                    response = {
-                        'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
-                        'auth_token': token.key,
-                        'radius_user_token': radius_token.key,
-                    }
-                    return Response(response, 200)
-                except Token.DoesNotExist:
-                    pass
-            return Response(response, 401)
+obtain_auth_token = ObtainAuthTokenView.as_view()
 
-    validate_auth_token = ValidateAuthTokenView.as_view()
+
+class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateAPIView):
+    radius_token = RadiusToken
+
+    def post(self, request, *args, **kwargs):
+        request_token = request.data.get('token')
+        response = {'response_code': 'BLANK_OR_INVALID_TOKEN'}
+        if request_token:
+            try:
+                token = UserToken.objects.get(key=request_token)
+                radius_token = self.get_or_create_radius_token(token.user)
+                response = {
+                    'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
+                    'auth_token': token.key,
+                    'radius_user_token': radius_token.key,
+                }
+                return Response(response, 200)
+            except UserToken.DoesNotExist:
+                pass
+        return Response(response, 401)
+
+
+validate_auth_token = ValidateAuthTokenView.as_view()
 
 
 class UserAccountingView(DispatchOrgMixin, generics.ListAPIView):

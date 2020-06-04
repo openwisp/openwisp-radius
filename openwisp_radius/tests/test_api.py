@@ -16,6 +16,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.timezone import now
 from freezegun import freeze_time
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from openwisp_users.models import Organization, OrganizationUser
@@ -1058,80 +1059,76 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 200)
 
-    # TODO: remove if here and elsewhere
-    # this shall be required
-    if app_settings.REST_USER_TOKEN_ENABLED:
-
-        def test_user_accounting_list_200(self):
-            auth_url = reverse('radius:user_auth_token', args=[self.default_org])
-            opts = dict(username='tester', password='tester')
-            self._create_user(**opts)
-            response = self.client.post(auth_url, opts)
-            authorization = 'Token {}'.format(response.data['key'])
-            stop_time = '2018-03-02T11:43:24.020460+01:00'
-            data1 = self.acct_post_data
-            data1.update(
-                dict(
-                    session_id='35000006',
-                    unique_id='75058e50',
-                    input_octets=9900909,
-                    output_octets=1513075509,
-                    username='tester',
-                    stop_time=stop_time,
-                )
+    def test_user_accounting_list_200(self):
+        auth_url = reverse('radius:user_auth_token', args=[self.default_org])
+        opts = dict(username='tester', password='tester')
+        self._create_user(**opts)
+        response = self.client.post(auth_url, opts)
+        authorization = 'Token {}'.format(response.data['key'])
+        stop_time = '2018-03-02T11:43:24.020460+01:00'
+        data1 = self.acct_post_data
+        data1.update(
+            dict(
+                session_id='35000006',
+                unique_id='75058e50',
+                input_octets=9900909,
+                output_octets=1513075509,
+                username='tester',
+                stop_time=stop_time,
             )
-            self._create_radius_accounting(**data1)
-            data2 = self.acct_post_data
-            data2.update(
-                dict(
-                    session_id='40111116',
-                    unique_id='12234f69',
-                    input_octets=3000909,
-                    output_octets=1613176609,
-                    username='tester',
-                )
+        )
+        self._create_radius_accounting(**data1)
+        data2 = self.acct_post_data
+        data2.update(
+            dict(
+                session_id='40111116',
+                unique_id='12234f69',
+                input_octets=3000909,
+                output_octets=1613176609,
+                username='tester',
             )
-            self._create_radius_accounting(**data2)
-            data3 = self.acct_post_data
-            data3.update(
-                dict(
-                    session_id='89897654',
-                    unique_id='99144d60',
-                    input_octets=4440909,
-                    output_octets=1119074409,
-                    username='admin',
-                    stop_time=stop_time,
-                )
+        )
+        self._create_radius_accounting(**data2)
+        data3 = self.acct_post_data
+        data3.update(
+            dict(
+                session_id='89897654',
+                unique_id='99144d60',
+                input_octets=4440909,
+                output_octets=1119074409,
+                username='admin',
+                stop_time=stop_time,
             )
-            self._create_radius_accounting(**data3)
-            url = reverse('radius:user_accounting', args=[self.default_org])
-            response = self.client.get(
-                '{0}?page_size=1&page=1'.format(url), HTTP_AUTHORIZATION=authorization,
-            )
-            self.assertEqual(len(response.json()), 1)
-            self.assertEqual(response.status_code, 200)
-            item = response.data[0]
-            self.assertEqual(item['output_octets'], data2['output_octets'])
-            self.assertEqual(item['input_octets'], data2['input_octets'])
-            self.assertEqual(item['nas_ip_address'], '172.16.64.91')
-            self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
-            self.assertIsNone(item['stop_time'])
-            response = self.client.get(
-                '{0}?page_size=1&page=2'.format(url), HTTP_AUTHORIZATION=authorization,
-            )
-            self.assertEqual(len(response.json()), 1)
-            self.assertEqual(response.status_code, 200)
-            item = response.data[0]
-            self.assertEqual(item['output_octets'], data1['output_octets'])
-            self.assertEqual(item['nas_ip_address'], '172.16.64.91')
-            self.assertEqual(item['input_octets'], data1['input_octets'])
-            self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
-            self.assertIsNotNone(item['stop_time'])
-            response = self.client.get(
-                '{0}?page_size=1&page=3'.format(url), HTTP_AUTHORIZATION=authorization,
-            )
-            self.assertEqual(len(response.json()), 1)
-            self.assertEqual(response.status_code, 404)
+        )
+        self._create_radius_accounting(**data3)
+        url = reverse('radius:user_accounting', args=[self.default_org])
+        response = self.client.get(
+            '{0}?page_size=1&page=1'.format(url), HTTP_AUTHORIZATION=authorization,
+        )
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.status_code, 200)
+        item = response.data[0]
+        self.assertEqual(item['output_octets'], data2['output_octets'])
+        self.assertEqual(item['input_octets'], data2['input_octets'])
+        self.assertEqual(item['nas_ip_address'], '172.16.64.91')
+        self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
+        self.assertIsNone(item['stop_time'])
+        response = self.client.get(
+            '{0}?page_size=1&page=2'.format(url), HTTP_AUTHORIZATION=authorization,
+        )
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.status_code, 200)
+        item = response.data[0]
+        self.assertEqual(item['output_octets'], data1['output_octets'])
+        self.assertEqual(item['nas_ip_address'], '172.16.64.91')
+        self.assertEqual(item['input_octets'], data1['input_octets'])
+        self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
+        self.assertIsNotNone(item['stop_time'])
+        response = self.client.get(
+            '{0}?page_size=1&page=3'.format(url), HTTP_AUTHORIZATION=authorization,
+        )
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.status_code, 404)
 
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
@@ -1234,79 +1231,77 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
         user.delete()
 
 
-if app_settings.REST_USER_TOKEN_ENABLED:
-    from rest_framework.authtoken.models import Token
+class TestApiUserToken(ApiTokenMixin, BaseTestCase):
+    def _get_url(self):
+        return reverse('radius:user_auth_token', args=[self.default_org])
 
-    class TestApiUserToken(ApiTokenMixin, BaseTestCase):
-        def _get_url(self):
-            return reverse('radius:user_auth_token', args=[self.default_org])
+    def test_user_auth_token_200(self):
+        url = self._get_url()
+        opts = dict(username='tester', password='tester')
+        self._create_user(**opts)
+        response = self.client.post(url, opts)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['key'], Token.objects.first().key)
+        self.assertEqual(
+            response.data['radius_user_token'], RadiusToken.objects.first().key,
+        )
 
-        def test_user_auth_token_200(self):
-            url = self._get_url()
-            opts = dict(username='tester', password='tester')
-            self._create_user(**opts)
-            response = self.client.post(url, opts)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data['key'], Token.objects.first().key)
-            self.assertEqual(
-                response.data['radius_user_token'], RadiusToken.objects.first().key,
-            )
+    def test_user_auth_token_400_credentials(self):
+        url = self._get_url()
+        opts = dict(username='tester', password='tester')
+        r = self.client.post(url, opts)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('Unable to log in', r.json()['non_field_errors'][0])
 
-        def test_user_auth_token_400_credentials(self):
-            url = self._get_url()
-            opts = dict(username='tester', password='tester')
-            r = self.client.post(url, opts)
-            self.assertEqual(r.status_code, 400)
-            self.assertIn('Unable to log in', r.json()['non_field_errors'][0])
+    def test_user_auth_token_400_organization(self):
+        url = self._get_url()
+        opts = dict(username='tester', password='tester')
+        self._create_user(**opts)
+        OrganizationUser.objects.all().delete()
+        r = self.client.post(url, opts)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('is not member', r.json()['non_field_errors'][0])
 
-        def test_user_auth_token_400_organization(self):
-            url = self._get_url()
-            opts = dict(username='tester', password='tester')
-            self._create_user(**opts)
-            OrganizationUser.objects.all().delete()
-            r = self.client.post(url, opts)
-            self.assertEqual(r.status_code, 400)
-            self.assertIn('is not member', r.json()['non_field_errors'][0])
+    def test_user_auth_token_404(self):
+        url = reverse('radius:user_auth_token', args=['wrong'])
+        opts = dict(username='tester', password='tester')
+        r = self.client.post(url, opts)
+        self.assertEqual(r.status_code, 404)
 
-        def test_user_auth_token_404(self):
-            url = reverse('radius:user_auth_token', args=['wrong'])
-            opts = dict(username='tester', password='tester')
-            r = self.client.post(url, opts)
-            self.assertEqual(r.status_code, 404)
 
-    class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
-        def _get_url(self):
-            return reverse('radius:validate_auth_token', args=[self.default_org])
+class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
+    def _get_url(self):
+        return reverse('radius:validate_auth_token', args=[self.default_org])
 
-        def get_user(self):
-            opts = dict(username='tester', password='tester')
-            user = self._create_user(**opts)
-            return user
+    def get_user(self):
+        opts = dict(username='tester', password='tester')
+        user = self._create_user(**opts)
+        return user
 
-        def test_validate_auth_token(self):
-            url = self._get_url()
-            user = self.get_user()
-            token = Token.objects.create(user=user)
-            # empty payload
-            response = self.client.post(url)
-            self.assertEqual(response.status_code, 401)
-            self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
-            # invalid token
-            payload = dict(token='some-random-string')
-            response = self.client.post(url, payload)
-            self.assertEqual(response.status_code, 401)
-            self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
-            # valid token
-            payload = dict(token=token.key)
-            response = self.client.post(url, payload)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(
-                response.data['response_code'], 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
-            )
-            self.assertEqual(response.data['auth_token'], token.key)
-            self.assertEqual(
-                response.data['radius_user_token'], RadiusToken.objects.first().key,
-            )
+    def test_validate_auth_token(self):
+        url = self._get_url()
+        user = self.get_user()
+        token = Token.objects.create(user=user)
+        # empty payload
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
+        # invalid token
+        payload = dict(token='some-random-string')
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
+        # valid token
+        payload = dict(token=token.key)
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data['response_code'], 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
+        )
+        self.assertEqual(response.data['auth_token'], token.key)
+        self.assertEqual(
+            response.data['radius_user_token'], RadiusToken.objects.first().key,
+        )
 
 
 class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
