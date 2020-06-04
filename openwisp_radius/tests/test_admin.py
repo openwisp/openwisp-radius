@@ -220,7 +220,10 @@ class TestAdmin(
 
     def test_radiusbatch_change(self):
         obj = self._create_radius_batch(
-            name='test', strategy='prefix', prefix='test', expiration_date='1998-01-28'
+            name='test',
+            strategy='prefix',
+            prefix='test-prefix4',
+            expiration_date='1998-01-28',
         )
         url = reverse(
             'admin:{0}_radiusbatch_change'.format(self.app_label), args=[obj.pk]
@@ -365,7 +368,9 @@ class TestAdmin(
         self.assertTrue(error_message in str(response.content))
 
     def test_radiusbatch_no_of_users(self):
-        r = self._create_radius_batch(name='test', strategy='prefix', prefix='openwisp')
+        r = self._create_radius_batch(
+            name='test', strategy='prefix', prefix='test-prefix5'
+        )
         path = reverse(
             'admin:{0}_radiusbatch_change'.format(self.app_label), args=[r.pk]
         )
@@ -375,7 +380,9 @@ class TestAdmin(
 
     def test_radiusbatch_delete_methods(self):
         n = User.objects.count()
-        options = dict(organization=self.default_org, n=10, prefix='test', name='test')
+        options = dict(
+            organization=self.default_org, n=10, prefix='test-prefix6', name='test'
+        )
         self._call_command('prefix_add_users', **options)
         self.assertEqual(User.objects.count() - n, 10)
         r = RadiusBatch.objects.first()
@@ -435,7 +442,7 @@ class TestAdmin(
         data = {
             'expiration_date': '2019-03-20',
             'strategy': 'prefix',
-            'prefix': 'openwisp',
+            'prefix': 'test-prefix12',
             'number_of_users': 10,
             'name': 'test2',
             'organization': self.default_org.pk,
@@ -513,7 +520,7 @@ class TestAdmin(
             url,
             {
                 'strategy': 'prefix',
-                'prefix': 'test',
+                'prefix': 'test_prefix16',
                 'name': 'test_name',
                 'csvfile': "",
                 'number_of_users': "",

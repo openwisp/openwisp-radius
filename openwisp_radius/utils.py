@@ -159,7 +159,7 @@ def prefix_generate_users(prefix, n, password_length):
 def generate_pdf(prefix, data):
     template = get_template(app_settings.BATCH_PDF_TEMPLATE)
     html = HTML(string=template.render(data))
-    f = open('{}/{}.pdf'.format(settings.MEDIA_ROOT, prefix), 'w+b')
+    f = open(f'/tmp/{prefix}.pdf', 'w+b')
     html.write_pdf(target=f)
     f.seek(0)
     return File(f)

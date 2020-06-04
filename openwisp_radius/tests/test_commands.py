@@ -125,11 +125,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command('delete_old_users', older_than_months=12)
         self.assertEqual(get_user_model().objects.all().count(), 0)
 
-    def test_prefix_add_users_commnad(self):
+    def test_prefix_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         options = dict(
             organization=self.default_org,
-            prefix='openwisp',
+            prefix='test-prefix7',
             n=10,
             name='test',
             expiration='28-01-2018',
@@ -140,14 +140,16 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 10)
         for u in users:
-            self.assertTrue('openwisp' in u.username)
+            self.assertTrue('test-prefix7' in u.username)
         self.assertEqual(radiusbatch.expiration_date.strftime('%d-%m-%y'), '28-01-18')
-        options = dict(organization=self.default_org, prefix='gsoc', n=5, name='test1')
+        options = dict(
+            organization=self.default_org, prefix='test-prefix8', n=5, name='test1'
+        )
         self._call_command('prefix_add_users', **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 2)
         self.assertEqual(get_user_model().objects.all().count(), 15)
+        options = dict(
+            organization=self.default_org, prefix='test-prefix9', n=-5, name='test2'
+        )
         with self.assertRaises(SystemExit):
-            options = dict(
-                organization=self.default_org, prefix='openwisp', n=-5, name='test2'
-            )
             self._call_command('prefix_add_users', **options)

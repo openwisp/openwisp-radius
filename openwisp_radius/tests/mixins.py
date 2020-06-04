@@ -1,13 +1,18 @@
+import os
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from openwisp_users.models import Organization
 
+from ..utils import load_model
 from . import CallCommandMixin as BaseCallCommandMixin
 from . import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
 from . import PostParamsMixin as BasePostParamsMixin
 
 User = get_user_model()
+RadiusBatch = load_model('RadiusBatch')
 
 
 class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
@@ -65,6 +70,15 @@ class ApiTokenMixin(BasePostParamsMixin):
 
 
 class BaseTestCase(DefaultOrgMixin, CreateRadiusObjectsMixin, TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+
+    def tearDown(self):
+        for radbatch in RadiusBatch.objects.all():
+            radbatch.delete()
+
     def _superuser_login(self):
         user = User.objects.create_superuser(
             username='admin', password='admin', email='test@test.org'

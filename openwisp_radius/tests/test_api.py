@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import timedelta
 from unittest import mock
 
@@ -694,16 +695,18 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         self.assertEqual(User.objects.count(), 0)
         text = 'user,cleartext$abcd,email@gmail.com,firstname,lastname'
-        with open('{}/test.csv'.format(settings.MEDIA_ROOT), 'wb') as file:
+        path_csv = f'{settings.MEDIA_ROOT}/test_csv1.csv'
+        with open(path_csv, 'wb') as file:
             text2 = text.encode('utf-8')
             file.write(text2)
-        with open('{}/test.csv'.format(settings.MEDIA_ROOT), 'rb') as file:
+        with open(path_csv, 'rb') as file:
             data = self._get_post_defaults(
-                {'name': 'test', 'strategy': 'csv', 'csvfile': file}
+                {'name': 'test_csv1', 'strategy': 'csv', 'csvfile': file}
             )
             response = self.client.post(
                 reverse('radius:batch'), data, HTTP_AUTHORIZATION=self.auth_header
             )
+        os.remove(path_csv)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(RadiusBatch.objects.count(), 1)
         self.assertEqual(User.objects.count(), 1)
@@ -715,7 +718,7 @@ class TestApi(ApiTokenMixin, BaseTestCase):
             {
                 'name': 'test',
                 'strategy': 'prefix',
-                'prefix': 'prefix',
+                'prefix': 'test-prefix13',
                 'number_of_users': 1,
             }
         )
@@ -729,7 +732,7 @@ class TestApi(ApiTokenMixin, BaseTestCase):
     def test_api_batch_user_creation_no_users(self):
         data = {
             'strategy': 'prefix',
-            'prefix': 'test',
+            'prefix': 'test-prefix14',
             'name': 'test_name',
             'csvfile': "",
             'number_of_users': "",
@@ -871,7 +874,7 @@ class TestApi(ApiTokenMixin, BaseTestCase):
             post_url,
             {
                 'name': 'test_name',
-                'prefix': 'test',
+                'prefix': 'test-prefix15',
                 'number_of_users': 5,
                 'strategy': 'prefix',
             },
