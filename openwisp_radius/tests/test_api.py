@@ -1058,6 +1058,81 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 200)
 
+    # TODO: remove if here and elsewhere
+    # this shall be required
+    if app_settings.REST_USER_TOKEN_ENABLED:
+
+        def test_user_accounting_list_200(self):
+            auth_url = reverse('radius:user_auth_token', args=[self.default_org])
+            opts = dict(username='tester', password='tester')
+            self._create_user(**opts)
+            response = self.client.post(auth_url, opts)
+            authorization = 'Token {}'.format(response.data['key'])
+            stop_time = '2018-03-02T11:43:24.020460+01:00'
+            data1 = self.acct_post_data
+            data1.update(
+                dict(
+                    session_id='35000006',
+                    unique_id='75058e50',
+                    input_octets=9900909,
+                    output_octets=1513075509,
+                    username='tester',
+                    stop_time=stop_time,
+                )
+            )
+            self._create_radius_accounting(**data1)
+            data2 = self.acct_post_data
+            data2.update(
+                dict(
+                    session_id='40111116',
+                    unique_id='12234f69',
+                    input_octets=3000909,
+                    output_octets=1613176609,
+                    username='tester',
+                )
+            )
+            self._create_radius_accounting(**data2)
+            data3 = self.acct_post_data
+            data3.update(
+                dict(
+                    session_id='89897654',
+                    unique_id='99144d60',
+                    input_octets=4440909,
+                    output_octets=1119074409,
+                    username='admin',
+                    stop_time=stop_time,
+                )
+            )
+            self._create_radius_accounting(**data3)
+            url = reverse('radius:user_accounting', args=[self.default_org])
+            response = self.client.get(
+                '{0}?page_size=1&page=1'.format(url), HTTP_AUTHORIZATION=authorization,
+            )
+            self.assertEqual(len(response.json()), 1)
+            self.assertEqual(response.status_code, 200)
+            item = response.data[0]
+            self.assertEqual(item['output_octets'], data2['output_octets'])
+            self.assertEqual(item['input_octets'], data2['input_octets'])
+            self.assertEqual(item['nas_ip_address'], '172.16.64.91')
+            self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
+            self.assertIsNone(item['stop_time'])
+            response = self.client.get(
+                '{0}?page_size=1&page=2'.format(url), HTTP_AUTHORIZATION=authorization,
+            )
+            self.assertEqual(len(response.json()), 1)
+            self.assertEqual(response.status_code, 200)
+            item = response.data[0]
+            self.assertEqual(item['output_octets'], data1['output_octets'])
+            self.assertEqual(item['nas_ip_address'], '172.16.64.91')
+            self.assertEqual(item['input_octets'], data1['input_octets'])
+            self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
+            self.assertIsNotNone(item['stop_time'])
+            response = self.client.get(
+                '{0}?page_size=1&page=3'.format(url), HTTP_AUTHORIZATION=authorization,
+            )
+            self.assertEqual(len(response.json()), 1)
+            self.assertEqual(response.status_code, 404)
+
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
     @classmethod

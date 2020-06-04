@@ -474,6 +474,30 @@ if app_settings.REST_USER_TOKEN_ENABLED:
     validate_auth_token = ValidateAuthTokenView.as_view()
 
 
+class UserAccountingView(DispatchOrgMixin, generics.ListAPIView):
+    authentication_classes = (UserTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RadiusAccountingSerializer
+    pagination_class = AccountingViewPagination
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = AccountingFilter
+    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+
+    def list(self, request, *args, **kwargs):
+        self.request = request
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(organization=self.organization, username=self.request.user.username)
+        )
+
+
+user_accounting = UserAccountingView.as_view()
+
+
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
     authentication_classes = (UserTokenAuthentication,)
 

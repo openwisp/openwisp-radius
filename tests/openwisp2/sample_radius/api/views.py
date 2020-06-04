@@ -11,6 +11,7 @@ from openwisp_radius.api.views import (
 from openwisp_radius.api.views import PasswordResetView as BasePasswordResetView
 from openwisp_radius.api.views import PostAuthView as BasePostAuthView
 from openwisp_radius.api.views import RegisterView as BaseRegisterView
+from openwisp_radius.api.views import UserAccountingView as BaseUserAccountingView
 from openwisp_radius.api.views import ValidateAuthTokenView as BaseValidateAuthTokenView
 from openwisp_radius.api.views import (
     ValidatePhoneTokenView as BaseValidatePhoneTokenView,
@@ -45,6 +46,10 @@ class ValidateAuthTokenView(BaseValidateAuthTokenView):
     pass
 
 
+class UserAccountingView(BaseUserAccountingView):
+    pass
+
+
 class PasswordChangeView(BasePasswordChangeView):
     pass
 
@@ -76,6 +81,7 @@ batch = BatchView.as_view()
 register = RegisterView.as_view()
 obtain_auth_token = ObtainAuthTokenView.as_view()
 validate_auth_token = ValidateAuthTokenView.as_view()
+user_accounting = UserAccountingView.as_view()
 password_change = PasswordChangeView.as_view()
 password_reset = PasswordResetView.as_view()
 password_reset_confirm = PasswordResetConfirmView.as_view()

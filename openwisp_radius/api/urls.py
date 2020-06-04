@@ -40,6 +40,11 @@ def get_api_urls(api_views=None):
             api_views.validate_auth_token,
             name='validate_auth_token',
         ),
+        url(
+            r'^(?P<slug>[\w-]+)/account/session/$',
+            api_views.user_accounting,
+            name='user_accounting',
+        ),
         # generate new sms phone token
         url(
             r'^(?P<slug>[\w-]+)/account/phone/token/$',
