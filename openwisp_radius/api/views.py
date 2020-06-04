@@ -193,7 +193,7 @@ class PostAuthView(TokenAuthorizationMixin, generics.CreateAPIView):
         Sets the response data to None in order to instruct
         FreeRADIUS to avoid processing the response body
         """
-        response = self.create(request, *args, **kwargs)
+        response = super().post(request, *args, **kwargs)
         response.data = None
         return response
 
