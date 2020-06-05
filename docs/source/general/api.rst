@@ -2,24 +2,22 @@
 API Documentation
 =================
 
-openwisp-radius provides an API that can be used by freeradius to perform
-the following operations:
+.. contents:: **Table of Contents**:
+   :backlinks: none
+   :depth: 4
 
-- Authorize
-- Accounting
-- Post Auth
+API endpoints for FreeRADIUS
+############################
 
-The API also provides other features that can be useful to perform integrations
-with third-party software:
+The following section is dedicated to API endpoints that are designed to be
+consumed by FreeRADIUS.
 
-- Batch User Creation
-- Login (Obtain User Auth Token)
-
-API Token
----------
+Organization API Token
+----------------------
 
 Only requests containing the right API token and Organization UUID will able
-to talk to the API endpoints.
+to talk to the API endpoints consumed by freeradius
+(`Authorize`_, `Post Auth`_, `Accounting`_).
 
 You can get (and set) the value of the api token in the organization
 configuration page on the OpenWISP dashboard
@@ -29,7 +27,7 @@ configuration page on the OpenWISP dashboard
    :alt: Organization Radius Token
 
 It is highly recommended that you use a hard to guess value, longer than 15 characters
-containing both letters and numbers. Eg: "165f9a790787fc38e5cc12c1640db2300648d9a2"
+containing both letters and numbers. Eg: ``165f9a790787fc38e5cc12c1640db2300648d9a2``.
 
 You will also need the UUID of your organization from the organization change page
 (select your organization in ``/admin/openwisp_users/organization/``):
@@ -56,6 +54,66 @@ Requests which contain an invalid token will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
 `Configure the REST module <freeradius.html#configure-the-rest-module>`_.
+
+Authorize
+---------
+
+Use by FreeRADIUS to perform the ``authorization`` phase.
+
+It's triggered when a user submits the form to login into the captive portal.
+The captive portal has to be configured to send the password to freeradius in clear text
+(will be encrypted with the freeradius shared secret, can be tunneled
+via TLS for increased security if needed).
+
+FreeRADIUS in turn will send the username and password via HTTPs to this endpoint.
+
+Responds to only **POST**.
+
+.. code-block:: text
+
+    /api/v1/authorize/
+
+Example:
+
+.. code-block:: text
+
+    POST /api/v1/authorize/ HTTP/1.1 username=testuser&password=testpassword
+
+========    ===========================
+Param       Description
+========    ===========================
+username    Username for the given user
+password    Password for the given user
+========    ===========================
+
+See also `OPENWISP_RADIUS_API_AUTHORIZE_REJECT
+<settings.html#openwisp-radius-api-authorize-reject>`_.
+
+Post Auth
+---------
+
+API endpoint designed to be used by FreeRADIUS ``postauth``.
+
+Responds only to **POST**.
+
+.. code-block:: text
+
+    /api/v1/postauth/
+
+==================   ===================================
+Param                Description
+==================   ===================================
+username             Username
+password             Password (*)
+reply                Radius reply received by freeradius
+called_station_id    Called Station ID
+calling_station_id   Calling Station ID
+==================   ===================================
+
+(*): the ``password`` is stored only on unsuccessful authorizations.
+
+Returns an empty response body in order to instruct
+FreeRADIUS to avoid processing the response body.
 
 Accounting
 ----------
@@ -104,7 +162,6 @@ Returns a list of accounting objects
           "unique_id": "75058e50"
       }
     ]
-
 
 POST
 ~~~~
@@ -177,40 +234,240 @@ stop_time           Stop time (less or equal to)
 is_open             If stop_time is null
 ==================  ====================================
 
-Authorize
----------
+User API endpoints
+##################
+
+These API endpoints are designed to be used by users
+(eg: creating an account, changing their password,
+obtaining access tokens, validating their phone number, etc.).
+
+.. note::
+  The API endpoints described below do not require the
+  `Organization API Token <#organization-api-token>`_
+  described in the beginning of this document.
+
+  Some of them require the sending of the user API access token
+  sent in the form of a "Bearer Token".
+
+User Registration
+-----------------
+
+Used by users to create new accounts, usually to access the internet.
 
 .. code-block:: text
 
-    /api/v1/authorize/
-
-Responds to only **POST**, used for authorizing a given username and password.
-
-.. code-block:: text
-
-    POST /api/v1/authorize/ HTTP/1.1 username=testuser&password=testpassword
-
-========    ===========================
-Param       Description
-========    ===========================
-username    Username for the given user
-password    Password for the given user
-========    ===========================
-
-See also `OPENWISP_RADIUS_API_AUTHORIZE_REJECT
-<settings.html#openwisp-radius-api-authorize-reject>`_.
-
-PostAuth
---------
-
-.. code-block:: text
-
-    /api/v1/postauth/
-
-Sets the response data to None in order to instruct
-FreeRADIUS to avoid processing the response body.
+  /api/v1/<organization-slug>/account/
 
 Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+username           string
+email              string
+password1          string
+password2          string
+phone_number       string (*)
+===============    ===============================
+
+(*) ``phone_number`` is required only when the organization has enabled
+SMS verification in its "Organization RADIUS Settings".
+
+Reset password
+--------------
+
+This is the classic "password forgotten recovery feature" which
+sends a reset password token to the email of the user.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/password/reset/
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+email              string
+===============    ===============================
+
+Confirm reset password
+----------------------
+
+Allows users to confirm their reset password after having it requested
+via the `Reset password <#reset-password>`_ endpoint.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/password/reset/confirm/
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+new_password1      string
+new_password2      string
+uid                string
+token              string
+===============    ===============================
+
+Change password
+---------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Allows users to change their password after using the
+`Reset password <#reset-password>`_ endpoint.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/password/change/
+
+Example:
+
+.. code-block:: text
+
+    curl -X POST http://localhost:8000/api/v1/<organization-slug>/account/password/change/ \
+         -H "Authorization: Bearer <user-auth-token>"
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+new_password1      string
+new_password2      string
+===============    ===============================
+
+Login (Obtain User Auth Token)
+------------------------------
+
+.. code-block:: text
+
+    /api/v1/account/token/
+
+Responds only to **POST**.
+
+Returns:
+
+- the user radius token, which can be used to authenticate
+  the user in the captive portal by sending it in place of the user password
+  (it will be passed to freeradius which in turn will send it to the
+  `authorize API endpoint <#authorize>`_ which will recognize the token as
+  the user passsword)
+- the user API access token, which will be needed to authenticate the user to
+  eventual subsequent API requests (eg: change password)
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+username           string
+password           string
+===============    ===============================
+
+Validate user auth token
+------------------------
+
+Used to check whether the auth token of a user is valid or not.
+
+Return also the radius user token in the response.
+
+.. code-block:: text
+
+    /api/v1/account/token/validate/
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+token              string
+===============    ===============================
+
+User Radius Sessions
+--------------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Returns the radius sessions of the logged-in user and the organization specified
+in the URL.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/session/
+
+Responds only to **GET**.
+
+Create SMS token
+----------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Used for SMS verification, sends a code via SMS to the phone number of the user.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/phone/token/
+
+Responds only to **POST**.
+
+No parameters required.
+
+Verify/Validate SMS token
+-------------------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Used for SMS verification, allows users to validate the code they receive via SMS.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/phone/verify/
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+code                string
+===============    ===============================
+
+Change phone number
+-------------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Allows users to change their phone number,
+will flag the user as inactive and send them a verification code via SMS.
+
+.. code-block:: text
+
+    /api/v1/<organization-slug>/account/phone/change/
+
+Responds only to **POST**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+phone_number       string
+===============    ===============================
 
 Batch user creation
 -------------------
@@ -249,28 +506,3 @@ prefix             prefix for the generation of users
 number_of_users    number of users
 expiration_date    date of expiration of the users
 ===============    ==================================
-
-Login (Obtain User Auth Token)
-------------------------------
-
-.. code-block:: text
-
-    /api/v1/account/token/
-
-.. note::
-  This endpoint does not require the sending of the `API Token <#api-token>`_
-  described in the beginning of this document.
-
-Responds only to **POST**.
-
-Returns the user access token, which can be used to authenticate
-the user via the freeradius authorization mechanism.
-
-Parameters:
-
-===============    ===============================
-Param              Description
-===============    ===============================
-username           string
-password           string
-===============    ===============================

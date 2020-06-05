@@ -230,7 +230,7 @@ Configure the site
 
 Configure the ``authorize``, ``authenticate`` and ``postauth`` section
 as follows, substituting the occurrences of ``<api_token>`` & ``<org-uuid>`` with
-the value of `your organization's UUID & api_token values <api.html#api-token>`_:
+the value of `your organization's UUID & api_token values <api.html#organization-api-token>`_:
 
 .. code-block:: ini
 
