@@ -450,8 +450,13 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
 obtain_auth_token = ObtainAuthTokenView.as_view()
 
 
+class ValidateTokenSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+
 class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateAPIView):
     radius_token = RadiusToken
+    serializer_class = ValidateTokenSerializer
 
     def post(self, request, *args, **kwargs):
         request_token = request.data.get('token')
@@ -512,8 +517,14 @@ password_change = PasswordChangeView.as_view()
 class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
 
+    def post(self, request, *args, **kwargs):
+        request.user = self.get_user(request)
+        return super().post(request, *args, **kwargs)
+
     def get_serializer_context(self):
-        user = self.get_user()
+        user = self.request.user
+        if not user.pk:
+            return
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         # until django 2.1 urlsafe_base64_encode returned a bytestring
         if not isinstance(uid, str):  # noqa
@@ -530,9 +541,9 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         context = {'request': self.request, 'password_reset_url': password_reset_url}
         return context
 
-    def get_user(self, *args, **kwargs):
-        if self.request.POST.get('email', None):
-            email = self.request.POST['email']
+    def get_user(self, request):
+        if request.POST.get('email', None):
+            email = request.POST['email']
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
@@ -588,6 +599,7 @@ class CreatePhoneTokenView(
 ):
     authentication_classes = (InactiveUserTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.Serializer
 
     def create(self, *args, **kwargs):
         request = self.request

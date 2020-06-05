@@ -1059,6 +1059,13 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 200)
 
+    def test_api_password_reset_405(self):
+        password_reset_url = reverse(
+            'radius:rest_password_reset', args=[self.default_org.slug]
+        )
+        response = self.client.get(password_reset_url)
+        self.assertEqual(response.status_code, 405)
+
     def test_user_accounting_list_200(self):
         auth_url = reverse('radius:user_auth_token', args=[self.default_org])
         opts = dict(username='tester', password='tester')
