@@ -24,7 +24,7 @@ from rest_auth.views import PasswordChangeView as BasePasswordChangeView
 from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from rest_auth.views import PasswordResetView as BasePasswordResetView
 from rest_framework import generics, serializers, status
-from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BaseAuthentication, SessionAuthentication
 from rest_framework.authentication import TokenAuthentication as UserTokenAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.serializers import AuthTokenSerializer
@@ -479,13 +479,20 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateA
 validate_auth_token = ValidateAuthTokenView.as_view()
 
 
+class UserAccountingFilter(AccountingFilter):
+    class Meta(AccountingFilter.Meta):
+        fields = [
+            field for field in AccountingFilter.Meta.fields if field != 'username'
+        ]
+
+
 class UserAccountingView(DispatchOrgMixin, generics.ListAPIView):
-    authentication_classes = (UserTokenAuthentication,)
+    authentication_classes = (UserTokenAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
-    filter_class = AccountingFilter
+    filter_class = UserAccountingFilter
     queryset = RadiusAccounting.objects.all().order_by('-start_time')
 
     def list(self, request, *args, **kwargs):
