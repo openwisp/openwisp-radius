@@ -23,7 +23,7 @@ You can get (and set) the value of the api token in the organization
 configuration page on the OpenWISP dashboard
 (select your organization in ``/admin/openwisp_users/organization/``):
 
-.. image:: ../images/token.png
+.. image:: /images/token.png
    :alt: Organization Radius Token
 
 It is highly recommended that you use a hard to guess value, longer than 15 characters
@@ -32,7 +32,7 @@ containing both letters and numbers. Eg: ``165f9a790787fc38e5cc12c1640db2300648d
 You will also need the UUID of your organization from the organization change page
 (select your organization in ``/admin/openwisp_users/organization/``):
 
-.. image:: ../images/org-uuid.png
+.. image:: /images/org-uuid.png
    :alt: Organization UUID
 
 HTTP clients must send these tokens, either in the form of a `bearer token
@@ -53,7 +53,7 @@ or in the form of a query string parameter as shown below.
 Requests which contain an invalid token will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
-`Configure the REST module <freeradius.html#configure-the-rest-module>`_.
+`Configure the REST module </developer/freeradius.html#configure-the-rest-module>`_.
 
 Authorize
 ---------
@@ -477,8 +477,8 @@ Batch user creation
     /api/v1/batch/
 
 .. note::
-  This API endpoint allows to use the features described in :doc:`importing_users`
-  and :doc:`generating_users`.
+  This API endpoint allows to use the features described in :doc:`/user/importing_users`
+  and :doc:`/user/generating_users`.
 
 Responds only to **POST**, used to save a ``RadiusBatch`` instance.
 It returns the information of the batch operation and the list of the users generated.

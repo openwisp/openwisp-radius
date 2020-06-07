@@ -414,7 +414,7 @@ class TestAdmin(
         response = self.client.get(add_url)
         docs_link = (
             'https://openwisp-radius.readthedocs.io/en/latest'
-            '/general/importing_users.html'
+            '/user/importing_users.html'
         )
         self.assertContains(response, docs_link)
 
