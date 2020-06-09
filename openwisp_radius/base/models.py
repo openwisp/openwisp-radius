@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import os
 from base64 import encodestring
@@ -36,7 +37,6 @@ from ..settings import (
 from ..utils import (
     SmsMessage,
     find_available_username,
-    generate_pdf,
     generate_sms_token,
     get_sms_default_valid_until,
     load_model,
@@ -815,12 +815,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         max_length=20,
         help_text=_('Usernames generated will be of the format [prefix][number]'),
     )
-    pdf = models.FileField(
-        null=True,
-        blank=True,
-        verbose_name='PDF',
-        help_text=_('The pdf file containing list of usernames and passwords'),
-    )
+    # List of usernames and passwords used to create PDF
+    user_credentials = JSONField(null=True, blank=True, verbose_name='PDF',)
     expiration_date = models.DateField(
         verbose_name=_('expiration date'),
         null=True,
@@ -892,14 +888,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         self.add(reader, password_length)
 
     def prefix_add(self, prefix, n, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
-        self.save()
-        users_list, user_password = prefix_generate_users(prefix, n, password_length)
+        users_list, user_credentials = prefix_generate_users(prefix, n, password_length)
         for user in users_list:
             user.full_clean()
             self.save_user(user)
-        pdf_file = generate_pdf(prefix, {'users': user_password})
-        pdf_file.name = f'{prefix}.pdf'
-        self.pdf = pdf_file
+        self.user_credentials = json.dumps(user_credentials)
         self.full_clean()
         self.save()
 
@@ -956,10 +949,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             u.save()
 
     def _remove_files(self):
-        strategy_filemap = {'prefix': 'pdf', 'csv': 'csvfile'}
-        file_details = getattr(self, strategy_filemap.get(self.strategy), None)
-        if file_details:
-            path = file_details.path
+        if self.csvfile:
+            path = self.csvfile.path
             if os.path.isfile(path):
                 os.remove(path)
 

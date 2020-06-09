@@ -6,6 +6,7 @@ from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.templatetags.static import static
+from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 
 from openwisp_users.admin import OrganizationAdmin
@@ -356,6 +357,7 @@ class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
 
 @admin.register(RadiusBatch)
 class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
+    change_form_template = 'openwisp-radius/admin/rad_batch_users_change_form.html'
     list_display = [
         'name',
         'organization',
@@ -372,7 +374,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'prefix',
         'number_of_users',
         'users',
-        'pdf',
         'expiration_date',
         'created',
         'modified',
@@ -400,7 +401,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         fields = super().get_fields(request, obj)[:]
         if not obj:
             fields.remove('users')
-            fields.remove('pdf')
         return fields
 
     def save_model(self, request, obj, form, change):
@@ -421,6 +421,18 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     def delete_model(self, request, obj):
         obj.users.all().delete()
         super(RadiusBatchAdmin, self).delete_model(request, obj)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        radbatch = RadiusBatch.objects.get(pk=object_id)
+        if radbatch.strategy == 'prefix':
+            extra_context['download_rad_batch_pdf_url'] = reverse(
+                'radius:download_rad_batch_pdf',
+                args=[radbatch.organization.pk, object_id],
+            )
+        return super().change_view(
+            request, object_id, form_url, extra_context=extra_context,
+        )
 
     def get_actions(self, request):
         actions = super().get_actions(request)
@@ -447,7 +459,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 'csvfile',
                 'number_of_users',
                 'users',
-                'pdf',
                 'expiration_date',
             ) + readonly_fields
         return readonly_fields

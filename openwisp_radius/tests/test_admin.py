@@ -228,14 +228,42 @@ class TestAdmin(
             prefix='test-prefix4',
             expiration_date='1998-01-28',
         )
-        url = reverse(
-            'admin:{0}_radiusbatch_change'.format(self.app_label), args=[obj.pk]
-        )
+        url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
         response = self.client.get(url)
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
 
+    def test_radiusbatch_change_contains_pdf_download(self):
+        obj = self._create_radius_batch(
+            name='test-prefix17',
+            strategy='prefix',
+            prefix='test-prefix17',
+            expiration_date='1998-01-28',
+        )
+        url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
+        response = self.client.get(url)
+        pdf_url = reverse(
+            'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+        )
+        self.assertContains(response, pdf_url)
+
+    def test_radiusbatch_change_not_contains_pdf_download(self):
+        self.assertEqual(RadiusBatch.objects.count(), 0)
+        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        data = self._get_csv_post_data()
+        response = self.client.post(add_url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusBatch.objects.count(), 1)
+        obj = RadiusBatch.objects.first()
+        url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
+        response = self.client.get(url)
+        pdf_url = reverse(
+            'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+        )
+        self.assertNotContains(response, pdf_url)
+
     def test_radiuscheck_create_weak_passwd(self):
+
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         _RADCHECK['new_value'] = ""
         resp = self.client.post(
@@ -324,7 +352,6 @@ class TestAdmin(
 
     def test_nas_admin_save_model(self):
         options = {
-            'organization': str(self.default_org.pk),
             'name': 'test-NAS',
             'short_name': 'test',
             'type': 'Virtual',
@@ -340,6 +367,7 @@ class TestAdmin(
         )
         options['custom_type'] = ""
         options['type'] = 'Other'
+        options['organization'] = str(self.default_org.pk)
         options = self._get_post_defaults(options)
         response = self.client.post(change_url, options, follow=True)
         self.assertNotContains(response, 'error')
@@ -556,12 +584,12 @@ class TestAdmin(
     def _create_multitenancy_test_env(
         self, usergroup=False, groupcheck=False, groupreply=False
     ):
-        org1 = self._create_org(name='testorg1', is_active=True, slug='testorg1')
-        org2 = self._create_org(name='testorg2', is_active=True, slug='testorg2')
+        org1 = self._create_org(**{'name': 'testorg1', 'slug': 'testorg1'})
+        org2 = self._create_org(**{'name': 'testorg2', 'slug': 'testorg2'})
         inactive = self._create_org(
-            name='inactive org', is_active=False, slug='inactive-org'
+            **{'name': 'inactive org', 'is_active': False, 'slug': 'inactive-org'}
         )
-        operator = self._create_operator()
+        operator = TestMultitenantAdminMixin()._create_operator()
         org1.add_user(operator, is_admin=True)
         inactive.add_user(operator)
         user11 = User.objects.create(

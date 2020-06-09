@@ -7,36 +7,12 @@ from django.test import TestCase
 
 from ..utils import load_model
 from . import CallCommandMixin as BaseCallCommandMixin
-from . import CreateRadiusObjectsMixin as BaseCreateRadiusObjectsMixin
+from . import CreateRadiusObjectsMixin
 from . import PostParamsMixin as BasePostParamsMixin
 
 User = get_user_model()
 RadiusBatch = load_model('RadiusBatch')
 Organization = swapper.load_model('openwisp_users', 'Organization')
-
-
-class CreateRadiusObjectsMixin(BaseCreateRadiusObjectsMixin):
-    def _create_org(self, **kwargs):
-        options = dict(name='default', slug='default')
-        options.update(kwargs)
-        try:
-            org = Organization.objects.get(**options)
-        except Organization.DoesNotExist:
-            org = Organization(**options)
-            org.full_clean()
-            org.save()
-        return org
-
-    def _get_defaults(self, options, model=None):
-        if not model or hasattr(model, 'organization'):
-            options.update({'organization': self._create_org()})
-        return super()._get_defaults(options, model)
-
-    def _create_user(self, **kwargs):
-        user = super()._create_user(**kwargs)
-        org = self._create_org()
-        org.add_user(user)
-        return user
 
 
 class GetEditFormInlineMixin(object):
@@ -95,13 +71,13 @@ class CallCommandMixin(BaseCallCommandMixin):
 class PostParamsMixin(BasePostParamsMixin):
     def _get_post_defaults(self, options, model=None):
         if not model or hasattr(model, 'organization'):
-            options.update({'organization': str(self._create_org().pk)})
+            options.update({'organization': str(self._get_org().pk)})
         return super()._get_post_defaults(options, model)
 
 
-class DefaultOrgMixin(object):
+class DefaultOrgMixin(CreateRadiusObjectsMixin):
     def setUp(self):
-        self.default_org = Organization.objects.get(slug='default')
+        self.default_org = self._get_org()
         super().setUp()
 
 
@@ -114,7 +90,7 @@ class ApiTokenMixin(BasePostParamsMixin):
         self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
 
 
-class BaseTestCase(DefaultOrgMixin, CreateRadiusObjectsMixin, TestCase):
+class BaseTestCase(DefaultOrgMixin, TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

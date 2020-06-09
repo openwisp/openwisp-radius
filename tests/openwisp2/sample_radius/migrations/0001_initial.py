@@ -1232,13 +1232,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    'pdf',
-                    models.FileField(
-                        blank=True,
-                        help_text='The pdf file containing list of usernames and passwords',
-                        null=True,
-                        upload_to='',
-                        verbose_name='PDF',
+                    'user_credentials',
+                    jsonfield.fields.JSONField(
+                        blank=True, null=True, verbose_name='PDF',
                     ),
                 ),
                 (

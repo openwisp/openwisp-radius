@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
@@ -104,9 +105,20 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     prefix = serializers.CharField(required=False)
     csvfile = serializers.FileField(required=False)
     pdf = serializers.FileField(required=False, read_only=True)
+    pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
     number_of_users = serializers.IntegerField(
         required=False, write_only=True, min_value=1
     )
+
+    def get_pdf_link(self, obj):
+        if isinstance(obj, RadiusBatch) and obj.strategy == 'prefix':
+            request = self.context.get('request')
+            return request.build_absolute_uri(
+                reverse(
+                    'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+                )
+            )
+        return None
 
     def validate(self, data):
         if data['strategy'] == 'prefix' and not data.get('number_of_users'):

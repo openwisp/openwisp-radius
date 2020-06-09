@@ -1,13 +1,12 @@
 import csv
 import os
 from datetime import timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.files import File
 from django.core.validators import validate_email
 from django.template.loader import get_template
 from django.utils import timezone
@@ -156,13 +155,15 @@ def prefix_generate_users(prefix, n, password_length):
     return users_list, user_password
 
 
-def generate_pdf(prefix, data):
+def generate_pdf(radbatch_uuid):
     template = get_template(app_settings.BATCH_PDF_TEMPLATE)
-    html = HTML(string=template.render(data))
-    f = open(f'/tmp/{prefix}.pdf', 'w+b')
-    html.write_pdf(target=f)
-    f.seek(0)
-    return File(f)
+    data = load_model('RadiusBatch').objects.get(pk=radbatch_uuid)
+    html = HTML(string=template.render({'users': data.user_credentials}))
+    buffer = BytesIO()
+    html.write_pdf(target=buffer)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
 
 
 def update_user_related_records(sender, instance, created, **kwargs):
