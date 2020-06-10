@@ -29,12 +29,15 @@ openwisp-radius
    :target: https://pypi.org/project/black/
    :alt: code style: black
 
-.. image:: docs/source/images/demo_radius.gif
+.. image:: https://github.com/openwisp/openwisp-radius/raw/master/docs/source/images/demo_radius.gif
    :alt: Feature Highlights
 
-------------
 
-**openwisp-radius** is Django reusable app that provides an admin interface to a `freeradius <http://freeradius.org/>`_ database.
+**openwisp-radius** is Django reusable app that provides an admin interface to a
+`freeradius <http://freeradius.org/>`_ database.
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
+   :target: http://openwisp.org
 
 `Documentation <http://openwisp-radius.readthedocs.io/en/latest/>`_ |
 `Change log <https://github.com/openwisp/openwisp-radius/blob/master/CHANGES.rst>`_ |

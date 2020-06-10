@@ -21,7 +21,6 @@ install:
 
 before_script:
   - ./run-qa-checks
-  - mkdir tests/media
 
 script:
   - coverage run --source=openwisp_radius runtests.py

@@ -2,6 +2,17 @@
 
 set -e
 
+echo ''
+echo 'Checking documentation build status'
+./runsphinx-build
+rm -rf docs/build/
+
+echo ''
+echo 'Check JavaScript Linting'
+jslint ./openwisp_radius/static/openwisp-radius/js/*.js
+
+echo ''
+echo 'Running checks for openwisp-radius'
 openwisp-qa-check \
         --migration-path "./openwisp_radius/migrations" \
         --migration-module openwisp_radius
@@ -18,10 +29,4 @@ SAMPLE_APP=1 openwisp-qa-check \
         --migration-path "./tests/openwisp2/sample_radius/migrations" \
         --migration-module sample_radius
 
-echo ''
-echo 'Checking documentation build status'
-./runsphinx-build
 
-echo ''
-echo 'Check JavaScript Linting'
-jslint ./openwisp_radius/static/openwisp-radius/js/*.js

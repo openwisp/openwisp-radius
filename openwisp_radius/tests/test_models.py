@@ -402,9 +402,9 @@ class TestRadiusBatch(BaseTestCase):
 
     def test_delete_method(self):
         radiusbatch = self._create_radius_batch(
-            strategy='prefix', prefix='test', name='test'
+            strategy='prefix', prefix='test-prefix16', name='test'
         )
-        radiusbatch.prefix_add('test', 5)
+        radiusbatch.prefix_add('test-prefix16', 5)
         User = get_user_model()
         self.assertEqual(User.objects.all().count(), 5)
         radiusbatch.delete()

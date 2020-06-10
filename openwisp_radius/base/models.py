@@ -860,7 +860,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             )
         if self.strategy == 'csv':
             validate_csvfile(self.csvfile.file)
-        super(AbstractRadiusBatch, self).clean()
+        super().clean()
 
     def add(self, reader, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
         users_list = []
@@ -899,7 +899,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             user.full_clean()
             self.save_user(user)
         pdf_file = generate_pdf(prefix, {'users': user_password})
-        pdf_file.name = pdf_file.name.split('/')[-1]
+        pdf_file.name = f'{prefix}.pdf'
         self.pdf = pdf_file
         self.full_clean()
         self.save()
@@ -957,9 +957,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def _remove_files(self):
         strategy_filemap = {'prefix': 'pdf', 'csv': 'csvfile'}
-        path = getattr(self, strategy_filemap.get(self.strategy)).path
-        if os.path.isfile(path):
-            os.remove(path)
+        file_details = getattr(self, strategy_filemap.get(self.strategy), None)
+        if file_details:
+            path = file_details.path
+            if os.path.isfile(path):
+                os.remove(path)
 
 
 class AbstractRadiusToken(TimeStampedEditableModel, models.Model):
