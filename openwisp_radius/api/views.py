@@ -384,7 +384,13 @@ class DispatchOrgMixin(object):
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
-class RegisterView(DispatchOrgMixin, BaseRegisterView):
+class RadiusTokenMixin(object):
+    def get_or_create_radius_token(self, user):
+        radius_token, rad_token_created = RadiusToken.objects.get_or_create(user=user)
+        return radius_token
+
+
+class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
     authentication_classes = tuple()
 
     def get_response_data(self, user):
@@ -397,31 +403,24 @@ class RegisterView(DispatchOrgMixin, BaseRegisterView):
         context = self.get_serializer_context()
 
         if getattr(settings, 'REST_USE_JWT', False):
-            data = {'user': user, 'token': self.token}
-            return JWTSerializer(data, context=context).data
+            data = JWTSerializer(
+                {'user': user, 'token': self.token}, context=context
+            ).data
         else:
-            return TokenSerializer(user.auth_token, context=context).data
+            data = TokenSerializer(user.auth_token, context=context).data
+
+        radius_token = self.get_or_create_radius_token(user)
+        data['radius_user_token'] = radius_token.key
+        return data
 
 
 register = RegisterView.as_view()
-
-
-class RadiusTokenMixin(object):
-    def get_or_create_radius_token(self, user):
-        """
-        Designed to be overridden by extensions
-        """
-        radius_token, rad_token_created = self.radius_token.objects.get_or_create(
-            user=user
-        )
-        return radius_token
 
 
 class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
     serializer_class = rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
     authentication_classes = []
-    radius_token = RadiusToken
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -455,7 +454,6 @@ class ValidateTokenSerializer(serializers.Serializer):
 
 
 class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateAPIView):
-    radius_token = RadiusToken
     serializer_class = ValidateTokenSerializer
 
     def post(self, request, *args, **kwargs):
