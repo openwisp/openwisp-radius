@@ -112,3 +112,4 @@ Pipfile
 # Other project related
 media/
 tmp/
+*_loaded.json

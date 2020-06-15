@@ -1,0 +1,15 @@
+[
+    {
+        "model": "auth.group",
+        "pk": 1,
+        "fields": {
+            "name": "sample_group_social",
+            "permissions": [
+                85,
+                86,
+                87,
+                88
+            ]
+        }
+    }
+]

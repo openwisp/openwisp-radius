@@ -1,0 +1,224 @@
+[
+    {
+        "model": "django_freeradius.radiuscheck",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-15T10:33:22.060Z",
+            "modified": "2020-06-15T10:33:22.060Z",
+            "username": "admin",
+            "value": "1",
+            "op": ":=",
+            "attribute": "Max-Daily-Session",
+            "user": null,
+            "is_active": true,
+            "valid_until": "2020-06-15T10:33:08Z",
+            "notes": ""
+        }
+    },
+    {
+        "model": "django_freeradius.radiusreply",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-15T10:35:13.924Z",
+            "modified": "2020-06-15T10:35:13.924Z",
+            "username": "sample",
+            "value": "10",
+            "op": "+=",
+            "attribute": "10",
+            "user": 2
+        }
+    },
+    {
+        "model": "django_freeradius.nas",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-15T10:34:35.383Z",
+            "modified": "2020-06-15T10:34:35.383Z",
+            "name": "sample_nas",
+            "short_name": "sample_nas",
+            "type": "cisco",
+            "ports": 12,
+            "secret": "field",
+            "server": null,
+            "community": null,
+            "description": null
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroupcheck",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-14T15:39:10.228Z",
+            "modified": "2020-06-14T15:39:10.228Z",
+            "groupname": "users",
+            "attribute": "Max-Daily-Session",
+            "op": ":=",
+            "value": "10800",
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroupcheck",
+        "pk": 2,
+        "fields": {
+            "created": "2020-06-14T15:39:10.229Z",
+            "modified": "2020-06-14T15:39:10.229Z",
+            "groupname": "users",
+            "attribute": "Max-Daily-Session-Traffic",
+            "op": ":=",
+            "value": "3000000000",
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroupcheck",
+        "pk": 3,
+        "fields": {
+            "created": "2020-06-15T10:34:02.365Z",
+            "modified": "2020-06-15T10:34:02.365Z",
+            "groupname": "group_sample",
+            "attribute": "group_check",
+            "op": ":=",
+            "value": "12",
+            "group": "7c8eccc4-1ebf-4155-8b49-a0e1ba042efd"
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroupreply",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-15T10:34:02.366Z",
+            "modified": "2020-06-15T10:34:02.366Z",
+            "groupname": "group_sample",
+            "attribute": "group_relies",
+            "op": "=",
+            "value": "12",
+            "group": "7c8eccc4-1ebf-4155-8b49-a0e1ba042efd"
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroup",
+        "pk": "64567285-267f-42c5-9554-7327530aa55c",
+        "fields": {
+            "created": "2020-06-14T15:39:10.230Z",
+            "modified": "2020-06-14T15:39:10.230Z",
+            "name": "power-users",
+            "description": "Users with less restrictions",
+            "default": false
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroup",
+        "pk": "7c8eccc4-1ebf-4155-8b49-a0e1ba042efd",
+        "fields": {
+            "created": "2020-06-15T10:34:02.360Z",
+            "modified": "2020-06-15T10:34:02.360Z",
+            "name": "group_sample",
+            "description": null,
+            "default": true
+        }
+    },
+    {
+        "model": "django_freeradius.radiusgroup",
+        "pk": "efb05f82-3317-423e-821a-326832d151e3",
+        "fields": {
+            "created": "2020-06-14T15:39:10.226Z",
+            "modified": "2020-06-14T15:39:10.226Z",
+            "name": "users",
+            "description": "Regular users",
+            "default": false
+        }
+    },
+    {
+        "model": "django_freeradius.radiususergroup",
+        "pk": 1,
+        "fields": {
+            "created": "2020-06-14T15:39:25.997Z",
+            "modified": "2020-06-14T15:39:25.997Z",
+            "username": "admin",
+            "groupname": "users",
+            "priority": 1,
+            "user": 1,
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiususergroup",
+        "pk": 2,
+        "fields": {
+            "created": "2020-06-15T10:25:47.372Z",
+            "modified": "2020-06-15T18:33:41.154Z",
+            "username": "sample",
+            "groupname": "group_sample",
+            "priority": 1,
+            "user": 2,
+            "group": "7c8eccc4-1ebf-4155-8b49-a0e1ba042efd"
+        }
+    },
+    {
+        "model": "django_freeradius.radiususergroup",
+        "pk": 3,
+        "fields": {
+            "created": "2020-06-15T10:32:13.104Z",
+            "modified": "2020-06-15T10:32:13.104Z",
+            "username": "prefix_users1",
+            "groupname": "users",
+            "priority": 1,
+            "user": 3,
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiususergroup",
+        "pk": 4,
+        "fields": {
+            "created": "2020-06-15T10:32:13.110Z",
+            "modified": "2020-06-15T10:32:13.110Z",
+            "username": "prefix_users2",
+            "groupname": "users",
+            "priority": 1,
+            "user": 4,
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiususergroup",
+        "pk": 5,
+        "fields": {
+            "created": "2020-06-15T10:32:13.115Z",
+            "modified": "2020-06-15T10:32:13.115Z",
+            "username": "prefix_users3",
+            "groupname": "users",
+            "priority": 1,
+            "user": 5,
+            "group": "efb05f82-3317-423e-821a-326832d151e3"
+        }
+    },
+    {
+        "model": "django_freeradius.radiusbatch",
+        "pk": "c9b9e93d-4df3-47e2-9251-5cea5b515e95",
+        "fields": {
+            "created": "2020-06-15T10:32:12.681Z",
+            "modified": "2020-06-15T10:32:13.186Z",
+            "strategy": "prefix",
+            "name": "prefix_users",
+            "csvfile": "",
+            "prefix": "prefix_users",
+            "pdf": "prefix_users_6o1tF3K.pdf",
+            "expiration_date": "2020-06-15",
+            "users": [
+                3,
+                4,
+                5
+            ]
+        }
+    },
+    {
+        "model": "django_freeradius.radiustoken",
+        "pk": "sLLk7D5GfemY3XijmqyQGlWIEC0PP7Hh9L2bA2O3",
+        "fields": {
+            "created": "2020-06-15T10:34:50.888Z",
+            "user": 1
+        }
+    }
+]
