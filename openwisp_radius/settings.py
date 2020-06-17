@@ -6,7 +6,10 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-logger = logging.getLogger(__name__)
+# 'pre_django_setup' is supposed to be a logger
+# that can work before registered Apps are
+# ready in django.setup() process.
+logger = logging.getLogger('pre_django_setup')
 
 
 def get_settings_value(option, default):
