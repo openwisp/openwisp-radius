@@ -1,7 +1,13 @@
+import os
+
 import swapper
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.urls import reverse
+
+from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
@@ -10,6 +16,7 @@ from ..utils import (
     SESSION_TRAFFIC_ATTRIBUTE,
     load_model,
 )
+from . import FileMixin
 from .mixins import BaseTestCase
 
 Nas = load_model('Nas')
@@ -429,11 +436,78 @@ class TestRadiusBatch(BaseTestCase):
         else:
             self.fail('ValidationError not raised')
         # mixing strategies
+        dummy_file = os.path.join(settings.PRIVATE_STORAGE_ROOT, 'test_csv2')
+        open(dummy_file, 'a').close()
         try:
             self._create_radius_batch(
-                strategy='prefix', prefix='prefix', csvfile='test', name='test'
+                strategy='prefix', prefix='prefix', csvfile=dummy_file, name='test'
             )
         except ValidationError as e:
+            os.remove(dummy_file)
             self.assertIn('Mixing', str(e))
         else:
+            os.remove(dummy_file)
             self.fail('ValidationError not raised')
+
+
+class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
+    def setUp(self):
+        reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
+        batch = self._create_radius_batch(
+            name='test', strategy='csv', csvfile=self._get_csvfile(reader)
+        )
+        self.csvfile = batch.csvfile
+        super().setUp()
+
+    def _download_csv_file_status(self, status_code):
+        response = self.client.get(reverse('serve_private_file', args=[self.csvfile],))
+        self.assertEqual(response.status_code, status_code)
+
+    def test_unauthenticated_user(self):
+        self._download_csv_file_status(403)
+
+    def test_authenticated_user(self):
+        user = self._get_user()
+        self.client.force_login(user)
+        self._download_csv_file_status(403)
+
+    def test_authenticated_user_with_different_organization(self):
+        org2 = self._create_org(**{'name': 'test-org2', 'is_active': True})
+        user2 = self._create_user(**{'username': 'test2', 'email': 'test2@test.co'})
+        self._create_org_user(**{'organization': org2, 'user': user2})
+        self.client.force_login(user2)
+        self._download_csv_file_status(403)
+
+    def test_authenticated_user_with_same_organization(self):
+        self._get_org_user()
+        self.client.force_login(self._get_user())
+        self._download_csv_file_status(403)
+
+    def test_staff_user_with_different_organization(self):
+        org2 = self._create_org(**{'name': 'test-org2', 'is_active': True})
+        user2 = self._create_operator(**{'username': 'test2', 'email': 'test2@test.co'})
+        self._create_org_user(**{'organization': org2, 'user': user2})
+        self.client.force_login(user2)
+        self._download_csv_file_status(403)
+
+    def test_operator_with_different_organization(self):
+        org2 = self._create_org(**{'name': 'test-org2', 'is_active': True})
+        user2 = self._create_operator(**{'username': 'test2', 'email': 'test2@test.co'})
+        self._create_org_user(**{'organization': org2, 'user': user2, 'is_admin': True})
+        self.client.force_login(user2)
+        self._download_csv_file_status(403)
+
+    def test_staff_user_with_same_organization(self):
+        self._create_org_user(**{'user': self._get_operator()})
+        self.client.force_login(self._get_operator())
+        self._download_csv_file_status(403)
+
+    def test_operator_with_same_organization(self):
+        self._create_org_user(**{'user': self._get_operator(), 'is_admin': True})
+        self.client.force_login(self._get_operator())
+        self._download_csv_file_status(200)
+
+    def test_superuser(self):
+        user = self._get_admin()
+        self.client.force_login(user)
+        self._download_csv_file_status(200)

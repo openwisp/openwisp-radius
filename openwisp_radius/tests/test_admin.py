@@ -263,7 +263,6 @@ class TestAdmin(
         self.assertNotContains(response, pdf_url)
 
     def test_radiuscheck_create_weak_passwd(self):
-
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         _RADCHECK['new_value'] = ""
         resp = self.client.post(

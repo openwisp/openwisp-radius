@@ -173,6 +173,25 @@ the following to your project ``settings.py``:
     )
 
 
+``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
++--------------+----------------------------+
+| **type**:    | ``int``                    |
++--------------+----------------------------+
+| **default**: |  `5 * 1024 * 1024` (5 MB)  |
++--------------+----------------------------+
+
+This setting can be used to set the maximum size limit for firmware images, eg:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+**Notes**:
+
+- Value must be specified in bytes. ``None`` means unlimited.
+
 Sending emails to users
 -----------------------
 

@@ -1,6 +1,9 @@
+import csv
+import io
 import os
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 
 from openwisp_users.tests.utils import TestOrganizationMixin
@@ -140,6 +143,17 @@ class FileMixin(object):
     def _get_path(self, file):
         d = os.path.dirname(os.path.abspath(__file__))
         return os.path.join(d, file)
+
+    def _get_csvfile(self, rows):
+        output = io.StringIO()
+        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+        for row in rows:
+            writer.writerow(row)
+        return SimpleUploadedFile(
+            'test.csv',
+            bytes(output.getvalue(), encoding='utf8'),
+            content_type='text/csv',
+        )
 
 
 class CallCommandMixin(object):

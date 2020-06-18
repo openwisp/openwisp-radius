@@ -19,6 +19,9 @@ from openwisp_radius.tests.test_batch_add_users import (
 from openwisp_radius.tests.test_commands import TestCommands as BaseTestCommands
 from openwisp_radius.tests.test_models import TestNas as BaseTestNas
 from openwisp_radius.tests.test_models import (
+    TestPrivateCsvFile as BaseTestPrivateCsvFile,
+)
+from openwisp_radius.tests.test_models import (
     TestRadiusAccounting as BaseTestRadiusAccounting,
 )
 from openwisp_radius.tests.test_models import TestRadiusBatch as BaseTestRadiusBatch
@@ -98,6 +101,10 @@ class TestRadiusPostAuth(BaseTestRadiusPostAuth):
     pass
 
 
+class TestPrivateCsvFile(BaseTestPrivateCsvFile):
+    pass
+
+
 class TestRadiusGroup(BaseTestRadiusGroup):
     pass
 
@@ -151,6 +158,7 @@ del BaseTestRadiusAccounting
 del BaseTestRadiusCheck
 del BaseTestRadiusReply
 del BaseTestRadiusPostAuth
+del BaseTestPrivateCsvFile
 del BaseTestRadiusGroup
 del BaseTestRadiusBatch
 del BaseTestSocial
