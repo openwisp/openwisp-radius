@@ -1,6 +1,8 @@
 import sys
 
-from openwisp_users.models import Organization
+import swapper
+
+Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
 class BatchAddMixin(object):

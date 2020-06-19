@@ -1,3 +1,4 @@
+import swapper
 from django.apps import AppConfig
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -23,9 +24,10 @@ class OpenwispRadiusConfig(AppConfig):
         self.add_default_menu_items()
 
     def connect_signals(self):
-        from openwisp_users.models import Organization, OrganizationUser
-
+        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+        Organization = swapper.load_model('openwisp_users', 'Organization')
         User = get_user_model()
+
         post_save.connect(
             create_default_groups_handler,
             sender=Organization,

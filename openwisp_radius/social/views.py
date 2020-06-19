@@ -1,13 +1,13 @@
+import swapper
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 from django.views import View
 from rest_framework.authtoken.models import Token
 
-from openwisp_users.models import Organization
-
 from ..utils import load_model
 
+Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = load_model('RadiusToken')
 
 

@@ -18,6 +18,8 @@ install:
   - python setup.py -q develop
   - pip install -r requirements-test.txt
   - npm install -g jslint
+  # TODO: Remove when openwisp-users 0.3 is released
+  - pip install --upgrade https://github.com/openwisp/openwisp-users/tarball/master/
 
 before_script:
   - ./run-qa-checks

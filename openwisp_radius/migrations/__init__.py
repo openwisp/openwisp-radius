@@ -5,14 +5,10 @@ from django.contrib.auth.models import Permission
 from ..utils import create_default_groups
 
 
-def get_model(apps, model_path):
-    app, model = model_path.split('.')
-    return apps.get_model(app, model)
-
-
 def get_swapped_model(apps, app_name, model_name):
     model_path = swapper.get_model_name(app_name, model_name)
-    return get_model(apps, model_path)
+    app, model = swapper.split(model_path)
+    return apps.get_model(app, model)
 
 
 def add_default_organization(apps, schema_editor):
@@ -40,7 +36,7 @@ def add_default_organization(apps, schema_editor):
 
 
 def add_default_groups(apps, schema_editor):
-    Organization = apps.get_model('openwisp_users', 'Organization')
+    Organization = get_swapped_model(apps, 'openwisp_users', 'Organization')
     RadiusGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusGroup')
     for organization in Organization.objects.all():
         if not RadiusGroup.objects.filter(organization_id=organization.pk).exists():
@@ -48,8 +44,8 @@ def add_default_groups(apps, schema_editor):
 
 
 def add_default_group_to_existing_users(apps, schema_editor):
-    Organization = apps.get_model('openwisp_users', 'Organization')
-    OrganizationUser = apps.get_model('openwisp_users', 'OrganizationUser')
+    Organization = get_swapped_model(apps, 'openwisp_users', 'Organization')
+    OrganizationUser = get_swapped_model(apps, 'openwisp_users', 'OrganizationUser')
     RadiusUserGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusUserGroup')
     RadiusGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusGroup')
     for organization in Organization.objects.all():
@@ -80,7 +76,7 @@ def create_default_permissions(apps, schema_editor):
 
 def assign_permissions_to_groups(apps, schema_editor):
     create_default_permissions(apps, schema_editor)
-    Group = apps.get_model('openwisp_users', 'Group')
+    Group = get_swapped_model(apps, 'openwisp_users', 'Group')
 
     try:
         admin = Group.objects.get(name='Administrator')

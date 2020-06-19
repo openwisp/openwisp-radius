@@ -7,6 +7,7 @@ from hashlib import md5, sha1
 from io import StringIO
 from os import urandom
 
+import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -23,7 +24,6 @@ from passlib.hash import lmhash, nthash, sha512_crypt
 from phonenumber_field.modelfields import PhoneNumberField
 
 from openwisp_users.mixins import OrgMixin
-from openwisp_users.models import OrganizationUser
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 
 from .. import exceptions
@@ -932,6 +932,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return user, generated_password
 
     def save_user(self, user):
+        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
         user.save()
         self.users.add(user)
         if OrganizationUser.objects.filter(
@@ -994,7 +995,7 @@ class AbstractRadiusToken(TimeStampedEditableModel, models.Model):
 
 class AbstractOrganizationRadiusSettings(UUIDModel):
     organization = models.OneToOneField(
-        'openwisp_users.Organization',
+        swapper.get_model_name('openwisp_users', 'Organization'),
         verbose_name=_('organization'),
         related_name='radius_settings',
         on_delete=models.CASCADE,
@@ -1109,6 +1110,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return result
 
     def send_token(self):
+        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
         org_user = OrganizationUser.objects.filter(user=self.user).first()
         if not org_user:
             raise exceptions.NoOrgException(
