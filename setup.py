@@ -42,10 +42,10 @@ if sys.argv[-1] == 'publish':
 setup(
     name='openwisp-radius',
     version=get_version(),
-    license='GNU GPL v3',
+    license='GPL3',
     author='Rohith Asrk',
     author_email='rohith.asrk@gmail.com',
-    description='OpenWISP 2 Radius',
+    description='OpenWISP Radius',
     long_description=open('README.rst').read(),
     url='http://openwisp.org',
     download_url='https://github.com/openwisp/openwisp-radius/releases',

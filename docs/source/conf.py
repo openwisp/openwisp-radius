@@ -50,8 +50,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'openwisp-radius'
-copyright = '2017, Fiorella De Luca'
-author = 'Fiorella De Luca'
+copyright = '2017-2020 OpenWISP and individual contributors'
+author = 'OpenWISP contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
