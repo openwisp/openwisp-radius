@@ -35,7 +35,7 @@ openwisp-radius
 
 
 **openwisp-radius** is Django reusable app that provides an admin interface to a
-`freeradius <http://freeradius.org/>`_ database.
+`freeradius <https://freeradius.org/>`_ database.
 
 .. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
    :target: http://openwisp.org
@@ -44,23 +44,16 @@ openwisp-radius
    :maxdepth: 2
    :caption: Contents:
 
-   /general/setup
-   /general/settings
-   /general/freeradius
-   /general/management_commands
-   /general/importing_users
-   /general/generating_users
-   /general/enforcing_limits
-   /general/registration
-   /general/social_login
-   /general/api
-   /general/how_to_extend
-   /general/contributing
+   /developer/setup
+   /user/settings
+   /developer/freeradius
+   /user/management_commands
+   /user/importing_users
+   /user/generating_users
+   /user/enforcing_limits
+   /user/registration
+   /user/social_login
+   /user/api
+   /developer/how_to_extend
+   /developer/contributing
    /general/goals
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

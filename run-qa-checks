@@ -5,6 +5,17 @@ set -e
 echo ''
 echo 'Checking documentation build status'
 ./runsphinx-build
+
+if [[ $TRAVIS_PYTHON_VERSION != 3.6 ]]; then
+        # check for broken link
+        # remove condition when 3.6 is dropped
+        python -m http.server 8001 -d docs/build/ &>/dev/null &
+        pid=$!
+        sleep 4
+        pylinkvalidate.py http://localhost:8001/
+        kill "${pid}"
+fi
+
 rm -rf docs/build/
 
 echo ''

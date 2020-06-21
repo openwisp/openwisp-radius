@@ -2,7 +2,7 @@
 Installation and configuration of Freeradius 3
 ==============================================
 
-This guide explains how to install and configure `freeradius 3 <http://freeradius.org/version3.html>`_
+This guide explains how to install and configure `freeradius 3 <https://freeradius.org>`_
 in order to make it work with `openwisp-radius <https://github.com/openwisp/openwisp-radius/>`_.
 
 .. note::
@@ -56,15 +56,15 @@ Configuring Freeradius 3
 ------------------------
 
 For a complete reference on how to configure freeradius please read the
-`Freeradius wiki, configuration files <http://wiki.freeradius.org/config/Configuration-files>`_
-and their `configuration tutorial <http://wiki.freeradius.org/guide/HOWTO>`_.
+`Freeradius wiki, configuration files <https://wiki.freeradius.org/config/Configuration-files>`_
+and their `configuration tutorial <https://wiki.freeradius.org/guide/HOWTO>`_.
 
 .. note::
     The path to freeradius configuration could be different on your system.
     This article use the ``/etc/freeradius/`` directory that ships with recent
     debian distributions and its derivatives
 
-Refer to the `mods-available documentation <http://networkradius.com/doc/3.0.10/raddb/mods-available/home.html>`_
+Refer to the `mods-available documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/home.html>`_
 for the available configuration values.
 
 Enable the configured modules
@@ -87,7 +87,7 @@ to configure Freeradius to use the relational database.
 
 Change the configuration for ``driver``, ``dialect``, ``server``, ``port``, ``login``, ``password``, ``radius_db`` as you need to fit your SQL server configuration.
 
-Refer to the `sql module documentation <http://networkradius.com/doc/3.0.10/raddb/mods-available/sql.html>`_ for the available configuration values.
+Refer to the `sql module documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/sql.html>`_ for the available configuration values.
 
 Example configuration using the PostgreSQL database:
 
@@ -110,7 +110,7 @@ Example configuration using the PostgreSQL database:
 Configure the SQL counters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``sqlcounter`` module is used to `enforce session limits <./enforcing_limits.html>`_.
+The ``sqlcounter`` module is used to `enforce session limits </user/enforcing_limits.html>`_.
 
 The ``mods-available/sqlcounter`` should look like the following:
 
@@ -189,7 +189,7 @@ substituting ``<url>`` with your django project's URL, (for example, if you are
 testing a development environment, the URL could be ``http://127.0.0.1:8000``,
 otherwise in production could be something like ``https://openwisp2.mydomain.org``)-
 
-Refer to the `rest module documentation <http://networkradius.com/doc/3.0.10/raddb/mods-available/rest.html>`_
+Refer to the `rest module documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/rest.html>`_
 for the available configuration values.
 
 .. code-block:: ini
@@ -230,7 +230,7 @@ Configure the site
 
 Configure the ``authorize``, ``authenticate`` and ``postauth`` section
 as follows, substituting the occurrences of ``<api_token>`` & ``<org-uuid>`` with
-the value of `your organization's UUID & api_token values <api.html#organization-api-token>`_:
+the value of `your organization's UUID & api_token values </user/api.html#organization-api-token>`_:
 
 .. code-block:: ini
 
@@ -296,13 +296,13 @@ In case of errors you can run `freeradius in debug mode
 **A common problem, especially during development and testing, is that the
 openwisp-radius application may not be running**, in that case you can find
 out how to run the django development server in the
-`Install for development <./setup.html#installing-for-development>`_ section.
+`Install for development </developer/setup.html#installing-for-development>`_ section.
 
 Also make sure that this server runs on the port specified in
 ``/etc/freeradius/mods-enabled/rest``.
 
 You may also want to take a look at the `Freeradius documentation
-<http://freeradius.org/doc/>`_ for further information that is freeradius specific.
+<https://freeradius.org/documentation/>`_ for further information that is freeradius specific.
 
 Reconfigure the development environment using PostgreSQL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -416,7 +416,7 @@ Additional Password Formats
 Freeradius supports additional password hashing algorithms which are listed in the Freeradius
 `rlm_pap <https://freeradius.org/radiusd/man/rlm_pap.html>`_ documentation.  If your existing
 deployment makes use of one of these or you would like to request an addition to openwisp-radius
-please see the documentation section on :doc:`/general/contributing`.
+please see the documentation section on :doc:`/developer/contributing`.
 
 Keep in mind that using Radius Checks for accessing user credentials is considered an edge case in openwisp-radius.
 Full compatibility with new and existing features is not guaranteed.

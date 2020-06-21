@@ -30,5 +30,5 @@ Adding from admin inteface
 
 At the url ``/admin/openwisp_radius/radiusbatch/add`` one can directly generate users using the prefix and the number of users. A PDF can be downloaded immediately after the users have been generated.
 
-.. image:: ../images/add_users_prefix.gif
+.. image:: /images/add_users_prefix.gif
    :alt: Demo: adding users from prefix

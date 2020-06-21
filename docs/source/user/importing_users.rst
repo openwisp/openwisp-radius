@@ -33,7 +33,7 @@ Selecting the CSV as the strategy and uploading the CSV file is all one will hav
 
 It is important to take care of the following when importing users from the CSV.
 
-.. image:: ../images/add_users_csv.gif
+.. image:: /images/add_users_csv.gif
    :alt: Demo: adding users from CSV
 
 CSV Format
