@@ -1393,12 +1393,12 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
 
     def test_sms_phone_required(self):
         radius_settings = OrganizationRadiusSettings(
-            organization=self.org, sms_verification=True, sms_phone_number=""
+            organization=self.org, sms_verification=True, sms_sender=""
         )
         try:
             radius_settings.full_clean()
         except ValidationError as e:
-            self.assertIn('sms_phone_number', e.message_dict)
+            self.assertIn('sms_sender', e.message_dict)
         else:
             self.fail('ValidationError not raised')
 
@@ -1411,7 +1411,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         super().setUp()
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_verification = True
-        radius_settings.sms_phone_number = '+595972157632'
+        radius_settings.sms_sender = '+595972157632'
         radius_settings.sms_meta_data = {
             'clientId': 3,
             'clientSecret': 'p8pVUoqz7T4ArPEu1rcgzlsYJmnGCkkWHs2WAqqm',

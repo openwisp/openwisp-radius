@@ -34,7 +34,7 @@ class TestPhoneToken(BaseTestCase):
         super().setUp()
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_verification = True
-        radius_settings.sms_phone_number = '+595972157632'
+        radius_settings.sms_sender = '+595972157632'
         radius_settings.save()
 
     def _create_token(self, user=None, ip='127.0.0.1', created=None):

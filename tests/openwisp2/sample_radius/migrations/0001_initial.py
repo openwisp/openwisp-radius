@@ -963,13 +963,13 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    'sms_phone_number',
-                    phonenumber_field.modelfields.PhoneNumberField(
+                    'sms_sender',
+                    models.CharField(
                         blank=True,
-                        help_text='phone number used as sender for SMS sent by this organization',
+                        help_text='alpha numeric identifier used as sender for SMS sent by this organization',
                         max_length=128,
                         null=True,
-                        region=None,
+                        verbose_name='Sender',
                     ),
                 ),
                 (

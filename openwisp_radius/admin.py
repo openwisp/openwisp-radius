@@ -487,7 +487,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
     form = AlwaysHasChangedForm
     fieldsets = (
-        (None, {'fields': ('token', 'sms_verification', 'sms_phone_number')}),
+        (None, {'fields': ('token', 'sms_verification', 'sms_sender')}),
         (
             _('Advanced options'),
             {'classes': ('collapse',), 'fields': ('sms_meta_data',)},

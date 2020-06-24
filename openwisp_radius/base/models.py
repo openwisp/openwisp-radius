@@ -21,7 +21,6 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from jsonfield import JSONField
 from passlib.hash import lmhash, nthash, sha512_crypt
-from phonenumber_field.modelfields import PhoneNumberField
 
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
@@ -1009,10 +1008,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             'phone number via SMS'
         ),
     )
-    sms_phone_number = PhoneNumberField(
+    sms_sender = models.CharField(
+        _('Sender'),
+        max_length=128,
         blank=True,
         null=True,
-        help_text=_('phone number used as sender for SMS ' 'sent by this organization'),
+        help_text=_(
+            'alpha numeric identifier used as sender for SMS sent by this organization'
+        ),
     )
     sms_meta_data = JSONField(
         null=True,
@@ -1031,10 +1034,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         return self.organization.name
 
     def clean(self):
-        if self.sms_verification and not self.sms_phone_number:
+        if self.sms_verification and not self.sms_sender:
             raise ValidationError(
                 {
-                    'sms_phone_number': _(
+                    'sms_sender': _(
                         'if SMS verification is enabled ' 'this field is required.'
                     )
                 }
@@ -1122,7 +1125,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         )
         sms_message = SmsMessage(
             body=message,
-            from_phone=str(org_radius_settings.sms_phone_number),
+            from_phone=str(org_radius_settings.sms_sender),
             to=[str(self.user.phone_number)],
         )
         sms_message.send(meta_data=org_radius_settings.sms_meta_data)
