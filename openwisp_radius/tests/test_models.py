@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import swapper
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -30,11 +32,19 @@ class TestNas(BaseTestCase):
         nas = Nas(name='entry nasname')
         self.assertEqual(str(nas), nas.name)
 
+    def test_id_uuid(self):
+        nas = Nas(name='uuid id')
+        self.assertIsInstance(nas.pk, UUID)
+
 
 class TestRadiusAccounting(BaseTestCase):
     def test_string_representation(self):
         radiusaccounting = RadiusAccounting(unique_id='entry acctuniqueid')
         self.assertEqual(str(radiusaccounting), radiusaccounting.unique_id)
+
+    def test_id(self):
+        radiusaccounting = RadiusAccounting(unique_id='unique')
+        self.assertEqual(radiusaccounting.pk, radiusaccounting.unique_id)
 
     def test_ipv6_validator(self):
         radiusaccounting = RadiusAccounting(
@@ -57,6 +67,10 @@ class TestRadiusCheck(BaseTestCase):
     def test_string_representation(self):
         radiuscheck = RadiusCheck(username='entry username')
         self.assertEqual(str(radiuscheck), radiuscheck.username)
+
+    def test_id(self):
+        radiuscheck = RadiusCheck(username='test uuid')
+        self.assertIsInstance(radiuscheck.pk, UUID)
 
     def test_auto_username(self):
         u = get_user_model().objects.create(
@@ -113,6 +127,10 @@ class TestRadiusReply(BaseTestCase):
         radiusreply = RadiusReply(username='entry username')
         self.assertEqual(str(radiusreply), radiusreply.username)
 
+    def test_uuid(self):
+        radiusreply = RadiusReply(username='test id')
+        self.assertIsInstance(radiusreply.pk, UUID)
+
     def test_auto_username(self):
         u = get_user_model().objects.create(
             username='test', email='test@test.org', password='test'
@@ -154,23 +172,43 @@ class TestRadiusPostAuth(BaseTestCase):
             str(radiuspostauthentication), radiuspostauthentication.username
         )
 
+    def test_id(self):
+        radiuspostauth = RadiusPostAuth(username='test id')
+        self.assertIsInstance(radiuspostauth.pk, UUID)
+
 
 class TestRadiusGroup(BaseTestCase):
     def test_group_str(self):
         g = RadiusGroup(name='entry groupname')
         self.assertEqual(str(g), g.name)
 
+    def test_group_id(self):
+        g = RadiusGroup(name='test group id')
+        self.assertIsInstance(g.pk, UUID)
+
     def test_group_reply_str(self):
         r = RadiusGroupReply(groupname='entry groupname')
         self.assertEqual(str(r), r.groupname)
+
+    def test_group_reply_id(self):
+        gr = RadiusGroupReply(groupname='test group reply id')
+        self.assertIsInstance(gr.pk, UUID)
 
     def test_group_check_str(self):
         c = RadiusGroupCheck(groupname='entry groupname')
         self.assertEqual(str(c), c.groupname)
 
+    def test_group_check_id(self):
+        gc = RadiusGroupCheck(groupname='group check id')
+        self.assertIsInstance(gc.pk, UUID)
+
     def test_user_group_str(self):
         ug = RadiusUserGroup(username='entry username')
         self.assertEqual(str(ug), ug.username)
+
+    def test_user_group_id(self):
+        ug = RadiusUserGroup(username='test user group id')
+        self.assertIsInstance(ug.pk, UUID)
 
     def test_default_groups(self):
         default_org = Organization.objects.first()

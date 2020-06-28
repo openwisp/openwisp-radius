@@ -1,3 +1,6 @@
+import os
+import _pickle as pickle
+import uuid
 import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
@@ -40,7 +43,7 @@ def add_default_groups(apps, schema_editor):
     RadiusGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusGroup')
     for organization in Organization.objects.all():
         if not RadiusGroup.objects.filter(organization_id=organization.pk).exists():
-            create_default_groups(organization)
+            create_default_groups(organization, apps=apps)
 
 
 def add_default_group_to_existing_users(apps, schema_editor):
@@ -118,3 +121,40 @@ def assign_permissions_to_groups(apps, schema_editor):
                 codename='{}_{}'.format(action, model_name)
             )
             admin.permissions.add(permission_ad.pk)
+
+
+def get_old_objects(apps, schema_editor):
+    models = [
+        'RadiusCheck',
+        'RadiusReply',
+        'RadiusGroupCheck',
+        'RadiusGroupReply',
+        'RadiusUserGroup',
+        'Nas',
+        'RadiusAccounting',
+        'RadiusPostAuth',
+    ]
+    old_objects = []
+    for model in models:
+        model = get_swapped_model(apps, 'openwisp_radius', model)
+        if model.objects.first() and not isinstance(
+            model.objects.first().pk, uuid.UUID
+        ):
+            old_objects += list(model.objects.all())
+            model.objects.all().delete()
+    with open('old_objects.pk1', 'wb') as f:
+        pickle.dump(old_objects, f, -1)
+        f.close()
+
+
+def update_obj_pk(apps, schema_editor):
+    with open('old_objects.pk1', 'rb') as f:
+        for obj in pickle.load(f):
+            if obj is not None:
+                if obj._meta.model.__name__ == 'RadiusAccounting':
+                    obj.pk = obj.unique_id
+                else:
+                    obj.pk = uuid.uuid4()
+                obj.save()
+        f.close()
+    os.remove('old_objects.pk1')

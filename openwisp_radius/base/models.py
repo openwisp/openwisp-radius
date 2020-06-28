@@ -139,14 +139,6 @@ RADCHECK_ATTRIBUTE_TYPES += RADCHECK_PASSWD_TYPE
 
 STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
 
-
-class BaseModel(TimeStampedEditableModel):
-    id = None
-
-    class Meta:
-        abstract = True
-
-
 _NOT_BLANK_MESSAGE = _('This field cannot be blank.')
 
 
@@ -246,7 +238,7 @@ class AbstractRadiusCheckManager(models.Manager):
         return super(AbstractRadiusCheckManager, self).create(*args, **kwargs)
 
 
-class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, BaseModel):
+class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -295,7 +287,7 @@ class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, BaseModel):
         return self.username
 
 
-class AbstractRadiusReply(OrgMixin, AutoUsernameMixin, BaseModel):
+class AbstractRadiusReply(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -326,7 +318,6 @@ class AbstractRadiusReply(OrgMixin, AutoUsernameMixin, BaseModel):
 
 
 class AbstractRadiusAccounting(OrgMixin, models.Model):
-    id = models.BigAutoField(primary_key=True, db_column='radacctid')
     session_id = models.CharField(
         verbose_name=_('session ID'),
         max_length=64,
@@ -338,6 +329,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         max_length=32,
         db_column='acctuniqueid',
         unique=True,
+        primary_key=True,
     )
     username = models.CharField(
         verbose_name=_('username'), max_length=64, db_index=True, null=True, blank=True
@@ -516,7 +508,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         return self.unique_id
 
 
-class AbstractNas(OrgMixin, BaseModel):
+class AbstractNas(OrgMixin, TimeStampedEditableModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=128,
@@ -554,13 +546,12 @@ class AbstractNas(OrgMixin, BaseModel):
         return self.name
 
 
-class AbstractRadiusGroup(OrgMixin, BaseModel):
+class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
     """
     This is not part of the standard freeradius schema.
     It's added to facilitate the management of groups.
     """
 
-    id = TimeStampedEditableModel._meta.get_field('id')
     name = models.CharField(
         verbose_name=_('group name'), max_length=255, unique=True, db_index=True
     )
@@ -645,7 +636,9 @@ class AbstractRadiusGroup(OrgMixin, BaseModel):
         )
 
 
-class AbstractRadiusUserGroup(AutoGroupnameMixin, AutoUsernameMixin, BaseModel):
+class AbstractRadiusUserGroup(
+    AutoGroupnameMixin, AutoUsernameMixin, TimeStampedEditableModel
+):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -684,7 +677,7 @@ class AbstractRadiusUserGroup(AutoGroupnameMixin, AutoUsernameMixin, BaseModel):
         return str(self.username)
 
 
-class AbstractRadiusGroupCheck(AutoGroupnameMixin, BaseModel):
+class AbstractRadiusGroupCheck(AutoGroupnameMixin, TimeStampedEditableModel):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,
@@ -717,7 +710,7 @@ class AbstractRadiusGroupCheck(AutoGroupnameMixin, BaseModel):
         return str(self.groupname)
 
 
-class AbstractRadiusGroupReply(AutoGroupnameMixin, BaseModel):
+class AbstractRadiusGroupReply(AutoGroupnameMixin, TimeStampedEditableModel):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,
@@ -747,7 +740,7 @@ class AbstractRadiusGroupReply(AutoGroupnameMixin, BaseModel):
         return str(self.groupname)
 
 
-class AbstractRadiusPostAuth(OrgMixin, models.Model):
+class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
     username = models.CharField(verbose_name=_('username'), max_length=64)
     password = models.CharField(
         verbose_name=_('password'), max_length=64, db_column='pass', blank=True
