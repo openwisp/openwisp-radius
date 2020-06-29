@@ -21,7 +21,7 @@ class BaseDeleteOldUsersCommand(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        months = now() - timedelta(days=30 * options['older_than_months'])
+        months = now() - timedelta(days=30 * int(options['older_than_months']))
         batches = RadiusBatch.objects.filter(expiration_date__lt=months)
         for b in batches:
             b.delete()

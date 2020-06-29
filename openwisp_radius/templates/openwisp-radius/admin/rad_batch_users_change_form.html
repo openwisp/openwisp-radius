@@ -1,0 +1,10 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+{% block object-tools-items %}
+{% if download_rad_batch_pdf_url %}
+<li>
+    <a href="{{ download_rad_batch_pdf_url }}" id="downloadpdflink">{% trans "Download User Credentials" %}</a>
+</li>
+{% endif %}
+{{ block.super }}
+{% endblock %}

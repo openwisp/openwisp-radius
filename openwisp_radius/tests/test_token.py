@@ -39,13 +39,15 @@ class TestPhoneToken(BaseTestCase):
 
     def _create_token(self, user=None, ip='127.0.0.1', created=None):
         if not user:
-            user = self._create_user(
-                username='tester',
-                email='tester@tester.com',
-                password='tester',
-                phone_number='+393664351805',
-                is_active=False,
-            )
+            opts = {
+                'username': 'tester',
+                'email': 'tester@tester.com',
+                'password': 'tester',
+                'phone_number': '+393664351805',
+                'is_active': False,
+            }
+            user = self._create_user(**opts)
+            self._create_org_user(**{'user': user})
         token = PhoneToken(user=user, ip=ip)
         if created:
             token.created = created
@@ -142,13 +144,15 @@ class TestPhoneToken(BaseTestCase):
     @freeze_time(_TEST_DATE)
     def test_ip_limit(self):
         self._create_tokens_limit_test()
-        user2 = self._create_user(
-            username='user2',
-            email='test2@test.com',
-            password='tester',
-            phone_number='+393664351806',
-            is_active=False,
-        )
+        opts = {
+            'username': 'user2',
+            'email': 'test2@test.com',
+            'password': 'tester',
+            'phone_number': '+393664351806',
+            'is_active': False,
+        }
+        user2 = self._create_user(**opts)
+        self._create_org_user(**{'user': user2})
         self._create_token(user=user2)
         try:
             self._create_token(user=user2)
@@ -158,7 +162,9 @@ class TestPhoneToken(BaseTestCase):
             self.fail('ValidationError not raised')
 
     def test_user_without_phone(self):
-        user = self._create_user(username='tester', password='tester', is_active=False)
+        user = self._create_user(
+            **{'username': 'tester', 'password': 'tester', 'is_active': False}
+        )
         try:
             self._create_token(user=user)
         except ValidationError as e:

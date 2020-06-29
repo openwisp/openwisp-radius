@@ -4,7 +4,7 @@ from datetime import datetime
 from django.core.management import BaseCommand
 
 from ....settings import BATCH_DEFAULT_PASSWORD_LENGTH
-from ....utils import load_model
+from ....utils import generate_pdf, load_model
 
 RadiusBatch = load_model('RadiusBatch')
 
@@ -18,6 +18,12 @@ class BasePrefixAddUsersCommand(BaseCommand):
         )
         parser.add_argument(
             '--prefix', action='store', help='Will generate users using this prefix'
+        )
+        parser.add_argument(
+            '--output',
+            action='store',
+            default=None,
+            help='Location of the output PDF file (example: /home/user/my_output.pdf)',
         )
         parser.add_argument(
             '--n', action='store', help='Number of users to be generated', type=int
@@ -49,8 +55,13 @@ class BasePrefixAddUsersCommand(BaseCommand):
             sys.exit(1)
         batch = self._create_batch(**options)
         batch.expiration_date = expiration_date
+        batch.full_clean()
         batch.save()
         batch.prefix_add(prefix, number_of_users, options['password_length'])
+        if options['output']:
+            pdf = generate_pdf(batch.pk)
+            with open(options['output'], 'wb') as file:
+                file.write(pdf)
         self.stdout.write('Generated a batch of users with prefix {}'.format(prefix))
 
     def _create_batch(self, **options):

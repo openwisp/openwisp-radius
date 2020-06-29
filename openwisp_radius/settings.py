@@ -95,21 +95,21 @@ try:  # pragma: no cover
             '{} must contain '.format(value)
             + '{organization}, {uid} and {token}'  # noqa
         )
-except AssertionError as e:
+except AssertionError as e:  # pragma: no cover
     raise ImproperlyConfigured(
         'OPENWISP_RADIUS_PASSWORD_RESET_URLS is invalid: {}'.format(str(e))
     )
 
-try:  # pragma: no cover
+try:
     SMS_TOKEN_HASH_ALGORITHM = getattr(hashlib, SMS_TOKEN_HASH_ALGORITHM)
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     raise ImproperlyConfigured(
         'OPENWISP_RADIUS_SMS_TOKEN_HASH_ALGORITHM is invalid: {}'.format(str(e))
     )
 
-try:  # pragma: no cover
+try:
     assert int(SMS_TOKEN_LENGTH) <= 8 and int(SMS_TOKEN_LENGTH) >= 4
-except AssertionError:
+except AssertionError:  # pragma: no cover
     raise ImproperlyConfigured(
         'OPENWISP_RADIUS_SMS_TOKEN_LENGTH must be a number between 4 and 8: '
         'lower would not be safe and higher would not be practical from '
