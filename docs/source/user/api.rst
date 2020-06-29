@@ -482,10 +482,6 @@ Batch user creation
 
 Responds only to **POST**, used to save a ``RadiusBatch`` instance.
 
-In the response, you can find the field ``user_credentials`` containing the list of users created
-(example: [['username', 'password'], ['sample_user', 'BBuOb5sN']]") and field ``pdf_link``
-containing a download link to a PDF file containing user credentials.
-
 It is possible to generate the users of the ``RadiusBatch`` with two different strategies: csv or prefix.
 
 The csv method needs the following parameters:
@@ -510,3 +506,9 @@ prefix             prefix for the generation of users
 number_of_users    number of users
 expiration_date    date of expiration of the users
 ===============    ==================================
+
+When using this strategy, in the response you can find the field
+``user_credentials`` containing the list of users created
+(example: ``[['username', 'password'], ['sample_user', 'BBuOb5sN']]``)
+and the field ``pdf_link`` which can be used to download a PDF file
+containing the user credentials.
