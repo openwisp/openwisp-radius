@@ -85,7 +85,7 @@ This command imports users from a csv file. Usage is as shown below.
 .. code-block:: shell
 
     ./manage.py batch_add_users --name <name_of_batch> \
-                                --organization=<organization-name> \
+                                --organization=<organization-slug> \
                                 --file <filepath> \
                                 --expiration <expiration_date> \
                                 --password-length <password_length>
