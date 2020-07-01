@@ -32,7 +32,7 @@ containing both letters and numbers. Eg: ``165f9a790787fc38e5cc12c1640db2300648d
 You will also need the UUID of your organization from the organization change page
 (select your organization in ``/admin/openwisp_users/organization/``):
 
-.. image:: /images/org-uuid.png
+.. image:: /images/org_uuid.png
    :alt: Organization UUID
 
 HTTP clients must send these tokens, either in the form of a `bearer token
@@ -481,7 +481,7 @@ Batch user creation
   and :doc:`/user/generating_users`.
 
 Responds only to **POST**, used to save a ``RadiusBatch`` instance.
-It returns the information of the batch operation and the list of the users generated.
+
 It is possible to generate the users of the ``RadiusBatch`` with two different strategies: csv or prefix.
 
 The csv method needs the following parameters:
@@ -490,7 +490,7 @@ The csv method needs the following parameters:
 Param              Description
 ===============    ===============================
 name               Name of the operation
-strategy           "csv"
+strategy           csv
 csvfile            file with the users
 expiration_date    date of expiration of the users
 ===============    ===============================
@@ -506,3 +506,9 @@ prefix             prefix for the generation of users
 number_of_users    number of users
 expiration_date    date of expiration of the users
 ===============    ==================================
+
+When using this strategy, in the response you can find the field
+``user_credentials`` containing the list of users created
+(example: ``[['username', 'password'], ['sample_user', 'BBuOb5sN']]``)
+and the field ``pdf_link`` which can be used to download a PDF file
+containing the user credentials.

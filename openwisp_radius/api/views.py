@@ -10,7 +10,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -30,17 +30,21 @@ from rest_framework.authentication import TokenAuthentication as UserTokenAuthen
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import AuthenticationFailed, ParseError
+from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.generics import CreateAPIView, GenericAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (
+    DjangoModelPermissions,
+    IsAdminUser,
+    IsAuthenticated,
+)
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 from rest_framework.views import APIView
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
-from ..utils import load_model
+from ..utils import generate_pdf, load_model
 from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
@@ -339,8 +343,9 @@ class BatchView(TokenAuthorizationMixin, generics.CreateAPIView):
                     strategy=strategy,
                     expiration_date=expiration_date,
                     csvfile=csvfile,
+                    organization=Organization.objects.get(pk=self.request.auth),
                 )
-                batch = self._create_batch(serializer, **options)
+                batch = RadiusBatch(**options)
                 batch.csvfile_upload(csvfile)
                 response = RadiusBatchSerializer(batch)
             elif strategy == 'prefix':
@@ -350,19 +355,14 @@ class BatchView(TokenAuthorizationMixin, generics.CreateAPIView):
                     strategy=strategy,
                     expiration_date=expiration_date,
                     prefix=prefix,
+                    organization=Organization.objects.get(pk=self.request.auth),
                 )
-                batch = self._create_batch(serializer, **options)
+                batch = RadiusBatch(**options)
                 number_of_users = int(request.data['number_of_users'])
                 batch.prefix_add(prefix, number_of_users)
-                response = RadiusBatchSerializer(batch)
+                response = RadiusBatchSerializer(batch, context={'request': request})
             return Response(response.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def _create_batch(self, serializer, **kwargs):
-        org = Organization.objects.get(pk=self.request.auth)
-        options = dict(organization=org)
-        options.update(kwargs)
-        return RadiusBatch(**options)
 
 
 batch = BatchView.as_view()
@@ -371,23 +371,55 @@ batch = BatchView.as_view()
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
         try:
-            self.organization = Organization.objects.get(slug=kwargs['slug'])
+            self.organization = Organization.objects.get(pk=kwargs['pk'])
         except Organization.DoesNotExist:
             raise Http404()
         return super().dispatch(*args, **kwargs)
 
     def validate_membership(self, user):
-        if (self.organization.pk,) not in user.organizations_pk:
-            message = _('User "{}" is not member ' 'of "{}"').format(
-                user.username, self.organization.slug
+        if not (user.is_superuser or (self.organization.pk,) in user.organizations_pk):
+            message = _(
+                f'User {user.username} is not member of '
+                f'organization {self.organization.pk}'
             )
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
+class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):
+    authentication_classes = (UserTokenAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        self.validate_membership(request.user)
+        try:
+            radbatch = RadiusBatch.objects.get(pk=kwargs['radbatch'])
+        except RadiusBatch.DoesNotExist:
+            raise NotFound(
+                detail="Given radius batch not found.", code=404,
+            )
+        if radbatch.strategy == 'prefix':
+            pdf = generate_pdf(kwargs['radbatch'])
+            response = HttpResponse(content_type='application/pdf')
+            response[
+                'Content-Disposition'
+            ] = f'attachment; filename="{radbatch.name}.pdf"'
+            response.write(pdf)
+            return response
+        else:
+            raise NotFound(
+                detail="Only available for users created with prefix strategy",
+                code=404,
+            )
+
+
+download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
+
+
 class RadiusTokenMixin(object):
     def get_or_create_radius_token(self, user):
-        radius_token, rad_token_created = RadiusToken.objects.get_or_create(user=user)
+        radius_token, _ = RadiusToken.objects.get_or_create(user=user)
         return radius_token
 
 

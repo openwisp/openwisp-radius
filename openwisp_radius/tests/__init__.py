@@ -3,6 +3,8 @@ import os
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
+from openwisp_users.tests.utils import TestOrganizationMixin
+
 from ..base.models import _encode_secret
 from ..utils import load_model
 
@@ -23,9 +25,20 @@ RadiusGroupReply = load_model('RadiusGroupReply')
 User = get_user_model()
 
 
-class CreateRadiusObjectsMixin(object):
+class CreateRadiusObjectsMixin(TestOrganizationMixin):
+    def _get_org(self, org_name='default'):
+        return super()._get_org(org_name)
+
+    def _get_user_with_org(self):
+        # Used where User model instance is required
+        # but User shall be a member of 'default' org.
+        self._get_org_user()
+        return self._get_user()
+
     def _get_defaults(self, opts, model=None):
         options = {}
+        if not model or hasattr(model, 'organization'):
+            options.update({'organization': self._get_org()})
         options.update(opts)
         return options
 
@@ -100,13 +113,6 @@ class CreateRadiusObjectsMixin(object):
         rb.full_clean()
         rb.save()
         return rb
-
-    def _create_user(self, **kwargs):
-        u = User(**kwargs)
-        u.set_password(kwargs['password'])
-        u.full_clean()
-        u.save()
-        return u
 
 
 class PostParamsMixin(object):

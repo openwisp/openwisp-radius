@@ -1,6 +1,8 @@
+import os
 from datetime import timedelta
 from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import now
@@ -127,15 +129,19 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
     def test_prefix_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
+        output_pdf = os.path.join(settings.MEDIA_ROOT, 'test_prefix10.pdf')
         options = dict(
             organization=self.default_org,
             prefix='test-prefix7',
             n=10,
             name='test',
             expiration='28-01-2018',
+            output=output_pdf,
         )
         self._call_command('prefix_add_users', **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
+        self.assertTrue(os.path.isfile(output_pdf))
+        os.remove(output_pdf)
         radiusbatch = RadiusBatch.objects.first()
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 10)

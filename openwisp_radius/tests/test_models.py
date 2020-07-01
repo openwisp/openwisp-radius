@@ -228,8 +228,8 @@ class TestRadiusGroup(BaseTestCase):
         self.assertEqual(power_users.radiusgroupcheck_set.count(), 0)
 
     def test_change_default_group(self):
-        org1 = self._create_org(name='org1', slug='org1')
-        org2 = self._create_org(name='org2', slug='org2')
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        org2 = self._create_org(**{'name': 'org2', 'slug': 'org2'})
         new_default_org1 = RadiusGroup(
             name='org1-new', organization=org1, description='test', default=True
         )
@@ -391,7 +391,7 @@ class TestRadiusGroup(BaseTestCase):
         self.assertEqual(RadiusGroup.objects.all().count(), 2)
 
     def test_create_organization_default_group(self):
-        new_org = self._create_org(name='new org', slug='new-org')
+        new_org = self._create_org(**{'name': 'new org', 'slug': 'new-org'})
         queryset = RadiusGroup.objects.filter(organization=new_org)
         self.assertEqual(queryset.count(), 2)
         self.assertEqual(queryset.filter(name='new-org-users').count(), 1)
@@ -413,7 +413,7 @@ class TestRadiusGroup(BaseTestCase):
         self.assertEqual(queryset.filter(name='renamed-power-users').count(), 1)
 
     def test_auto_prefix(self):
-        org = self._create_org(name='Cool WiFi', slug='cool-wifi')
+        org = self._create_org(**{'name': 'Cool WiFi', 'slug': 'cool-wifi'})
         rg = RadiusGroup(name='guests', organization=org)
         rg.full_clean()
         self.assertEqual(rg.name, '{}-guests'.format(org.slug))
