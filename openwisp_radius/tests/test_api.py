@@ -22,6 +22,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from openwisp_radius.api import views as api_views
+
 from .. import settings as app_settings
 from ..utils import load_model
 from . import _TEST_DATE, FileMixin
@@ -47,11 +49,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_invalid_token(self):
         self._get_org_user()
         auth_header = self.auth_header.replace(' ', '')  # removes spaces in token
-        response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'tester', 'password': 'tester'},
-            HTTP_AUTHORIZATION=auth_header,
-        )
+        response = self._authorize_user(auth_header=auth_header)
         self.assertEqual(response.status_code, 400)
 
     def test_disabled_user_login(self):
@@ -64,29 +62,37 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             }
         )
         self._create_org_user(**{'user': user})
-        response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'barbar', 'password': 'molly'},
-            HTTP_AUTHORIZATION=self.auth_header,
+        response = self._authorize_user(
+            username='barbar', password='molly', auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
 
     def test_authorize_no_token_403(self):
+        cache.clear()
         self._get_org_user()
-        response = self.client.post(
-            reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'}
-        )
+        response = self._authorize_user()
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data, {'detail': 'Token authentication failed'})
+        self.assertEqual(
+            response.data['detail'],
+            (
+                'Radius token does not exist. Obtain a new radius token or provide '
+                'the organization UUID and API token.'
+            ),
+        )
+
+    def test_authorize_no_username_403(self):
+        cache.clear()
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        response = self._authorize_user(username='')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], 'username field is required.')
 
     def test_authorize_200(self):
+        cache.clear()
         self._get_org_user()
-        response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'tester', 'password': 'tester'},
-            HTTP_AUTHORIZATION=self.auth_header,
-        )
+        response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
@@ -100,23 +106,67 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
     def test_authorize_failed(self):
-        response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'baldo', 'password': 'ugo'},
-            HTTP_AUTHORIZATION=self.auth_header,
+        response = self._authorize_user(
+            username='baldo', password='ugo', auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
 
+    def test_authorize_fail_auth_details_incomplete(self):
+        for querystring in [
+            f'?token={self.default_org.radius_settings.token}',
+            f'?uuid={str(self.default_org.pk)}',
+        ]:
+            with self.subTest(querystring):
+                post_url = f'{reverse("radius:authorize")}{querystring}'
+                response = self.client.post(
+                    post_url, {'username': 'tester', 'password': 'tester'}
+                )
+                self.assertEqual(response.status_code, 403)
+
     def test_authorize_wrong_password(self):
         self._get_org_user()
-        response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'tester', 'password': 'wrong'},
-            HTTP_AUTHORIZATION=self.auth_header,
-        )
+        response = self._authorize_user(password='wrong', auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
+
+    def test_authorize_radius_token_200(self):
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        response = self._authorize_user()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+
+    def test_user_auth_token_disposed_after_auth(self):
+        app_settings.DISPOSABLE_RADIUS_USER_TOKEN = True
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        # Success but disable radius_token for authorization
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        # Ensure cannot authorize with radius_token
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'')
+        # Ensure can authorize with password
+        response = self._authorize_user()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+
+    def test_user_auth_token_obtain_auth_token_renew(self):
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        # Authorization works
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        # Renew and authorize again
+        second_rad_token = self._login_and_obtain_auth_token()
+        response = self._authorize_user(password=second_rad_token)
+        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(rad_token, second_rad_token)
 
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -124,6 +174,32 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = self.client.post(
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
         )
+        params['password'] = ''
+        self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data, None)
+
+    def test_postauth_radius_token_expired_201(self):
+        cache.clear()
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        self.assertEqual(RadiusToken.objects.all().count(), 0)
+        self._get_org_user()
+        self._create_radius_token(can_auth=False)
+        params = self._get_postauth_params(**{'username': 'tester', 'password': ''})
+        response = self.client.post(reverse('radius:postauth'), params)
+        self.assertEqual(RadiusToken.objects.all().count(), 1)
+        self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data, None)
+
+    def test_postauth_radius_token_accept_201(self):
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        params = self._get_postauth_params(
+            **{'username': 'tester', 'password': 'tester'}
+        )
+        response = self.client.post(reverse('radius:postauth'), params)
         params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
@@ -175,9 +251,16 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_postauth_no_token_403(self):
-        response = self.client.post(reverse('radius:postauth'), {})
+        cache.clear()
+        response = self.client.post(reverse('radius:postauth'), {'username': 'tester'})
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data, {'detail': 'Token authentication failed'})
+        self.assertEqual(
+            response.data['detail'],
+            (
+                'Radius token does not exist. Obtain a new radius token or provide '
+                'the organization UUID and API token.'
+            ),
+        )
 
     _acct_url = reverse('radius:accounting')
     _acct_initial_data = {
@@ -228,6 +311,11 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             content_type='application/json',
         )
 
+    def _prep_start_acct_data(self):
+        data = self.acct_post_data
+        data['status_type'] = 'Start'
+        return self._get_accounting_params(**data)
+
     def assertAcctData(self, ra, data):
         """
         compares the values in data (dict)
@@ -251,17 +339,21 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             self.assertEqual(ra_value, data_value, msg=key)
 
     def test_accounting_no_token_403(self):
-        response = self.client.post(self._acct_url, {})
+        response = self.client.post(self._acct_url, {'username': 'tester'})
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data, {'detail': 'Token authentication failed'})
+        self.assertEqual(
+            response.data['detail'],
+            (
+                'Radius token does not exist. Obtain a new radius token or provide '
+                'the organization UUID and API token.'
+            ),
+        )
 
     @freeze_time(START_DATE)
     def test_accounting_start_200(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
-        data = self.acct_post_data
-        data['status_type'] = 'Start'
-        data = self._get_accounting_params(**data)
+        data = self._prep_start_acct_data()
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
@@ -269,13 +361,37 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
 
+    def test_accounting_start_radius_token_201(self):
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        data = self._prep_start_acct_data()
+        data.update(username='tester')
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        response = self.client.post(
+            self._acct_url, data=json.dumps(data), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data, None)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+    def test_accounting_start_radius_token_expired_200(self):
+        cache.clear()
+        self._get_org_user()
+        self._create_radius_token(can_auth=False)
+        self._create_radius_accounting(**self._acct_initial_data)
+        data = self._prep_start_acct_data()
+        data.update(username='tester')
+        response = self.client.post(
+            self._acct_url, data=json.dumps(data), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'')
+
     @freeze_time(START_DATE)
     def test_accounting_start_200_querystring(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
-        data = self.acct_post_data
-        data['status_type'] = 'Start'
-        data = self._get_accounting_params(**data)
+        data = self._prep_start_acct_data()
         post_url = f'{self._acct_url}{self.token_querystring}'
         response = self.client.post(
             post_url, json.dumps(data), content_type='application/json'
@@ -404,6 +520,42 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(ra.stop_time.timetuple(), now().timetuple())
         self.assertEqual(ra.start_time.timetuple(), now().timetuple())
         self.assertAcctData(ra, data)
+
+    def test_user_auth_token_disabled_on_stop(self):
+        self._get_org_user()
+        radtoken = self._create_radius_token(can_auth=True)
+        # Send Accounting stop request
+        data = self.acct_post_data
+        data.update(username='tester', status_type='Stop')
+        data = self._get_accounting_params(**data)
+        self.post_json(data)
+        radtoken.refresh_from_db()
+        self.assertFalse(radtoken.can_auth)
+
+    @freeze_time(START_DATE)
+    def test_user_auth_token_org_accounting_stop(self):
+        self._get_org_user()
+        self.org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
+        self._create_org_user(**{'organization': self.org2})
+        # Start Accounting with first organzation
+        response = self.client.post(
+            reverse('radius:user_auth_token', args=[self.default_org.slug]),
+            {'username': 'tester', 'password': 'tester'},
+        )
+        data = self._prep_start_acct_data()
+        data.update(username='tester')
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        # Get radius token with second organization
+        response = self.client.post(
+            reverse('radius:user_auth_token', args=[self.org2.slug]),
+            {'username': 'tester', 'password': 'tester'},
+        )
+        # Test RadiusAccounting is terminated with correct cause
+        radacct = RadiusAccounting.objects.get(
+            username='tester', organization=self.default_org
+        )
+        self.assertEqual(radacct.terminate_cause, 'NAS_Request')
 
     @freeze_time(START_DATE)
     def test_accounting_400_missing_status_type(self):
@@ -1352,6 +1504,27 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
+
+    def test_user_auth_token_with_second_organization(self):
+        api_views.renew_required = False
+        self._get_org_user()
+        self.org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
+        self._create_org_user(**{'organization': self.org2})
+        for org_slug in [self.default_org.slug, self.org2.slug]:
+            with self.subTest(org_slug):
+                # Get token for organizations
+                response = self.client.post(
+                    reverse('radius:user_auth_token', args=[org_slug]),
+                    {'username': 'tester', 'password': 'tester'},
+                )
+                self.assertEqual(response.status_code, 200)
+                # Check authorization accepts for both organizations
+                response = self.client.post(
+                    reverse('radius:authorize'),
+                    {'username': 'tester', 'password': 'tester'},
+                )
+                self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        api_views.renew_required = True
 
     def test_user_auth_token_400_credentials(self):
         url = self._get_url()

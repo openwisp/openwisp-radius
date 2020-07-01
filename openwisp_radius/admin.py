@@ -541,5 +541,5 @@ if settings.DEBUG:
     @admin.register(RadiusToken)
     class RadiusTokenAdmin(ModelAdmin):
         list_display = ['key', 'user', 'created']
-        fields = ['user']
+        fields = ['user', 'organization', 'can_auth']
         ordering = ('-created',)

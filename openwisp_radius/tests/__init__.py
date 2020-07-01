@@ -31,6 +31,7 @@ Nas = load_model('Nas')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusReply = load_model('RadiusReply')
+RadiusToken = load_model('RadiusToken')
 RadiusCheck = load_model('RadiusCheck')
 RadiusGroup = load_model('RadiusGroup')
 RadiusPostAuth = load_model('RadiusPostAuth')
@@ -133,6 +134,14 @@ class CreateRadiusObjectsMixin(TestOrganizationMixin):
         rb.full_clean()
         rb.save()
         return rb
+
+    def _create_radius_token(self, **kwargs):
+        options = {'user': self._get_user(), 'can_auth': True, 'key': '1234'}
+        options.update(self._get_defaults(kwargs))
+        radtoken = RadiusToken(**options)
+        radtoken.full_clean()
+        radtoken.save()
+        return radtoken
 
 
 class PostParamsMixin(object):

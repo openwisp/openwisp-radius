@@ -1,10 +1,12 @@
 import swapper
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from rest_framework.authtoken.models import Token
 
+from ..api.views import RadiusTokenMixin
 from ..utils import load_model
 
 Organization = swapper.load_model('openwisp_users', 'Organization')
@@ -12,7 +14,7 @@ RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
-class RedirectCaptivePageView(View):
+class RedirectCaptivePageView(RadiusTokenMixin, View):
     def get(self, request, *args, **kwargs):
         """
         redirect user to captive page
@@ -21,10 +23,11 @@ class RedirectCaptivePageView(View):
         """
         if not request.GET.get('cp'):
             return HttpResponse(_('missing cp GET param'), status=400)
-        self.authorize(request, *args, **kwargs)
-        return HttpResponseRedirect(self.get_redirect_url(request))
+        org = get_object_or_404(Organization, slug=kwargs.get('slug'))
+        self.authorize(request, org, *args, **kwargs)
+        return HttpResponseRedirect(self.get_redirect_url(request, org))
 
-    def authorize(self, request, *args, **kwargs):
+    def authorize(self, request, org, *args, **kwargs):
         """
         authorization logic
         raises PermissionDenied if user is not authorized
@@ -33,11 +36,6 @@ class RedirectCaptivePageView(View):
         if not user.is_authenticated or not user.socialaccount_set.exists():
             raise PermissionDenied()
         user = request.user
-        slug = kwargs.get('slug')
-        try:
-            org = Organization.objects.get(slug=slug)
-        except Organization.DoesNotExist:
-            raise Http404()
         is_member = user.is_member(org)
         # to avoid this, we should fix this:
         # https://github.com/openwisp/openwisp-users/issues/34
@@ -49,16 +47,15 @@ class RedirectCaptivePageView(View):
             orgUser.full_clean()
             orgUser.save()
 
-    def get_redirect_url(self, request):
+    def get_redirect_url(self, request, organization):
         """
         refreshes token and returns the captive page URL
         """
         cp = request.GET.get('cp')
         user = request.user
         Token.objects.filter(user=user).delete()
-        RadiusToken.objects.filter(user=user).delete()
-        token = Token.objects.create(user=user)
-        rad_token = RadiusToken.objects.create(user=user)
+        token, _ = Token.objects.get_or_create(user=user)
+        rad_token = self.get_or_create_radius_token(user, organization)
         return (
             f'{cp}?username={user.username}&token={token.key}&'
             f'radius_user_token={rad_token.key}'

@@ -10,7 +10,9 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_text
@@ -30,7 +32,12 @@ from rest_framework.authentication import BaseAuthentication, SessionAuthenticat
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
+from rest_framework.exceptions import (
+    AuthenticationFailed,
+    NotAuthenticated,
+    NotFound,
+    ParseError,
+)
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.generics import (
     CreateAPIView,
@@ -62,7 +69,9 @@ from .serializers import (
 from .utils import ErrorDictMixin
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
+renew_required = app_settings.DISPOSABLE_RADIUS_USER_TOKEN
 logger = logging.getLogger(__name__)
+
 User = get_user_model()
 PhoneToken = load_model('PhoneToken')
 RadiusToken = load_model('RadiusToken')
@@ -74,10 +83,36 @@ OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
-class TokenAuthentication(BaseAuthentication):
+class FreeradiusApiAuthentication(BaseAuthentication):
+    def _radius_token_authenticate(self, request):
+        # cached_orgid exists only for users authenticated
+        # successfully in past 24 hours
+        username = request.data.get('username')
+        cached_orgid = cache.get(f'rt-{username}')
+        if cached_orgid:
+            return (AnonymousUser(), cached_orgid)
+        else:
+            try:
+                radtoken = RadiusToken.objects.get(user__username=username)
+            except RadiusToken.DoesNotExist:
+                if username:
+                    message = _(
+                        'Radius token does not exist. Obtain a new radius token '
+                        'or provide the organization UUID and API token.'
+                    )
+                else:
+                    message = _('username field is required.')
+                logger.warning(message)
+                raise NotAuthenticated(message)
+            org_uuid = str(radtoken.organization_id)
+            cache.set(f'rt-{username}', org_uuid, 86400)
+            return (AnonymousUser(), org_uuid)
+
     def authenticate(self, request):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
+        if not uuid and not token:
+            return self._radius_token_authenticate(request)
         if not uuid or not token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # check cache first
@@ -117,7 +152,7 @@ class TokenAuthentication(BaseAuthentication):
 
 
 class TokenAuthorizationMixin(object):
-    authentication_classes = (TokenAuthentication,)
+    authentication_classes = (FreeradiusApiAuthentication,)
 
     def get_serializer(self, *args, **kwargs):
         # supply organization uuid got from authentication
@@ -148,18 +183,21 @@ class AuthorizeView(TokenAuthorizationMixin, APIView):
         """
         return active user or ``None``
         """
+        username = request.data.get('username')
         try:
-            user = User.objects.get(
-                username=request.data.get('username'), is_active=True
-            )
-            # ensure user is member of the authenticated org
-            if not OrganizationUser.objects.filter(
-                user=user, organization_id=request.auth
-            ).exists():
-                return None
-            return user
+            user = User.objects.get(username=username, is_active=True)
         except User.DoesNotExist:
             return None
+        # ensure user is member of the authenticated org
+        # or RadiusToken for the user exists.
+        if (
+            RadiusToken.objects.filter(user=user, can_auth=True).exists()
+            or OrganizationUser.objects.filter(
+                user=user, organization_id=request.auth
+            ).exists()
+        ):
+            return user
+        return None
 
     def authenticate_user(self, request, user):
         """
@@ -167,25 +205,26 @@ class AuthorizeView(TokenAuthorizationMixin, APIView):
         a valid user password or a valid user token
         can be overridden to implement more complex checks
         """
-        return user.check_password(
-            request.data.get('password')
-        ) or self.check_user_token(
-            request, user
-        )  # noqa
+        return bool(
+            user.check_password(request.data.get('password'))
+            or self.check_user_token(request, user)
+        )
 
     def check_user_token(self, request, user):
         """
         returns ``True`` if the password value supplied is a valid
         radius user token
         """
-
         try:
-            token = RadiusToken.objects.get(user=user, key=request.data.get('password'))
+            token = RadiusToken.objects.get(
+                user=user, can_auth=True, key=request.data.get('password')
+            )
         except RadiusToken.DoesNotExist:
-            token = None
-        if app_settings.DISPOSABLE_RADIUS_USER_TOKEN and token is not None:
-            token.delete()
-        return token is not None
+            return False
+        if app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
+            token.can_auth = False
+            token.save()
+        return True
 
     def get_serializer(self, *args, **kwargs):
         # needed to avoid `'super' object has no attribute 'get_serializer'`
@@ -357,10 +396,7 @@ batch = BatchView.as_view()
 
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
-        try:
-            self.organization = Organization.objects.get(slug=kwargs['slug'])
-        except Organization.DoesNotExist:
-            raise Http404()
+        self.organization = get_object_or_404(Organization, slug=kwargs['slug'])
         return super().dispatch(*args, **kwargs)
 
     def validate_membership(self, user):
@@ -403,8 +439,52 @@ download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 
 class RadiusTokenMixin(object):
-    def get_or_create_radius_token(self, user):
-        radius_token, _ = RadiusToken.objects.get_or_create(user=user)
+    def _radius_account_nas_stop(self, user, org):
+        try:
+            radacct = RadiusAccounting.objects.get(username=user, organization=org)
+        except RadiusAccounting.DoesNotExist:
+            pass
+        else:
+            radacct.terminate_cause = 'NAS_Request'
+            time = timezone.now()
+            radacct.update_time = time
+            radacct.stop_time = time
+            radacct.full_clean()
+            radacct.save()
+
+    def _delete_used_token(self, user, organization):
+        try:
+            used_radtoken = RadiusToken.objects.get(user=user)
+        except RadiusToken.DoesNotExist:
+            pass
+        else:
+            # If organization is changed, stop accounting for
+            # the previously used for organization
+            in_use_org = used_radtoken.organization
+            if in_use_org != organization:
+                self._radius_account_nas_stop(user, in_use_org)
+            used_radtoken.delete()
+
+    def get_or_create_radius_token(
+        self, user, organization, enable_auth=True, renew=True
+    ):
+        if renew:
+            self._delete_used_token(user, organization)
+        try:
+            radius_token, _ = RadiusToken.objects.get_or_create(
+                user=user, organization=organization
+            )
+        except IntegrityError:
+            radius_token = RadiusToken.objects.get(user=user)
+            self._radius_account_nas_stop(user, radius_token.organization)
+            radius_token.organization = organization
+        radius_token.can_auth = enable_auth
+        radius_token.full_clean()
+        radius_token.save()
+        # Create a cache for 24 hours so that next
+        # user request is responded quickly.
+        if enable_auth:
+            cache.set(f'rt-{user.username}', str(organization.pk), 86400)
         return radius_token
 
     def update_user_last_login(self, user):
@@ -430,8 +510,9 @@ class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
             ).data
         else:
             data = TokenSerializer(user.auth_token, context=context).data
-
-        radius_token = self.get_or_create_radius_token(user)
+        radius_token = self.get_or_create_radius_token(
+            user, self.organization, enable_auth=False
+        )
         data['radius_user_token'] = radius_token.key
         return data
 
@@ -454,8 +535,10 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         )
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
-        token, created = UserToken.objects.get_or_create(user=user)
-        radius_token = self.get_or_create_radius_token(user)
+        token, _ = UserToken.objects.get_or_create(user=user)
+        radius_token = self.get_or_create_radius_token(
+            user, self.organization, renew=renew_required
+        )
         self.update_user_last_login(user)
         context = {'view': self, 'request': request, 'token_login': True}
         serializer = self.serializer_class(instance=token, context=context)
@@ -485,7 +568,12 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
         if request_token:
             try:
                 token = UserToken.objects.select_related('user').get(key=request_token)
-                radius_token = self.get_or_create_radius_token(token.user)
+            except UserToken.DoesNotExist:
+                pass
+            else:
+                radius_token = self.get_or_create_radius_token(
+                    token.user, self.organization, renew=renew_required
+                )
                 response = {
                     'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
                     'auth_token': token.key,
@@ -494,8 +582,6 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                 }
                 self.update_user_last_login(token.user)
                 return Response(response, 200)
-            except UserToken.DoesNotExist:
-                pass
         return Response(response, 401)
 
 
@@ -571,10 +657,7 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
     def get_user(self, request):
         if request.POST.get('email', None):
             email = request.POST['email']
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                raise Http404()
+            user = get_object_or_404(User, email=email)
             self.validate_membership(user)
             return user
         raise ParseError(_('email field is required'))

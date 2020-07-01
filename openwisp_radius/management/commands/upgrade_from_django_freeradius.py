@@ -177,9 +177,11 @@ class BaseUpdateFromDjangoFreeradius(BaseCommand):
                 for user in data['fields']['users']:
                     user_list.append(self.int_to_uuid(user))
                 data['fields']['users'] = user_list
-            if table_name in ['radiustoken', 'radiusreply', 'radiususergroup']:
+            if table_name in ['radiusreply', 'radiususergroup']:
                 data['fields']['user'] = self.int_to_uuid(data['fields']['user'])
-
+            if table_name in ['radiustoken']:
+                data['fields']['user'] = self.int_to_uuid(data['fields']['user'])
+                data['fields']['organization'] = str(org.pk)
         # Save in anotherfile
         with open(f'{options["backup"]}/freeradius_loaded.json', 'w') as outfile:
             json.dump(freeradius_data, outfile)

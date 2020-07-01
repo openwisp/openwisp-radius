@@ -22,6 +22,7 @@ from .utils import ErrorDictMixin
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
+RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
@@ -66,6 +67,15 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     # as it's not a model field
     status_type = serializers.ChoiceField(write_only=True, choices=STATUS_TYPE_CHOICES)
 
+    def _disable_token_auth(self, user):
+        try:
+            radius_token = RadiusToken.objects.get(user__username=user)
+        except RadiusToken.DoesNotExist:
+            pass
+        else:
+            radius_token.can_auth = False
+            radius_token.save()
+
     def validate(self, data):
         """
         We need to set some timestamps according to the accounting packet type
@@ -82,6 +92,8 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         if status_type == 'Stop':
             data['update_time'] = time
             data['stop_time'] = time
+            # disable radius_token auth capability
+            self._disable_token_auth(data['username'])
         return data
 
     class Meta:

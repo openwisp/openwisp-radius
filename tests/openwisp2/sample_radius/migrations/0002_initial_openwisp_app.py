@@ -377,7 +377,22 @@ class Migration(migrations.Migration):
                         verbose_name='Key',
                     ),
                 ),
+                (
+                    'can_auth',
+                    models.BooleanField(
+                        default=False,
+                        help_text='Enable the radius token to be used for freeradius authorization request',
+                    ),
+                ),
                 ('details', models.CharField(blank=True, max_length=64, null=True)),
+                (
+                    'organization',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=swapper.get_model_name('openwisp_users', 'Organization'),
+                        verbose_name='organization',
+                    ),
+                ),
                 (
                     'user',
                     models.OneToOneField(
@@ -393,6 +408,7 @@ class Migration(migrations.Migration):
                 'db_table': 'radiustoken',
                 'abstract': False,
             },
+            bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
         migrations.CreateModel(
             name='RadiusGroup',

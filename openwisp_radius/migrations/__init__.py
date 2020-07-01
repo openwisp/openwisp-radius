@@ -16,6 +16,11 @@ def get_swapped_model(apps, app_name, model_name):
     return apps.get_model(app, model)
 
 
+def delete_old_radius_token(apps, schema_editor):
+    RadiusToken = get_swapped_model(apps, 'openwisp_radius', 'RadiusToken')
+    RadiusToken.objects.all().delete()
+
+
 def add_default_organization(apps, schema_editor):
     """
     Set default organization using

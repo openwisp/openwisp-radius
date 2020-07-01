@@ -57,7 +57,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         r = self.client.get(url, {'cp': 'http://wifi.openwisp.org/cp'})
         self.assertEqual(r.status_code, 302)
         qs = Token.objects.filter(user=user)
-        rs = RadiusToken.objects.filter(user=user)
+        rs = RadiusToken.objects.filter(user=user, organization=self._get_org())
         self.assertEqual(qs.count(), 1)
         self.assertEqual(rs.count(), 1)
         token = qs.first()

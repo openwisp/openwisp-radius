@@ -966,7 +966,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                 os.remove(path)
 
 
-class AbstractRadiusToken(TimeStampedEditableModel, models.Model):
+class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
     # key field is a primary key so additional id field will be redundant
     id = None
     # tokens are not supposed to be modified, can be regenerated if necessary
@@ -974,6 +974,12 @@ class AbstractRadiusToken(TimeStampedEditableModel, models.Model):
     key = models.CharField(_('Key'), max_length=40, primary_key=True)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='radius_token'
+    )
+    can_auth = models.BooleanField(
+        default=False,
+        help_text=(
+            'Enable the radius token to be used for freeradius authorization request'
+        ),
     )
 
     class Meta:
@@ -986,6 +992,11 @@ class AbstractRadiusToken(TimeStampedEditableModel, models.Model):
         if not self.key:
             self.key = self.generate_key()
         return super().save(*args, **kwargs)
+
+    def delete_cache(self, *args, **kwargs):
+        username = f'rt-{self.user.username}'
+        if cache.get(username):
+            cache.delete(username)
 
     def generate_key(self):
         return get_random_string(length=40)
