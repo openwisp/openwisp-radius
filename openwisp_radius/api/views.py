@@ -371,7 +371,7 @@ batch = BatchView.as_view()
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
         try:
-            self.organization = Organization.objects.get(pk=kwargs['pk'])
+            self.organization = Organization.objects.get(slug=kwargs['slug'])
         except Organization.DoesNotExist:
             raise Http404()
         return super().dispatch(*args, **kwargs)
