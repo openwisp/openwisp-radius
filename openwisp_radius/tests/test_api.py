@@ -1441,14 +1441,21 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
         post_url = '{}{}'.format(reverse('radius:authorize'), token_querystring)
         self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
-        self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        # test update
-        rad.token = '1234567'
-        rad.save()
-        self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        # test delete
-        rad.delete()
-        self.assertEqual(None, cache.get(rad.organization.pk))
+        with self.subTest('Cache & token match'):
+            self.assertEqual(rad.token, cache.get(rad.organization.pk))
+        with self.subTest('Force changed corrupt cache returns 403'):
+            cache.set(rad.organization.pk, 'wrong-value')
+            response = self.client.post(
+                post_url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 403)
+        with self.subTest('Updated cache with radius setting token'):
+            rad.token = '1234567'
+            rad.save()
+            self.assertEqual(rad.token, cache.get(rad.organization.pk))
+        with self.subTest('Cache Miss: radius settings deleted'):
+            rad.delete()
+            self.assertEqual(None, cache.get(rad.organization.pk))
 
     def test_no_org_radius_setting(self):
         cache.clear()
