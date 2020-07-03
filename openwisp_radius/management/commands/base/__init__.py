@@ -13,9 +13,9 @@ class BatchAddMixin(object):
         )
 
     def _create_batch(self, **options):
-        org_slug = options['organization']
+        slug = options['organization']
         try:
-            org = Organization.objects.get(slug=org_slug)
+            org = Organization.objects.get(slug=slug)
         except Organization.DoesNotExist:
             sys.stdout.write('The organization supplied was not found\n')
             sys.exit(1)

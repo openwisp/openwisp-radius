@@ -243,7 +243,7 @@ class TestAdmin(
         url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
         response = self.client.get(url)
         pdf_url = reverse(
-            'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+            'radius:download_rad_batch_pdf', args=[obj.organization.slug, obj.pk],
         )
         self.assertContains(response, pdf_url)
 
