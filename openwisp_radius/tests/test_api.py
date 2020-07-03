@@ -771,7 +771,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         # we'll handle this case and avoid the issue altogether
         self._superuser_login()
         self.assertEqual(User.objects.count(), 1)
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -795,7 +795,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_register_error_missing_radius_settings(self):
         self.assertEqual(User.objects.count(), 0)
         self.default_org.radius_settings.delete()
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -828,7 +828,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     )
     def test_email_verification_sent(self):
         self.assertEqual(User.objects.count(), 0)
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -844,7 +844,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     @override_settings(REST_USE_JWT=True)
     def test_registration_with_jwt(self):
         user_count = User.objects.all().count()
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -951,9 +951,9 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             )
         self.assertEqual(response.status_code, 201)
         response_json = json.loads(response.content)
+        org = Organization.objects.get(pk=response_json['organization'])
         pdf_url = reverse(
-            'radius:download_rad_batch_pdf',
-            args=[response_json['organization'], response_json['id']],
+            'radius:download_rad_batch_pdf', args=[org.slug, response_json['id']],
         )
         self._superuser_login()
         self.assertEqual(response_json['pdf_link'], None)
@@ -963,7 +963,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_download_non_existing_radbatch_404(self):
         url = reverse(
             'radius:download_rad_batch_pdf',
-            args=[self.default_org.pk, '00000000-0000-0000-0000-000000000000'],
+            args=[self.default_org.slug, '00000000-0000-0000-0000-000000000000'],
         )
         self._superuser_login()
         response = self.client.get(url)
@@ -974,8 +974,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             name='test', strategy='prefix', prefix='test-prefix5'
         )
         url = reverse(
-            'radius:download_rad_batch_pdf',
-            args=['00000000-0000-0000-0000-000000000000', radbatch.pk],
+            'radius:download_rad_batch_pdf', args=['non-existent-org', radbatch.pk],
         )
         self._superuser_login()
         response = self.client.get(url)
@@ -987,7 +986,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
         self.default_org.add_user(test_user)
         login_payload = {'username': 'test_name', 'password': 'test_password'}
-        login_url = reverse('radius:user_auth_token', args=(self.default_org.pk,))
+        login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
         token = login_response.json()['key']
 
@@ -996,8 +995,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
         # invalid organization
         password_change_url = reverse(
-            'radius:rest_password_change',
-            args=('00000000-0000-0000-0000-000000000000',),
+            'radius:rest_password_change', args=['random-valid-slug'],
         )
         new_password_payload = {
             'new_password1': 'test_new_password',
@@ -1013,7 +1011,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         token1 = Token.objects.create(user=test_user1)
         client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token1))
         password_change_url = reverse(
-            'radius:rest_password_change', args=(self.default_org.pk,)
+            'radius:rest_password_change', args=[self.default_org.slug]
         )
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
@@ -1021,7 +1019,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         # pass1 and pass2 are not equal
         client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token))
         password_change_url = reverse(
-            'radius:rest_password_change', args=(self.default_org.pk,)
+            'radius:rest_password_change', args=[self.default_org.slug]
         )
         new_password_payload = {
             'new_password1': 'test_new_password',
@@ -1068,13 +1066,13 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
         # wrong org
         password_reset_url = reverse(
-            'radius:rest_password_reset', args=['00000000-0000-0000-0000-000000000000']
+            'radius:rest_password_reset', args=['wrong-slug-name']
         )
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(response.status_code, 404)
 
         password_reset_url = reverse(
-            'radius:rest_password_reset', args=[self.default_org.pk]
+            'radius:rest_password_reset', args=[self.default_org.slug]
         )
 
         # no payload
@@ -1104,7 +1102,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             'token': default_token_generator.make_token(test_user),
         }
         password_confirm_url = reverse(
-            'radius:rest_password_reset_confirm', args=[self.default_org.pk]
+            'radius:rest_password_reset_confirm', args=[self.default_org.slug]
         )
 
         # wrong token
@@ -1152,7 +1150,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
         # user should not be able to login with old password
         login_payload = {'username': 'test_name', 'password': 'test_password'}
-        login_url = reverse('radius:user_auth_token', args=(self.default_org.pk,))
+        login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 400)
 
@@ -1163,13 +1161,13 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
     def test_api_password_reset_405(self):
         password_reset_url = reverse(
-            'radius:rest_password_reset', args=[self.default_org.pk]
+            'radius:rest_password_reset', args=[self.default_org.slug]
         )
         response = self.client.get(password_reset_url)
         self.assertEqual(response.status_code, 405)
 
     def test_user_accounting_list_200(self):
-        auth_url = reverse('radius:user_auth_token', args=[self.default_org.pk])
+        auth_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         self._get_org_user()
         response = self.client.post(
             auth_url, {'username': 'tester', 'password': 'tester'}
@@ -1211,7 +1209,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             )
         )
         self._create_radius_accounting(**data3)
-        url = reverse('radius:user_accounting', args=[self.default_org.pk])
+        url = reverse('radius:user_accounting', args=[self.default_org.slug])
         response = self.client.get(
             '{0}?page_size=1&page=1'.format(url), HTTP_AUTHORIZATION=authorization,
         )
@@ -1343,7 +1341,7 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
 
 class TestApiUserToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
-        return reverse('radius:user_auth_token', args=[self.default_org.pk])
+        return reverse('radius:user_auth_token', args=[self.default_org.slug])
 
     def test_user_auth_token_200(self):
         url = self._get_url()
@@ -1379,7 +1377,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
-        return reverse('radius:validate_auth_token', args=[self.default_org.pk])
+        return reverse('radius:validate_auth_token', args=[self.default_org.slug])
 
     def test_validate_auth_token(self):
         url = self._get_url()
@@ -1441,14 +1439,21 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
         post_url = '{}{}'.format(reverse('radius:authorize'), token_querystring)
         self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
-        self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        # test update
-        rad.token = '1234567'
-        rad.save()
-        self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        # test delete
-        rad.delete()
-        self.assertEqual(None, cache.get(rad.organization.pk))
+        with self.subTest('Cache & token match'):
+            self.assertEqual(rad.token, cache.get(rad.organization.pk))
+        with self.subTest('Force changed corrupt cache returns 403'):
+            cache.set(rad.organization.pk, 'wrong-value')
+            response = self.client.post(
+                post_url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 403)
+        with self.subTest('Updated cache with radius setting token'):
+            rad.token = '1234567'
+            rad.save()
+            self.assertEqual(rad.token, cache.get(rad.organization.pk))
+        with self.subTest('Cache Miss: radius settings deleted'):
+            rad.delete()
+            self.assertEqual(None, cache.get(rad.organization.pk))
 
     def test_no_org_radius_setting(self):
         cache.clear()
@@ -1506,7 +1511,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_register_phone_required(self):
         self.assertEqual(User.objects.count(), 0)
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -1527,7 +1532,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         # we'll handle this case and avoid the issue altogether
         self._superuser_login()
         self.assertEqual(User.objects.count(), 1)
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         phone_number = '+393664255801'
         r = self.client.post(
             url,
@@ -1549,7 +1554,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
     def test_register_400_duplicate_phone_number(self):
         self.test_register_201()
-        url = reverse('radius:rest_register', args=[self.default_org.pk])
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {
@@ -1565,7 +1570,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 2)
 
     def test_create_phone_token_401(self):
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url)
         self.assertEqual(r.status_code, 401)
 
@@ -1573,7 +1578,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
     def test_create_phone_token_201(self, send_messages_mock):
         self.test_register_201()
         token = Token.objects.last()
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
         self.assertEqual(r.status_code, 201)
         phonetoken = PhoneToken.objects.first()
@@ -1584,7 +1589,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.test_register_201()
         OrganizationUser.objects.all().delete()
         token = Token.objects.last()
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1595,7 +1600,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user.is_active = False
         user.save()
         token = Token.objects.create(user=user)
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1606,7 +1611,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         token = Token.objects.last()
         token.user.is_active = True
         token.user.save()
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1618,7 +1623,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         token = Token.objects.last()
         token_header = 'Token {}'.format(token.key)
         max_value = app_settings.SMS_TOKEN_MAX_USER_DAILY
-        url = reverse('radius:phone_token_create', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         for n in range(1, max_value + 2):
             r = self.client.post(url, HTTP_AUTHORIZATION=token_header)
             if n > max_value:
@@ -1637,7 +1642,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         PhoneToken.objects.create(user=user, ip=phone_token.ip)
         phone_token = PhoneToken.objects.create(user=user, ip=phone_token.ip)
         self.assertEqual(phone_token.attempts, 0)
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url,
             json.dumps({'code': phone_token.token}),
@@ -1654,7 +1659,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.test_create_phone_token_201()
         OrganizationUser.objects.all().delete()
         token = Token.objects.last()
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1666,7 +1671,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         self.assertEqual(phone_token.attempts, 0)
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {'code': '123456'},
@@ -1688,7 +1693,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         phone_token.valid_until -= timedelta(days=3)
         phone_token.save()
         self.assertEqual(phone_token.attempts, 0)
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {'code': phone_token.token},
@@ -1709,7 +1714,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         max_value = app_settings.SMS_TOKEN_MAX_ATTEMPTS + 1
         for n in range(1, max_value + 2):
             r = self.client.post(
@@ -1730,7 +1735,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertFalse(user.is_active)
 
     def test_validate_phone_token_401(self):
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(url)
         self.assertEqual(r.status_code, 401)
 
@@ -1741,7 +1746,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user.save()
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {'code': phone_token.token},
@@ -1756,7 +1761,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         self.assertEqual(PhoneToken.objects.count(), 0)
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url,
             {'code': '123456'},
@@ -1772,7 +1777,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.test_register_201()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
             url, {'code': ''}, HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
         )
@@ -1783,7 +1788,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.test_register_201()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
-        url = reverse('radius:phone_token_validate', args=[self.default_org.pk])
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(user_token.key))
         self.assertEqual(r.status_code, 400)
         self.assertIn('code', r.data)
@@ -1794,7 +1799,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('radius:phone_number_change', args=[self.default_org.pk])
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
         new_phone_number = '+595972157444'
         r = self.client.post(
             url,
@@ -1814,7 +1819,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('radius:phone_number_change', args=[self.default_org.pk])
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
         new_phone_number = '+393664255801'
         r = self.client.post(
             url,
@@ -1833,7 +1838,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('radius:phone_number_change', args=[self.default_org.pk])
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
         r = self.client.post(
             url,
             json.dumps({'phone_number': ''}),
@@ -1851,7 +1856,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
         self.assertEqual(phone_token_qs.count(), 1)
-        url = reverse('radius:phone_number_change', args=[self.default_org.pk])
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
         r = self.client.post(
             url,
             content_type='application/json',

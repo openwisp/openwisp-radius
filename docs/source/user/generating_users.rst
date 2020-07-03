@@ -53,7 +53,7 @@ This command generates users whose usernames start with a particular prefix. Usa
 .. code-block:: shell
 
     ./manage.py prefix_add_users --name <name_of_batch> \
-                                 --organization=<organization-name> \
+                                 --organization=<organization-slug> \
                                  --prefix <prefix> \
                                  --n <number_of_users> \
                                  --expiration <expiration_date> \

@@ -428,7 +428,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         if radbatch.strategy == 'prefix':
             extra_context['download_rad_batch_pdf_url'] = reverse(
                 'radius:download_rad_batch_pdf',
-                args=[radbatch.organization.pk, object_id],
+                args=[radbatch.organization.slug, object_id],
             )
         return super().change_view(
             request, object_id, form_url, extra_context=extra_context,

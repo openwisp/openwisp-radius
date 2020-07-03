@@ -73,15 +73,16 @@ class TokenAuthentication(BaseAuthentication):
         uuid, token = self.get_uuid_token(request)
         if not uuid or not token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
-        # check cache too
-        if not cache.get('uuid'):
+        # check cache first
+        cached_token = cache.get(uuid)
+        if not cached_token:
             try:
                 opts = dict(organization_id=uuid, token=token)
                 instance = OrganizationRadiusSettings.objects.get(**opts)
                 cache.set(uuid, instance.token)
             except OrganizationRadiusSettings.DoesNotExist:
                 raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
-        elif cache.get(uuid) != token:
+        elif cached_token != token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # if execution gets here the auth token is good
         # we include the organization id in the auth info
@@ -371,7 +372,7 @@ batch = BatchView.as_view()
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
         try:
-            self.organization = Organization.objects.get(pk=kwargs['pk'])
+            self.organization = Organization.objects.get(slug=kwargs['slug'])
         except Organization.DoesNotExist:
             raise Http404()
         return super().dispatch(*args, **kwargs)
