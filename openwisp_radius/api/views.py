@@ -74,7 +74,7 @@ class TokenAuthentication(BaseAuthentication):
         if not uuid or not token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # check cache too
-        if not cache.get('uuid'):
+        if not cache.get(uuid):
             try:
                 opts = dict(organization_id=uuid, token=token)
                 instance = OrganizationRadiusSettings.objects.get(**opts)
