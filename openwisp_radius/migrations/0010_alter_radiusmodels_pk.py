@@ -3,17 +3,19 @@
 from django.db import migrations, models
 import uuid
 
-from . import get_old_objects
+from . import UUIDMigrator
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('openwisp_radius', '0008_sms_sender'),
+        ('openwisp_radius', '0009_radbatch_user_credentials_field'),
     ]
 
     operations = [
-        migrations.RunPython(get_old_objects, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            UUIDMigrator.backup_data, reverse_code=migrations.RunPython.noop
+        ),
         migrations.RemoveField(model_name='radiusaccounting', name='id',),
         migrations.AlterField(
             model_name='nas',

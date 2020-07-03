@@ -123,38 +123,43 @@ def assign_permissions_to_groups(apps, schema_editor):
             admin.permissions.add(permission_ad.pk)
 
 
-def get_old_objects(apps, schema_editor):
-    models = [
-        'RadiusCheck',
-        'RadiusReply',
-        'RadiusGroupCheck',
-        'RadiusGroupReply',
-        'RadiusUserGroup',
-        'Nas',
-        'RadiusAccounting',
-        'RadiusPostAuth',
-    ]
-    old_objects = []
-    for model in models:
-        model = get_swapped_model(apps, 'openwisp_radius', model)
-        if model.objects.first() and not isinstance(
-            model.objects.first().pk, uuid.UUID
-        ):
-            old_objects += list(model.objects.all())
-            model.objects.all().delete()
-    with open('old_objects.pk1', 'wb') as f:
-        pickle.dump(old_objects, f, -1)
-        f.close()
+class UUIDMigrator:
+    _backup_file_name = 'backup.pk1'
 
+    @classmethod
+    def backup_data(cls, apps, schema_editor):
+        models = [
+            'RadiusCheck',
+            'RadiusReply',
+            'RadiusGroupCheck',
+            'RadiusGroupReply',
+            'RadiusUserGroup',
+            'Nas',
+            'RadiusAccounting',
+            'RadiusPostAuth',
+        ]
+        current_objects = []
+        for model in models:
+            model = get_swapped_model(apps, 'openwisp_radius', model)
+            if model.objects.first() and not isinstance(
+                model.objects.first().pk, uuid.UUID
+            ):
+                current_objects += list(model.objects.all())
+                model.objects.all().delete()
+        with open(cls._backup_file_name, 'wb') as f:
+            pickle.dump(current_objects, f, -1)
+            f.close()
 
-def update_obj_pk(apps, schema_editor):
-    with open('old_objects.pk1', 'rb') as f:
-        for obj in pickle.load(f):
-            if obj is not None:
-                if obj._meta.model.__name__ == 'RadiusAccounting':
+    @classmethod
+    def upgrade_primary_keys(cls, apps, schema_editor):
+        with open(cls._backup_file_name, 'rb') as f:
+            for obj in pickle.load(f):
+                if obj is None:
+                    continue
+                if hasattr(obj, 'unique_id'):
                     obj.pk = obj.unique_id
                 else:
                     obj.pk = uuid.uuid4()
                 obj.save()
-        f.close()
-    os.remove('old_objects.pk1')
+            f.close()
+        os.remove(cls._backup_file_name)

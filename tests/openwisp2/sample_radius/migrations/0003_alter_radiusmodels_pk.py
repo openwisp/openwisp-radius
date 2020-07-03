@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import uuid
-from openwisp_radius.migrations import get_old_objects
+from openwisp_radius.migrations import UUIDMigrator
 
 
 class Migration(migrations.Migration):
@@ -12,7 +12,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(get_old_objects, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            UUIDMigrator.backup_data, reverse_code=migrations.RunPython.noop
+        ),
         migrations.RemoveField(model_name='radiusaccounting', name='id',),
         migrations.AlterField(
             model_name='nas',

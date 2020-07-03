@@ -1,11 +1,12 @@
 from django.db import migrations
-from openwisp_radius.migrations import UUIDMigrator
+
+from . import UUIDMigrator
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sample_radius', '0003_alter_radiusmodels_pk'),
+        ('openwisp_radius', '0010_alter_radiusmodels_pk'),
     ]
 
     operations = [
