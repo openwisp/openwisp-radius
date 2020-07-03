@@ -115,7 +115,8 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             return request.build_absolute_uri(
                 reverse(
-                    'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+                    'radius:download_rad_batch_pdf',
+                    args=[obj.organization.slug, obj.pk],
                 )
             )
         return None
