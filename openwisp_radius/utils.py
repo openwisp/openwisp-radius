@@ -28,9 +28,25 @@ def load_model(model):
     return swapper.load_model('openwisp_radius', model)
 
 
-def create_default_groups(organization):
-    RadiusGroup = load_model('RadiusGroup')
-    RadiusGroupCheck = load_model('RadiusGroupCheck')
+def get_model(apps, model_path):
+    app, model = model_path.split('.')
+    return apps.get_model(app, model)
+
+
+def get_swapped_model(apps, app_name, model_name):
+    model_path = swapper.get_model_name(app_name, model_name)
+    return get_model(apps, model_path)
+
+
+def create_default_groups(organization, apps=None):
+    if apps is not None:
+        RadiusGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusGroup')
+        RadiusGroupCheck = get_swapped_model(
+            apps, 'openwisp_radius', 'RadiusGroupCheck'
+        )
+    else:
+        RadiusGroup = load_model('RadiusGroup')
+        RadiusGroupCheck = load_model('RadiusGroupCheck')
     default = RadiusGroup(
         organization_id=organization.pk,
         name='{}-users'.format(organization.slug),
