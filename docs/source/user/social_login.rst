@@ -73,7 +73,7 @@ Ensure your main ``urls.py`` contains the ``allauth.urls``:
 
     urlpatterns = [
         # .. other urls ...
-        url(r'^accounts/', include('allauth.urls')),
+        path('accounts/', include('allauth.urls')),
     ]
 
 Configure the social account application

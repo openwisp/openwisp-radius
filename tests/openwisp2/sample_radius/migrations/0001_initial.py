@@ -14,6 +14,8 @@ import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
 import phonenumber_field.modelfields
+import private_storage.fields
+import private_storage.storage.files
 import re
 import uuid
 import swapper
@@ -1213,11 +1215,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     'csvfile',
-                    models.FileField(
+                    private_storage.fields.PrivateFileField(
                         blank=True,
                         help_text='The csv file containing the user details to be uploaded',
                         null=True,
-                        upload_to='',
+                        storage=private_storage.storage.files.PrivateFileSystemStorage(
+                            base_url='/radiusbatch/csv/',
+                            location=settings.PRIVATE_STORAGE_ROOT,
+                        ),
+                        upload_to=openwisp_radius.base.models._get_csv_file_location,
                         verbose_name='CSV',
                     ),
                 ),
@@ -1333,7 +1339,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Phone verification tokens',
                 'ordering': ('-created',),
                 'abstract': False,
-                'index_together': {('user', 'created'), ('user', 'created', 'ip')},
+                'index_together': {('user', 'created', 'ip'), ('user', 'created')},
             },
         ),
     ]

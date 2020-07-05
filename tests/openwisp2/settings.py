@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     # openwisp radius
     'openwisp_radius',
     'openwisp_users',
+    'private_storage',
     'django_extensions',
 ]
 
@@ -102,6 +103,7 @@ USE_I18N = False
 USE_L10N = False
 USE_TZ = True
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
 EMAIL_PORT = '1025'
 MEDIA_URL = '/media/'
 STATIC_URL = '/static/'

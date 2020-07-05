@@ -38,6 +38,7 @@ SOCIAL_LOGIN_ENABLED = 'allauth.socialaccount' in settings.INSTALLED_APPS
 DISPOSABLE_RADIUS_USER_TOKEN = get_settings_value('DISPOSABLE_RADIUS_USER_TOKEN', True)
 API_ACCOUNTING_AUTO_GROUP = get_settings_value('API_ACCOUNTING_AUTO_GROUP', True)
 EXTRA_NAS_TYPES = get_settings_value('EXTRA_NAS_TYPES', tuple())
+MAX_CSV_FILE_SIZE = get_settings_value('MAX_FILE_SIZE', 5 * 1024 * 1024)
 BATCH_PDF_TEMPLATE = get_settings_value(
     'BATCH_PDF_TEMPLATE',
     os.path.join(

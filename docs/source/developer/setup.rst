@@ -92,6 +92,7 @@ modules listed ``INSTALLED_APPS``:
         # openwisp radius
         'openwisp_radius',
         'openwisp_users',
+        'private_storage',
     ]
 
 These modules are optional, add them only if you need the
@@ -106,16 +107,25 @@ These modules are optional, add them only if you need the
         'allauth.socialaccount.providers.google',
     ]
 
+Add media locations in ``settings.py``:
+
+.. code-block:: python
+
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
+
 Add the URLs to your main ``urls.py``:
 
 .. code-block:: python
 
+    from openwisp_radius.urls import get_urls
+
     urlpatterns = [
         # ... other urls in your project ...
-
         # openwisp-radius urls
-        # keep the namespace argument unchanged
-        url(r'^', include('openwisp_radius.urls', namespace='radius')),
+        path('accounts/', include('openwisp_users.accounts.urls')),
+        path('', include('openwisp_radius.urls')),
+        path('', include((get_urls(), 'radius'), namespace='radius',)),
     ]
 
 Then run:

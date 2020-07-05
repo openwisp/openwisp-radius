@@ -1,8 +1,3 @@
-import csv
-import io
-
-from django.core.files.uploadedfile import SimpleUploadedFile
-
 from ..utils import load_model
 from . import FileMixin
 from .mixins import BaseTestCase
@@ -11,17 +6,6 @@ RadiusBatch = load_model('RadiusBatch')
 
 
 class TestCSVUpload(FileMixin, BaseTestCase):
-    def _get_csvfile(self, rows):
-        output = io.StringIO()
-        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
-        for row in rows:
-            writer.writerow(row)
-        return SimpleUploadedFile(
-            'test.csv',
-            bytes(output.getvalue(), encoding='utf8'),
-            content_type='text/csv',
-        )
-
     def test_generate_username_from_email(self):
         reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
         batch = self._create_radius_batch(

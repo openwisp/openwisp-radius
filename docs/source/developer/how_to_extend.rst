@@ -311,12 +311,13 @@ monkey patching, you can proceed as follows:
 
     urlpatterns = [
         # ... other urls in your project ...
-        url(r'^admin/', admin.site.urls),
+        path('admin/', admin.site.urls),
         # openwisp-radius urls
-        url(r'^accounts/', include('openwisp_users.accounts.urls')),
+        path('accounts/', include('openwisp_users.accounts.urls')),
+        path('', include('openwisp_radius.urls')),
         # Use only when extending views (dicussed below)
-        # url(r'^', include((get_urls(api_views, social_views), 'radius'),namespace='radius',)),
-        url(r'^', include('openwisp_radius.urls', namespace='radius')), <-- Remove when extending views
+        # path('', include((get_urls(api_views, social_views), 'radius'), namespace='radius')),
+        path('', include((get_urls(), 'radius'), namespace='radius',)), # Remove when extending views
     ]
 .. note::
     For more information about URL configuration in django, please refer to the

@@ -25,8 +25,7 @@ jslint ./openwisp_radius/static/openwisp-radius/js/*.js
 echo ''
 echo 'Running checks for openwisp-radius'
 openwisp-qa-check \
-        --migration-path "./openwisp_radius/migrations" \
-        --migration-module openwisp_radius
+        --migration-path "./openwisp_radius/migrations"
 
 echo ''
 echo 'Running checks for SAMPLE_APP'
@@ -37,5 +36,5 @@ SAMPLE_APP=1 openwisp-qa-check \
         --skip-checkmigrations \
         --skip-checkendline \
         --skip-checkcommit \
-        --migration-path "./tests/openwisp2/sample_radius/migrations" \
-        --migration-module sample_radius
+        --migration-path "./tests/openwisp2/sample_radius/migrations
+                          ./tests/openwisp2/sample_users/migrations"

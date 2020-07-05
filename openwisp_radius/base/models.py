@@ -22,6 +22,8 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from jsonfield import JSONField
 from passlib.hash import lmhash, nthash, sha512_crypt
+from private_storage.fields import PrivateFileField
+from private_storage.storage.files import PrivateFileSystemStorage
 
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
@@ -781,6 +783,15 @@ class AbstractRadiusPostAuth(OrgMixin, models.Model):
         return str(self.username)
 
 
+_get_csv_file_private_storage = PrivateFileSystemStorage(
+    location=settings.PRIVATE_STORAGE_ROOT, base_url='/radiusbatch/csv/',
+)
+
+
+def _get_csv_file_location(instance, filename):
+    return os.path.join(str(instance.organization.pk), filename)
+
+
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     strategy = models.CharField(
         _('strategy'),
@@ -802,11 +813,14 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         related_name='radius_batch',
         help_text=_('List of users uploaded in this batch'),
     )
-    csvfile = models.FileField(
+    csvfile = PrivateFileField(
         null=True,
         blank=True,
         verbose_name='CSV',
+        storage=_get_csv_file_private_storage,
+        upload_to=_get_csv_file_location,
         help_text=_('The csv file containing the user details to be uploaded'),
+        max_file_size=app_settings.MAX_CSV_FILE_SIZE,
     )
     prefix = models.CharField(
         _('prefix'),
