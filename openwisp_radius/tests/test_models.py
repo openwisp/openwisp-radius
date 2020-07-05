@@ -487,7 +487,7 @@ class TestRadiusBatch(BaseTestCase):
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):
-        reader = [['', 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
+        reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
         )
