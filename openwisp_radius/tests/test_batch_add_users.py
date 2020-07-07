@@ -7,7 +7,7 @@ RadiusBatch = load_model('RadiusBatch')
 
 class TestCSVUpload(FileMixin, BaseTestCase):
     def test_generate_username_from_email(self):
-        reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
+        reader = [['', 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
         )
@@ -28,7 +28,7 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         cleartext_password = 'cleartext$password'
         reader = [
             ['rohith', cleartext_password, 'rohith@openwisp.com', 'Rohith', 'ASRK'],
-            ['rohith', hashed_password, 'rohith@openwisp.org', "", ""],
+            ['rohith', hashed_password, 'rohith@openwisp.org', '', ''],
         ]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
@@ -41,7 +41,7 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         self.assertIn('rohith1', users)
 
     def test_generate_password(self):
-        reader = [['rohith', "", 'rohith@openwisp.com', "", ""]]
+        reader = [['rohith', '', 'rohith@openwisp.com', '', '']]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
         )

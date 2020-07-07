@@ -264,7 +264,7 @@ class TestAdmin(
 
     def test_radiuscheck_create_weak_passwd(self):
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
-        _RADCHECK['new_value'] = ""
+        _RADCHECK['new_value'] = ''
         resp = self.client.post(
             reverse('admin:{0}_radiuscheck_add'.format(self.app_label)),
             _RADCHECK,
@@ -356,15 +356,15 @@ class TestAdmin(
             'type': 'Virtual',
             'ports': '12',
             'secret': 'testing123',
-            'server': "",
-            'community': "",
+            'server': '',
+            'community': '',
             'description': 'test',
         }
         nas = self._create_nas(**options)
         change_url = reverse(
             'admin:{0}_nas_change'.format(self.app_label), args=[nas.pk]
         )
-        options['custom_type'] = ""
+        options['custom_type'] = ''
         options['type'] = 'Other'
         options['organization'] = str(self.default_org.pk)
         options = self._get_post_defaults(options)
@@ -552,8 +552,8 @@ class TestAdmin(
                 'strategy': 'prefix',
                 'prefix': 'test_prefix16',
                 'name': 'test_name',
-                'csvfile': "",
-                'number_of_users': "",
+                'csvfile': '',
+                'number_of_users': '',
             },
         )
         self.assertEqual(response.status_code, 200)

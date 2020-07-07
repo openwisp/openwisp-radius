@@ -395,9 +395,7 @@ class TestRadiusGroup(BaseTestCase):
             self.assertIn('organization', e.message_dict)
         except Exception as e:
             name = e.__class__.__name__
-            self.fail(
-                'ValidationError not raised, ' 'got "{}: {}" instead'.format(name, e)
-            )
+            self.fail(f'ValidationError not raised, got {name}: {e} instead')
         else:
             self.fail('ValidationError not raised')
 
@@ -452,7 +450,7 @@ class TestRadiusBatch(BaseTestCase):
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):
-        reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
+        reader = [['', 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
         )

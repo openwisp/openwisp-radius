@@ -378,10 +378,10 @@ class DispatchOrgMixin(object):
         return super().dispatch(*args, **kwargs)
 
     def validate_membership(self, user):
-        if not (user.is_superuser or (self.organization.pk,) in user.organizations_pk):
+        if not (user.is_superuser or user.is_member(self.organization)):
             message = _(
                 f'User {user.username} is not member of '
-                f'organization {self.organization.pk}'
+                f'organization {self.organization.slug}'
             )
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
