@@ -37,7 +37,7 @@ class RedirectCaptivePageView(View):
             org = Organization.objects.get(slug=slug)
         except Organization.DoesNotExist:
             raise Http404()
-        is_member = (org.pk,) in user.organizations_pk
+        is_member = user.is_member(org)
         # to avoid this, we should fix this:
         # https://github.com/openwisp/openwisp-users/issues/34
         if user.is_staff and not is_member:

@@ -46,7 +46,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
     def test_invalid_token(self):
         self._get_org_user()
-        auth_header = self.auth_header.replace(' ', "")  # removes spaces in token
+        auth_header = self.auth_header.replace(' ', '')  # removes spaces in token
         response = self.client.post(
             reverse('radius:authorize'),
             {'username': 'tester', 'password': 'tester'},
@@ -124,7 +124,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = self.client.post(
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
         )
-        params['password'] = ""
+        params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data, None)
@@ -134,7 +134,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         params = self._get_postauth_params()
         post_url = '{}{}'.format(reverse('radius:postauth'), self.token_querystring)
         response = self.client.post(post_url, params)
-        params['password'] = ""
+        params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data, None)
@@ -156,8 +156,8 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_postauth_reject_201_empty_fields(self):
         params = {
             'reply': 'Access-Reject',
-            'called_station_id': "",
-            'calling_station_id': "",
+            'called_station_id': '',
+            'calling_station_id': '',
         }
         params = self._get_postauth_params(**params)
         response = self.client.post(
@@ -190,7 +190,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     }
     _acct_post_data = {
         'username': 'admin',
-        'realm': "",
+        'realm': '',
         'nas_port_id': '1',
         'nas_port_type': 'Async',
         'session_time': '261',
@@ -294,19 +294,19 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             'session_id': '5a4f59aa00000001',
             'unique_id': 'd11a8069e261040d8b01b9135bdb8dc9',
             'username': 'username',
-            'realm': "",
+            'realm': '',
             'nas_ip_address': '192.168.182.1',
             'nas_port_id': '1',
             'nas_port_type': 'Wireless-802.11',
-            'session_time': "",
-            'authentication': "",
-            'input_octets': "",
-            'output_octets': "",
+            'session_time': '',
+            'authentication': '',
+            'input_octets': '',
+            'output_octets': '',
             'called_station_id': 'C0-4A-00-EE-D1-0D',
             'calling_station_id': 'A4-02-B9-D3-FD-29',
-            'terminate_cause': "",
-            'service_type': "",
-            'framed_protocol': "",
+            'terminate_cause': '',
+            'service_type': '',
+            'framed_protocol': '',
             'framed_ip_address': '192.168.182.3',
             'framed_ipv6_address': '::ffff:c0a8:b603',
             'framed_ipv6_prefix': '0::/64',
@@ -627,27 +627,27 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
             'status_type': 'Accounting-On',
-            'session_id': "",
+            'session_id': '',
             'unique_id': '569533dad629d47d8b122826d3ed7f3d',
-            'username': "",
-            'realm': "",
+            'username': '',
+            'realm': '',
             'nas_ip_address': '192.168.182.1',
-            'nas_port_id': "",
+            'nas_port_id': '',
             'nas_port_type': 'Wireless-802.11',
-            'session_time': "",
-            'authentication': "",
-            'input_octets': "",
-            'output_octets': "",
+            'session_time': '',
+            'authentication': '',
+            'input_octets': '',
+            'output_octets': '',
             'called_station_id': 'C0-4A-00-EE-D1-0D',
             'calling_station_id': '00-00-00-00-00-00',
-            'terminate_cause': "",
-            'service_type': "",
-            'framed_protocol': "",
-            'framed_ip_address': "",
-            'framed_ipv6_address': "",
-            'framed_ipv6_prefix': "",
-            'framed_interface_id': "",
-            'delegated_ipv6_prefix': "",
+            'terminate_cause': '',
+            'service_type': '',
+            'framed_protocol': '',
+            'framed_ip_address': '',
+            'framed_ipv6_address': '',
+            'framed_ipv6_prefix': '',
+            'framed_interface_id': '',
+            'delegated_ipv6_prefix': '',
         }
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
@@ -660,27 +660,27 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
             'status_type': 'Accounting-Off',
-            'session_id': "",
+            'session_id': '',
             'unique_id': '569533dad629d47d8b122826d3ed7f3d',
-            'username': "",
-            'realm': "",
+            'username': '',
+            'realm': '',
             'nas_ip_address': '192.168.182.1',
-            'nas_port_id': "",
+            'nas_port_id': '',
             'nas_port_type': 'Wireless-802.11',
-            'session_time': "",
-            'authentication': "",
-            'input_octets': "",
-            'output_octets': "",
+            'session_time': '',
+            'authentication': '',
+            'input_octets': '',
+            'output_octets': '',
             'called_station_id': 'C0-4A-00-EE-D1-0D',
             'calling_station_id': '00-00-00-00-00-00',
             'terminate_cause': '0',
-            'service_type': "",
-            'framed_protocol': "",
-            'framed_ip_address': "",
-            'framed_ipv6_address': "",
-            'framed_ipv6_prefix': "",
-            'framed_interface_id': "",
-            'delegated_ipv6_prefix': "",
+            'service_type': '',
+            'framed_protocol': '',
+            'framed_ip_address': '',
+            'framed_ipv6_address': '',
+            'framed_ipv6_prefix': '',
+            'framed_interface_id': '',
+            'delegated_ipv6_prefix': '',
         }
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
@@ -689,7 +689,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
     def test_batch_bad_request_400(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
-        data = {'name': "", 'strategy': 'prefix', 'number_of_users': -1, 'prefix': ""}
+        data = {'name': '', 'strategy': 'prefix', 'number_of_users': -1, 'prefix': ''}
         response = self.client.post(
             reverse('radius:batch'), data, HTTP_AUTHORIZATION=self.auth_header
         )
@@ -739,9 +739,9 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             'strategy': 'prefix',
             'prefix': 'test-prefix14',
             'name': 'test_name',
-            'csvfile': "",
-            'number_of_users': "",
-            'modified': "",
+            'csvfile': '',
+            'number_of_users': '',
+            'modified': '',
         }
         response = self.client.post(
             reverse('radius:batch'), data, HTTP_AUTHORIZATION=self.auth_header
@@ -789,7 +789,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         radius_token = RadiusToken.objects.get()
         self.assertEqual(r.data['radius_user_token'], radius_token.key)
         user = User.objects.get(email=self._test_email)
-        self.assertIn((self.default_org.pk,), user.organizations_pk)
+        self.assertTrue(user.organizations_dict.get(str(self.default_org.pk), False))
         self.assertTrue(user.is_active)
 
     def test_register_error_missing_radius_settings(self):
@@ -839,7 +839,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             },
         )
         self.assertEqual(r.status_code, 201)
-        self.assertEqual(r.data['detail'], "Verification e-mail sent.")
+        self.assertEqual(r.data['detail'], 'Verification e-mail sent.')
 
     @override_settings(REST_USE_JWT=True)
     def test_registration_with_jwt(self):
@@ -894,7 +894,9 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         for user in users:
             test_user = User.objects.get(pk=user['id'])
             with self.subTest(test_user=test_user):
-                self.assertIn((self.default_org.pk,), test_user.organizations_pk)
+                self.assertTrue(
+                    test_user.organizations_dict.get(str(self.default_org.pk), False)
+                )
 
     def test_api_batch_pdf_link(self):
         post_url = f'{reverse("radius:batch")}{self.token_querystring}'
@@ -1028,7 +1030,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            "The two password fields didn’t match.",
+            'The two password fields didn’t match.',
             str(response.data['new_password2']).replace("'", "’"),
         )
 
@@ -1289,9 +1291,9 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
             f'/api/v1/accounting/{self.token_querystring}',
             {
                 'status_type': 'Start',
-                'session_time': "",
-                'input_octets': "",
-                'output_octets': "",
+                'session_time': '',
+                'input_octets': '',
+                'output_octets': '',
                 'nas_ip_address': '127.0.0.1',
                 'session_id': '48484',
                 'unique_id': '1515151',
@@ -1325,9 +1327,9 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
             url,
             {
                 'status_type': 'Start',
-                'session_time': "",
-                'input_octets': "",
-                'output_octets': "",
+                'session_time': '',
+                'input_octets': '',
+                'output_octets': '',
                 'nas_ip_address': '127.0.0.1',
                 'session_id': '48484',
                 'unique_id': '1515151',
@@ -1483,7 +1485,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
 
     def test_sms_phone_required(self):
         radius_settings = OrganizationRadiusSettings(
-            organization=self.org, sms_verification=True, sms_sender=""
+            organization=self.org, sms_verification=True, sms_sender=''
         )
         try:
             radius_settings.full_clean()
@@ -1548,7 +1550,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('key', r.data)
         self.assertEqual(User.objects.count(), 2)
         user = User.objects.get(email=self._test_email)
-        self.assertIn((self.default_org.pk,), user.organizations_pk)
+        self.assertTrue(user.organizations_dict.get(str(self.default_org.pk), False))
         self.assertEqual(user.phone_number, phone_number)
         self.assertFalse(user.is_active)
 

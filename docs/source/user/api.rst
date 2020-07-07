@@ -216,7 +216,9 @@ traversing with pagination <https://developer.github.com/v3/guides/traversing-wi
       ....
     }
 
-Note: Default page size is 10, which can be overridden using the `page_size` parameter.
+.. note::
+    Default page size is 10, which can be overridden using
+    the `page_size` parameter.
 
 Filters
 +++++++
