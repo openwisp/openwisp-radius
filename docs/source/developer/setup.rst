@@ -124,8 +124,7 @@ Add the URLs to your main ``urls.py``:
         # ... other urls in your project ...
         # openwisp-radius urls
         path('accounts/', include('openwisp_users.accounts.urls')),
-        path('', include('openwisp_radius.urls')),
-        path('', include((get_urls(), 'radius'), namespace='radius',)),
+        path('', include('openwisp_radius.urls', namespace='radius'))
     ]
 
 Then run:

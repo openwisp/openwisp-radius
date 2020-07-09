@@ -458,7 +458,9 @@ class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
         super().setUp()
 
     def _download_csv_file_status(self, status_code):
-        response = self.client.get(reverse('serve_private_file', args=[self.csvfile],))
+        response = self.client.get(
+            reverse('radius:serve_private_file', args=[self.csvfile],)
+        )
         self.assertEqual(response.status_code, status_code)
 
     def test_unauthenticated_user(self):

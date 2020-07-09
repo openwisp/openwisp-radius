@@ -2,7 +2,7 @@ from django.urls import include, path
 
 from . import settings as app_settings
 from .api.urls import get_api_urls
-from .views import rad_batch_csv_download_view
+from .private_storage.views import rad_batch_csv_download_view
 
 
 def get_urls(api_views=None, social_views=None):
@@ -14,7 +14,14 @@ def get_urls(api_views=None, social_views=None):
     """
     if not social_views:
         from .social import views as social_views
-    urls = [path('api/v1/', include(get_api_urls(api_views)))]
+    urls = [
+        path('api/v1/', include(get_api_urls(api_views))),
+        path(
+            'radiusbatch/csv/<path:csvfile>',
+            rad_batch_csv_download_view,
+            name='serve_private_file',
+        ),
+    ]
     if app_settings.SOCIAL_LOGIN_ENABLED:
         urls.append(
             path(
@@ -26,10 +33,5 @@ def get_urls(api_views=None, social_views=None):
     return urls
 
 
-urlpatterns = [
-    path(
-        'radiusbatch/csv/<path:csvfile>',
-        rad_batch_csv_download_view,
-        name='serve_private_file',
-    ),
-]
+app_name = 'radius'
+urlpatterns = get_urls()

@@ -513,9 +513,8 @@ OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
 # avoid cluttering the admin with too many models, leave only the
 # minimum required to configure social login and check if it's working
 if app_settings.SOCIAL_LOGIN_ENABLED:
+    from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
     from django.apps import apps
-    from allauth.socialaccount.admin import SocialApp, SocialAppAdmin
-    from allauth.socialaccount.admin import SocialAccount
 
     class SocialAccountInline(admin.StackedInline):
         model = SocialAccount

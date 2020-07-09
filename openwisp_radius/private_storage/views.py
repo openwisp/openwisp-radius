@@ -1,7 +1,7 @@
 from private_storage.views import PrivateStorageDetailView
 
-from .base.models import _get_csv_file_private_storage
-from .utils import load_model
+from ..base.models import _get_csv_file_private_storage
+from ..utils import load_model
 
 
 class RadiusBatchCsvDownloadView(PrivateStorageDetailView):
