@@ -7,7 +7,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('openwisp_radius', '0009_radbatch_user_credentials_field'),
+        ('openwisp_radius', '0010_csv_private_storage'),
     ]
 
     operations = [

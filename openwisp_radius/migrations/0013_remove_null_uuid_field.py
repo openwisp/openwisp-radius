@@ -7,7 +7,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('openwisp_radius', '0011_populate_uuid_field'),
+        ('openwisp_radius', '0012_populate_uuid_field'),
     ]
 
     operations = [
@@ -79,5 +79,24 @@ class Migration(migrations.Migration):
                 unique=True,
                 verbose_name='accounting unique ID',
             ),
+        ),
+        migrations.RenameField(model_name='nas', old_name='uuid', new_name='id',),
+        migrations.RenameField(
+            model_name='radiuscheck', old_name='uuid', new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiusgroupcheck', old_name='uuid', new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiusgroupreply', old_name='uuid', new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiuspostauth', old_name='uuid', new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiusreply', old_name='uuid', new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiususergroup', old_name='uuid', new_name='id',
         ),
     ]
