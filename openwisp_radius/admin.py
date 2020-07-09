@@ -50,7 +50,7 @@ class OrganizationFirstMixin(MultitenantAdminMixin):
 
 
 class TimeStampedEditableAdmin(TimeReadonlyAdminMixin, ModelAdmin):
-    pass
+    ordering = ['created']
 
 
 @admin.register(RadiusCheck)
@@ -162,6 +162,7 @@ class RadiusAccountingAdmin(OrganizationFirstMixin, BaseAccounting):
         'nas_ip_address',
     ]
     list_filter = ['start_time', 'stop_time', ('organization', MultitenantOrgFilter)]
+    ordering = ['-start_time']
 
 
 @admin.register(Nas)
@@ -354,6 +355,7 @@ class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
     ]
     search_fields = ['username', 'reply', 'calling_station_id', 'called_station_id']
     exclude = ['id']
+    ordering = ['-date']
 
 
 @admin.register(RadiusBatch)
