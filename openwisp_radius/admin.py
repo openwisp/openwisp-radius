@@ -353,6 +353,7 @@ class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
         ('organization', MultitenantOrgFilter),
     ]
     search_fields = ['username', 'reply', 'calling_station_id', 'called_station_id']
+    exclude = ['id']
 
 
 @admin.register(RadiusBatch)
