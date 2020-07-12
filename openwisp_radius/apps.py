@@ -11,7 +11,7 @@ from .receivers import (
     organization_pre_save,
     set_default_group_handler,
 )
-from .utils import update_user_related_records
+from .utils import load_model, update_user_related_records
 
 
 class OpenwispRadiusConfig(AppConfig):
@@ -24,9 +24,10 @@ class OpenwispRadiusConfig(AppConfig):
         self.add_default_menu_items()
 
     def connect_signals(self):
-        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
         Organization = swapper.load_model('openwisp_users', 'Organization')
-        RadiusToken = swapper.load_model('openwisp_radius', 'RadiusToken')
+        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+        OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+        RadiusToken = load_model('RadiusToken')
         User = get_user_model()
 
         post_save.connect(
@@ -59,8 +60,24 @@ class OpenwispRadiusConfig(AppConfig):
             sender=RadiusToken,
             dispatch_uid='openwisp_radius_radiustoken_post_delete',
         )
+        post_save.connect(
+            self.radiusorgsettings_post_save,
+            sender=OrganizationRadiusSettings,
+            dispatch_uid='openwisp_radius_organizationradiussettings_post_save',
+        )
+        post_delete.connect(
+            self.radiusorgsettings_post_delete,
+            sender=OrganizationRadiusSettings,
+            dispatch_uid='openwisp_radius_organizationradiussettings_post_delete',
+        )
 
     def radiustoken_post_delete(self, instance, **kwargs):
+        instance.delete_cache()
+
+    def radiusorgsettings_post_save(self, instance, **kwargs):
+        instance.save_cache()
+
+    def radiusorgsettings_post_delete(self, instance, **kwargs):
         instance.delete_cache()
 
     def add_default_menu_items(self):

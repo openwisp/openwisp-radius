@@ -114,6 +114,16 @@ Add media locations in ``settings.py``:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
 
+Add allowed freeradius hosts  in ``settings.py``:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
+
+.. note::
+    Read more about `freeradius allowed hosts in settings page
+    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+
 Add the URLs to your main ``urls.py``:
 
 .. code-block:: python

@@ -11,6 +11,12 @@ API endpoints for FreeRADIUS
 
 The following section is dedicated to API endpoints that are designed
 to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
+
+.. important::
+    These endpoints can be consumed only by hosts which have
+    been added to the `freeradius allowed hosts list
+    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+
 There are three methods for request authorization:
 
 1. Radius User token (recommended)

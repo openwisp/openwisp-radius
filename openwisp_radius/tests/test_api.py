@@ -1623,6 +1623,90 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
 
 
+class TestClientIpApi(ApiTokenMixin, BaseTestCase):
+    def setUp(self):
+        self._get_org_user()
+        self.params = {'username': 'tester', 'password': 'tester'}
+        self.fail_msg = (
+            'Request rejected: Client IP address (127.0.0.1) is not in '
+            'the list of IP addresses allowed to consume the freeradius API.'
+        )
+        self.freeradius_hosts_path = 'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS'
+        self.client.post(
+            reverse('radius:user_auth_token', args=[self._get_org().slug]), self.params
+        )
+
+    def test_cache(self):
+        def authorize_and_asset(numOfQueries, ip_list):
+            with self.assertNumQueries(numOfQueries):
+                response = self.client.post(reverse('radius:authorize'), self.params)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+            self.assertEqual(cache.get(f'ip-{org.pk}'), ip_list)
+
+        cache.clear()
+        org = self._get_org()
+        self.assertEqual(cache.get(f'ip-{org.pk}'), None)
+        with self.subTest('Without Cache'):
+            authorize_and_asset(4, [])
+        with self.subTest('With Cache'):
+            authorize_and_asset(2, [])
+        with self.subTest('Organization Settings Updated'):
+            radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+            radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
+            radsetting.save()
+            authorize_and_asset(2, ['127.0.0.1', '192.0.2.0'])
+        with self.subTest('Cache Deleted'):
+            cache.clear()
+            authorize_and_asset(4, ['127.0.0.1', '192.0.2.0'])
+
+    def test_ip_from_setting_valid(self):
+        response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+
+    def test_ip_from_setting_invalid(self):
+        with mock.patch(self.freeradius_hosts_path, ['localhost']):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], self.fail_msg)
+
+    def test_ip_from_radsetting_valid(self):
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(
+                organization=self._get_org()
+            )
+        radsetting.freeradius_allowed_hosts = '127.0.0.1'
+        radsetting.save()
+        response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+
+    def test_ip_from_radsetting_invalid(self):
+        radsetting = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        radsetting.freeradius_allowed_hosts = '127.0.0.500'
+        radsetting.save()
+        with mock.patch(self.freeradius_hosts_path, []):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], self.fail_msg)
+
+    def test_ip_from_radsetting_not_exist(self):
+        org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
+        self._create_org_user(**{'organization': org2})
+        self.client.post(reverse('radius:user_auth_token', args=[org2.slug]))
+        with self.subTest('FREERADIUS_ALLOWED_HOSTS is 127.0.0.1'):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        with self.subTest('Empty Settings'), mock.patch(self.freeradius_hosts_path, []):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.data['detail'], self.fail_msg)
+
+
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
         return reverse('radius:validate_auth_token', args=[self.default_org.slug])

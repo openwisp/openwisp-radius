@@ -1,12 +1,16 @@
+from unittest import mock
+
 import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
 from .. import settings as app_settings
+from ..base.models import _GET_IP_LIST_HELP_TEXT
 from ..utils import load_model
 from . import CallCommandMixin, FileMixin, PostParamsMixin
 from .mixins import BaseTestCase
@@ -19,6 +23,7 @@ RadiusCheck = load_model('RadiusCheck')
 RadiusToken = load_model('RadiusToken')
 RadiusGroup = load_model('RadiusGroup')
 RadiusReply = load_model('RadiusReply')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
@@ -499,6 +504,82 @@ class TestAdmin(
         self.assertEqual(rg.filter(organization=org, default=True).count(), 1)
         self.assertContains(response, 'error')
         self.assertContains(response, 'Cannot proceed with the delete')
+
+    def test_organization_radsettings_freeradius_allowed_hosts(self):
+        org = self._get_org()
+        url = reverse(
+            f'admin:{self.app_label_users}_organization_change', args=[org.pk],
+        )
+        radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+        form_data = org.__dict__
+        form_data.update(
+            {
+                "owner-TOTAL_FORMS": "0",
+                "owner-INITIAL_FORMS": "0",
+                "owner-MIN_NUM_FORMS": "0",
+                "owner-MAX_NUM_FORMS": "1",
+                'radius_settings-TOTAL_FORMS': '1',
+                'radius_settings-INITIAL_FORMS': '1',
+                'radius_settings-MIN_NUM_FORMS': '0',
+                'radius_settings-MAX_NUM_FORMS': '1',
+                'radius_settings-0-token': '12345',
+                'radius_settings-0-sms_sender': '',
+                'radius_settings-0-sms_meta_data': 'null',
+                'radius_settings-0-id': radsetting.pk,
+                'radius_settings-0-organization': org.pk,
+            }
+        )
+        with self.subTest('Return FREERADIUS_ALLOWED_HOSTS back'):
+            form_data.update(
+                {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.1'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            # This should fail when the value of FREERADIUS_ALLOWED_HOSTS is
+            # stored in the model as well.
+            self.assertEqual(radsetting.freeradius_allowed_hosts, '')
+        with self.subTest('Valid IP list'):
+            form_data.update(
+                {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.45'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.freeradius_allowed_hosts, '127.0.0.45')
+        with self.subTest('Empty IP list with FREERADIUS_ALLOWED_HOSTS'):
+            form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.freeradius_allowed_hosts, '')
+        with self.subTest('Empty IP list without FREERADIUS_ALLOWED_HOSTS'):
+            with mock.patch('openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', []):
+                response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Cannot be empty when the settings value for '
+                    '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
+                ),
+            )
+        with self.subTest('Invalid IP list'):
+            form_data.update(
+                {'radius_settings-0-freeradius_allowed_hosts': '123.246.512.12'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Invalid input. Please enter valid ip addresses '
+                    'separated by comma. (no spaces)'
+                ),
+            )
+
+    def test_radsettings_freeradius_allowed_hosts_help_text(self):
+        url = reverse(f'admin:{self.app_label_users}_organization_add')
+        response = self.client.get(url)
+        self.assertContains(response, _GET_IP_LIST_HELP_TEXT)
 
     def test_radius_group_delete_selected_non_default(self):
         url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')

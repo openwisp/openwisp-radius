@@ -22,7 +22,7 @@ from . import settings as app_settings
 from .base.admin_actions import disable_action, enable_action
 from .base.admin_filters import DuplicateListFilter, ExpiredListFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
-from .base.models import _encode_secret
+from .base.models import _GET_IP_LIST_HELP_TEXT, _encode_secret
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -493,15 +493,36 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
 UserAdminInline.inlines += [RadiusUserGroupInline, PhoneTokenInline]
 
 
+class AllowedHostsField(forms.CharField):
+    def prepare_value(self, value):
+        if not value:
+            value = ','.join(app_settings.FREERADIUS_ALLOWED_HOSTS)
+        return super().prepare_value(value)
+
+
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
-    pass
+    freeradius_allowed_hosts = AllowedHostsField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
+        help_text=_GET_IP_LIST_HELP_TEXT,
+    )
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
     form = AlwaysHasChangedForm
     fieldsets = (
-        (None, {'fields': ('token', 'sms_verification', 'sms_sender')}),
+        (
+            None,
+            {
+                'fields': (
+                    'token',
+                    'freeradius_allowed_hosts',
+                    'sms_verification',
+                    'sms_sender',
+                )
+            },
+        ),
         (
             _('Advanced options'),
             {'classes': ('collapse',), 'fields': ('sms_meta_data',)},

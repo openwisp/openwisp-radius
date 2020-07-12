@@ -1,4 +1,5 @@
 import csv
+import ipaddress
 import json
 import logging
 import os
@@ -139,9 +140,12 @@ RADCHECK_PASSWD_TYPE = [
 
 RADCHECK_ATTRIBUTE_TYPES += RADCHECK_PASSWD_TYPE
 
-STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
+_STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
 
 _NOT_BLANK_MESSAGE = _('This field cannot be blank.')
+_GET_IP_LIST_HELP_TEXT = _(
+    'Comma separated list of IP addresses allowed to access freeradius API'
+)
 
 
 class AutoUsernameMixin(object):
@@ -789,7 +793,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     strategy = models.CharField(
         _('strategy'),
         max_length=16,
-        choices=STRATEGIES,
+        choices=_STRATEGIES,
         db_index=True,
         help_text=_('Import users from a CSV or generate using a prefix'),
     )
@@ -1034,8 +1038,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_(
-            'Additional configuration for SMS backend in JSON format, if needed'
+            'Additional configuration for SMS backend in JSON format (optional)'
         ),
+    )
+    freeradius_allowed_hosts = models.TextField(
+        null=True, blank=True, help_text=_GET_IP_LIST_HELP_TEXT,
     )
 
     class Meta:
@@ -1046,6 +1053,13 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     def __str__(self):
         return self.organization.name
 
+    @property
+    def freeradius_allowed_hosts_list(self):
+        addresses = []
+        if self.freeradius_allowed_hosts:
+            addresses = self.freeradius_allowed_hosts.split(',')
+        return addresses
+
     def clean(self):
         if self.sms_verification and not self.sms_sender:
             raise ValidationError(
@@ -1055,15 +1069,44 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
+        self._clean_freeradius_allowed_hosts()
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
+    def _clean_freeradius_allowed_hosts(self):
+        allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
+        settings_allowed_hosts_set = set(app_settings.FREERADIUS_ALLOWED_HOSTS)
+        if not allowed_hosts_set and not settings_allowed_hosts_set:
+            raise ValidationError(
+                {
+                    'freeradius_allowed_hosts': _(
+                        'Cannot be empty when the settings value for '
+                        '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
+                    )
+                }
+            )
+        elif allowed_hosts_set:
+            if allowed_hosts_set == settings_allowed_hosts_set:
+                self.freeradius_allowed_hosts = ''
+            else:
+                try:
+                    for ip_address in allowed_hosts_set:
+                        ipaddress.ip_address(ip_address)
+                except ValueError:
+                    raise ValidationError(
+                        {
+                            'freeradius_allowed_hosts': _(
+                                'Invalid input. Please enter valid ip '
+                                'addresses separated by comma. (no spaces)'
+                            )
+                        }
+                    )
+
+    def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)
+        cache.set(f'ip-{self.organization.pk}', self.freeradius_allowed_hosts_list)
 
-    def delete(self, *args, **kwargs):
-        pk = self.organization.pk
-        super().delete(*args, **kwargs)
-        cache.delete(pk)
+    def delete_cache(self, *args, **kwargs):
+        cache.delete(self.organization.pk)
+        cache.delete(f'ip-{self.organization.pk}')
 
 
 class AbstractPhoneToken(TimeStampedEditableModel):

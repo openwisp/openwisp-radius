@@ -145,6 +145,35 @@ the following to your project ``settings.py``:
         ('cisco', 'Cisco Router'),
     )
 
+``OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``[]``
+
+List of host IP addresses allowed to consume the freeradius
+API endpoints (Authorize, Accounting and Postauth), i.e the value
+of this option should be the IP address of your freeradius
+instance. Example: If your freeradius instance is running on
+the same host machine as OpenWISP, the value should be ``127.0.0.1``.
+Similarly, if your freeradius instance is on a different host in
+the private network, the value should be the private IP of freeradius
+host like ``192.0.2.50``. If your freeradius is on a public network,
+please use the public IP of your freeradius instance.
+
+This value can be overridden per organization in the organization
+change page. You can skip setting this option if you intend to set
+it from organization change page for each organization.
+
+.. image:: /images/freeradius_allowed_hosts.png
+   :alt: Organization change page freeradius settings
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1', '192.0.2.10']
+
+If this option and organization change page option are both
+empty, then all freeradius API requests for the organization
+will return ``403``.
 
 ``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
