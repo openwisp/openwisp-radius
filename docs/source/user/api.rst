@@ -474,9 +474,11 @@ phone_number       string
 Batch user creation
 -------------------
 
+**Requires the user auth token (Bearer Token)**.
+
 .. code-block:: text
 
-    /api/v1/batch/
+    /api/v1/<organization-slug>/radiusbatch/
 
 .. note::
   This API endpoint allows to use the features described in :doc:`/user/importing_users`

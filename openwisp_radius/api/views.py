@@ -42,6 +42,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 from rest_framework.views import APIView
 
+from openwisp_users.api.authentication import BearerAuthentication
+
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
@@ -326,49 +328,6 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
 accounting = AccountingView.as_view()
 
 
-class BatchView(TokenAuthorizationMixin, generics.CreateAPIView):
-    authentication_classes = (TokenAuthentication,)
-    queryset = RadiusBatch.objects.all()
-    serializer_class = RadiusBatchSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            name = serializer.data.get('name')
-            expiration_date = serializer.data.get('expiration_data')
-            strategy = serializer.data.get('strategy')
-            if strategy == 'csv':
-                csvfile = request.FILES['csvfile']
-                options = dict(
-                    name=name,
-                    strategy=strategy,
-                    expiration_date=expiration_date,
-                    csvfile=csvfile,
-                    organization=Organization.objects.get(pk=self.request.auth),
-                )
-                batch = RadiusBatch(**options)
-                batch.csvfile_upload(csvfile)
-                response = RadiusBatchSerializer(batch)
-            elif strategy == 'prefix':
-                prefix = serializer.data.get('prefix')
-                options = dict(
-                    name=name,
-                    strategy=strategy,
-                    expiration_date=expiration_date,
-                    prefix=prefix,
-                    organization=Organization.objects.get(pk=self.request.auth),
-                )
-                batch = RadiusBatch(**options)
-                number_of_users = int(request.data['number_of_users'])
-                batch.prefix_add(prefix, number_of_users)
-                response = RadiusBatchSerializer(batch, context={'request': request})
-            return Response(response.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-batch = BatchView.as_view()
-
-
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
         try:
@@ -385,6 +344,53 @@ class DispatchOrgMixin(object):
             )
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
+
+
+class BatchView(DispatchOrgMixin, generics.CreateAPIView):
+    authentication_classes = (BearerAuthentication,)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+    serializer_class = RadiusBatchSerializer
+
+    def post(self, request, *args, **kwargs):
+        self.validate_membership(request.user)
+        data = request.data.copy()
+        data.update(organization=self.organization.pk)
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+            name = serializer.data.get('name')
+            expiration_date = serializer.data.get('expiration_data')
+            strategy = serializer.data.get('strategy')
+            if strategy == 'csv':
+                csvfile = request.FILES['csvfile']
+                options = dict(
+                    name=name,
+                    strategy=strategy,
+                    expiration_date=expiration_date,
+                    csvfile=csvfile,
+                    organization=self.organization,
+                )
+                batch = RadiusBatch(**options)
+                batch.csvfile_upload(csvfile)
+                response = RadiusBatchSerializer(batch)
+            elif strategy == 'prefix':
+                prefix = serializer.data.get('prefix')
+                options = dict(
+                    name=name,
+                    strategy=strategy,
+                    expiration_date=expiration_date,
+                    prefix=prefix,
+                    organization=self.organization,
+                )
+                batch = RadiusBatch(**options)
+                number_of_users = int(request.data['number_of_users'])
+                batch.prefix_add(prefix, number_of_users)
+                response = RadiusBatchSerializer(batch, context={'request': request})
+            return Response(response.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+batch = BatchView.as_view()
 
 
 class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):

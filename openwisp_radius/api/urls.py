@@ -10,7 +10,6 @@ def get_api_urls(api_views=None):
         path('authorize/', api_views.authorize, name='authorize'),
         path('postauth/', api_views.postauth, name='postauth'),
         path('accounting/', api_views.accounting, name='accounting'),
-        path('batch/', api_views.batch, name='batch'),
         # registration differentiated by organization
         path('<slug:slug>/account/', api_views.register, name='rest_register'),
         # password reset
@@ -62,6 +61,7 @@ def get_api_urls(api_views=None):
             api_views.change_phone_number,
             name='phone_number_change',
         ),
+        path('<slug:slug>/radiusbatch/', api_views.batch, name='batch'),
         path(
             '<slug:slug>/radiusbatch/<uuid:radbatch>/pdf/',
             api_views.download_rad_batch_pdf,
