@@ -1405,6 +1405,9 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
+        self.assertEqual(
+            response.data['username'], RadiusToken.objects.first().user.username,
+        )
 
 
 class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
