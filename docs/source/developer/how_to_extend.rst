@@ -302,8 +302,32 @@ monkey patching, you can proceed as follows:
     class RadiusBatchAdmin(BaseRadiusBatchAdmin):
         # add your changes here
 
-11. Create root URL configuration
+11. Setup Periodic tasks
+------------------------
+
+Some periodic commands are required in production environments to enable certain
+features and facilitate database cleanup:
+
+1. You need to create a `celery configuration file as it's created in example file <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/celery.py>`_.
+
+2. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
+``365`` is given here for ``delete_old_radacct`` in the example settings.
+These arguments are passed to their respective management commands. More information about these parameters can be
+found at the `management commands page </user/management_commands.html>`_.
+
+3. Add the following in your settings.py file::
+
+    CELERY_IMPORTS = ('openwisp_monitoring.device.tasks',)
+
+.. note::
+    Celery tasks do not start with django server and need to be
+    started seperately, please read about running `celery and
+    celery-beat </developer/setup.html#celery-usage>`_ tasks.
+
+12. Create root URL configuration
 ---------------------------------
+
+The root ``url.py`` file should have the following paths (please read the comments):
 
 .. code-block:: python
 
@@ -325,7 +349,7 @@ monkey patching, you can proceed as follows:
     For more information about URL configuration in django, please refer to the
     `"URL dispatcher" section in the django documentation <https://docs.djangoproject.com/en/dev/topics/http/urls/>`_.
 
-12. Import the automated tests
+13. Import the automated tests
 ------------------------------
 
 When developing a custom application based on this module, it's a good
