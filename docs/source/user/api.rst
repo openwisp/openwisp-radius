@@ -248,8 +248,13 @@ obtaining access tokens, validating their phone number, etc.).
   `Organization API Token <#organization-api-token>`_
   described in the beginning of this document.
 
-  Some of them require the sending of the user API access token
-  sent in the form of a "Bearer Token".
+Some endpoints require the sending of the user API access
+token sent in the form of a "Bearer Token", example:
+
+.. code-block:: shell
+
+    curl -H "Authorization: Bearer <user-token>" \
+         'http://localhost:8000/api/v1/default/account/session/'
 
 User Registration
 -----------------
@@ -331,13 +336,6 @@ Allows users to change their password after using the
 .. code-block:: text
 
     /api/v1/<organization-slug>/account/password/change/
-
-Example:
-
-.. code-block:: text
-
-    curl -X POST http://localhost:8000/api/v1/<organization-slug>/account/password/change/ \
-         -H "Authorization: Bearer <user-auth-token>"
 
 Responds only to **POST**.
 

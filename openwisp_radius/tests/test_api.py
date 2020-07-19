@@ -1029,7 +1029,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         token = login_response.json()['key']
 
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token))
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
         # invalid organization
         password_change_url = reverse(
@@ -1047,7 +1047,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             username='test_name1', password='test_password1', email='test1@email.com'
         )
         token1 = Token.objects.create(user=test_user1)
-        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token1))
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token1}')
         password_change_url = reverse(
             'radius:rest_password_change', args=[self.default_org.slug]
         )
@@ -1055,7 +1055,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
 
         # pass1 and pass2 are not equal
-        client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token))
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         password_change_url = reverse(
             'radius:rest_password_change', args=[self.default_org.slug]
         )
@@ -1210,7 +1210,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = self.client.post(
             auth_url, {'username': 'tester', 'password': 'tester'}
         )
-        authorization = 'Token {}'.format(response.data['key'])
+        authorization = f'Bearer {response.data["key"]}'
         stop_time = '2018-03-02T11:43:24.020460+01:00'
         data1 = self.acct_post_data
         data1.update(
@@ -1644,7 +1644,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.test_register_201()
         token = Token.objects.last()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 201)
         phonetoken = PhoneToken.objects.first()
         self.assertIsNotNone(phonetoken)
@@ -1655,7 +1655,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         OrganizationUser.objects.all().delete()
         token = Token.objects.last()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
         self.assertIn('is not member', str(r.data['non_field_errors']))
@@ -1666,7 +1666,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user.save()
         token = Token.objects.create(user=user)
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
         self.assertIn('does not have a phone number', str(r.data['non_field_errors']))
@@ -1677,7 +1677,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         token.user.is_active = True
         token.user.save()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
         self.assertIn('This user is already active', str(r.data['non_field_errors']))
@@ -1686,7 +1686,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
     def test_create_phone_token_400_limit_reached(self):
         self.test_register_201()
         token = Token.objects.last()
-        token_header = 'Token {}'.format(token.key)
+        token_header = f'Bearer {token.key}'
         max_value = app_settings.SMS_TOKEN_MAX_USER_DAILY
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         for n in range(1, max_value + 2):
@@ -1712,7 +1712,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             url,
             json.dumps({'code': phone_token.token}),
             content_type='application/json',
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 200)
         phone_token.refresh_from_db()
@@ -1725,7 +1725,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         OrganizationUser.objects.all().delete()
         token = Token.objects.last()
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
         self.assertIn('is not member', str(r.data['non_field_errors']))
@@ -1738,9 +1738,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token.attempts, 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
-            url,
-            {'code': '123456'},
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
@@ -1762,7 +1760,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(
             url,
             {'code': phone_token.token},
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
@@ -1783,9 +1781,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         max_value = app_settings.SMS_TOKEN_MAX_ATTEMPTS + 1
         for n in range(1, max_value + 2):
             r = self.client.post(
-                url,
-                {'code': '123456'},
-                HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+                url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
             )
             self.assertEqual(r.status_code, 400)
             phone_token.refresh_from_db()
@@ -1815,7 +1811,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(
             url,
             {'code': phone_token.token},
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1828,9 +1824,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(PhoneToken.objects.count(), 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
-            url,
-            {'code': '123456'},
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
@@ -1844,7 +1838,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
-            url, {'code': ''}, HTTP_AUTHORIZATION='Token {}'.format(user_token.key)
+            url, {'code': ''}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}'
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('code', r.data)
@@ -1854,7 +1848,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION='Token {}'.format(user_token.key))
+        r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {user_token.key}')
         self.assertEqual(r.status_code, 400)
         self.assertIn('code', r.data)
 
@@ -1870,7 +1864,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             url,
             json.dumps({'phone_number': new_phone_number}),
             content_type='application/json',
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(phone_token_qs.count(), 2)
@@ -1890,7 +1884,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             url,
             json.dumps({'phone_number': new_phone_number}),
             content_type='application/json',
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertEqual(phone_token_qs.count(), 1)
@@ -1908,7 +1902,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             url,
             json.dumps({'phone_number': ''}),
             content_type='application/json',
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertEqual(phone_token_qs.count(), 1)
@@ -1925,7 +1919,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(
             url,
             content_type='application/json',
-            HTTP_AUTHORIZATION='Token {}'.format(user_token.key),
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertEqual(phone_token_qs.count(), 1)
