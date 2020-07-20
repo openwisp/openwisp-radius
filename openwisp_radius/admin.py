@@ -235,7 +235,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     select_related = ('organization',)
 
     def get_group_name(self, obj):
-        return obj.name.replace('{}-'.format(obj.organization.slug), "")
+        return obj.name.replace('{}-'.format(obj.organization.slug), '')
 
     get_group_name.short_description = _('Group name')
 

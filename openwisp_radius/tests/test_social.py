@@ -66,8 +66,8 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
             u.username, token.key, rad_token.key
         )
         self.assertIn(querystring, r.url)
-        u = User.objects.filter(username='socialuser').first()
-        self.assertIn((self.default_org.pk,), u.organizations_pk)
+        user = User.objects.filter(username='socialuser').first()
+        self.assertTrue(user.is_member(self.default_org))
 
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()

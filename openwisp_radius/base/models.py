@@ -1019,7 +1019,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_(
-            'Additional configuration for SMS ' 'backend in JSON format, if needed'
+            'Additional configuration for SMS backend in JSON format, if needed'
         ),
     )
 
@@ -1036,7 +1036,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             raise ValidationError(
                 {
                     'sms_sender': _(
-                        'if SMS verification is enabled ' 'this field is required.'
+                        'if SMS verification is enabled this field is required.'
                     )
                 }
             )
@@ -1077,7 +1077,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             logger.warning('user {} is already active'.format(self.user))
             raise ValidationError(_('This user is already active.'))
         if not self.user.phone_number:
-            logger.warning('user {} does not have a ' 'phone number'.format(self.user))
+            logger.warning('user {} does not have a phone number'.format(self.user))
             raise ValidationError(_('This user does not have a phone number.'))
         date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
@@ -1087,7 +1087,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
             logger.warning(
-                'user {} has reached the maximum ' 'daily SMS limit'.format(self.user)
+                'user {} has reached the maximum daily SMS limit'.format(self.user)
             )
             raise ValidationError(_('Maximum daily limit reached.'))
         # limit generation of tokens per day by ip
@@ -1100,7 +1100,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
             raise ValidationError(
-                _('Maximum daily limit reached ' 'from this ip address.')
+                _('Maximum daily limit reached from this ip address.')
             )
 
     def save(self, *args, **kwargs):
@@ -1115,7 +1115,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         org_user = OrganizationUser.objects.filter(user=self.user).first()
         if not org_user:
             raise exceptions.NoOrgException(
-                'User {} is not member ' 'of any organization'.format(self.user)
+                'User {} is not member of any organization'.format(self.user)
             )
         org_radius_settings = org_user.organization.radius_settings
         message = _('{} verification code: {}').format(

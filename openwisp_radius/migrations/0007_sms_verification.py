@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 null=True,
                 region=None,
                 help_text=(
-                    'phone number used as sender for ' 'SMS sent by this organization'
+                    'phone number used as sender for SMS sent by this organization'
                 ),
             ),
         ),

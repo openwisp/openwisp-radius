@@ -789,7 +789,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         radius_token = RadiusToken.objects.get()
         self.assertEqual(r.data['radius_user_token'], radius_token.key)
         user = User.objects.get(email=self._test_email)
-        self.assertTrue(user.organizations_dict.get(str(self.default_org.pk), False))
+        self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
 
     def test_register_error_missing_radius_settings(self):
@@ -894,9 +894,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         for user in users:
             test_user = User.objects.get(pk=user['id'])
             with self.subTest(test_user=test_user):
-                self.assertTrue(
-                    test_user.organizations_dict.get(str(self.default_org.pk), False)
-                )
+                self.assertTrue(test_user.is_member(self.default_org))
 
     def test_api_batch_pdf_link(self):
         post_url = f'{reverse("radius:batch")}{self.token_querystring}'
@@ -1553,7 +1551,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('key', r.data)
         self.assertEqual(User.objects.count(), 2)
         user = User.objects.get(email=self._test_email)
-        self.assertTrue(user.organizations_dict.get(str(self.default_org.pk), False))
+        self.assertTrue(user.is_member(self.default_org))
         self.assertEqual(user.phone_number, phone_number)
         self.assertFalse(user.is_active)
 
