@@ -101,7 +101,5 @@ class BaseTestCase(DefaultOrgMixin, TestCase):
             radbatch.delete()
 
     def _superuser_login(self):
-        user = User.objects.create_superuser(
-            username='admin', password='admin', email='test@test.org'
-        )
-        self.client.force_login(user)
+        admin = self._get_admin()
+        self.client.force_login(admin)
