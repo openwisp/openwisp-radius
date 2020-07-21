@@ -94,7 +94,7 @@ class TokenAuthentication(BaseAuthentication):
     def check_organization(self, request):
         if 'organization' in request.data:
             raise AuthenticationFailed(
-                _('setting the organization parameter ' 'explicitly is not allowed')
+                _('setting the organization parameter explicitly is not allowed')
             )
 
     def get_uuid_token(self, request):
@@ -292,9 +292,7 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
             try:
                 user = user_model.objects.get(username=username)
             except User.DoesNotExist:
-                logging.info(
-                    'no corresponding user found ' 'for username: {}'.format(username)
-                )
+                logging.info(f'no corresponding user found for username: {username}')
                 serializer.save()
             else:
                 group = user.radiususergroup_set.order_by('priority').first()
@@ -686,7 +684,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         phone_token = PhoneToken.objects.filter(user=user).order_by('-created').first()
         if not phone_token:
             return self._error_response(
-                _('No verification code found in ' 'the system for this user.')
+                _('No verification code found in the system for this user.')
             )
         try:
             is_valid = phone_token.is_valid(serializer.data['code'])

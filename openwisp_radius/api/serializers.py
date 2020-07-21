@@ -212,7 +212,7 @@ class ChangePhoneNumberSerializer(ErrorDictMixin, serializers.Serializer):
     def validate_phone_number(self, phone_number):
         if self.user.phone_number == phone_number:
             raise serializers.ValidationError(
-                _('The new phone number must be ' 'different than the old one.')
+                _('The new phone number must be different than the old one.')
             )
         return phone_number
 
