@@ -589,8 +589,8 @@ class TestAdmin(
             **{'name': 'inactive org', 'is_active': False, 'slug': 'inactive-org'}
         )
         operator = TestMultitenantAdminMixin()._create_operator()
-        org1.add_user(operator, is_admin=True)
-        inactive.add_user(operator)
+        self._create_org_user(organization=org1, user=operator, is_admin=True)
+        self._create_org_user(organization=inactive, user=operator, is_admin=True)
         user11 = User.objects.create(
             username='user11', password='User_11', email='user11@g.com'
         )
@@ -600,9 +600,9 @@ class TestAdmin(
         user33 = User.objects.create(
             username='user33', password='User_33', email='user33@g.com'
         )
-        org1.add_user(user11)
-        org2.add_user(user22)
-        inactive.add_user(user33)
+        self._create_org_user(organization=org1, user=user11, is_admin=True)
+        self._create_org_user(organization=org2, user=user22, is_admin=True)
+        self._create_org_user(organization=inactive, user=user33, is_admin=True)
         rc1 = RadiusCheck.objects.create(
             username='user1', attribute='NT-Password', value='User_1', organization=org1
         )

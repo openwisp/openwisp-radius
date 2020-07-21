@@ -986,7 +986,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         test_user = User.objects.create_user(
             username='test_name', password='test_password',
         )
-        self.default_org.add_user(test_user)
+        self._create_org_user(organization=self.default_org, user=test_user)
         login_payload = {'username': 'test_name', 'password': 'test_password'}
         login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
@@ -1062,7 +1062,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         test_user = User.objects.create_user(
             username='test_name', password='test_password', email='test@email.com'
         )
-        self.default_org.add_user(test_user)
+        self._create_org_user(organization=self.default_org, user=test_user)
         mail_count = len(mail.outbox)
         reset_payload = {'email': 'test@email.com'}
 

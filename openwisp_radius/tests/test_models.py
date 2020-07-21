@@ -283,7 +283,7 @@ class TestRadiusGroup(BaseTestCase):
         u = get_user_model()(username='test', email='test@test.org', password='test')
         u.full_clean()
         u.save()
-        org.add_user(u)
+        self._create_org_user(organization=org, user=u)
         u.refresh_from_db()
         usergroup_set = u.radiususergroup_set.all()
         self.assertEqual(usergroup_set.count(), 1)

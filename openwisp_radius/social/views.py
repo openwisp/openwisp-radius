@@ -9,6 +9,7 @@ from ..utils import load_model
 
 Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = load_model('RadiusToken')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
 class RedirectCaptivePageView(View):
@@ -44,7 +45,9 @@ class RedirectCaptivePageView(View):
             raise SuspiciousOperation()
         # add user to organization
         if not is_member:
-            org.add_user(user)
+            orgUser = OrganizationUser(organization=org, user=user)
+            orgUser.full_clean()
+            orgUser.save()
 
     def get_redirect_url(self, request):
         """

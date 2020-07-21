@@ -1,3 +1,4 @@
+import swapper
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
 from django.conf import settings
@@ -21,6 +22,7 @@ from .utils import ErrorDictMixin
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 User = get_user_model()
 
 
@@ -191,7 +193,9 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
         except ValidationError as e:
             raise serializers.ValidationError(self._get_error_dict(e))
         user.save()
-        org.add_user(user)
+        orgUser = OrganizationUser(organization=org, user=user)
+        orgUser.full_clean()
+        orgUser.save()
 
 
 class ValidatePhoneTokenSerializer(serializers.Serializer):
