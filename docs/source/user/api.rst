@@ -383,7 +383,7 @@ Validate user auth token
 
 Used to check whether the auth token of a user is valid or not.
 
-Return also the radius user token in the response.
+Return also the radius user token and username in the response.
 
 .. code-block:: text
 

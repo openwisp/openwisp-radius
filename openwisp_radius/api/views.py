@@ -495,12 +495,13 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateA
         response = {'response_code': 'BLANK_OR_INVALID_TOKEN'}
         if request_token:
             try:
-                token = UserToken.objects.get(key=request_token)
+                token = UserToken.objects.select_related('user').get(key=request_token)
                 radius_token = self.get_or_create_radius_token(token.user)
                 response = {
                     'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
                     'auth_token': token.key,
                     'radius_user_token': radius_token.key,
+                    'username': radius_token.user.username,
                 }
                 return Response(response, 200)
             except UserToken.DoesNotExist:
