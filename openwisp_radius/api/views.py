@@ -11,6 +11,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -423,6 +424,10 @@ class RadiusTokenMixin(object):
         radius_token, _ = RadiusToken.objects.get_or_create(user=user)
         return radius_token
 
+    def update_user_last_login(self, user):
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
 
 class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
     authentication_classes = tuple()
@@ -468,6 +473,7 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         user = self.get_user(serializer, *args, **kwargs)
         token, created = UserToken.objects.get_or_create(user=user)
         radius_token = self.get_or_create_radius_token(user)
+        self.update_user_last_login(user)
         context = {'view': self, 'request': request, 'token_login': True}
         serializer = self.serializer_class(instance=token, context=context)
         response = {'radius_user_token': radius_token.key}
@@ -503,6 +509,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateA
                     'radius_user_token': radius_token.key,
                     'username': radius_token.user.username,
                 }
+                self.update_user_last_login(token.user)
                 return Response(response, 200)
             except UserToken.DoesNotExist:
                 pass

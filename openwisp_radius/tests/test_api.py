@@ -16,7 +16,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode
-from django.utils.timezone import now
+from django.utils.timezone import localtime, now
 from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -1376,6 +1376,18 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(r.status_code, 404)
 
+    @freeze_time(_TEST_DATE)
+    def test_user_auth_updates_last_login(self):
+        admin = self._get_admin()
+        login_payload = {'username': 'admin', 'password': 'tester'}
+        login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
+        self.assertEqual(admin.last_login, None)
+        response = self.client.post(login_url, data=login_payload)
+        self.assertEqual(response.status_code, 200)
+        admin.refresh_from_db()
+        self.assertIsNotNone(admin.last_login)
+        self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
+
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
@@ -1408,6 +1420,18 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['username'], RadiusToken.objects.first().user.username,
         )
+
+    @freeze_time(_TEST_DATE)
+    def test_user_auth_updates_last_login(self):
+        admin = self._get_admin()
+        token = Token.objects.create(user=admin)
+        payload = dict(token=token.key)
+        self.assertEqual(admin.last_login, None)
+        response = self.client.post(self._get_url(), payload)
+        self.assertEqual(response.status_code, 200)
+        admin.refresh_from_db()
+        self.assertIsNotNone(admin.last_login)
+        self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
 
 
 class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
