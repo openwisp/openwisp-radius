@@ -886,7 +886,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                 [user_email],
             )
 
-    def csvfile_upload(self, csvfile, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
+    def csvfile_upload(
+        self, csvfile=None, password_length=BATCH_DEFAULT_PASSWORD_LENGTH
+    ):
+        if not csvfile:
+            csvfile = self.csvfile
         csv_data = csvfile.read()
         csv_data = csv_data.decode('utf-8') if isinstance(csv_data, bytes) else csv_data
         reader = csv.reader(StringIO(csv_data), delimiter=',')

@@ -688,12 +688,12 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
         header = f'Bearer {login_response.json()["key"]}'
-        url = reverse('radius:batch', args=[self.default_org])
+        url = reverse('radius:batch')
         return self.client.post(url, data, HTTP_AUTHORIZATION=header)
 
     def test_batch_bad_request_400(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
-        data = {'name': '', 'strategy': 'prefix', 'number_of_users': -1, 'prefix': ''}
+        data = self._radius_batch_prefix_data(number_of_users=-1)
         response = self._radius_batch_post_request(data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(RadiusBatch.objects.count(), 0)
@@ -707,9 +707,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             text2 = text.encode('utf-8')
             file.write(text2)
         with open(path_csv, 'rb') as file:
-            data = self._get_post_defaults(
-                {'name': 'test_csv1', 'strategy': 'csv', 'csvfile': file}
-            )
+            data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
         os.remove(path_csv)
         self.assertEqual(response.status_code, 201)
@@ -719,33 +717,22 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_batch_prefix_201(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         self.assertEqual(User.objects.count(), 0)
-        data = self._get_post_defaults(
-            {
-                'name': 'test',
-                'strategy': 'prefix',
-                'prefix': 'test-prefix13',
-                'number_of_users': 1,
-            }
-        )
-        response = self._radius_batch_post_request(data)
+        response = self._radius_batch_post_request(self._radius_batch_prefix_data())
         self.assertEqual(response.status_code, 201)
         self.assertEqual(RadiusBatch.objects.count(), 1)
-        self.assertEqual(User.objects.count(), 2)
+        self.assertEqual(User.objects.count(), 4)
 
     def test_radius_batch_permissions(self):
         self._get_admin()
         self._create_org_user(user=self._get_operator())
         self._create_org_user(user=self._get_user())
         self.assertEqual(User.objects.count(), 3)
-        data = self._get_post_defaults(
-            {
-                'name': 'test',
-                'strategy': 'prefix',
-                'prefix': 'test-prefix19',
-                'number_of_users': 3,
-            }
-        )
+        data = self._radius_batch_prefix_data()
         add_radbatch_perm = Permission.objects.get(codename='add_radiusbatch')
+        with self.subTest('Test w/o login'):
+            response = self.client.post(reverse('radius:batch'), data)
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(User.objects.count(), 3)
         with self.subTest('Test as superuser'):
             response = self._radius_batch_post_request(data)
             self.assertEqual(response.status_code, 201)
@@ -776,14 +763,9 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             self.assertEqual(User.objects.count(), 9)
 
     def test_api_batch_user_creation_no_users(self):
-        data = {
-            'strategy': 'prefix',
-            'prefix': 'test-prefix14',
-            'name': 'test_name',
-            'csvfile': '',
-            'number_of_users': '',
-            'modified': '',
-        }
+        data = self._radius_batch_prefix_data(
+            **{'csvfile': '', 'number_of_users': '', 'modified': ''}
+        )
         response = self._radius_batch_post_request(data)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'The field number_of_users cannot be empty', response.content)
@@ -920,13 +902,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(data.json()[0]['organization'], str(self.default_org.pk))
 
     def test_api_batch_add_users(self):
-        data = {
-            'name': 'test_name',
-            'prefix': 'test-prefix15',
-            'number_of_users': 5,
-            'strategy': 'prefix',
-        }
-        response = self._radius_batch_post_request(data)
+        response = self._radius_batch_post_request(self._radius_batch_prefix_data())
         users = response.json()['users']
         for user in users:
             test_user = User.objects.get(pk=user['id'])
@@ -934,13 +910,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
                 self.assertTrue(test_user.is_member(self.default_org))
 
     def test_api_batch_pdf_link(self):
-        data = {
-            'name': 'test-prefix18',
-            'prefix': 'test-prefix18',
-            'number_of_users': 5,
-            'strategy': 'prefix',
-        }
-        response = self._radius_batch_post_request(data)
+        response = self._radius_batch_post_request(self._radius_batch_prefix_data())
         pdf_link = response.json()['pdf_link']
         with self.subTest('No Login'):
             pdf_response = self.client.get(pdf_link)
@@ -977,9 +947,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             os.path.dirname(os.path.abspath(__file__)), 'static', 'test_batch.csv'
         )
         with open(path_csv, 'rt') as file:
-            data = self._get_post_defaults(
-                {'name': 'test_csv1', 'strategy': 'csv', 'csvfile': file}
-            )
+            data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
         self.assertEqual(response.status_code, 201)
         response_json = json.loads(response.content)
