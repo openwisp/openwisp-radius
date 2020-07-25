@@ -27,7 +27,6 @@ from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirm
 from rest_auth.views import PasswordResetView as BasePasswordResetView
 from rest_framework import generics, serializers, status
 from rest_framework.authentication import BaseAuthentication, SessionAuthentication
-from rest_framework.authentication import TokenAuthentication as UserTokenAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
@@ -126,7 +125,6 @@ class TokenAuthorizationMixin(object):
 
 
 class AuthorizeView(TokenAuthorizationMixin, APIView):
-    authentication_classes = (TokenAuthentication,)
     accept_attributes = {'control:Auth-Type': 'Accept'}
     accept_status = 200
     reject_attributes = {'control:Auth-Type': 'Reject'}
@@ -194,7 +192,6 @@ authorize = AuthorizeView.as_view()
 
 
 class PostAuthView(TokenAuthorizationMixin, generics.CreateAPIView):
-    authentication_classes = (TokenAuthentication,)
     serializer_class = RadiusPostAuthSerializer
 
     def post(self, request, *args, **kwargs):
@@ -248,7 +245,6 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
           processing the response without generating warnings
     """
 
-    authentication_classes = (TokenAuthentication,)
     queryset = RadiusAccounting.objects.all().order_by('-start_time')
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
@@ -393,7 +389,7 @@ batch = BatchView.as_view()
 
 
 class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):
-    authentication_classes = (UserTokenAuthentication, SessionAuthentication)
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
 
@@ -531,7 +527,7 @@ class UserAccountingFilter(AccountingFilter):
 
 
 class UserAccountingView(DispatchOrgMixin, generics.ListAPIView):
-    authentication_classes = (UserTokenAuthentication, SessionAuthentication)
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
@@ -555,7 +551,7 @@ user_accounting = UserAccountingView.as_view()
 
 
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
-    authentication_classes = (UserTokenAuthentication,)
+    authentication_classes = (BearerAuthentication,)
 
     def post(self, request, *args, **kwargs):
         self.validate_membership(request.user)
@@ -629,11 +625,11 @@ class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
 password_reset_confirm = PasswordResetConfirmView.as_view()
 
 
-class InactiveUserTokenAuthentication(UserTokenAuthentication):
+class InactiveBearerTokenAuthentication(BearerAuthentication):
     """
-    Overrides the default User Token Authentication
-    of Django REST Framework to allow inactive users
-    to authenticate against some specific API endpoints.
+    Overrides the Bearer Authentication of openwisp-users
+    to allow inactive users to authenticate against
+    some specific API endpoints.
     """
 
     def authenticate_credentials(self, key):
@@ -648,7 +644,7 @@ class InactiveUserTokenAuthentication(UserTokenAuthentication):
 class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
-    authentication_classes = (InactiveUserTokenAuthentication,)
+    authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = serializers.Serializer
 
@@ -669,7 +665,7 @@ create_phone_token = CreatePhoneTokenView.as_view()
 
 
 class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
-    authentication_classes = (InactiveUserTokenAuthentication,)
+    authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = ValidatePhoneTokenSerializer
 
@@ -702,7 +698,7 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
 
 
 class ChangePhoneNumberView(CreatePhoneTokenView):
-    authentication_classes = (InactiveUserTokenAuthentication,)
+    authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = ChangePhoneNumberSerializer
 
