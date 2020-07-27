@@ -51,19 +51,20 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
 
     def test_redirect_cp_301(self):
-        u = self._create_social_user()
-        self.client.force_login(u)
+        user = self._create_social_user()
+        self.client.force_login(user)
         url = self.get_url()
         r = self.client.get(url, {'cp': 'http://wifi.openwisp.org/cp'})
         self.assertEqual(r.status_code, 302)
-        qs = Token.objects.filter(user=u)
-        rs = RadiusToken.objects.filter(user=u)
+        qs = Token.objects.filter(user=user)
+        rs = RadiusToken.objects.filter(user=user)
         self.assertEqual(qs.count(), 1)
         self.assertEqual(rs.count(), 1)
         token = qs.first()
         rad_token = rs.first()
-        querystring = 'username={}&token={}&radius_user_token={}'.format(
-            u.username, token.key, rad_token.key
+        querystring = (
+            f'username={user.username}&token={token.key}&'
+            f'radius_user_token={rad_token.key}'
         )
         self.assertIn(querystring, r.url)
         user = User.objects.filter(username='socialuser').first()

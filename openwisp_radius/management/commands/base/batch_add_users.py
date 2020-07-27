@@ -4,6 +4,7 @@ from datetime import datetime
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.management import BaseCommand, CommandError
+from django.utils.translation import gettext_lazy as _
 
 from ....settings import BATCH_DEFAULT_PASSWORD_LENGTH
 from ....utils import load_model
@@ -38,7 +39,7 @@ class BaseBatchAddUsersCommand(BaseCommand):
         try:
             csvfile = open(options['file'], 'rt')
         except IOError:
-            raise CommandError('File does not exist')
+            raise CommandError(_('File does not exist'))
         expiration_date = options['expiration']
         if expiration_date:
             expiration_date = datetime.strptime(expiration_date, '%d-%m-%Y')

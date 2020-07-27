@@ -88,7 +88,7 @@ class TestAdmin(
         )
         obj = self._create_nas(**options)
         response = self.client.get(
-            reverse('admin:{0}_nas_change'.format(self.app_label), args=[obj.pk])
+            reverse(f'admin:{self.app_label}_nas_change', args=[obj.pk])
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -99,9 +99,7 @@ class TestAdmin(
         )
         obj = self._create_radius_reply(**options)
         response = self.client.get(
-            reverse(
-                'admin:{0}_radiusreply_change'.format(self.app_label), args=[obj.pk]
-            )
+            reverse(f'admin:{self.app_label}_radiusreply_change', args=[obj.pk])
         )
 
         self.assertContains(response, 'ok')
@@ -113,10 +111,7 @@ class TestAdmin(
         )
         obj = self._create_radius_groupreply(**options)
         response = self.client.get(
-            reverse(
-                'admin:{0}_radiusgroupreply_change'.format(self.app_label),
-                args=[obj.pk],
-            )
+            reverse(f'admin:{self.app_label}_radiusgroupreply_change', args=[obj.pk],)
         )
 
         self.assertContains(response, 'ok')
@@ -128,10 +123,7 @@ class TestAdmin(
         )
         obj = self._create_radius_groupcheck(**options)
         response = self.client.get(
-            reverse(
-                'admin:{0}_radiusgroupcheck_change'.format(self.app_label),
-                args=[obj.pk],
-            )
+            reverse(f'admin:{self.app_label}_radiusgroupcheck_change', args=[obj.pk],)
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -140,9 +132,7 @@ class TestAdmin(
         options = dict(username='bob', groupname='students', priority='1')
         obj = self._create_radius_usergroup(**options)
         response = self.client.get(
-            reverse(
-                'admin:{0}_radiususergroup_change'.format(self.app_label), args=[obj.pk]
-            )
+            reverse(f'admin:{self.app_label}_radiususergroup_change', args=[obj.pk])
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -165,10 +155,7 @@ class TestAdmin(
         )
         obj = self._create_radius_accounting(**options)
         response = self.client.get(
-            reverse(
-                'admin:{0}_radiusaccounting_change'.format(self.app_label),
-                args=[obj.pk],
-            )
+            reverse(f'admin:{self.app_label}_radiusaccounting_change', args=[obj.pk],)
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -176,7 +163,7 @@ class TestAdmin(
     def test_radiusaccounting_changelist(self):
         original_value = app_settings.EDITABLE_ACCOUNTING
         app_settings.EDITABLE_ACCOUNTING = False
-        url = reverse('admin:{0}_radiusaccounting_changelist'.format(self.app_label))
+        url = reverse(f'admin:{self.app_label}_radiusaccounting_changelist')
         response = self.client.get(url)
         self.assertNotContains(response, 'Add accounting')
         app_settings.EDITABLE_ACCOUNTING = original_value
@@ -186,9 +173,7 @@ class TestAdmin(
             username='gino', password='ciao', reply='ghdhd', date='2017-09-02'
         )
         obj = self._create_radius_postauth(**options)
-        url = reverse(
-            'admin:{0}_radiuspostauth_change'.format(self.app_label), args=[obj.pk]
-        )
+        url = reverse(f'admin:{self.app_label}_radiuspostauth_change', args=[obj.pk])
         response = self.client.get(url)
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -214,9 +199,7 @@ class TestAdmin(
         self._create_radius_check(**_RADCHECK)
         data = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         data['mode'] = 'custom'
-        url = reverse(
-            'admin:{0}_radiuscheck_change'.format(self.app_label), args=[obj.pk]
-        )
+        url = reverse(f'admin:{self.app_label}_radiuscheck_change', args=[obj.pk])
         response = self.client.post(url, data, follow=True)
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -249,7 +232,7 @@ class TestAdmin(
 
     def test_radiusbatch_change_not_contains_pdf_download(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
-        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         data = self._get_csv_post_data()
         response = self.client.post(add_url, data, follow=True)
         self.assertEqual(response.status_code, 200)
@@ -266,9 +249,7 @@ class TestAdmin(
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         _RADCHECK['new_value'] = ''
         resp = self.client.post(
-            reverse('admin:{0}_radiuscheck_add'.format(self.app_label)),
-            _RADCHECK,
-            follow=True,
+            reverse(f'admin:{self.app_label}_radiuscheck_add'), _RADCHECK, follow=True,
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'errors')
@@ -277,7 +258,7 @@ class TestAdmin(
         data = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         data['attribute'] = 'Cleartext-Password'
         data['mode'] = 'custom'
-        url = reverse('admin:{0}_radiuscheck_add'.format(self.app_label))
+        url = reverse(f'admin:{self.app_label}_radiuscheck_add')
         response = self.client.post(url, data, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'errors')
@@ -285,7 +266,7 @@ class TestAdmin(
     def test_radiuscheck_admin_save_model(self):
         obj = self._create_radius_check(**self._RADCHECK_ENTRY)
         change_url = reverse(
-            'admin:{0}_radiuscheck_change'.format(self.app_label), args=[obj.pk]
+            f'admin:{self.app_label}_radiuscheck_change', args=[obj.pk]
         )
         # test admin save_model method
         data = self._RADCHECK_ENTRY_PW_UPDATE.copy()
@@ -306,7 +287,7 @@ class TestAdmin(
     def test_radiuscheck_enable_disable_action(self):
         self._create_radius_check(**self._RADCHECK_ENTRY)
         checks = RadiusCheck.objects.all().values_list('pk', flat=True)
-        change_url = reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label))
+        change_url = reverse(f'admin:{self.app_label}_radiuscheck_changelist')
         data = {'action': 'enable_action', '_selected_action': checks}
         self.client.post(change_url, data, follow=True)
         data = {'action': 'disable_action', '_selected_action': checks}
@@ -317,7 +298,7 @@ class TestAdmin(
         self._create_radius_check(**self._RADCHECK_ENTRY)
         self._create_radius_check(**self._RADCHECK_ENTRY)
         url = (
-            reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label))
+            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?duplicates=username'
         )
         resp = self.client.get(url, follow=True)
@@ -327,7 +308,7 @@ class TestAdmin(
         self._create_radius_check(**self._RADCHECK_ENTRY)
         self._create_radius_check(**self._RADCHECK_ENTRY)
         url = (
-            reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label))
+            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?duplicates=value'
         )
         resp = self.client.get(url, follow=True)
@@ -335,7 +316,7 @@ class TestAdmin(
 
     def test_radiuscheck_filter_expired(self):
         url = (
-            reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label))
+            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?expired=expired'
         )
         resp = self.client.get(url, follow=True)
@@ -343,7 +324,7 @@ class TestAdmin(
 
     def test_radiuscheck_filter_not_expired(self):
         url = (
-            reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label))
+            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?expired=not_expired'
         )
         resp = self.client.get(url, follow=True)
@@ -361,9 +342,7 @@ class TestAdmin(
             'description': 'test',
         }
         nas = self._create_nas(**options)
-        change_url = reverse(
-            'admin:{0}_nas_change'.format(self.app_label), args=[nas.pk]
-        )
+        change_url = reverse(f'admin:{self.app_label}_nas_change', args=[nas.pk])
         options['custom_type'] = ''
         options['type'] = 'Other'
         options['organization'] = str(self.default_org.pk)
@@ -375,7 +354,7 @@ class TestAdmin(
 
     def test_radius_batch_save_model(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
-        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         data = self._get_csv_post_data()
         response = self.client.post(add_url, data, follow=True)
         self.assertEqual(response.status_code, 200)
@@ -383,7 +362,7 @@ class TestAdmin(
         batch = RadiusBatch.objects.first()
         self.assertEqual(batch.users.count(), 3)
         change_url = reverse(
-            'admin:{0}_radiusbatch_change'.format(self.app_label), args=[batch.pk]
+            f'admin:{self.app_label}_radiusbatch_change', args=[batch.pk]
         )
         response = self.client.post(change_url, data, follow=True)
         self.assertEqual(response.status_code, 200)
@@ -401,9 +380,7 @@ class TestAdmin(
         r = self._create_radius_batch(
             name='test', strategy='prefix', prefix='test-prefix5'
         )
-        path = reverse(
-            'admin:{0}_radiusbatch_change'.format(self.app_label), args=[r.pk]
-        )
+        path = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[r.pk])
         response = self.client.get(path)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'field-number_of_users')
@@ -416,9 +393,7 @@ class TestAdmin(
         self._call_command('prefix_add_users', **options)
         self.assertEqual(User.objects.count() - n, 10)
         r = RadiusBatch.objects.first()
-        delete_path = reverse(
-            'admin:{0}_radiusbatch_delete'.format(self.app_label), args=[r.pk]
-        )
+        delete_path = reverse(f'admin:{self.app_label}_radiusbatch_delete', args=[r.pk])
         response = self.client.post(delete_path, {'post': 'yes'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(User.objects.count() - n, 0)
@@ -427,9 +402,7 @@ class TestAdmin(
         options['name'] = 'test2'
         self._call_command('prefix_add_users', **options)
         self.assertEqual(User.objects.count() - n, 20)
-        changelist_path = reverse(
-            'admin:{0}_radiusbatch_changelist'.format(self.app_label)
-        )
+        changelist_path = reverse(f'admin:{self.app_label}_radiusbatch_changelist')
         p_keys = [x.pk for x in RadiusBatch.objects.all()]
         data = {'action': 'delete_selected_batches', '_selected_action': p_keys}
         response = self.client.post(changelist_path, data, follow=True)
@@ -437,7 +410,7 @@ class TestAdmin(
         self.assertEqual(User.objects.count() - n, 0)
 
     def test_radius_batch_csv_help_text(self):
-        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         response = self.client.get(add_url)
         docs_link = (
             'https://openwisp-radius.readthedocs.io/en/latest'
@@ -447,12 +420,12 @@ class TestAdmin(
 
     def test_radiususergroup_inline_user(self):
         app_label = User._meta.app_label
-        add_url = reverse('admin:{}_user_add'.format(app_label))
+        add_url = reverse(f'admin:{app_label}_user_add')
         response = self.client.get(add_url)
         label_id = 'radiususergroup_set-group'
         self.assertNotContains(response, label_id)
         user = User.objects.first()
-        change_url = reverse('admin:{}_user_change'.format(app_label), args=[user.pk])
+        change_url = reverse(f'admin:{app_label}_user_change', args=[user.pk])
         response = self.client.get(change_url)
         self.assertContains(response, label_id)
 
@@ -482,7 +455,7 @@ class TestAdmin(
     def test_radius_group_delete_default_by_superuser(self):
         rg = RadiusGroup.objects
         default = rg.get(default=True)
-        url_name = 'admin:{0}_radiusgroup_delete'.format(self.app_label)
+        url_name = f'admin:{self.app_label}_radiusgroup_delete'
         delete_url = reverse(url_name, args=[default.pk])
         response = self.client.get(delete_url)
         self.assertEqual(rg.filter(default=True).count(), 1)
@@ -500,7 +473,7 @@ class TestAdmin(
             user.user_permissions.add(permission)
         rg = RadiusGroup.objects
         default = rg.get(default=True)
-        url_name = 'admin:{0}_radiusgroup_delete'.format(self.app_label)
+        url_name = f'admin:{self.app_label}_radiusgroup_delete'
         delete_url = reverse(url_name, args=[default.pk])
         response = self.client.get(delete_url)
         self.assertEqual(rg.filter(default=True).count(), 1)
@@ -508,7 +481,7 @@ class TestAdmin(
         org_user.delete()
 
     def test_radius_group_delete_selected_default(self):
-        url = reverse('admin:{0}_radiusgroup_changelist'.format(self.app_label))
+        url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')
         rg = RadiusGroup.objects
         default = rg.get(default=True)
         response = self.client.post(
@@ -527,7 +500,7 @@ class TestAdmin(
         self.assertContains(response, 'Cannot proceed with the delete')
 
     def test_radius_group_delete_selected_non_default(self):
-        url = reverse('admin:{0}_radiusgroup_changelist'.format(self.app_label))
+        url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')
         rg = RadiusGroup.objects
         non_default = rg.get(default=False)
         response = self.client.post(
@@ -545,7 +518,7 @@ class TestAdmin(
         self.assertEqual(rg.filter(default=False).count(), 0)
 
     def test_batch_user_creation_form(self):
-        url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         response = self.client.post(
             url,
             {
@@ -573,7 +546,7 @@ class TestAdmin(
 
     def test_radiusbatch_org_user(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
-        add_url = reverse('admin:{0}_radiusbatch_add'.format(self.app_label))
+        add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         data = self._get_csv_post_data()
         self.client.post(add_url, data, follow=True)
         self.assertEqual(OrganizationUser.objects.all().count(), 3)
@@ -751,7 +724,7 @@ class TestAdmin(
     def test_radiuscheck_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiuscheck_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiuscheck_changelist'),
             visible=[data['rc1'].username, data['org1'].name],
             hidden=[data['rc2'].username, data['org2'].name, data['rc3'].username],
         )
@@ -759,7 +732,7 @@ class TestAdmin(
     def test_radiuscheck_organization_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiuscheck_add'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiuscheck_add'),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
@@ -769,7 +742,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiuscheck_add'.format(self.app_label)), user=True
+                reverse(f'admin:{self.app_label}_radiuscheck_add'), user=True
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -778,7 +751,7 @@ class TestAdmin(
     def test_radiusreply_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusreply_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusreply_changelist'),
             visible=[data['rr1'].username, data['org1'].name],
             hidden=[data['rr2'].username, data['org2'], data['rr3'].username],
         )
@@ -786,7 +759,7 @@ class TestAdmin(
     def test_radiusreply_organization_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusreply_add'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusreply_add'),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
@@ -796,7 +769,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiusreply_add'.format(self.app_label)), user=True
+                reverse(f'admin:{self.app_label}_radiusreply_add'), user=True
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -805,7 +778,7 @@ class TestAdmin(
     def test_radiusgroup_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusgroup_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusgroup_changelist'),
             visible=[data['rg1'].name, data['org1'].name],
             hidden=[data['org2'].name, data['rg2'].name, data['rg3'].name],
         )
@@ -813,7 +786,7 @@ class TestAdmin(
     def test_radiusgroup_organization_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=(reverse('admin:{0}_radiusgroup_add'.format(self.app_label))),
+            url=(reverse(f'admin:{self.app_label}_radiusgroup_add')),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
@@ -822,7 +795,7 @@ class TestAdmin(
     def test_nas_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_nas_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_nas_changelist'),
             visible=[data['nas1'].name, data['org1'].name],
             hidden=[data['nas2'].name, data['org2'].name, data['nas3'].name],
         )
@@ -830,7 +803,7 @@ class TestAdmin(
     def test_nas_organization_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_nas_add'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_nas_add'),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
@@ -839,7 +812,7 @@ class TestAdmin(
     def test_radiusaccounting_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusaccounting_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusaccounting_changelist'),
             visible=[data['ra1'].username, data['org1'].name],
             hidden=[data['ra2'].username, data['org2'].name, data['ra3'].username],
         )
@@ -847,7 +820,7 @@ class TestAdmin(
     def test_radiusbatch_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusbatch_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusbatch_changelist'),
             visible=[data['rb1'].name, data['org1'].name],
             hidden=[data['rb2'].name, data['org2'].name, data['rb3'].name],
         )
@@ -855,7 +828,7 @@ class TestAdmin(
     def test_radiusbatch_organization_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusbatch_add'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusbatch_add'),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
@@ -864,7 +837,7 @@ class TestAdmin(
     def test_radius_usergroup_queryset(self):
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiususergroup_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiususergroup_changelist'),
             visible=[data['ug1'].group, data['ug1'].user],
             hidden=[data['ug2'].group, data['ug2'].user, data['ug3'].user],
         )
@@ -873,8 +846,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiususergroup_add'.format(self.app_label)),
-                group=True,
+                reverse(f'admin:{self.app_label}_radiususergroup_add'), group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -884,8 +856,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiususergroup_add'.format(self.app_label)),
-                user=True,
+                reverse(f'admin:{self.app_label}_radiususergroup_add'), user=True,
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -894,7 +865,7 @@ class TestAdmin(
     def test_radius_groupcheck_queryset(self):
         data = self._create_multitenancy_test_env(groupcheck=True)
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusgroupcheck_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusgroupcheck_changelist'),
             visible=[data['gc1'].group, data['gc1'].attribute],
             hidden=[data['gc2'].group, data['gc2'].attribute, data['gc3']],
         )
@@ -903,8 +874,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(groupcheck=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiusgroupcheck_add'.format(self.app_label)),
-                group=True,
+                reverse(f'admin:{self.app_label}_radiusgroupcheck_add'), group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -913,7 +883,7 @@ class TestAdmin(
     def test_radius_groupreply_queryset(self):
         data = self._create_multitenancy_test_env(groupreply=True)
         self._test_multitenant_admin(
-            url=reverse('admin:{0}_radiusgroupreply_changelist'.format(self.app_label)),
+            url=reverse(f'admin:{self.app_label}_radiusgroupreply_changelist'),
             visible=[data['gr1'].group, data['gr1'].attribute],
             hidden=[data['gr2'].group, data['gr2'].attribute, data['gr3']],
         )
@@ -922,8 +892,7 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(groupreply=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse('admin:{0}_radiusgroupreply_add'.format(self.app_label)),
-                group=True,
+                reverse(f'admin:{self.app_label}_radiusgroupreply_add'), group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],

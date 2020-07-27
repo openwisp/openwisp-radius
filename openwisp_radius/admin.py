@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.templatetags.static import static
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.admin import OrganizationAdmin
 from openwisp_users.admin import UserAdmin as UserAdminInline
@@ -235,7 +235,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     select_related = ('organization',)
 
     def get_group_name(self, obj):
-        return obj.name.replace('{}-'.format(obj.organization.slug), '')
+        return obj.name.replace(f'{obj.organization.slug}-', '')
 
     get_group_name.short_description = _('Group name')
 

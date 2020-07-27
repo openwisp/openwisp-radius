@@ -92,7 +92,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
     def test_authorize_200_querystring(self):
         self._get_org_user()
-        post_url = '{}{}'.format(reverse('radius:authorize'), self.token_querystring)
+        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
         response = self.client.post(
             post_url, {'username': 'tester', 'password': 'tester'}
         )
@@ -132,7 +132,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_postauth_accept_201_querystring(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params()
-        post_url = '{}{}'.format(reverse('radius:postauth'), self.token_querystring)
+        post_url = f'{reverse("radius:postauth")}{self.token_querystring}'
         response = self.client.post(post_url, params)
         params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
@@ -276,7 +276,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         data = self.acct_post_data
         data['status_type'] = 'Start'
         data = self._get_accounting_params(**data)
-        post_url = '{}{}'.format(self._acct_url, self.token_querystring)
+        post_url = f'{self._acct_url}{self.token_querystring}'
         response = self.client.post(
             post_url, json.dumps(data), content_type='application/json'
         )
@@ -466,8 +466,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
         self._create_radius_accounting(**data3)
         response = self.client.get(
-            '{0}?page_size=1&page=1'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=1', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -477,8 +476,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(item['nas_ip_address'], '172.16.64.91')
         self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
         response = self.client.get(
-            '{0}?page_size=1&page=2'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=2', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -488,8 +486,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(item['input_octets'], data2['input_octets'])
         self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
         response = self.client.get(
-            '{0}?page_size=1&page=3'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=3', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -507,8 +504,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         data2.update(dict(username='admin', unique_id='99144d60'))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?username=test_user'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?username=test_user', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -523,7 +519,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         data2.update(dict(called_station_id='C0-CA-40-FE-E1-9D', unique_id='85144d60'))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?called_station_id=E0-CA-40-EE-D1-0D'.format(self._acct_url),
+            f'{self._acct_url}?called_station_id=E0-CA-40-EE-D1-0D',
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
@@ -539,7 +535,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         data2.update(dict(calling_station_id='5c:6d:c2:80:a7:4c', unique_id='85144d60'))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?calling_station_id=4c:8d:c2:80:a7:4c'.format(self._acct_url),
+            f'{self._acct_url}?calling_station_id=4c:8d:c2:80:a7:4c',
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
@@ -558,7 +554,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?start_time={1}'.format(self._acct_url, '2018-03-01'),
+            f'{self._acct_url}?start_time=2018-03-01',
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 2)
@@ -588,7 +584,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?stop_time={1}'.format(self._acct_url, '2018-03-02 21:43:25'),
+            f'{self._acct_url}?stop_time=2018-03-02 21:43:25',
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
@@ -606,16 +602,14 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            '{0}?is_open=true'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?is_open=true', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
         self.assertEqual(item['stop_time'], None)
         response = self.client.get(
-            '{0}?is_open=false'.format(self._acct_url),
-            HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?is_open=false', HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -795,10 +789,10 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertIn(b'The field number_of_users cannot be empty', response.content)
 
     def test_get_authorize_view(self):
-        url = '{}{}'.format(reverse('radius:authorize'), self.token_querystring)
+        url = f'{reverse("radius:authorize")}{self.token_querystring}'
         r = self.client.get(url, HTTP_ACCEPT='text/html')
         self.assertEqual(r.status_code, 405)
-        expected = '<form action="{}'.format(reverse('radius:authorize'))
+        expected = f'<form action="{reverse("radius:authorize")}'
         self.assertIn(expected, r.content.decode())
 
     def test_accounting_start_403(self):
@@ -1249,7 +1243,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self._create_radius_accounting(**data3)
         url = reverse('radius:user_accounting', args=[self.default_org.slug])
         response = self.client.get(
-            '{0}?page_size=1&page=1'.format(url), HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=1', HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1260,7 +1254,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
         self.assertIsNone(item['stop_time'])
         response = self.client.get(
-            '{0}?page_size=1&page=2'.format(url), HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=2', HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1271,7 +1265,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
         self.assertIsNotNone(item['stop_time'])
         response = self.client.get(
-            '{0}?page_size=1&page=3'.format(url), HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=3', HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 404)
@@ -1358,7 +1352,7 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
             groupname='group2', priority=1, username='testgroup2'
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
-        url = '{}{}'.format(reverse('radius:accounting'), self.token_querystring)
+        url = f'{reverse("radius:accounting")}{self.token_querystring}'
         self.client.post(
             url,
             {
@@ -1501,8 +1495,8 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             token='12345', organization=self.org
         )
         self._get_org_user()
-        token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
-        post_url = '{}{}'.format(reverse('radius:authorize'), token_querystring)
+        token_querystring = f'?token={rad.token}&uuid={str(self.org.pk)}'
+        post_url = f'{reverse("radius:authorize")}{token_querystring}'
         self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
         with self.subTest('Cache & token match'):
             self.assertEqual(rad.token, cache.get(rad.organization.pk))
@@ -1523,8 +1517,8 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
     def test_no_org_radius_setting(self):
         cache.clear()
         self._get_org_user()
-        token_querystring = '?token={0}&uuid={1}'.format('12345', str(self.org.pk))
-        post_url = '{}{}'.format(reverse('radius:authorize'), token_querystring)
+        token_querystring = f'?token=12345&uuid={str(self.org.pk)}'
+        post_url = f'{reverse("radius:authorize")}{token_querystring}'
         r = self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.data, {'detail': 'Token authentication failed'})
@@ -1535,8 +1529,8 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         )
         cache.set('uuid', str(self.org.pk), 30)
         self._get_org_user()
-        token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(self.org.pk))
-        post_url = '{}{}'.format(reverse('radius:authorize'), token_querystring)
+        token_querystring = f'?token={rad.token}&uuid={str(self.org.pk)}'
+        post_url = f'{reverse("radius:authorize")}{token_querystring}'
         r = self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(r.status_code, 200)
         cache.clear()

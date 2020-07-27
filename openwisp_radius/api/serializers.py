@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
@@ -126,7 +126,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['strategy'] == 'prefix' and not data.get('number_of_users'):
             raise serializers.ValidationError(
-                {'number_of_users': 'The field number_of_users cannot be empty'}
+                {'number_of_users': _('The field number_of_users cannot be empty')}
             )
         return super().validate(data)
 
@@ -161,8 +161,10 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
             return org.radius_settings.sms_verification
         except ObjectDoesNotExist:
             raise APIException(
-                'Could not complete operation '
-                'because of an internal misconfiguration'
+                _(
+                    'Could not complete operation '
+                    'because of an internal misconfiguration'
+                )
             )
 
     def validate_phone_number(self, phone_number):
