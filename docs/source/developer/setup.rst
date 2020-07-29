@@ -137,7 +137,7 @@ Migrating an existing freeradius database
 -----------------------------------------
 
 If you already have a freeradius 3 database with the default schema, you should
-be able to use it with openwisp-radius (and openwisp-radius) easily:
+be able to use it with openwisp-radius (and extended apps) easily:
 
 1. first of all, back up your existing database;
 2. configure django to connect to your existing database;

@@ -2,13 +2,13 @@ import uuid
 
 import django.db.models.deletion
 import django.utils.timezone
+import jsonfield.fields
 import model_utils.fields
+import phonenumber_field.modelfields
 from django.conf import settings
 from django.db import migrations, models
 
-import phonenumber_field.modelfields
 import openwisp_radius.utils
-import jsonfield.fields
 
 from .. import settings as app_settings
 

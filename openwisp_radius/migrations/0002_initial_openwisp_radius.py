@@ -7,13 +7,14 @@ import django.core.validators
 import django.db.models.deletion
 import django.utils.timezone
 import model_utils.fields
-import openwisp_utils.base
-import openwisp_users.mixins
-import openwisp_utils.utils
 from django.conf import settings
 from django.db import migrations, models
-from openwisp_radius.migrations import add_default_organization
 from swapper import get_model_name
+
+import openwisp_users.mixins
+import openwisp_utils.base
+import openwisp_utils.utils
+from openwisp_radius.migrations import add_default_organization
 
 
 class Migration(migrations.Migration):
