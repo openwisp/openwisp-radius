@@ -164,15 +164,18 @@ Substitute ``myradius`` with the name you chose in step 1.
 9. Create database migrations
 -----------------------------
 
-Create database migrations::
+Copy the `migration files from the sample_radius's migration folder <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/migrations/>`
+
+
+Now, create database migrations as per your custom application's requirements::
 
     ./manage.py makemigrations
 
-Now, manually create a file ``0002_default_groups_and_permissions.py`` in the migrations directory just create by the ``makemigrations`` command and copy contents of the `sample_radius/migrations/0002_default_groups_and_permissions.py <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/migrations/0002_default_groups_and_permissions.py>`_.
-
-Apply database migrations::
+If you are starting with a fresh database, you can apply the migrations::
 
     ./manage.py migrate
+
+However, if you want `migrate an existing freeradius database please read the guide in the setup </developer/setup.html#migratinga-an-existing-freeradius-database>`_.
 
 .. note::
     For more information, refer to the

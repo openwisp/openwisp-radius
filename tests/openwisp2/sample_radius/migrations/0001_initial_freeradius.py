@@ -2,23 +2,25 @@
 
 import django.utils.timezone
 import model_utils.fields
+import swapper
 from django.db import migrations, models
 
 import openwisp_radius.base.models
 import openwisp_users.mixins
-
-from ..base.models import RAD_NAS_TYPES
+from openwisp_radius.base.models import RAD_NAS_TYPES
 
 
 class Migration(migrations.Migration):
     """
-    Default schema of freeradius 3. openwisp-radius
-    model's schema begins from next migration, this helps
+    Default schema of freeradius 3. radius app's
+    model schema begins from next migration, this helps
     to enable users to migrate from freeradius 3
     """
 
     initial = True
-    dependencies = [('openwisp_radius', '__first__')]
+    nas_model = swapper.get_model_name('openwisp_radius', 'Nas')
+    model_app_label = swapper.split(nas_model)[0]
+    dependencies = [(model_app_label, '__first__')]
 
     operations = [
         migrations.CreateModel(
