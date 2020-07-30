@@ -26,5 +26,5 @@ class BaseDeleteOldUsersCommand(BaseCommand):
         for b in batches:
             b.delete()
         self.stdout.write(
-            'Deleted accounts older than {} months'.format(options['older_than_months'])
+            f'Deleted accounts older than {options["older_than_months"]} months'
         )

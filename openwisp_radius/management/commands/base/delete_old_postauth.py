@@ -19,7 +19,5 @@ class BaseDeleteOldPostauthCommand(BaseCommand):
             days = now() - timedelta(days=options['number_of_days'])
             RadiusPostAuth.objects.filter(date__lt=days).delete()
             self.stdout.write(
-                'Deleted post-auth logs older than {} days'.format(
-                    options['number_of_days']
-                )
+                f'Deleted post-auth logs older than {options["number_of_days"]} days'
             )

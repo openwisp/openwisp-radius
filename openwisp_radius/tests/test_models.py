@@ -422,7 +422,7 @@ class TestRadiusGroup(BaseTestCase):
         org = self._create_org(**{'name': 'Cool WiFi', 'slug': 'cool-wifi'})
         rg = RadiusGroup(name='guests', organization=org)
         rg.full_clean()
-        self.assertEqual(rg.name, '{}-guests'.format(org.slug))
+        self.assertEqual(rg.name, f'{org.slug}-guests')
 
     def test_org_none(self):
         rg = RadiusGroup(name='guests')
@@ -487,7 +487,7 @@ class TestRadiusBatch(BaseTestCase):
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):
-        reader = [["", 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
+        reader = [['', 'cleartext$password', 'rohith@openwisp.com', 'Rohith', 'ASRK']]
         batch = self._create_radius_batch(
             name='test', strategy='csv', csvfile=self._get_csvfile(reader)
         )

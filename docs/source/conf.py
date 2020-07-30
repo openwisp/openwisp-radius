@@ -58,7 +58,7 @@ author = 'OpenWISP contributors'
 # built documents.
 
 # The short X.Y version.
-version = '{0}.{1}'.format(VERSION[0], VERSION[1])
+version = f'{VERSION[0]}.{VERSION[1]}'
 # The full version, including alpha/beta/rc tags.
 release = get_version()
 

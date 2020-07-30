@@ -105,21 +105,17 @@ def assign_permissions_to_groups(apps, schema_editor):
 
     for action in manage_operations:
         for model_name in operators_and_admins_can_manage:
-            permission = Permission.objects.get(
-                codename='{}_{}'.format(action, model_name)
-            )
+            permission = Permission.objects.get(codename=f'{action}_{model_name}')
             admin.permissions.add(permission.pk)
             operator.permissions.add(permission.pk)
     for model_name in operators_read_only_admins_manage:
         try:
-            permission = Permission.objects.get(codename='view_{}'.format(model_name))
+            permission = Permission.objects.get(codename=f'view_{model_name}')
             operator.permissions.add(permission.pk)
         except Permission.DoesNotExist:
             pass
         for action in manage_operations:
-            permission_ad = Permission.objects.get(
-                codename='{}_{}'.format(action, model_name)
-            )
+            permission_ad = Permission.objects.get(codename=f'{action}_{model_name}')
             admin.permissions.add(permission_ad.pk)
 
 

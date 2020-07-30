@@ -19,7 +19,7 @@ from django.db.models import Count, ProtectedError
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from passlib.hash import lmhash, nthash, sha512_crypt
 from private_storage.fields import PrivateFileField
@@ -585,8 +585,8 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
         self.check_default()
         if not hasattr(self, 'organization'):
             return
-        if not self.name.startswith('{}-'.format(self.organization.slug)):
-            self.name = '{}-{}'.format(self.organization.slug, self.name)
+        if not self.name.startswith(f'{self.organization.slug}-'):
+            self.name = f'{self.organization.slug}-{self.name}'
 
     def save(self, *args, **kwargs):
         result = super().save(*args, **kwargs)
@@ -1074,10 +1074,10 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         if not hasattr(self, 'user'):
             return
         if self.user.is_active:
-            logger.warning('user {} is already active'.format(self.user))
+            logger.warning(_(f'user {self.user} is already active'))
             raise ValidationError(_('This user is already active.'))
         if not self.user.phone_number:
-            logger.warning('user {} does not have a phone number'.format(self.user))
+            logger.warning(_(f'user {self.user} does not have a phone number'))
             raise ValidationError(_('This user does not have a phone number.'))
         date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
@@ -1087,7 +1087,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
             logger.warning(
-                'user {} has reached the maximum daily SMS limit'.format(self.user)
+                _(f'user {self.user} has reached the maximum daily SMS limit')
             )
             raise ValidationError(_('Maximum daily limit reached.'))
         # limit generation of tokens per day by ip
@@ -1095,8 +1095,10 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         if ip_token_count >= app_settings.SMS_TOKEN_MAX_IP_DAILY:
             logger.warning(
                 logger.warning(
-                    'user {} has reached the maximum '
-                    'daily SMS limit from ip address {}'.format(self.user, self.ip)
+                    _(
+                        f'User {self.user} has reached the maximum '
+                        f'daily SMS limit from ip address {self.ip}'
+                    )
                 )
             )
             raise ValidationError(
@@ -1115,11 +1117,11 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         org_user = OrganizationUser.objects.filter(user=self.user).first()
         if not org_user:
             raise exceptions.NoOrgException(
-                'User {} is not member of any organization'.format(self.user)
+                _(f'User {self.user} is not member of any organization.')
             )
         org_radius_settings = org_user.organization.radius_settings
-        message = _('{} verification code: {}').format(
-            org_radius_settings.organization.name, self.token
+        message = _(
+            f'{org_radius_settings.organization.name} verification code: {self.token}'
         )
         sms_message = SmsMessage(
             body=message,
@@ -1132,20 +1134,22 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         self.attempts += 1
         try:
             self.verified = self.__check(token)
-        except exceptions.PhoneTokenException as e:
+        except exceptions.PhoneTokenException as phone_error:
             self.save()
-            raise e
+            raise phone_error
         self.save()
         return self.verified
 
     def __check(self, token):
         if self.user.is_active:
-            logger.warning('user {} is already active'.format(self.user.pk))
+            logger.warning(_(f'User {self.user.pk} is already active'))
             raise exceptions.UserAlreadyActive(_('This user is already active.'))
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
-                'user {} has reached the max attempt '
-                'limit for token {}'.format(self.user, self.pk)
+                _(
+                    f'User {self.user} has reached the max attempt '
+                    f'limit for token {self.pk}.'
+                )
             )
             raise exceptions.MaxAttemptsException(
                 _(
@@ -1156,8 +1160,10 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             )
         if timezone.now() > self.valid_until:
             logger.warning(
-                'user {} has tried to verify '
-                'an expired token: {}'.format(self.user, self.pk)
+                _(
+                    f'User {self.user} has tried to verify '
+                    f'an expired token: {self.pk}.'
+                )
             )
             raise exceptions.ExpiredTokenException(
                 _(

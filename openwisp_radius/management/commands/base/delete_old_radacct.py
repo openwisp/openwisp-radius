@@ -19,5 +19,5 @@ class BaseDeleteOldRadacctCommand(BaseCommand):
             days = now() - timedelta(days=options['number_of_days'])
             RadiusAccounting.objects.filter(stop_time__lt=days).delete()
             self.stdout.write(
-                'Deleted sessions older than {} days'.format(options['number_of_days'])
+                f'Deleted sessions older than {options["number_of_days"]} days'
             )

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 # 'pre_django_setup' is supposed to be a logger
 # that can work before registered Apps are
@@ -14,9 +15,11 @@ logger = logging.getLogger('pre_django_setup')
 
 def get_settings_value(option, default):
     if hasattr(settings, f'DJANGO_FREERADIUS_{option}'):  # pragma: no cover
-        logger.warn(
-            f'DJANGO_FREERADIUS_{option} setting is deprecated. It will be removed '
-            f'in the future, please use OPENWISP_RADIUS_{option} instead.'
+        logger.warning(
+            _(
+                f'DJANGO_FREERADIUS_{option} setting is deprecated. It will be '
+                f'removed in the future, please use OPENWISP_RADIUS_{option} instead.'
+            )
         )
         return getattr(settings, f'DJANGO_FREERADIUS_{option}')
     return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
@@ -84,21 +87,20 @@ try:  # pragma: no cover
             try:
                 UUID(key)
             except ValueError:
-                raise AssertionError('{} is not a valid UUID'.format(key))
+                raise AssertionError(f'{key} is not a valid UUID')
         assert all(['{organization}' in value, '{uid}' in value, '{token}' in value]), (
-            '{} must contain '.format(value)
-            + '{organization}, {uid} and {token}'  # noqa
+            f'{value} must contain ' + '{organization}, {uid} and {token}'  # noqa
         )
-except AssertionError as e:  # pragma: no cover
+except AssertionError as error:  # pragma: no cover
     raise ImproperlyConfigured(
-        'OPENWISP_RADIUS_PASSWORD_RESET_URLS is invalid: {}'.format(str(e))
+        f'OPENWISP_RADIUS_PASSWORD_RESET_URLS is invalid: {error}'
     )
 
 try:
     SMS_TOKEN_HASH_ALGORITHM = getattr(hashlib, SMS_TOKEN_HASH_ALGORITHM)
-except ImportError as e:  # pragma: no cover
+except ImportError as error:  # pragma: no cover
     raise ImproperlyConfigured(
-        'OPENWISP_RADIUS_SMS_TOKEN_HASH_ALGORITHM is invalid: {}'.format(str(e))
+        f'OPENWISP_RADIUS_SMS_TOKEN_HASH_ALGORITHM is invalid: {error}'
     )
 
 try:
