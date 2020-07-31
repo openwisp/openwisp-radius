@@ -78,7 +78,7 @@ target/
 .python-version
 
 # celery beat schedule file
-celerybeat-schedule
+celerybeat-schedule*
 
 # SageMath parsed files
 *.sage.py
@@ -112,3 +112,4 @@ Pipfile
 # Other project related
 media/
 tmp/
+*.pid

@@ -1,6 +1,5 @@
 import os
 from datetime import timedelta
-from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -8,21 +7,8 @@ from django.core.management import CommandError, call_command
 from django.utils.timezone import now
 
 from ..utils import load_model
-from . import CallCommandMixin, FileMixin
+from . import _RADACCT, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
-
-_RADACCT = {
-    'username': 'bob',
-    'nas_ip_address': '127.0.0.1',
-    'start_time': '2017-06-10 10:50:00',
-    'authentication': 'RADIUS',
-    'connection_info_start': 'f',
-    'connection_info_stop': 'hgh',
-    'input_octets': '1',
-    'output_octets': '4',
-    'session_id': uuid4().int,
-}
-
 
 User = get_user_model()
 RadiusAccounting = load_model('RadiusAccounting')
@@ -42,11 +28,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(session.update_time, session.stop_time)
 
     def test_delete_old_postauth_command(self):
-        options = dict(username='steve', password='jones', reply='ghdhd')
+        options = dict(username='steve', password='jones', reply='value1')
         self._create_radius_postauth(**options)
-        RadiusPostAuth.objects.filter(username='steve').update(
-            date='2017-06-10 10:50:00'
-        )
+        RadiusPostAuth.objects.filter(username='steve').update(date='2017-06-10')
         call_command('delete_old_postauth', 3)
         self.assertEqual(RadiusPostAuth.objects.filter(username='steve').count(), 0)
 
