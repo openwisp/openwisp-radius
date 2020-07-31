@@ -27,7 +27,6 @@ def add_default_organization(apps, schema_editor):
     else:  # pragma: no-cover (corner case)
         Organization = get_swapped_model(apps, 'openwisp_users', 'Organization')
         default_org_id = Organization.objects.first().pk
-
     for model in models:
         Model = get_swapped_model(apps, 'openwisp_radius', model)
         for record in Model.objects.all().iterator():

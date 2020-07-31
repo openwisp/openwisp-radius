@@ -619,7 +619,7 @@ class Migration(migrations.Migration):
                         null=True,
                         storage=private_storage.storage.files.PrivateFileSystemStorage(
                             base_url='/radiusbatch/csv/',
-                            location='/home/atb00ker/Documents/develop/openwisp/openwisp-radius/tests/openwisp2/media/private',
+                            location=settings.PRIVATE_STORAGE_ROOT,
                         ),
                         upload_to=openwisp_radius.base.models._get_csv_file_location,
                         verbose_name='CSV',
