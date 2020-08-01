@@ -25,7 +25,7 @@ Default groups
 Some groups are created automatically by **openwisp-radius** during the initial
 migrations:
 
-- ``users``: this is the deafult group which limits users sessions
+- ``users``: this is the default group which limits users sessions
   to 3 hours and 300 MB (daily)
 - ``power-users``: this group does not have any check, therefore users who
   are members of this group won't be limited in any way
@@ -36,7 +36,7 @@ new groups according to your needs and preferences.
 **Note on the default group**: keep in mind that the group flagged as
 default will by automatically assigned to new users, it cannot be deleted nor
 it can be flagged as non-default: to set another group as default simply check
-that group as the deafult one, save and **openwisp-radius** will remove the
+that group as the default one, save and **openwisp-radius** will remove the
 default flag from the old default group.
 
 Freeradius configuration

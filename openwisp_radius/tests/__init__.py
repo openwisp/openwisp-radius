@@ -37,12 +37,17 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
 
 
 class CreateRadiusObjectsMixin(TestOrganizationMixin):
-    def _get_org(self, org_name='default'):
-        return super()._get_org(org_name)
+    def _get_org(self, org_name='test org'):
+        organization = super()._get_org(org_name)
+        OrganizationRadiusSettings.objects.get_or_create(
+            organization_id=organization.pk
+        )
+        return organization
 
     def _get_user_with_org(self):
         # Used where User model instance is required
