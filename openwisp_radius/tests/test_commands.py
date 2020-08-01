@@ -47,7 +47,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         path = self._get_path('static/test_batch.csv')
         options = dict(
-            organization=self.default_org,
+            organization=self.default_org.slug,
             file=path,
             expiration='28-01-2018',
             name='test',
@@ -58,26 +58,28 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(get_user_model().objects.all().count(), 3)
         self.assertEqual(radiusbatch.expiration_date.strftime('%d-%m-%y'), '28-01-18')
         path = self._get_path('static/test_batch_new.csv')
-        options = dict(organization=self.default_org, file=path, name='test1')
+        options = dict(organization=self.default_org.slug, file=path, name='test1')
         self._call_command('batch_add_users', **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 2)
         self.assertEqual(get_user_model().objects.all().count(), 6)
         invalid_csv_path = self._get_path('static/test_batch_invalid.csv')
         with self.assertRaises(CommandError):
             options = dict(
-                organization=self.default_org, file='doesnotexist.csv', name='test3'
+                organization=self.default_org.slug,
+                file='doesnotexist.csv',
+                name='test3',
             )
             self._call_command('batch_add_users', **options)
         with self.assertRaises(SystemExit):
             options = dict(
-                organization=self.default_org, file=invalid_csv_path, name='test4'
+                organization=self.default_org.slug, file=invalid_csv_path, name='test4'
             )
             self._call_command('batch_add_users', **options)
 
     def test_deactivate_expired_users_command(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
-            organization=self.default_org,
+            organization=self.default_org.slug,
             file=path,
             expiration='28-01-1970',
             name='test',
@@ -90,7 +92,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     def test_delete_old_users_command(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
-            organization=self.default_org,
+            organization=self.default_org.slug,
             file=path,
             expiration='28-01-1970',
             name='test',
@@ -99,7 +101,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         expiration_date = (now() - timedelta(days=30 * 15)).strftime('%d-%m-%Y')
         path = self._get_path('static/test_batch_new.csv')
         options = dict(
-            organization=self.default_org,
+            organization=self.default_org.slug,
             file=path,
             expiration=expiration_date,
             name='test1',
@@ -115,7 +117,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         output_pdf = os.path.join(settings.MEDIA_ROOT, 'test_prefix10.pdf')
         options = dict(
-            organization=self.default_org,
+            organization=self.default_org.slug,
             prefix='test-prefix7',
             n=10,
             name='test',
@@ -133,13 +135,16 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertTrue('test-prefix7' in u.username)
         self.assertEqual(radiusbatch.expiration_date.strftime('%d-%m-%y'), '28-01-18')
         options = dict(
-            organization=self.default_org, prefix='test-prefix8', n=5, name='test1'
+            organization=self.default_org.slug, prefix='test-prefix8', n=5, name='test1'
         )
         self._call_command('prefix_add_users', **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 2)
         self.assertEqual(get_user_model().objects.all().count(), 15)
         options = dict(
-            organization=self.default_org, prefix='test-prefix9', n=-5, name='test2'
+            organization=self.default_org.slug,
+            prefix='test-prefix9',
+            n=-5,
+            name='test2',
         )
         with self.assertRaises(SystemExit):
             self._call_command('prefix_add_users', **options)

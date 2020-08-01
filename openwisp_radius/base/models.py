@@ -602,7 +602,7 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
     _DEFAULT_VALIDATION_ERROR = _(
         'There must be at least one default group present in '
         'the system. To change the default group, simply set '
-        'as deafult the group you want to make the new deafult.'
+        'as default the group you want to make the new default.'
     )
     _DEFAULT_PROTECTED_ERROR = _('The default group cannot be deleted')
 

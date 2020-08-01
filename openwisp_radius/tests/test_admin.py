@@ -388,7 +388,7 @@ class TestAdmin(
     def test_radiusbatch_delete_methods(self):
         n = User.objects.count()
         options = dict(
-            organization=self.default_org, n=10, prefix='test-prefix6', name='test'
+            organization=self.default_org.slug, n=10, prefix='test-prefix6', name='test'
         )
         self._call_command('prefix_add_users', **options)
         self.assertEqual(User.objects.count() - n, 10)
@@ -453,37 +453,37 @@ class TestAdmin(
         return data
 
     def test_radius_group_delete_default_by_superuser(self):
+        org = self._get_org()
         rg = RadiusGroup.objects
-        default = rg.get(default=True)
+        default = rg.get(organization=org, default=True)
         url_name = f'admin:{self.app_label}_radiusgroup_delete'
         delete_url = reverse(url_name, args=[default.pk])
         response = self.client.get(delete_url)
-        self.assertEqual(rg.filter(default=True).count(), 1)
+        self.assertEqual(rg.filter(organization=org, default=True).count(), 1)
         self.assertEqual(response.status_code, 200)
 
     def test_radius_group_delete_default_by_non_superuser(self):
-        org_user = OrganizationUser.objects.create(
-            organization=Organization.objects.get(name='default'),
-            user=User.objects.get(username='admin'),
-        )
-        user = User.objects.get(username='admin')
+        org = self._get_org()
+        user = self._get_admin()
+        org_user = OrganizationUser.objects.create(organization=org, user=user)
         user.is_superuser = False
         user.save()
         for permission in Permission.objects.all():
             user.user_permissions.add(permission)
         rg = RadiusGroup.objects
-        default = rg.get(default=True)
+        default = rg.get(organization=org, default=True)
         url_name = f'admin:{self.app_label}_radiusgroup_delete'
         delete_url = reverse(url_name, args=[default.pk])
         response = self.client.get(delete_url)
-        self.assertEqual(rg.filter(default=True).count(), 1)
+        self.assertEqual(rg.filter(organization=org, default=True).count(), 1)
         self.assertEqual(response.status_code, 403)
         org_user.delete()
 
     def test_radius_group_delete_selected_default(self):
         url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')
+        org = self._get_org()
         rg = RadiusGroup.objects
-        default = rg.get(default=True)
+        default = rg.get(organization=org, default=True)
         response = self.client.post(
             url,
             {
@@ -495,14 +495,15 @@ class TestAdmin(
             },
             follow=True,
         )
-        self.assertEqual(rg.filter(default=True).count(), 1)
+        self.assertEqual(rg.filter(organization=org, default=True).count(), 1)
         self.assertContains(response, 'error')
         self.assertContains(response, 'Cannot proceed with the delete')
 
     def test_radius_group_delete_selected_non_default(self):
         url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')
+        org = self._get_org()
         rg = RadiusGroup.objects
-        non_default = rg.get(default=False)
+        non_default = rg.get(organization=org, default=False)
         response = self.client.post(
             url,
             {
@@ -515,7 +516,7 @@ class TestAdmin(
             follow=True,
         )
         self.assertNotContains(response, 'error')
-        self.assertEqual(rg.filter(default=False).count(), 0)
+        self.assertEqual(rg.filter(organization=org, default=False).count(), 0)
 
     def test_batch_user_creation_form(self):
         url = reverse(f'admin:{self.app_label}_radiusbatch_add')

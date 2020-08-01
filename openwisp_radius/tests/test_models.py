@@ -217,8 +217,8 @@ class TestRadiusGroup(BaseTestCase):
         self.assertIsInstance(ug.pk, UUID)
 
     def test_default_groups(self):
-        default_org = Organization.objects.first()
-        queryset = RadiusGroup.objects.filter(organization=default_org)
+        org = self._get_org('default')
+        queryset = RadiusGroup.objects.filter(organization=org)
         self.assertEqual(queryset.count(), 2)
         self.assertEqual(queryset.filter(name='default-users').count(), 1)
         self.assertEqual(queryset.filter(name='default-power-users').count(), 1)
@@ -255,7 +255,7 @@ class TestRadiusGroup(BaseTestCase):
         self.assertEqual(queryset.filter(name='org2-new').count(), 1)
 
     def test_delete_default_group(self):
-        group = RadiusGroup.objects.get(default=1)
+        group = RadiusGroup.objects.get(organization=self._get_org(), default=1)
         try:
             group.delete()
         except ProtectedError:
@@ -264,7 +264,7 @@ class TestRadiusGroup(BaseTestCase):
             self.fail('ProtectedError not raised')
 
     def test_undefault_group(self):
-        group = RadiusGroup.objects.get(default=True)
+        group = RadiusGroup.objects.get(organization=self._get_org(), default=True)
         group.default = False
         try:
             group.full_clean()
@@ -279,13 +279,12 @@ class TestRadiusGroup(BaseTestCase):
         self._create_radius_group(name='test')
 
     def test_new_user_default_group(self):
-        org = Organization.objects.get(slug='default')
-        u = get_user_model()(username='test', email='test@test.org', password='test')
-        u.full_clean()
-        u.save()
-        self._create_org_user(organization=org, user=u)
-        u.refresh_from_db()
-        usergroup_set = u.radiususergroup_set.all()
+        user = get_user_model()(username='test', email='test@test.org', password='test')
+        user.full_clean()
+        user.save()
+        self._create_org_user(user=user)
+        user.refresh_from_db()
+        usergroup_set = user.radiususergroup_set.all()
         self.assertEqual(usergroup_set.count(), 1)
         ug = usergroup_set.first()
         self.assertTrue(ug.group.default)
@@ -394,7 +393,7 @@ class TestRadiusGroup(BaseTestCase):
     def test_delete(self):
         g = self._create_radius_group(name='test', description='test')
         g.delete()
-        self.assertEqual(RadiusGroup.objects.all().count(), 2)
+        self.assertEqual(RadiusGroup.objects.all().count(), 4)
 
     def test_create_organization_default_group(self):
         new_org = self._create_org(**{'name': 'new org', 'slug': 'new-org'})

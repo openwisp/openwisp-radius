@@ -1457,14 +1457,14 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             )
 
     def test_cache(self):
-        # clear cache set from previous tests
-        cache.clear()
         rad = OrganizationRadiusSettings.objects.create(
             token='12345', organization=self.org
         )
         self._get_org_user()
         token_querystring = f'?token={rad.token}&uuid={str(self.org.pk)}'
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
+        # Clear cache before sending request
+        cache.clear()
         self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
         with self.subTest('Cache & token match'):
             self.assertEqual(rad.token, cache.get(rad.organization.pk))
@@ -1504,7 +1504,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         cache.clear()
 
     def test_default_organisation_radius_settings(self):
-        org = Organization.objects.get(slug='default')
+        org = self._get_org()
         self.assertTrue(hasattr(org, 'radius_settings'))
         self.assertIsInstance(org.radius_settings, OrganizationRadiusSettings)
 
