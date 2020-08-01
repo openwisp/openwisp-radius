@@ -44,6 +44,7 @@ from rest_framework.generics import (
     GenericAPIView,
     ListAPIView,
     ListCreateAPIView,
+    RetrieveAPIView,
 )
 from rest_framework.permissions import (
     DjangoModelPermissions,
@@ -55,6 +56,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from rest_framework.views import APIView
 
 from openwisp_users.api.authentication import BearerAuthentication
+from openwisp_users.api.permissions import IsOrganizationManager
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
@@ -409,21 +411,15 @@ class DispatchOrgMixin(object):
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
-class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):
+class DownloadRadiusBatchPdfView(DispatchOrgMixin, RetrieveAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
 
     def get(self, request, *args, **kwargs):
-        self.validate_membership(request.user)
-        try:
-            radbatch = RadiusBatch.objects.get(pk=kwargs['radbatch'])
-        except RadiusBatch.DoesNotExist:
-            raise NotFound(
-                detail="Given radius batch not found.", code=404,
-            )
+        radbatch = self.get_object()
         if radbatch.strategy == 'prefix':
-            pdf = generate_pdf(kwargs['radbatch'])
+            pdf = generate_pdf(radbatch.pk)
             response = HttpResponse(content_type='application/pdf')
             response[
                 'Content-Disposition'
