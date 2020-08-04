@@ -1,6 +1,8 @@
 import os
 import sys
 
+from celery.schedules import crontab
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TESTING = sys.argv[1] == 'test'
 
@@ -46,7 +48,7 @@ INSTALLED_APPS = [
 LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTH_USER_MODEL = 'openwisp_users.User'
-SITE_ID = '1'
+SITE_ID = 1
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -123,10 +125,52 @@ SOCIALACCOUNT_PROVIDERS = {
     'google': {'SCOPE': ['profile', 'email'], 'AUTH_PARAMS': {'access_type': 'online'}},
 }
 
-if TESTING:
+redis_host = os.getenv('REDIS_HOST', 'localhost')
+
+if not TESTING:
+    CELERY_BROKER_URL = os.getenv('REDIS_URL', f'redis://{redis_host}/1')
+else:
     OPENWISP_RADIUS_GROUPCHECK_ADMIN = True
     OPENWISP_RADIUS_GROUPREPLY_ADMIN = True
     OPENWISP_RADIUS_USERGROUP_ADMIN = True
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    CELERY_BROKER_URL = 'memory://'
+
+TEST_RUNNER = 'openwisp_utils.tests.TimeLoggingTestRunner'
+
+CELERY_BEAT_SCHEDULE = {
+    'deactivate_expired_users': {
+        'task': 'openwisp_radius.tasks.cleanup_stale_radacct',
+        'schedule': crontab(hour=0, minute=0),
+        'args': None,
+        'relative': True,
+    },
+    'delete_old_users': {
+        'task': 'openwisp_radius.tasks.delete_old_users',
+        'schedule': crontab(hour=0, minute=10),
+        'args': [365],
+        'relative': True,
+    },
+    'cleanup_stale_radacct': {
+        'task': 'openwisp_radius.tasks.cleanup_stale_radacct',
+        'schedule': crontab(hour=0, minute=20),
+        'args': [365],
+        'relative': True,
+    },
+    'delete_old_postauth': {
+        'task': 'openwisp_radius.tasks.delete_old_postauth',
+        'schedule': crontab(hour=0, minute=30),
+        'args': [365],
+        'relative': True,
+    },
+    'delete_old_radacct': {
+        'task': 'openwisp_radius.tasks.delete_old_radacct',
+        'schedule': crontab(hour=0, minute=40),
+        'args': [365],
+        'relative': True,
+    },
+}
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
 OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
@@ -176,6 +220,7 @@ if os.environ.get('SAMPLE_APP', False):
     )
     # Rename sample_app database
     DATABASES['default']['NAME'] = os.path.join(BASE_DIR, 'sample_radius.db')
+    CELERY_IMPORTS = ('openwisp_radius.tasks',)
 
 if os.environ.get('SAMPLE_APP', False) and TESTING:
     # Required for openwisp-users tests

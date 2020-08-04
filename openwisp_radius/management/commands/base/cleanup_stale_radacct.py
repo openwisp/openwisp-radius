@@ -24,7 +24,5 @@ class BaseCleanupRadacctCommand(BaseCommand):
             session.update_time = session.stop_time
             session.save()
         self.stdout.write(
-            'Closed active sessions older than {} days'.format(
-                options['number_of_days']
-            )
+            f'Closed active sessions older than {options["number_of_days"]} days'
         )

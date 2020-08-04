@@ -3,7 +3,7 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from .. import settings as app_settings
 from .models import RADCHECK_PASSWD_TYPE, AbstractNas, AbstractRadiusCheck
@@ -82,8 +82,6 @@ class RadiusBatchForm(forms.ModelForm):
                 'https://openwisp-radius.readthedocs.io/en/latest'
                 '/user/importing_users.html'
             )
-            help_text = "Refer to the <b><u><a href='{}'>docs</a></u></b> for more \
-                details on importing users from a CSV".format(
-                docs_link
-            )
+            help_text = f"Refer to the <b><u><a href='{docs_link}'>docs</a></u></b> \
+                for more details on importing users from a CSV"
             self.fields['csvfile'].help_text = help_text

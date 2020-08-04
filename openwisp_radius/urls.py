@@ -25,7 +25,7 @@ def get_urls(api_views=None, social_views=None):
     if app_settings.SOCIAL_LOGIN_ENABLED:
         urls.append(
             path(
-                'freeradius/social-login/<slug:slug>/',
+                'radius/social-login/<slug:slug>/',
                 social_views.redirect_cp,
                 name='redirect_cp',
             )

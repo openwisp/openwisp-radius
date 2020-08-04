@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
@@ -23,6 +23,7 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
@@ -102,11 +103,23 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class RadiusOrganizationField(serializers.SlugRelatedField):
+    def get_queryset(self):
+        queryset = Organization.objects.all()
+        request = self.context.get('request', None)
+        if not request.user.is_superuser:
+            queryset = queryset.filter(pk__in=request.user.organizations_dict.keys())
+        return queryset
+
+
 class RadiusBatchSerializer(serializers.ModelSerializer):
+    organization = serializers.PrimaryKeyRelatedField(read_only=True)
+    organization_slug = RadiusOrganizationField(
+        required=True, label='organization', slug_field='slug', write_only=True
+    )
     users = UserSerializer(many=True, read_only=True)
     prefix = serializers.CharField(required=False)
     csvfile = serializers.FileField(required=False)
-    pdf = serializers.FileField(required=False, read_only=True)
     pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
     number_of_users = serializers.IntegerField(
         required=False, write_only=True, min_value=1
@@ -126,13 +139,21 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['strategy'] == 'prefix' and not data.get('number_of_users'):
             raise serializers.ValidationError(
-                {'number_of_users': 'The field number_of_users cannot be empty'}
+                {'number_of_users': _('The field number_of_users cannot be empty')}
             )
-        return super().validate(data)
+        validated_data = super().validate(data)
+        # Additional Model Validation
+        batch_data = validated_data.copy()
+        batch_data.pop('number_of_users', None)
+        batch_data['organization'] = batch_data.pop('organization_slug', None)
+        instance = self.instance or self.Meta.model(**batch_data)
+        instance.full_clean()
+        return validated_data
 
     class Meta:
         model = RadiusBatch
         fields = '__all__'
+        read_only_fields = ('created', 'modified', 'user_credentials')
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):
@@ -161,8 +182,10 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
             return org.radius_settings.sms_verification
         except ObjectDoesNotExist:
             raise APIException(
-                'Could not complete operation '
-                'because of an internal misconfiguration'
+                _(
+                    'Could not complete operation '
+                    'because of an internal misconfiguration'
+                )
             )
 
     def validate_phone_number(self, phone_number):

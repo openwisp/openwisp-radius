@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,6 +15,17 @@ from ..utils import load_model
 # it's 21 of April on UTC, this date is fabricated on purpose
 # to test possible timezone related bugs in the date filtering
 _TEST_DATE = '2019-04-20T22:14:09-04:00'
+_RADACCT = {
+    'username': 'bob',
+    'nas_ip_address': '127.0.0.1',
+    'start_time': '2017-06-10 10:50:00',
+    'authentication': 'RADIUS',
+    'connection_info_start': 'f',
+    'connection_info_stop': 'hgh',
+    'input_octets': '1',
+    'output_octets': '4',
+    'session_id': uuid4().int,
+}
 
 Nas = load_model('Nas')
 RadiusAccounting = load_model('RadiusAccounting')
@@ -25,12 +37,17 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
 
 
 class CreateRadiusObjectsMixin(TestOrganizationMixin):
-    def _get_org(self, org_name='default'):
-        return super()._get_org(org_name)
+    def _get_org(self, org_name='test org'):
+        organization = super()._get_org(org_name)
+        OrganizationRadiusSettings.objects.get_or_create(
+            organization_id=organization.pk
+        )
+        return organization
 
     def _get_user_with_org(self):
         # Used where User model instance is required

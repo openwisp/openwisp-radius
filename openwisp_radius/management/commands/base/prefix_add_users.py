@@ -62,7 +62,7 @@ class BasePrefixAddUsersCommand(BaseCommand):
             pdf = generate_pdf(batch.pk)
             with open(options['output'], 'wb') as file:
                 file.write(pdf)
-        self.stdout.write('Generated a batch of users with prefix {}'.format(prefix))
+        self.stdout.write(f'Generated a batch of users with prefix {prefix}')
 
     def _create_batch(self, **options):
         batch = RadiusBatch(

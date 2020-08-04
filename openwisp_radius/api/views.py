@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -25,14 +25,19 @@ from rest_auth.registration.views import RegisterView as BaseRegisterView
 from rest_auth.views import PasswordChangeView as BasePasswordChangeView
 from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from rest_auth.views import PasswordResetView as BasePasswordResetView
-from rest_framework import generics, serializers, status
+from rest_framework import serializers, status
 from rest_framework.authentication import BaseAuthentication, SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
 from rest_framework.exceptions import ValidationError as RestValidationError
-from rest_framework.generics import CreateAPIView, GenericAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    GenericAPIView,
+    ListAPIView,
+    ListCreateAPIView,
+)
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -107,7 +112,7 @@ class TokenAuthentication(BaseAuthentication):
                 uuid = parts[1]
                 token = parts[2]
             except IndexError:
-                raise ParseError('Invalid token')
+                raise ParseError(_('Invalid token'))
         return uuid, token
 
 
@@ -191,7 +196,7 @@ class AuthorizeView(TokenAuthorizationMixin, APIView):
 authorize = AuthorizeView.as_view()
 
 
-class PostAuthView(TokenAuthorizationMixin, generics.CreateAPIView):
+class PostAuthView(TokenAuthorizationMixin, CreateAPIView):
     serializer_class = RadiusPostAuthSerializer
 
     def post(self, request, *args, **kwargs):
@@ -233,7 +238,7 @@ class AccountingViewPagination(drf_link_header_pagination.LinkHeaderPagination):
     max_page_size = 100
 
 
-class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
+class AccountingView(TokenAuthorizationMixin, ListCreateAPIView):
     """
     HEADER: Pagination is provided using a Link header
             https://developer.github.com/v3/guides/traversing-with-pagination/
@@ -264,7 +269,7 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
         is_start = request.data['status_type'] == 'Start'
         data = request.data.copy()  # import because request objects is immutable
         for field in ['session_time', 'input_octets', 'output_octets']:
-            if is_start and request.data[field] == "":
+            if is_start and request.data[field] == '':
                 data[field] = 0
         serializer = self.get_serializer(data=data)
         serializer.is_valid()
@@ -284,7 +289,7 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
     def perform_create(self, serializer):
         if app_settings.API_ACCOUNTING_AUTO_GROUP:
             user_model = get_user_model()
-            username = serializer.validated_data.get('username', "")
+            username = serializer.validated_data.get('username', '')
             try:
                 user = user_model.objects.get(username=username)
             except User.DoesNotExist:
@@ -323,6 +328,33 @@ class AccountingView(TokenAuthorizationMixin, generics.ListCreateAPIView):
 accounting = AccountingView.as_view()
 
 
+class BatchView(CreateAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+    serializer_class = RadiusBatchSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            valid_data = serializer.validated_data.copy()
+            num_of_users = valid_data.pop('number_of_users', None)
+            valid_data['organization'] = valid_data.pop('organization_slug', None)
+            batch = serializer.create(valid_data)
+            strategy = valid_data.get('strategy')
+            if strategy == 'csv':
+                batch.csvfile_upload()
+                response = RadiusBatchSerializer(batch, context={'request': request})
+            else:
+                batch.prefix_add(valid_data.get('prefix'), num_of_users)
+                response = RadiusBatchSerializer(batch, context={'request': request})
+            return Response(response.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+batch = BatchView.as_view()
+
+
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
         try:
@@ -335,57 +367,10 @@ class DispatchOrgMixin(object):
         if not (user.is_superuser or user.is_member(self.organization)):
             message = _(
                 f'User {user.username} is not member of '
-                f'organization {self.organization.slug}'
+                f'organization {self.organization.slug}.'
             )
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
-
-
-class BatchView(DispatchOrgMixin, generics.CreateAPIView):
-    authentication_classes = (BearerAuthentication,)
-    permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
-    serializer_class = RadiusBatchSerializer
-
-    def post(self, request, *args, **kwargs):
-        self.validate_membership(request.user)
-        data = request.data.copy()
-        data.update(organization=self.organization.pk)
-        serializer = self.get_serializer(data=data)
-        if serializer.is_valid():
-            name = serializer.data.get('name')
-            expiration_date = serializer.data.get('expiration_data')
-            strategy = serializer.data.get('strategy')
-            if strategy == 'csv':
-                csvfile = request.FILES['csvfile']
-                options = dict(
-                    name=name,
-                    strategy=strategy,
-                    expiration_date=expiration_date,
-                    csvfile=csvfile,
-                    organization=self.organization,
-                )
-                batch = RadiusBatch(**options)
-                batch.csvfile_upload(csvfile)
-                response = RadiusBatchSerializer(batch)
-            elif strategy == 'prefix':
-                prefix = serializer.data.get('prefix')
-                options = dict(
-                    name=name,
-                    strategy=strategy,
-                    expiration_date=expiration_date,
-                    prefix=prefix,
-                    organization=self.organization,
-                )
-                batch = RadiusBatch(**options)
-                number_of_users = int(request.data['number_of_users'])
-                batch.prefix_add(prefix, number_of_users)
-                response = RadiusBatchSerializer(batch, context={'request': request})
-            return Response(response.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-batch = BatchView.as_view()
 
 
 class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):
@@ -410,10 +395,8 @@ class DownloadRadiusBatchPdfView(DispatchOrgMixin, APIView):
             response.write(pdf)
             return response
         else:
-            raise NotFound(
-                detail="Only available for users created with prefix strategy",
-                code=404,
-            )
+            message = _('Only available for users created with prefix strategy')
+            raise NotFound(message)
 
 
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
@@ -493,7 +476,7 @@ class ValidateTokenSerializer(serializers.Serializer):
     token = serializers.CharField()
 
 
-class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, generics.CreateAPIView):
+class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
     serializer_class = ValidateTokenSerializer
 
     def post(self, request, *args, **kwargs):
@@ -526,7 +509,7 @@ class UserAccountingFilter(AccountingFilter):
         ]
 
 
-class UserAccountingView(DispatchOrgMixin, generics.ListAPIView):
+class UserAccountingView(DispatchOrgMixin, ListAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
     serializer_class = RadiusAccountingSerializer
@@ -573,9 +556,6 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         if not user.pk:
             return
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        # until django 2.1 urlsafe_base64_encode returned a bytestring
-        if not isinstance(uid, str):  # noqa
-            uid = uid.decode()
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')
@@ -597,7 +577,7 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
                 raise Http404()
             self.validate_membership(user)
             return user
-        raise ParseError('email field is required')
+        raise ParseError(_('email field is required'))
 
 
 password_reset = PasswordResetView.as_view()

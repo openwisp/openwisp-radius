@@ -137,7 +137,7 @@ Migrating an existing freeradius database
 -----------------------------------------
 
 If you already have a freeradius 3 database with the default schema, you should
-be able to use it with openwisp-radius (and openwisp-radius) easily:
+be able to use it with openwisp-radius (and extended apps) easily:
 
 1. first of all, back up your existing database;
 2. configure django to connect to your existing database;
@@ -150,6 +150,84 @@ be able to use it with openwisp-radius (and openwisp-radius) easily:
     ./manage.py migrate --fake openwisp-radius 0001_initial_freeradius
     ./manage.py migrate
 
+Automated periodic tasks
+------------------------
+
+Some periodic commands are required in production environments to enable certain
+features and facilitate database cleanup.
+There are two ways to automate these tasks:
+
+1. Celery-beat (Recommended Method)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. You need to create a `celery configuration file as it's created in example file <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/celery.py>`_.
+
+2. Add celery to ``__init__.py`` of your project:
+
+.. code-block:: python
+
+    from .celery import app as celery_app
+
+    __all__ = ['celery_app']
+
+3. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
+``365`` is given here for ``delete_old_radacct`` in the example settings.
+These arguments are passed to their respective management commands. More information about these parameters can be
+found at the `management commands page </user/management_commands.html>`_.
+
+.. note::
+    Celery tasks do not start with django server and need to be
+    started seperately, please read about running `celery and
+    celery-beat </developer/setup.html#celery-usage>`_ tasks.
+
+2. Crontab (Legacy Method)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Edit the crontab with:
+
+.. code-block:: shell
+
+    crontab -e
+
+Add and modify the following lines accordingly:
+
+.. code-block:: shell
+
+    # This command deletes RADIUS accounting sessions older than 365 days
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_radacct 365
+
+    # This command deletes RADIUS post-auth logs older than 365 days
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_postauth 365
+
+    # This command closes stale RADIUS sessions that have remained open for 15 days
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py cleanup_stale_radacct 15
+
+    # This command deactivates expired user accounts which were created temporarily
+    # (eg: for en event) and have an expiration date set.
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py deactivate_expired_users
+
+    # This command deletes users that have expired (and should have
+    # been deactivated by deactivate_expired_users) for more than
+    # 18 months (which is the default duration)
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_users
+
+Be sure to replace ``<virtualenv_path>`` with the absolute path to the Python
+virtual environment.
+
+Also, change ``<full/path/to>`` to the directory where ``manage.py`` is.
+
+To get the absolute path to ``manage.py`` when openwisp-radius is
+installed for development, navigate to the base directory of
+the cloned fork. Then, run:
+
+.. code-block:: shell
+
+    cd tests/
+    pwd
+
+.. note::
+    More information can be found at the
+    `management commands page </user/management_commands.html>`_.
 
 Installing for development
 --------------------------
@@ -211,6 +289,26 @@ Run tests with:
 
     ./runtests.py
 
+Celery Usage
+------------
+
+To run celery, you need to start redis-server. You can `install redis on your machine
+<https://redis.io/download>`_ or `install docker <https://docs.docker.com/get-docker/>`_
+and run redis inside docker container:
+
+.. code-block:: shell
+
+    docker run -p 6379:6379 --name openwisp-redis -d redis:alpine
+
+Run celery (it is recommended to use a tool like supervisord in production):
+
+.. code-block:: shell
+
+    # Optionally, use ``--detach`` argument to avoid using multiple terminals
+    celery -A openwisp2 worker -l info
+    celery -A openwisp2 beat -l info
+
+
 Troubleshooting
 ---------------
 
@@ -221,57 +319,3 @@ If you encounter any issue during installation, run:
     pip install -r requirements.txt -r requirements-test.txt
 
 instead of ``pip install -r requirements-test.txt``
-
-
-Automating management commands
-------------------------------
-
-Some management commands are necessary to enable certain
-features and also facilitate database cleanup. In a
-production environment, it is highly recommended to
-automate the usage of these commands by using cron jobs.
-
-Edit the crontab with:
-
-.. code-block:: shell
-
-    crontab -e
-
-Add and modify the following lines accordingly:
-
-.. code-block:: shell
-
-    # This command deletes RADIUS accounting sessions older than 365 days
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_radacct 365
-
-    # This command deletes RADIUS post-auth logs older than 365 days
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_postauth 365
-
-    # This command closes stale RADIUS sessions that have remained open for 15 days
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py cleanup_stale_radacct 15
-
-    # This command deactivates expired user accounts which were created temporarily
-    # (eg: for en event) and have an expiration date set.
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py deactivate_expired_users
-
-    # This command deletes users that have expired (and should have
-    # been deactivated by deactivate_expired_users) for more than
-    # 18 months (which is the default duration)
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_users
-
-Be sure to replace ``<virtualenv_path>`` with the absolute path to the Python
-virtual environment.
-
-Also, change ``<full/path/to>`` to the directory where ``manage.py`` is.
-
-To get the absolute path to ``manage.py`` when openwisp-radius is
-installed for development, navigate to the base directory of
-the cloned fork. Then, run:
-
-.. code-block:: shell
-
-    cd tests/
-    pwd
-
-More information can be found at the
-`management commands page </user/management_commands.html>`_.

@@ -11,7 +11,7 @@ from django.core.validators import validate_email
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
 from weasyprint import HTML
@@ -49,7 +49,7 @@ def create_default_groups(organization, apps=None):
         RadiusGroupCheck = load_model('RadiusGroupCheck')
     default = RadiusGroup(
         organization_id=organization.pk,
-        name='{}-users'.format(organization.slug),
+        name=f'{organization.slug}-users',
         description='Regular users',
         default=True,
     )
@@ -72,7 +72,7 @@ def create_default_groups(organization, apps=None):
     check.save()
     power_users = RadiusGroup(
         organization_id=organization.pk,
-        name='{}-power-users'.format(organization.slug),
+        name=f'{organization.slug}-power-users',
         description='Users with less restrictions',
         default=False,
     )
@@ -116,11 +116,11 @@ class SmsMessage(BaseSmsMessage):
 def find_available_username(username, users_list, prefix=False):
     User = get_user_model()
     suffix = 1
-    tmp = '{}{}'.format(username, suffix) if prefix else username
+    tmp = f'{username}{suffix}' if prefix else username
     names_list = map(lambda x: x.username, users_list)
     while User.objects.filter(username=tmp).exists() or tmp in names_list:
         suffix += 1 if prefix else 0
-        tmp = '{}{}'.format(username, suffix)
+        tmp = f'{username}{suffix}'
         suffix += 1 if not prefix else 0
     return tmp
 
@@ -145,9 +145,9 @@ def validate_csvfile(csvfile):
             username, password, email, firstname, lastname = row
             try:
                 validate_email(email)
-            except ValidationError as e:
+            except ValidationError as error:
                 raise ValidationError(
-                    _(error_message.format(str(row_count), e.message))
+                    _(error_message.format(str(row_count), error.message))
                 )
             row_count += 1
         elif len(row) > 0:

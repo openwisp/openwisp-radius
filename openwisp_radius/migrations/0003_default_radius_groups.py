@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from . import add_default_groups, add_default_group_to_existing_users
+from . import add_default_group_to_existing_users, add_default_groups
 
 
 class Migration(migrations.Migration):

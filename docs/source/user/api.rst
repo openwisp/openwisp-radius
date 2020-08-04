@@ -476,7 +476,7 @@ Batch user creation
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/radiusbatch/
+    /api/v1/radiusbatch/
 
 .. note::
   This API endpoint allows to use the features described in :doc:`/user/importing_users`
@@ -488,26 +488,28 @@ It is possible to generate the users of the ``RadiusBatch`` with two different s
 
 The csv method needs the following parameters:
 
-===============    ===============================
+=================  =================================
 Param              Description
-===============    ===============================
+=================  =================================
 name               Name of the operation
 strategy           csv
 csvfile            file with the users
 expiration_date    date of expiration of the users
-===============    ===============================
+organization_slug  slug of organization of the users
+=================  =================================
 
 These others are for the prefix method:
 
-===============    ==================================
+=================  ==================================
 Param              Description
-===============    ==================================
+=================  ==================================
 name               name of the operation
 strategy           prefix
 prefix             prefix for the generation of users
 number_of_users    number of users
 expiration_date    date of expiration of the users
-===============    ==================================
+organization_slug  slug of organization of the users
+=================  ==================================
 
 When using this strategy, in the response you can find the field
 ``user_credentials`` containing the list of users created

@@ -86,8 +86,32 @@ class ApiTokenMixin(BasePostParamsMixin):
         super().setUp()
         org = self.default_org
         rad = self.default_org.radius_settings
-        self.auth_header = 'Bearer {0} {1}'.format(org.pk, rad.token)
-        self.token_querystring = '?token={0}&uuid={1}'.format(rad.token, str(org.pk))
+        self.auth_header = f'Bearer {org.pk} {rad.token}'
+        self.token_querystring = f'?token={rad.token}&uuid={str(org.pk)}'
+
+    def _radius_batch_csv_data(self, **kwargs):
+        options = self._get_post_defaults(
+            {
+                'organization_slug': self._get_org().slug,
+                'name': 'test-csv',
+                'strategy': 'csv',
+            }
+        )
+        options.update(**kwargs)
+        return options
+
+    def _radius_batch_prefix_data(self, **kwargs):
+        options = self._get_post_defaults(
+            {
+                'organization_slug': self._get_org().slug,
+                'name': 'test-prefix',
+                'prefix': 'test-prefix',
+                'number_of_users': 3,
+                'strategy': 'prefix',
+            }
+        )
+        options.update(**kwargs)
+        return options
 
 
 class BaseTestCase(DefaultOrgMixin, TestCase):

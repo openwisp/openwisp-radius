@@ -22,7 +22,7 @@ install:
   # TODO: Remove when openwisp-users 0.3 is released
   - pip install --upgrade https://github.com/openwisp/openwisp-users/tarball/master/
   # TODO: Remove when latest openwisp-utils is released
-  - pip install --upgrade https://github.com/openwisp/openwisp-utils/tarball/master/
+  - pip install --upgrade git+https://github.com/openwisp/openwisp-utils.git#egg=openwisp_utils[qa]
 
 before_script:
   - ./run-qa-checks

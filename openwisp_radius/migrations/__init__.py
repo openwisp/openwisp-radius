@@ -1,10 +1,12 @@
 import os
-import _pickle as pickle
 import uuid
+
+import _pickle as pickle
 import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
+
 from ..utils import create_default_groups
 
 
@@ -25,7 +27,6 @@ def add_default_organization(apps, schema_editor):
     else:  # pragma: no-cover (corner case)
         Organization = get_swapped_model(apps, 'openwisp_users', 'Organization')
         default_org_id = Organization.objects.first().pk
-
     for model in models:
         Model = get_swapped_model(apps, 'openwisp_radius', model)
         for record in Model.objects.all().iterator():
@@ -105,21 +106,17 @@ def assign_permissions_to_groups(apps, schema_editor):
 
     for action in manage_operations:
         for model_name in operators_and_admins_can_manage:
-            permission = Permission.objects.get(
-                codename='{}_{}'.format(action, model_name)
-            )
+            permission = Permission.objects.get(codename=f'{action}_{model_name}')
             admin.permissions.add(permission.pk)
             operator.permissions.add(permission.pk)
     for model_name in operators_read_only_admins_manage:
         try:
-            permission = Permission.objects.get(codename='view_{}'.format(model_name))
+            permission = Permission.objects.get(codename=f'view_{model_name}')
             operator.permissions.add(permission.pk)
         except Permission.DoesNotExist:
             pass
         for action in manage_operations:
-            permission_ad = Permission.objects.get(
-                codename='{}_{}'.format(action, model_name)
-            )
+            permission_ad = Permission.objects.get(codename=f'{action}_{model_name}')
             admin.permissions.add(permission_ad.pk)
 
 
