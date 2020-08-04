@@ -1,0 +1,56 @@
+[
+    {
+        "model": "socialaccount.socialapp",
+        "pk": 1,
+        "fields": {
+            "provider": "facebook",
+            "name": "sample_app",
+            "client_id": "sample_app",
+            "secret": "sample_app",
+            "key": "sample_app",
+            "sites": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "socialaccount.socialapp",
+        "pk": 2,
+        "fields": {
+            "provider": "facebook",
+            "name": "sample",
+            "client_id": "sad2",
+            "secret": "123s",
+            "key": "sad",
+            "sites": [
+                3,
+                1,
+                4,
+                2
+            ]
+        }
+    },
+    {
+        "model": "socialaccount.socialaccount",
+        "pk": 1,
+        "fields": {
+            "user": 2,
+            "provider": "facebook",
+            "uid": "sample",
+            "last_login": "2020-06-15T10:36:21.268Z",
+            "date_joined": "2020-06-15T10:36:21.268Z",
+            "extra_data": "{}"
+        }
+    },
+    {
+        "model": "socialaccount.socialtoken",
+        "pk": 1,
+        "fields": {
+            "app": 1,
+            "account": 1,
+            "token": "this_is_a_sample_value",
+            "token_secret": "",
+            "expires_at": "2020-06-15T10:36:49Z"
+        }
+    }
+]

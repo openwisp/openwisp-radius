@@ -1,0 +1,866 @@
+[
+    {
+        "model": "auth.permission",
+        "pk": 1,
+        "fields": {
+            "name": "Can add permission",
+            "content_type": 1,
+            "codename": "add_permission"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 2,
+        "fields": {
+            "name": "Can change permission",
+            "content_type": 1,
+            "codename": "change_permission"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 3,
+        "fields": {
+            "name": "Can delete permission",
+            "content_type": 1,
+            "codename": "delete_permission"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 4,
+        "fields": {
+            "name": "Can view permission",
+            "content_type": 1,
+            "codename": "view_permission"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 5,
+        "fields": {
+            "name": "Can add group",
+            "content_type": 2,
+            "codename": "add_group"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 6,
+        "fields": {
+            "name": "Can change group",
+            "content_type": 2,
+            "codename": "change_group"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 7,
+        "fields": {
+            "name": "Can delete group",
+            "content_type": 2,
+            "codename": "delete_group"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 8,
+        "fields": {
+            "name": "Can view group",
+            "content_type": 2,
+            "codename": "view_group"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 9,
+        "fields": {
+            "name": "Can add user",
+            "content_type": 3,
+            "codename": "add_user"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 10,
+        "fields": {
+            "name": "Can change user",
+            "content_type": 3,
+            "codename": "change_user"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 11,
+        "fields": {
+            "name": "Can delete user",
+            "content_type": 3,
+            "codename": "delete_user"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 12,
+        "fields": {
+            "name": "Can view user",
+            "content_type": 3,
+            "codename": "view_user"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 13,
+        "fields": {
+            "name": "Can add content type",
+            "content_type": 4,
+            "codename": "add_contenttype"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 14,
+        "fields": {
+            "name": "Can change content type",
+            "content_type": 4,
+            "codename": "change_contenttype"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 15,
+        "fields": {
+            "name": "Can delete content type",
+            "content_type": 4,
+            "codename": "delete_contenttype"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 16,
+        "fields": {
+            "name": "Can view content type",
+            "content_type": 4,
+            "codename": "view_contenttype"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 17,
+        "fields": {
+            "name": "Can add session",
+            "content_type": 5,
+            "codename": "add_session"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 18,
+        "fields": {
+            "name": "Can change session",
+            "content_type": 5,
+            "codename": "change_session"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 19,
+        "fields": {
+            "name": "Can delete session",
+            "content_type": 5,
+            "codename": "delete_session"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 20,
+        "fields": {
+            "name": "Can view session",
+            "content_type": 5,
+            "codename": "view_session"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 21,
+        "fields": {
+            "name": "Can add log entry",
+            "content_type": 6,
+            "codename": "add_logentry"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 22,
+        "fields": {
+            "name": "Can change log entry",
+            "content_type": 6,
+            "codename": "change_logentry"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 23,
+        "fields": {
+            "name": "Can delete log entry",
+            "content_type": 6,
+            "codename": "delete_logentry"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 24,
+        "fields": {
+            "name": "Can view log entry",
+            "content_type": 6,
+            "codename": "view_logentry"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 25,
+        "fields": {
+            "name": "Can add NAS",
+            "content_type": 7,
+            "codename": "add_nas"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 26,
+        "fields": {
+            "name": "Can change NAS",
+            "content_type": 7,
+            "codename": "change_nas"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 27,
+        "fields": {
+            "name": "Can delete NAS",
+            "content_type": 7,
+            "codename": "delete_nas"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 28,
+        "fields": {
+            "name": "Can view NAS",
+            "content_type": 7,
+            "codename": "view_nas"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 29,
+        "fields": {
+            "name": "Can add accounting",
+            "content_type": 8,
+            "codename": "add_radiusaccounting"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 30,
+        "fields": {
+            "name": "Can change accounting",
+            "content_type": 8,
+            "codename": "change_radiusaccounting"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 31,
+        "fields": {
+            "name": "Can delete accounting",
+            "content_type": 8,
+            "codename": "delete_radiusaccounting"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 32,
+        "fields": {
+            "name": "Can view accounting",
+            "content_type": 8,
+            "codename": "view_radiusaccounting"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 33,
+        "fields": {
+            "name": "Can add check",
+            "content_type": 9,
+            "codename": "add_radiuscheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 34,
+        "fields": {
+            "name": "Can change check",
+            "content_type": 9,
+            "codename": "change_radiuscheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 35,
+        "fields": {
+            "name": "Can delete check",
+            "content_type": 9,
+            "codename": "delete_radiuscheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 36,
+        "fields": {
+            "name": "Can view check",
+            "content_type": 9,
+            "codename": "view_radiuscheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 37,
+        "fields": {
+            "name": "Can add group check",
+            "content_type": 10,
+            "codename": "add_radiusgroupcheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 38,
+        "fields": {
+            "name": "Can change group check",
+            "content_type": 10,
+            "codename": "change_radiusgroupcheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 39,
+        "fields": {
+            "name": "Can delete group check",
+            "content_type": 10,
+            "codename": "delete_radiusgroupcheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 40,
+        "fields": {
+            "name": "Can view group check",
+            "content_type": 10,
+            "codename": "view_radiusgroupcheck"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 41,
+        "fields": {
+            "name": "Can add group reply",
+            "content_type": 11,
+            "codename": "add_radiusgroupreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 42,
+        "fields": {
+            "name": "Can change group reply",
+            "content_type": 11,
+            "codename": "change_radiusgroupreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 43,
+        "fields": {
+            "name": "Can delete group reply",
+            "content_type": 11,
+            "codename": "delete_radiusgroupreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 44,
+        "fields": {
+            "name": "Can view group reply",
+            "content_type": 11,
+            "codename": "view_radiusgroupreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 45,
+        "fields": {
+            "name": "Can add post auth",
+            "content_type": 12,
+            "codename": "add_radiuspostauth"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 46,
+        "fields": {
+            "name": "Can change post auth",
+            "content_type": 12,
+            "codename": "change_radiuspostauth"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 47,
+        "fields": {
+            "name": "Can delete post auth",
+            "content_type": 12,
+            "codename": "delete_radiuspostauth"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 48,
+        "fields": {
+            "name": "Can view post auth",
+            "content_type": 12,
+            "codename": "view_radiuspostauth"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 49,
+        "fields": {
+            "name": "Can add reply",
+            "content_type": 13,
+            "codename": "add_radiusreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 50,
+        "fields": {
+            "name": "Can change reply",
+            "content_type": 13,
+            "codename": "change_radiusreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 51,
+        "fields": {
+            "name": "Can delete reply",
+            "content_type": 13,
+            "codename": "delete_radiusreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 52,
+        "fields": {
+            "name": "Can view reply",
+            "content_type": 13,
+            "codename": "view_radiusreply"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 53,
+        "fields": {
+            "name": "Can add user group",
+            "content_type": 14,
+            "codename": "add_radiususergroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 54,
+        "fields": {
+            "name": "Can change user group",
+            "content_type": 14,
+            "codename": "change_radiususergroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 55,
+        "fields": {
+            "name": "Can delete user group",
+            "content_type": 14,
+            "codename": "delete_radiususergroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 56,
+        "fields": {
+            "name": "Can view user group",
+            "content_type": 14,
+            "codename": "view_radiususergroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 57,
+        "fields": {
+            "name": "Can add batch user creation",
+            "content_type": 15,
+            "codename": "add_radiusbatch"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 58,
+        "fields": {
+            "name": "Can change batch user creation",
+            "content_type": 15,
+            "codename": "change_radiusbatch"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 59,
+        "fields": {
+            "name": "Can delete batch user creation",
+            "content_type": 15,
+            "codename": "delete_radiusbatch"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 60,
+        "fields": {
+            "name": "Can view batch user creation",
+            "content_type": 15,
+            "codename": "view_radiusbatch"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 61,
+        "fields": {
+            "name": "Can add group",
+            "content_type": 16,
+            "codename": "add_radiusgroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 62,
+        "fields": {
+            "name": "Can change group",
+            "content_type": 16,
+            "codename": "change_radiusgroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 63,
+        "fields": {
+            "name": "Can delete group",
+            "content_type": 16,
+            "codename": "delete_radiusgroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 64,
+        "fields": {
+            "name": "Can view group",
+            "content_type": 16,
+            "codename": "view_radiusgroup"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 65,
+        "fields": {
+            "name": "Can add radius token",
+            "content_type": 17,
+            "codename": "add_radiustoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 66,
+        "fields": {
+            "name": "Can change radius token",
+            "content_type": 17,
+            "codename": "change_radiustoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 67,
+        "fields": {
+            "name": "Can delete radius token",
+            "content_type": 17,
+            "codename": "delete_radiustoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 68,
+        "fields": {
+            "name": "Can view radius token",
+            "content_type": 17,
+            "codename": "view_radiustoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 69,
+        "fields": {
+            "name": "Can add Token",
+            "content_type": 18,
+            "codename": "add_token"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 70,
+        "fields": {
+            "name": "Can change Token",
+            "content_type": 18,
+            "codename": "change_token"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 71,
+        "fields": {
+            "name": "Can delete Token",
+            "content_type": 18,
+            "codename": "delete_token"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 72,
+        "fields": {
+            "name": "Can view Token",
+            "content_type": 18,
+            "codename": "view_token"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 73,
+        "fields": {
+            "name": "Can add site",
+            "content_type": 19,
+            "codename": "add_site"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 74,
+        "fields": {
+            "name": "Can change site",
+            "content_type": 19,
+            "codename": "change_site"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 75,
+        "fields": {
+            "name": "Can delete site",
+            "content_type": 19,
+            "codename": "delete_site"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 76,
+        "fields": {
+            "name": "Can view site",
+            "content_type": 19,
+            "codename": "view_site"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 77,
+        "fields": {
+            "name": "Can add email address",
+            "content_type": 20,
+            "codename": "add_emailaddress"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 78,
+        "fields": {
+            "name": "Can change email address",
+            "content_type": 20,
+            "codename": "change_emailaddress"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 79,
+        "fields": {
+            "name": "Can delete email address",
+            "content_type": 20,
+            "codename": "delete_emailaddress"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 80,
+        "fields": {
+            "name": "Can view email address",
+            "content_type": 20,
+            "codename": "view_emailaddress"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 81,
+        "fields": {
+            "name": "Can add email confirmation",
+            "content_type": 21,
+            "codename": "add_emailconfirmation"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 82,
+        "fields": {
+            "name": "Can change email confirmation",
+            "content_type": 21,
+            "codename": "change_emailconfirmation"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 83,
+        "fields": {
+            "name": "Can delete email confirmation",
+            "content_type": 21,
+            "codename": "delete_emailconfirmation"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 84,
+        "fields": {
+            "name": "Can view email confirmation",
+            "content_type": 21,
+            "codename": "view_emailconfirmation"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 85,
+        "fields": {
+            "name": "Can add social account",
+            "content_type": 22,
+            "codename": "add_socialaccount"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 86,
+        "fields": {
+            "name": "Can change social account",
+            "content_type": 22,
+            "codename": "change_socialaccount"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 87,
+        "fields": {
+            "name": "Can delete social account",
+            "content_type": 22,
+            "codename": "delete_socialaccount"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 88,
+        "fields": {
+            "name": "Can view social account",
+            "content_type": 22,
+            "codename": "view_socialaccount"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 89,
+        "fields": {
+            "name": "Can add social application",
+            "content_type": 23,
+            "codename": "add_socialapp"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 90,
+        "fields": {
+            "name": "Can change social application",
+            "content_type": 23,
+            "codename": "change_socialapp"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 91,
+        "fields": {
+            "name": "Can delete social application",
+            "content_type": 23,
+            "codename": "delete_socialapp"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 92,
+        "fields": {
+            "name": "Can view social application",
+            "content_type": 23,
+            "codename": "view_socialapp"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 93,
+        "fields": {
+            "name": "Can add social application token",
+            "content_type": 24,
+            "codename": "add_socialtoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 94,
+        "fields": {
+            "name": "Can change social application token",
+            "content_type": 24,
+            "codename": "change_socialtoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 95,
+        "fields": {
+            "name": "Can delete social application token",
+            "content_type": 24,
+            "codename": "delete_socialtoken"
+        }
+    },
+    {
+        "model": "auth.permission",
+        "pk": 96,
+        "fields": {
+            "name": "Can view social application token",
+            "content_type": 24,
+            "codename": "view_socialtoken"
+        }
+    }
+]

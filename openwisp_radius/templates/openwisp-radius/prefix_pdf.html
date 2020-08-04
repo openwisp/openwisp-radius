@@ -16,18 +16,24 @@
     </style>
 </head>
 <body>
-<table>
-    <tr>
-        <th>{% trans 'Username' %}</th>
-        <th>{% trans 'Password' %}</th>
-    </tr>
-    {% for row in users %}
-    <tr>
-	{% for cell in row %}
-        <td>{{ cell }}</td>
-	{% endfor %}
-    </tr>
-    {% endfor %}
-</table>
+{% if users %}
+    <table>
+        <tr>
+            <th>{% trans 'Username' %}</th>
+            <th>{% trans 'Password' %}</th>
+        </tr>
+        {% for row in users %}
+        <tr>
+            {% for cell in row %}
+            <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    No user credential data found.
+    If you have upgraded from django-freeradius, please note it is not possible to import user credential data.
+    If you are an operator, please contact system administrator for more information.
+{% endif %}
 </body>
 </html>

@@ -84,3 +84,30 @@ This command deletes users that have expired (and should have been deactivated b
     ./manage.py delete_old_users --older-than-months <duration_in_months>
 
 Note that the default duration is set to 18 months.
+
+``upgrade_from_django_freeradius``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are upgrading from `django-freeradius <https://github.com/openwisp/django-freeradius>`_
+to openwisp-radius, there is an easy migration script that will import your freeradius
+database, sites, social website account users, users & groups to openwisp-radius instance::
+
+    ./manage.py upgrade_from_django_freeradius
+
+The management command accepts an argument ``--backup``, that you can pass
+to give the location of the backup files, by default it looks in the ``tests/``
+directory, eg::
+
+    ./manage.py upgrade_from_django_freeradius --backup /home/user/django_freeradius/
+
+The management command accepts another argument ``--organization``, if you want to
+import data to a specific organization, you can give its UUID for the same,
+by default the data is added to the first found organization, eg::
+
+    ./manage.py upgrade_from_django_freeradius --organization 900856da-c89a-412d-8fee-45a9c763ca0b
+
+.. note::
+    You can follow the `tutorial to migrate database from django-freeradius <https://github.com/openwisp/django-freeradius/blob/master/README.rst>`_.
+
+.. warning::
+    It is not possible to export user credential data for radiusbatch created using prefix, please manually preserve the PDF files if you want to access the data in the future.
