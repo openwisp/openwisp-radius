@@ -50,10 +50,31 @@ ensuring also that ``openwisp_radius`` has been removed:
 
     INSTALLED_APPS = [
         # ... other apps ...
-
-        # 'openwisp_radius'  <-- comment out or delete this line
-        'myradius'
+        # openwisp admin theme
+        'openwisp_utils.admin_theme',
+        # all-auth
+        'django.contrib.sites',
+        'allauth',
+        'allauth.account',
+        'allauth.socialaccount',
+        # admin
+        'django.contrib.admin',
+        # rest framework
+        'rest_framework',
+        'django_filters',
+        # registration
+        'rest_framework.authtoken',
+        'rest_auth',
+        'rest_auth.registration',
+        # social login
+        'allauth.socialaccount.providers.facebook',  # optional, can be removed if social login is not needed
+        'allauth.socialaccount.providers.google',  # optional, can be removed if social login is not needed
+        # openwisp
+        # 'myradius', <-- replace with your app-name here
+        'openwisp_users',
+        'private_storage',
     ]
+
 .. note::
     For more information about how to work with django projects and django apps, please refer
     to the `django documentation <https://docs.djangoproject.com/en/dev/intro/tutorial01/>`_.
