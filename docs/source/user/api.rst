@@ -9,15 +9,69 @@ API Documentation
 API endpoints for FreeRADIUS
 ############################
 
-The following section is dedicated to API endpoints that are designed to be
-consumed by FreeRADIUS.
+The following section is dedicated to API endpoints that are designed
+to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
+There are three methods for request authorization:
 
-Organization API Token
-----------------------
+1. Radius User token (recommended)
+----------------------------------
 
-Only requests containing the right API token and Organization UUID will able
-to talk to the API endpoints consumed by freeradius
-(`Authorize`_, `Post Auth`_, `Accounting`_).
+To use Radius User token authentication method, the
+following workflow can be used:
+
+1. User enters credentials and sends request to login in the Captive portal.
+2. The captive login page `performs authentication <#login-obtain-user-auth-token>`_ which returns **radius user token** on success.
+3. The captive login must initiate the ``POST`` request to the captive portal, using the radius user token as password, example:
+
+.. code-block:: text
+
+    curl -X POST http://localhost:8000/api/v1/authorize/ \
+         -d "username=<username>&password=<radius_token>"
+
+
+.. note::
+    By default, ``<radius_token>`` is valid for authentication for one
+    request only and a new ``<radius_token>`` needs to be `obtained for
+    each request <#login-obtain-user-auth-token>`_.
+    However, if `OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN
+    </user/settings.html#openwisp-radius-disposable-radius-user-token>`_
+    is set to ``False``, the ``<radius_token>`` is valid for authentication
+    as long as freeradius accounting ``Stop`` request is not sent
+    or the token is not deleted.
+
+.. warning::
+    If you are using Radius User token method, remember that one
+    user account can only authenticate with one organization
+    at a time, i.e a single user account cannot consume
+    services from multiple organizations simultaneously.
+
+2. Bearer token
+---------------
+
+The Authorization information (`<org-uuid> and <token>
+<#organization-uuid-token>`_) is required to be sent in the form
+of bearer token in an authorization header.
+
+.. code-block:: text
+
+      curl -X POST http://localhost:8000/api/v1/authorize/ \
+           -H "Authorization: Bearer <org-uuid> <token>" \
+           -d "username=<username>&password=<password>"
+
+3. Querystring
+--------------
+
+The Authorization information (`<org-uuid> and <token>
+<#organization-uuid-token>`_) is required to be sent in the form
+of querystring in the request URL.
+
+.. code-block:: text
+
+      curl -X POST http://localhost:8000/api/v1/authorize/?uuid=<org-uuid>&token=<token> \
+           -d "username=<username>&password=<password>"
+
+Organization UUID & Token
+-------------------------
 
 You can get (and set) the value of the api token in the organization
 configuration page on the OpenWISP dashboard
@@ -26,8 +80,10 @@ configuration page on the OpenWISP dashboard
 .. image:: /images/token.png
    :alt: Organization Radius Token
 
-It is highly recommended that you use a hard to guess value, longer than 15 characters
-containing both letters and numbers. Eg: ``165f9a790787fc38e5cc12c1640db2300648d9a2``.
+.. note::
+    It is highly recommended that you use a hard to guess value, longer than
+    15 characters containing both letters and numbers.
+    Eg: ``165f9a790787fc38e5cc12c1640db2300648d9a2``.
 
 You will also need the UUID of your organization from the organization change page
 (select your organization in ``/admin/openwisp_users/organization/``):
@@ -35,22 +91,9 @@ You will also need the UUID of your organization from the organization change pa
 .. image:: /images/org_uuid.png
    :alt: Organization UUID
 
-HTTP clients must send these tokens, either in the form of a `bearer token
-<https://swagger.io/docs/specification/authentication/bearer-authentication/>`_
-or in the form of a query string parameter as shown below.
-
-* Bearer token (recommended)::
-
-      curl -X POST http://localhost:8000/api/v1/authorize/ \
-           -H "Authorization: Bearer <org-uuid> <token>" \
-           -d "username=<username>&password=<password>"
-
-* Querystring::
-
-      curl -X POST http://localhost:8000/api/v1/authorize/?uuid=<org-uuid>&token=<token> \
-           -d "username=<username>&password=<password>"
-
-Requests which contain an invalid token will receive a ``403`` HTTP error.
+Requests authorizing with `bearer-token <#bearer-token>`_ or `querystring
+<#querystring>`_ method **must** contain organization UUID & token. If the
+tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
 `Configure the REST module </developer/freeradius.html#configure-the-rest-module>`_.
@@ -353,7 +396,7 @@ Login (Obtain User Auth Token)
 
 .. code-block:: text
 
-    /api/v1/account/token/
+    /api/v1/<organization-slug>/account/token/
 
 Responds only to **POST**.
 
@@ -385,7 +428,7 @@ Return also the radius user token and username in the response.
 
 .. code-block:: text
 
-    /api/v1/account/token/validate/
+    /api/v1/<organization-slug>/account/token/validate/
 
 Responds only to **POST**.
 

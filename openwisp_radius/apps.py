@@ -2,7 +2,7 @@ import swapper
 from django.apps import AppConfig
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
 
 from .receivers import (
@@ -26,6 +26,7 @@ class OpenwispRadiusConfig(AppConfig):
     def connect_signals(self):
         OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
         Organization = swapper.load_model('openwisp_users', 'Organization')
+        RadiusToken = swapper.load_model('openwisp_radius', 'RadiusToken')
         User = get_user_model()
 
         post_save.connect(
@@ -53,6 +54,14 @@ class OpenwispRadiusConfig(AppConfig):
             sender=Organization,
             dispatch_uid='openwisp_radius_org_post_save',
         )
+        post_delete.connect(
+            self.radiustoken_post_delete,
+            sender=RadiusToken,
+            dispatch_uid='openwisp_radius_radiustoken_post_delete',
+        )
+
+    def radiustoken_post_delete(self, instance, **kwargs):
+        instance.delete_cache()
 
     def add_default_menu_items(self):
         menu_setting = 'OPENWISP_DEFAULT_ADMIN_MENU_ITEMS'

@@ -24,7 +24,7 @@ class TestRadiusToken(BaseTestCase):
 
     def test_create_radius_token_model(self):
         u = User.objects.create(username='test', email='test@test.org', password='test')
-        obj = RadiusToken.objects.create(user=u)
+        obj = RadiusToken.objects.create(user=u, organization=self._get_org())
         self.assertEqual(str(obj), obj.key)
         self.assertEqual(obj.user, u)
 

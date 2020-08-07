@@ -1,6 +1,7 @@
 import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.cache import cache
 from django.urls import reverse
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
@@ -898,3 +899,32 @@ class TestAdmin(
             visible=[data['rg1']],
             hidden=[data['rg2']],
         )
+
+    def test_radiustoken_delete_queryset(self):
+        # Create & check radius token works
+        self._get_org_user()
+        radtoken, _ = RadiusToken.objects.get_or_create(
+            user=self._get_user(), organization=self._get_org(), can_auth=True
+        )
+        response = self.client.post(
+            reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'},
+        )
+        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(cache.get('rt-tester'), str(self.default_org.pk))
+        # Delete radius token
+        response = self.client.post(
+            reverse('admin:{0}_radiustoken_changelist'.format(self.app_label)),
+            {
+                'action': 'delete_selected',
+                '_selected_action': [radtoken.pk],
+                'post': 'yes',
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Test delete queryset deleted cache
+        response = self.client.post(
+            reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(cache.get('rt-tester'), None)

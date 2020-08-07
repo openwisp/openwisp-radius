@@ -4,6 +4,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from ..utils import load_model
 from . import CallCommandMixin as BaseCallCommandMixin
@@ -12,6 +13,7 @@ from . import PostParamsMixin as BasePostParamsMixin
 
 User = get_user_model()
 RadiusBatch = load_model('RadiusBatch')
+RadiusToken = load_model('RadiusToken')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
@@ -112,6 +114,23 @@ class ApiTokenMixin(BasePostParamsMixin):
         )
         options.update(**kwargs)
         return options
+
+    def _authorize_user(self, username='tester', password='tester', auth_header=None):
+        if auth_header:
+            return self.client.post(
+                reverse('radius:authorize'),
+                {'username': username, 'password': password},
+                HTTP_AUTHORIZATION=auth_header,
+            )
+        return self.client.post(
+            reverse('radius:authorize'), {'username': username, 'password': password},
+        )
+
+    def _login_and_obtain_auth_token(self, username='tester', password='tester'):
+        login_payload = {'username': username, 'password': password}
+        login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
+        login_response = self.client.post(login_url, data=login_payload)
+        return login_response.json()['radius_user_token']
 
 
 class BaseTestCase(DefaultOrgMixin, TestCase):

@@ -228,20 +228,24 @@ for the available configuration values.
 Configure the site
 ^^^^^^^^^^^^^^^^^^
 
-Configure the ``authorize``, ``authenticate`` and ``postauth`` section
-as follows, substituting the occurrences of ``<api_token>`` & ``<org-uuid>`` with
+Configuration of the ``authorize``, ``authenticate`` and ``postauth`` section as follows,
+there are three ways to `authenticate your freeradius instance with openwisp-radius </user/api.html#organization-api-token>`_, if you are **not** using Radius Token method, please
+substitute the occurrences of ``<api_token>`` & ``<org-uuid>`` with
 the value of `your organization's UUID & api_token values </user/api.html#organization-api-token>`_:
 
 .. code-block:: ini
 
     # /etc/freeradius/sites-enabled/default
+    # Remove `#` symbol from the line to uncomment it
 
     server default {
-
-        api_token_header = "Authorization: Bearer <org-uuid> <api_token>"
+        # if you are not using Radius Token authentication method, please uncomment
+        # and set the values for <org-uuid> & <api_token>
+        # api_token_header = "Authorization: Bearer <org-uuid> <api_token>"
 
         authorize {
-            update control { &REST-HTTP-Header += "${...api_token_header}" }
+            # if you are not using Radius Token authentication method, please uncomment the following
+            # update control { &REST-HTTP-Header += "${...api_token_header}" }
             rest
             sql
             dailycounter
@@ -253,17 +257,20 @@ the value of `your organization's UUID & api_token values </user/api.html#organi
         authenticate {}
 
         post-auth {
-            update control { &REST-HTTP-Header += "${...api_token_header}" }
+            # if you are not using Radius Token authentication method, please uncomment the following
+            # update control { &REST-HTTP-Header += "${...api_token_header}" }
             rest
 
             Post-Auth-Type REJECT {
-                update control { &REST-HTTP-Header += "${....api_token_header}" }
+                # if you are not using Radius Token authentication method, please uncomment the following
+                # update control { &REST-HTTP-Header += "${....api_token_header}" }
                 rest
             }
         }
 
         accounting {
-            update control { &REST-HTTP-Header += "${...api_token_header}" }
+            # if you are not using Radius Token authentication method, please uncomment the following
+            # update control { &REST-HTTP-Header += "${...api_token_header}" }
             rest
         }
     }
