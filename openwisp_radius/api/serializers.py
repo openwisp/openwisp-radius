@@ -37,7 +37,9 @@ class RadiusPostAuthSerializer(serializers.ModelSerializer):
         # do not save correct passwords in clear text
         if data['reply'] == 'Access-Accept':
             data['password'] = ''
-        return data
+        passwd = data['password']
+        data['password'] = f'{passwd[:63]}\u2026' if len(passwd) > 64 else passwd
+        return super().validate(data)
 
     class Meta:
         model = RadiusPostAuth
