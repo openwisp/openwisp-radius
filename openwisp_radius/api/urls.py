@@ -7,9 +7,9 @@ def get_api_urls(api_views=None):
     if not api_views:
         api_views = views
     return [
-        path('authorize/', api_views.authorize, name='authorize'),
-        path('postauth/', api_views.postauth, name='postauth'),
-        path('accounting/', api_views.accounting, name='accounting'),
+        path('freeradius/authorize/', api_views.authorize, name='authorize'),
+        path('freeradius/postauth/', api_views.postauth, name='postauth'),
+        path('freeradius/accounting/', api_views.accounting, name='accounting'),
         # registration differentiated by organization
         path('<slug:slug>/account/', api_views.register, name='rest_register'),
         # password reset
