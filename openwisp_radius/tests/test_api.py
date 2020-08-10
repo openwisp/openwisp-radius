@@ -14,6 +14,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
+from django.utils.crypto import get_random_string
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode
 from django.utils.timezone import localtime, now
@@ -261,6 +262,42 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
                 'the organization UUID and API token.'
             ),
         )
+
+    def test_postauth_long_password_access_reject(self):
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        params = self._get_postauth_params(
+            **{'password': get_random_string(length=128), 'reply': 'Access-Reject'}
+        )
+        response = self.client.post(
+            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data, None)
+        self.assertEqual(RadiusPostAuth.objects.count(), 1)
+        pa = RadiusPostAuth.objects.first()
+        with self.subTest('Ensure validation does not fail'):
+            pa.full_clean()
+        with self.subTest('Ensure max length is honored'):
+            self.assertEqual(
+                len(pa.password), RadiusPostAuth._meta.get_field('password').max_length
+            )
+
+    def test_postauth_long_password_access_accept(self):
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        params = self._get_postauth_params(
+            **{'password': get_random_string(length=128), 'reply': 'Access-Accept'}
+        )
+        response = self.client.post(
+            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data, None)
+        self.assertEqual(RadiusPostAuth.objects.count(), 1)
+        pa = RadiusPostAuth.objects.first()
+        with self.subTest('Ensure validation does not fail'):
+            pa.full_clean()
+        with self.subTest('Ensure password is not saved'):
+            self.assertEqual(len(pa.password), 0)
 
     _acct_url = reverse('radius:accounting')
     _acct_initial_data = {
