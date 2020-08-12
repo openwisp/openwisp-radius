@@ -47,6 +47,10 @@ START_DATE = '2019-04-20T22:14:09+01:00'
 class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     _test_email = 'test@openwisp.org'
 
+    def setUp(self):
+        cache.clear()
+        super().setUp()
+
     def test_invalid_token(self):
         self._get_org_user()
         auth_header = self.auth_header.replace(' ', '')  # removes spaces in token
@@ -70,7 +74,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.data, None)
 
     def test_authorize_no_token_403(self):
-        cache.clear()
         self._get_org_user()
         response = self._authorize_user()
         self.assertEqual(response.status_code, 403)
@@ -83,15 +86,13 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
 
     def test_authorize_no_username_403(self):
-        cache.clear()
         self._get_org_user()
         self._login_and_obtain_auth_token()
-        response = self._authorize_user(username='')
+        response = self.client.get(reverse('radius:authorize'))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data['detail'], 'username field is required.')
 
     def test_authorize_200(self):
-        cache.clear()
         self._get_org_user()
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
@@ -188,7 +189,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.data, None)
 
     def test_postauth_radius_token_expired_201(self):
-        cache.clear()
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         self.assertEqual(RadiusToken.objects.all().count(), 0)
         self._get_org_user()
@@ -259,7 +259,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_postauth_no_token_403(self):
-        cache.clear()
         response = self.client.post(reverse('radius:postauth'), {'username': 'tester'})
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -419,7 +418,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
 
     def test_accounting_start_radius_token_expired_200(self):
-        cache.clear()
         self._get_org_user()
         self._create_radius_token(can_auth=False)
         self._create_radius_accounting(**self._acct_initial_data)
@@ -572,7 +570,8 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         data = self.acct_post_data
         data.update(username='tester', status_type='Stop')
         data = self._get_accounting_params(**data)
-        self.post_json(data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
         radtoken.refresh_from_db()
         self.assertFalse(radtoken.can_auth)
 
@@ -1453,6 +1452,21 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 404)
 
+    def test_user_accounting_list_empty_diff_organization(self):
+        self.test_accounting_start_200()
+        self._get_org_user()
+        with self.subTest("Auth Token"):
+            self._login_and_obtain_auth_token(username='tester')
+            response = self.client.get(f'{self._acct_url}?username=tester')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.json()), 0)
+        with self.subTest("HTTP Auth"):
+            response = self.client.get(
+                f'{self._acct_url}?username=tester', HTTP_AUTHORIZATION=self.auth_header
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.json()), 0)
+
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
     @classmethod
@@ -1670,6 +1684,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
 
 class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
     def setUp(self):
+        cache.clear()
         self.org = self._create_org(**{'name': 'test', 'slug': 'test'})
 
     def test_string_representation(self):
@@ -1719,7 +1734,6 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             self.assertEqual(None, cache.get(rad.organization.pk))
 
     def test_no_org_radius_setting(self):
-        cache.clear()
         self._get_org_user()
         token_querystring = f'?token=12345&uuid={str(self.org.pk)}'
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
@@ -1737,7 +1751,6 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
         r = self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(r.status_code, 200)
-        cache.clear()
 
     def test_default_organisation_radius_settings(self):
         org = self._get_org()

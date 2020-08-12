@@ -38,7 +38,6 @@ from rest_framework.exceptions import (
     NotFound,
     ParseError,
 )
-from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
@@ -89,7 +88,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
     def _radius_token_authenticate(self, request):
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
-        username = request.data.get('username')
+        username = request.data.get('username') or request.query_params.get('username')
         cached_orgid = cache.get(f'rt-{username}')
         if cached_orgid:
             return (AnonymousUser(), cached_orgid)
@@ -153,20 +152,8 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return uuid, token
 
 
-class TokenAuthorizationMixin(object):
+class AuthorizeView(APIView):
     authentication_classes = (FreeradiusApiAuthentication,)
-
-    def get_serializer(self, *args, **kwargs):
-        # supply organization uuid got from authentication
-        if 'data' in kwargs:
-            # request.data is immutable so we'll use a normal dict
-            data = kwargs['data'].copy()
-            data['organization'] = self.request.auth
-            kwargs['data'] = data
-        return super().get_serializer(*args, **kwargs)
-
-
-class AuthorizeView(TokenAuthorizationMixin, APIView):
     accept_attributes = {'control:Auth-Type': 'Accept'}
     accept_status = 200
     reject_attributes = {'control:Auth-Type': 'Reject'}
@@ -228,16 +215,12 @@ class AuthorizeView(TokenAuthorizationMixin, APIView):
             token.save()
         return True
 
-    def get_serializer(self, *args, **kwargs):
-        # needed to avoid `'super' object has no attribute 'get_serializer'`
-        # exception, raised in TokenAuthorizationMixin.get_serializer
-        return serializers.Serializer(*args, **kwargs)
-
 
 authorize = AuthorizeView.as_view()
 
 
-class PostAuthView(TokenAuthorizationMixin, CreateAPIView):
+class PostAuthView(CreateAPIView):
+    authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusPostAuthSerializer
 
     def post(self, request, *args, **kwargs):
@@ -248,6 +231,10 @@ class PostAuthView(TokenAuthorizationMixin, CreateAPIView):
         response = super().post(request, *args, **kwargs)
         response.data = None
         return response
+
+    def perform_create(self, serializer):
+        organization = Organization.objects.get(pk=self.request.auth)
+        serializer.save(organization=organization)
 
 
 postauth = PostAuthView.as_view()
@@ -279,7 +266,7 @@ class AccountingViewPagination(drf_link_header_pagination.LinkHeaderPagination):
     max_page_size = 100
 
 
-class AccountingView(TokenAuthorizationMixin, ListCreateAPIView):
+class AccountingView(ListCreateAPIView):
     """
     HEADER: Pagination is provided using a Link header
             https://developer.github.com/v3/guides/traversing-with-pagination/
@@ -292,78 +279,43 @@ class AccountingView(TokenAuthorizationMixin, ListCreateAPIView):
     """
 
     queryset = RadiusAccounting.objects.all().order_by('-start_time')
+    authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
     filter_class = AccountingFilter
 
-    def post(self, request, *args, **kwargs):
-        status_type = self._get_status_type(request)
-        # Accounting-On and Accounting-Off are not implemented and
-        # hence  ignored right now - may be implemented in the future
-        if status_type in ['Accounting-On', 'Accounting-Off']:
-            return Response(None)
-        method = 'create' if status_type == 'Start' else 'update'
-        return getattr(self, method)(request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        is_start = request.data['status_type'] == 'Start'
-        data = request.data.copy()  # import because request objects is immutable
-        for field in ['session_time', 'input_octets', 'output_octets']:
-            if is_start and request.data[field] == '':
-                data[field] = 0
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid()
-        error_keys = serializer.errors.keys()
-        errors = len(error_keys)
-        if not errors:
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(None, status=201, headers=headers)
-        # trying to create a record which
-        # already exist, fallback to update
-        if errors == 1 and 'unique_id' in error_keys:
-            return self.update(request, *args, **kwargs)
-        else:
-            raise RestValidationError(serializer.errors)
-
-    def perform_create(self, serializer):
-        if app_settings.API_ACCOUNTING_AUTO_GROUP:
-            user_model = get_user_model()
-            username = serializer.validated_data.get('username', '')
-            try:
-                user = user_model.objects.get(username=username)
-            except User.DoesNotExist:
-                logging.info(f'no corresponding user found for username: {username}')
-                serializer.save()
-            else:
-                group = user.radiususergroup_set.order_by('priority').first()
-                # user may not have a group defined
-                groupname = group.groupname if group else None
-                serializer.save(groupname=groupname)
-        else:
-            return super().perform_create(serializer)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_queryset().get(unique_id=request.data['unique_id'])
-        # trying to update a record which
-        # does not exist, fallback to create
-        except RadiusAccounting.DoesNotExist:
-            return self.create(request, *args, **kwargs)
-        serializer = self.get_serializer(instance, data=request.data, partial=False)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(None)
-
-    def _get_status_type(self, request):
-        try:
-            return request.data['status_type']
-        except KeyError:
-            raise RestValidationError({'status_type': [_('This field is required.')]})
-
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.auth)
+
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        # Accounting-On and Accounting-Off are not implemented and
+        # hence  ignored right now - may be implemented in the future
+        if data.get('status_type', None) in ['Accounting-On', 'Accounting-Off']:
+            return Response(None)
+        # Create or Update
+        try:
+            instance = self.get_queryset().get(unique_id=data.get('unique_id'))
+        except RadiusAccounting.DoesNotExist:
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
+            serializer.create(acct_data)
+            headers = self.get_success_headers(serializer.data)
+            return Response(None, status=201, headers=headers)
+        else:
+            serializer = self.get_serializer(instance, data=data, partial=False)
+            serializer.is_valid(raise_exception=True)
+            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
+            serializer.update(instance, acct_data)
+            return Response(None)
+
+    def _data_to_acct_model(self, valid_data):
+        acct_org = Organization.objects.get(pk=self.request.auth)
+        valid_data.pop('status_type', None)
+        valid_data['organization'] = acct_org
+        return valid_data
 
 
 accounting = AccountingView.as_view()

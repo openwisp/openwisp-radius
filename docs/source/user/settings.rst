@@ -209,7 +209,7 @@ The value filled in will be the ``groupname`` of the ``RadiusUserGroup`` of the 
 priority among the RadiusUserGroups related to the user with the ``username`` as in the
 accounting instance.
 In the event there is no user in the database corresponding to the ``username`` in the
-accounting instance, the failure will be logged with ``info`` level but the accounting
+accounting instance, the failure will be logged with ``warning`` level but the accounting
 will be saved as usual.
 
 Email related settings

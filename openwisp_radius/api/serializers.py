@@ -1,3 +1,5 @@
+import logging
+
 import swapper
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
@@ -16,8 +18,11 @@ from rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSe
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
+from .. import settings as app_settings
 from ..utils import load_model
 from .utils import ErrorDictMixin
+
+logger = logging.getLogger(__name__)
 
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
@@ -44,6 +49,7 @@ class RadiusPostAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = RadiusPostAuth
         fields = '__all__'
+        read_only_fields = ('organization',)
 
 
 STATUS_TYPE_CHOICES = (
@@ -67,7 +73,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     output_octets = serializers.IntegerField(required=False, default=0)
     # this is needed otherwise serialize will ignore status_type from accounting packet
     # as it's not a model field
-    status_type = serializers.ChoiceField(write_only=True, choices=STATUS_TYPE_CHOICES)
+    status_type = serializers.ChoiceField(
+        write_only=True, required=True, choices=STATUS_TYPE_CHOICES
+    )
 
     def _disable_token_auth(self, user):
         try:
@@ -77,6 +85,12 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         else:
             radius_token.can_auth = False
             radius_token.save()
+
+    def run_validation(self, data):
+        for field in ['session_time', 'input_octets', 'output_octets']:
+            if data.get('status_type', None) == 'Start' and data[field] == '':
+                data[field] = 0
+        return super().run_validation(data)
 
     def validate(self, data):
         """
@@ -98,9 +112,25 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             self._disable_token_auth(data['username'])
         return data
 
+    def create(self, validated_data):
+        if app_settings.API_ACCOUNTING_AUTO_GROUP:
+            username = validated_data.get('username', '')
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                logging.warning(
+                    _(f'No corresponding user found for username: {username}')
+                )
+            else:
+                group = user.radiususergroup_set.order_by('priority').first()
+                groupname = group.groupname if group else None
+                validated_data.update(groupname=groupname)
+        return super().create(validated_data)
+
     class Meta:
         model = RadiusAccounting
         fields = '__all__'
+        read_only_fields = ('organization',)
 
 
 class GroupSerializer(serializers.ModelSerializer):
