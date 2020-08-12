@@ -1475,7 +1475,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
-            f'/api/v1/accounting/{self.token_querystring}',
+            f'{reverse("radius:accounting")}{self.token_querystring}',
             {
                 'status_type': 'Start',
                 'session_time': '',
