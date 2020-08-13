@@ -191,7 +191,7 @@ class AuthorizeView(TokenAuthorizationMixin, APIView):
         # ensure user is member of the authenticated org
         # or RadiusToken for the user exists.
         if (
-            RadiusToken.objects.filter(user=user, can_auth=True).exists()
+            RadiusToken.objects.filter(user=user).exists()
             or OrganizationUser.objects.filter(
                 user=user, organization_id=request.auth
             ).exists()

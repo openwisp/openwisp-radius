@@ -133,7 +133,14 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
     def test_authorize_radius_token_200(self):
         self._get_org_user()
-        self._login_and_obtain_auth_token()
+        rad_token = self._login_and_obtain_auth_token()
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+
+    def test_authorize_with_password_after_radius_token_expires(self):
+        self.test_authorize_radius_token_200()
+        self.assertFalse(RadiusToken.objects.get(user__username='tester').can_auth)
         response = self._authorize_user()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
