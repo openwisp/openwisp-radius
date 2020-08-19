@@ -15,11 +15,39 @@ User = get_user_model()
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 
 
 class GetEditFormInlineMixin(object):
-    def _get_edit_form_inline_params(self, user, organization):
-        params = super()._get_edit_form_inline_params(user, organization)
+    def _get_org_edit_form_inline_params(self, user, org):
+        params = super()._get_org_edit_form_inline_params(user, org)
+        if OrganizationRadiusSettings.objects.filter(organization=org).exists():
+            params.update(
+                {
+                    'radius_settings-TOTAL_FORMS': 1,
+                    'radius_settings-INITIAL_FORMS': 0,
+                    'radius_settings-MIN_NUM_FORMS': 0,
+                    'radius_settings-MAX_NUM_FORMS': 1,
+                    'radius_settings-0-token': 'random-token-value',
+                    'radius_settings-0-sms_sender': '',
+                    'radius_settings-0-sms_meta_data': '',
+                    'radius_settings-0-id': '',
+                    'radius_settings-0-organization': str(org.pk),
+                }
+            )
+        else:
+            params.update(
+                {
+                    'radius_settings-TOTAL_FORMS': 0,
+                    'radius_settings-INITIAL_FORMS': 0,
+                    'radius_settings-MIN_NUM_FORMS': 0,
+                    'radius_settings-MAX_NUM_FORMS': 0,
+                }
+            )
+        return params
+
+    def _get_user_edit_form_inline_params(self, user, organization):
+        params = super()._get_user_edit_form_inline_params(user, organization)
         rug = user.radiususergroup_set.first()
         if rug is not None:
             params.update(
