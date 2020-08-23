@@ -39,7 +39,10 @@ class Migration(migrations.Migration):
                     'is_superuser',
                     models.BooleanField(
                         default=False,
-                        help_text='Designates that this user has all permissions without explicitly assigning them.',
+                        help_text=(
+                            'Designates that this user has all permissions '
+                            'without explicitly assigning them.'
+                        ),
                         verbose_name='superuser status',
                     ),
                 ),
@@ -49,7 +52,10 @@ class Migration(migrations.Migration):
                         error_messages={
                             'unique': 'A user with that username already exists.'
                         },
-                        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
+                        help_text=(
+                            'Required. 150 characters or fewer. '
+                            'Letters, digits and @/./+/-/_ only.'
+                        ),
                         max_length=150,
                         unique=True,
                         validators=[
@@ -74,7 +80,9 @@ class Migration(migrations.Migration):
                     'is_staff',
                     models.BooleanField(
                         default=False,
-                        help_text='Designates whether the user can log into this admin site.',
+                        help_text=(
+                            'Designates whether the user can log into this admin site.'
+                        ),
                         verbose_name='staff status',
                     ),
                 ),
@@ -82,7 +90,11 @@ class Migration(migrations.Migration):
                     'is_active',
                     models.BooleanField(
                         default=True,
-                        help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
+                        help_text=(
+                            'Designates whether this user should be '
+                            'treated as active. Unselect this instead '
+                            'of deleting accounts.'
+                        ),
                         verbose_name='active',
                     ),
                 ),
@@ -146,7 +158,10 @@ class Migration(migrations.Migration):
                     'groups',
                     models.ManyToManyField(
                         blank=True,
-                        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
+                        help_text=(
+                            'The groups this user belongs to. A user will get '
+                            'all permissions granted to each of their groups.'
+                        ),
                         related_name='user_set',
                         related_query_name='user',
                         to='auth.Group',
@@ -171,7 +186,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
                 'index_together': {('id', 'email')},
             },
-            managers=[('objects', openwisp_users.base.models.UserManager()),],
+            managers=[('objects', openwisp_users.base.models.UserManager())],
         ),
         migrations.CreateModel(
             name='Organization',
@@ -200,7 +215,10 @@ class Migration(migrations.Migration):
                     organizations.fields.SlugField(
                         blank=True,
                         editable=False,
-                        help_text='The name in all lowercase, suitable for URL identification',
+                        help_text=(
+                            'The name in all lowercase, suitable for '
+                            'URL identification'
+                        ),
                         max_length=200,
                         populate_from='name',
                         unique=True,
@@ -225,7 +243,7 @@ class Migration(migrations.Migration):
                 ),
                 ('url', models.URLField(blank=True, verbose_name='URL')),
             ],
-            options={'abstract': False,},
+            options={'abstract': False},
             bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.CreateModel(
@@ -239,7 +257,7 @@ class Migration(migrations.Migration):
                 'constraints': [],
             },
             bases=(openwisp_users.base.models.BaseGroup, 'auth.group'),
-            managers=[('objects', django.contrib.auth.models.GroupManager()),],
+            managers=[('objects', django.contrib.auth.models.GroupManager())],
         ),
         migrations.CreateModel(
             name='OrganizationUser',
@@ -283,7 +301,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={'abstract': False,},
+            options={'abstract': False},
             bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.CreateModel(
@@ -326,7 +344,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={'abstract': False,},
+            options={'abstract': False},
             bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.AddField(

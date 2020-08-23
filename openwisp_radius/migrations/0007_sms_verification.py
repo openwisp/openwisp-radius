@@ -51,7 +51,10 @@ class Migration(migrations.Migration):
             name='sms_meta_data',
             field=jsonfield.fields.JSONField(
                 blank=True,
-                help_text='Additional configuration for SMS backend in JSON format (optional)',
+                help_text=(
+                    'Additional configuration for SMS backend '
+                    'in JSON format (optional)'
+                ),
                 null=True,
             ),
         ),

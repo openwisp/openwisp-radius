@@ -20,7 +20,10 @@ class Migration(migrations.Migration):
             name='sms_sender',
             field=models.CharField(
                 blank=True,
-                help_text='alpha numeric identifier used as sender for SMS sent by this organization',
+                help_text=(
+                    'alpha numeric identifier used as sender for '
+                    'SMS sent by this organization'
+                ),
                 max_length=128,
                 null=True,
                 verbose_name='Sender',
