@@ -1119,15 +1119,20 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             operator = self._get_operator()
             self.client.force_login(operator)
             pdf_response = self.client.get(pdf_link)
-            self.assertEqual(pdf_response.status_code, 400)
+            self.assertEqual(pdf_response.status_code, 403)
         with self.subTest('Login: operator without organization'):
             view_radbatch_perm = Permission.objects.get(codename='view_radiusbatch')
             operator.user_permissions.add(view_radbatch_perm)
             pdf_response = self.client.get(pdf_link)
-            self.assertEqual(pdf_response.status_code, 400)
+            self.assertEqual(pdf_response.status_code, 403)
+        with self.subTest('Login: operator not is_admin rejected'):
+            user = self._create_org_user(organization=self.default_org, user=operator)
+            pdf_response = self.client.get(pdf_link)
+            self.assertEqual(pdf_response.status_code, 403)
         with self.subTest('Login: operator allowed'):
+            user.delete()
             self._create_org_user(
-                **{'organization': self.default_org, 'user': operator}
+                **{'organization': self.default_org, 'user': operator, 'is_admin': True}
             )
             pdf_response = self.client.get(pdf_link)
             self.assertEqual(pdf_response.status_code, 200)
@@ -1175,6 +1180,20 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self._superuser_login()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+    def test_download_different_organization_radiusbatch_403(self):
+        org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
+        radbatch = self._create_radius_batch(
+            name='test', strategy='prefix', prefix='test-prefix5', organization=org2
+        )
+        url = reverse(
+            'radius:download_rad_batch_pdf', args=[self.default_org.slug, radbatch.pk],
+        )
+        operator = self._get_operator()
+        self._create_org_user(user=operator)
+        self.client.force_login(self._get_operator())
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
 
     def test_api_password_change(self):
         test_user = User.objects.create_user(

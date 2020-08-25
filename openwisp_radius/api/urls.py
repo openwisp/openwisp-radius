@@ -63,7 +63,7 @@ def get_api_urls(api_views=None):
         ),
         path('radiusbatch/', api_views.batch, name='batch'),
         path(
-            '<slug:slug>/radiusbatch/<uuid:radbatch>/pdf/',
+            '<slug:slug>/radiusbatch/<uuid:pk>/pdf/',
             api_views.download_rad_batch_pdf,
             name='download_rad_batch_pdf',
         ),
