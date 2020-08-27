@@ -45,8 +45,8 @@ openwisp-radius
    :caption: Contents:
 
    /developer/setup
-   /user/settings
    /developer/freeradius
+   /user/settings
    /user/management_commands
    /user/importing_users
    /user/generating_users
