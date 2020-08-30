@@ -56,6 +56,22 @@ class TestPhoneToken(BaseTestCase):
         token.save()
         return token
 
+    def test_is_already_active(self):
+        token = self._create_token()
+        token.user.is_active = True
+        token.user.save()
+        token.refresh_from_db()
+
+        with self.subTest('existing token, running validation again should not fail'):
+            self.assertEqual(token.full_clean(), None)
+
+        with self.subTest('new token with active user, validation should fail'):
+            with self.assertRaises(ValidationError) as context_manager:
+                self._create_token(user=token.user)
+            message_dict = context_manager.exception.message_dict
+            self.assertIn('__all__', message_dict)
+            self.assertEqual(message_dict['__all__'], ['This user is already active.'])
+
     def test_valid_until(self):
         token = PhoneToken()
         expected = timezone.now() + timedelta(
