@@ -302,7 +302,20 @@ monkey patching, you can proceed as follows:
     class RadiusBatchAdmin(BaseRadiusBatchAdmin):
         # add your changes here
 
-11. Setup Periodic tasks
+11. Setup Freeradius API Allowed Hosts
+--------------------------------------
+
+Add allowed freeradius hosts  in ``settings.py``:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
+
+.. note::
+    Read more about `freeradius allowed hosts in settings page
+    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+
+12. Setup Periodic tasks
 ------------------------
 
 Some periodic commands are required in production environments to enable certain
@@ -324,7 +337,7 @@ found at the `management commands page </user/management_commands.html>`_.
     started seperately, please read about running `celery and
     celery-beat </developer/setup.html#celery-usage>`_ tasks.
 
-12. Create root URL configuration
+13. Create root URL configuration
 ---------------------------------
 
 The root ``url.py`` file should have the following paths (please read the comments):
@@ -349,7 +362,7 @@ The root ``url.py`` file should have the following paths (please read the commen
     For more information about URL configuration in django, please refer to the
     `"URL dispatcher" section in the django documentation <https://docs.djangoproject.com/en/dev/topics/http/urls/>`_.
 
-13. Import the automated tests
+14. Import the automated tests
 ------------------------------
 
 When developing a custom application based on this module, it's a good

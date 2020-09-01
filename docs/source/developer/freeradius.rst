@@ -189,6 +189,12 @@ substituting ``<url>`` with your django project's URL, (for example, if you are
 testing a development environment, the URL could be ``http://127.0.0.1:8000``,
 otherwise in production could be something like ``https://openwisp2.mydomain.org``)-
 
+.. warning::
+    Remember you need to add your freeradius server IP address in `openwisp freeradius
+    allowed hosts settings </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    If the freeradius server IP is not in allowed hosts, all requests to openwisp
+    radius API will return ``403``.
+
 Refer to the `rest module documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/rest.html>`_
 for the available configuration values.
 

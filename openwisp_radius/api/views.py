@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
+from ipware import get_client_ip
 from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
 from rest_auth.registration.views import RegisterView as BaseRegisterView
@@ -85,13 +86,42 @@ Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
+    def _get_ip_list(self, uuid):
+        if f'ip-{uuid}' in cache:
+            ip_list = cache.get(f'ip-{uuid}')
+        else:
+            try:
+                ip_list = OrganizationRadiusSettings.objects.get(
+                    organization__pk=uuid
+                ).freeradius_allowed_hosts_list
+            except OrganizationRadiusSettings.DoesNotExist:
+                ip_list = None
+            else:
+                cache.set(f'ip-{uuid}', ip_list)
+        return ip_list
+
+    def _check_client_ip_and_return(self, request, uuid):
+        client_ip, _is_routable = get_client_ip(request)
+        ip_list = self._get_ip_list(uuid)
+        if bool(
+            (ip_list and client_ip in ip_list)
+            or (not ip_list and client_ip in app_settings.FREERADIUS_ALLOWED_HOSTS)
+        ):
+            return (AnonymousUser(), uuid)
+        message = _(
+            f'Request rejected: Client IP address ({client_ip}) is not in '
+            'the list of IP addresses allowed to consume the freeradius API.'
+        )
+        logger.warning(message)
+        raise AuthenticationFailed(message)
+
     def _radius_token_authenticate(self, request):
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
         username = request.data.get('username') or request.query_params.get('username')
         cached_orgid = cache.get(f'rt-{username}')
         if cached_orgid:
-            return (AnonymousUser(), cached_orgid)
+            return self._check_client_ip_and_return(request, cached_orgid)
         else:
             try:
                 radtoken = RadiusToken.objects.get(user__username=username)
@@ -107,7 +137,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                 raise NotAuthenticated(message)
             org_uuid = str(radtoken.organization_id)
             cache.set(f'rt-{username}', org_uuid, 86400)
-            return (AnonymousUser(), org_uuid)
+            return self._check_client_ip_and_return(request, org_uuid)
 
     def authenticate(self, request):
         self.check_organization(request)
@@ -129,7 +159,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # if execution gets here the auth token is good
         # we include the organization id in the auth info
-        return (AnonymousUser(), uuid)
+        return self._check_client_ip_and_return(request, uuid)
 
     def check_organization(self, request):
         if 'organization' in request.data:

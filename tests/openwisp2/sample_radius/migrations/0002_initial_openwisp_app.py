@@ -526,7 +526,15 @@ class Migration(migrations.Migration):
                     'sms_meta_data',
                     jsonfield.fields.JSONField(
                         blank=True,
-                        help_text='Additional configuration for SMS backend in JSON format, if needed',
+                        help_text='Additional configuration for SMS backend in JSON format (optional)',
+                        null=True,
+                    ),
+                ),
+                (
+                    'freeradius_allowed_hosts',
+                    models.TextField(
+                        blank=True,
+                        help_text='Comma separated list of IP addresses allowed to access freeradius API',
                         null=True,
                     ),
                 ),
