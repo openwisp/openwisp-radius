@@ -471,7 +471,7 @@ class TestAdmin(
     def test_radius_group_delete_default_by_non_superuser(self):
         org = self._get_org()
         user = self._get_admin()
-        org_user = OrganizationUser.objects.create(organization=org, user=user)
+        OrganizationUser.objects.create(organization=org, user=user, is_admin=True)
         user.is_superuser = False
         user.save()
         for permission in Permission.objects.all():
@@ -483,7 +483,6 @@ class TestAdmin(
         response = self.client.get(delete_url)
         self.assertEqual(rg.filter(organization=org, default=True).count(), 1)
         self.assertEqual(response.status_code, 403)
-        org_user.delete()
 
     def test_radius_group_delete_selected_default(self):
         url = reverse(f'admin:{self.app_label}_radiusgroup_changelist')

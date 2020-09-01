@@ -6,5 +6,5 @@ sphinx
 sphinx_rtd_theme
 freezegun
 django-extensions
-openwisp-utils[qa]~=0.6.0
+openwisp-utils[qa]~=0.6.3
 pylinkvalidator
