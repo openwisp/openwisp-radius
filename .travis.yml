@@ -20,13 +20,16 @@ install:
   - pip install -r requirements-test.txt
   - npm install -g jslint
 
-before_script:
-  - ./run-qa-checks
-
 script:
+  - ./run-qa-checks
   - coverage run --source=openwisp_radius runtests.py
   # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
   - SAMPLE_APP=1 ./runtests.py --parallel --keepdb
 
 after_success:
   coveralls
+
+notifications:
+  # will post a summary as a comment on github in case of failure
+  webhooks: https://www.travisbuddy.com/
+  on_success: never
