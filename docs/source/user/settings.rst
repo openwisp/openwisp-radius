@@ -194,10 +194,17 @@ This setting can be used to set the maximum size limit for firmware images, eg:
 
 - Value must be specified in bytes. ``None`` means unlimited.
 
-API and user token settings
-===========================
+API and user token related settings
+===================================
 
 These settings control details related to the API and the radius user token.
+
+``OPENWISP_RADIUS_API``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+Indicates whether the API for Radius is enabled or not.
 
 ``OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

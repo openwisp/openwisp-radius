@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
 from ipware import get_client_ip
 from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
@@ -53,7 +54,6 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
-from rest_framework.views import APIView
 
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
@@ -62,12 +62,14 @@ from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
 from .serializers import (
+    AuthorizeSerializer,
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
     RadiusPostAuthSerializer,
     ValidatePhoneTokenSerializer,
 )
+from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
 from .utils import ErrorDictMixin
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
@@ -182,27 +184,45 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return uuid, token
 
 
-class AuthorizeView(APIView):
+class AuthorizeView(GenericAPIView):
     authentication_classes = (FreeradiusApiAuthentication,)
     accept_attributes = {'control:Auth-Type': 'Accept'}
     accept_status = 200
     reject_attributes = {'control:Auth-Type': 'Reject'}
     reject_status = 401
+    serializer_class = AuthorizeSerializer
 
+    @swagger_auto_schema(
+        responses={
+            accept_status: f'`{accept_attributes}`',
+            reject_status: f'`{reject_attributes}`',
+        }
+    )
     def post(self, request, *args, **kwargs):
-        user = self.get_user(request)
-        if user and self.authenticate_user(request, user):
+        """
+        **API Endpoint used by FreeRADIUS server.**
+        It's triggered when a user submits the form to login into the captive portal.
+        The captive portal has to be configured to send the password to freeradius
+        in clear text (will be encrypted with the freeradius shared secret,
+        can be tunneled via TLS for increased security if needed). FreeRADIUS in
+        turn will send the username and password via HTTPS to this endpoint.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get('username')
+        password = serializer.validated_data.get('password')
+        user = self.get_user(request, username)
+        if user and self.authenticate_user(request, user, password):
             return Response(self.accept_attributes, status=self.accept_status)
         if app_settings.API_AUTHORIZE_REJECT:
             return Response(self.reject_attributes, status=self.reject_status)
         else:
             return Response(None, status=200)
 
-    def get_user(self, request):
+    def get_user(self, request, username):
         """
         return active user or ``None``
         """
-        username = request.data.get('username')
         try:
             user = User.objects.get(username=username, is_active=True)
         except User.DoesNotExist:
@@ -218,26 +238,24 @@ class AuthorizeView(APIView):
             return user
         return None
 
-    def authenticate_user(self, request, user):
+    def authenticate_user(self, request, user, password):
         """
         returns ``True`` if the password value supplied is
         a valid user password or a valid user token
         can be overridden to implement more complex checks
         """
         return bool(
-            user.check_password(request.data.get('password'))
-            or self.check_user_token(request, user)
+            user.check_password(password)
+            or self.check_user_token(request, user, password)
         )
 
-    def check_user_token(self, request, user):
+    def check_user_token(self, request, user, password):
         """
         returns ``True`` if the password value supplied is a valid
         radius user token
         """
         try:
-            token = RadiusToken.objects.get(
-                user=user, can_auth=True, key=request.data.get('password')
-            )
+            token = RadiusToken.objects.get(user=user, can_auth=True, key=password)
         except RadiusToken.DoesNotExist:
             return False
         if app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
@@ -253,10 +271,12 @@ class PostAuthView(CreateAPIView):
     authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusPostAuthSerializer
 
+    @swagger_auto_schema(responses={201: ''})
     def post(self, request, *args, **kwargs):
         """
-        Sets the response data to None in order to instruct
-        FreeRADIUS to avoid processing the response body
+        **API Endpoint used by FreeRADIUS server.**
+        Returns an empty response body in order to instruct
+        FreeRADIUS to avoid processing the response body.
         """
         response = super().post(request, *args, **kwargs)
         response.data = None
@@ -318,7 +338,21 @@ class AccountingView(ListCreateAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.auth)
 
+    def get(self, request, *args, **kwargs):
+        """
+        **API Endpoint used by FreeRADIUS server.**
+        Returns a list of accounting objects
+        """
+        return super().get(self, request, *args, **kwargs)
+
+    @swagger_auto_schema(responses={201: '', 200: ''})
     def post(self, request, *args, **kwargs):
+        """
+        **API Endpoint used by FreeRADIUS server.**
+        Add or update accounting information (start, interim-update, stop);
+        does not return any JSON response so that freeradius will avoid
+        processing the response without generating warnings
+        """
         data = request.data.copy()
         # Accounting-On and Accounting-Off are not implemented and
         # hence  ignored right now - may be implemented in the future
@@ -358,6 +392,12 @@ class BatchView(CreateAPIView):
     serializer_class = RadiusBatchSerializer
 
     def post(self, request, *args, **kwargs):
+        """
+        **Requires the user auth token (Bearer Token).**
+        Allows organization administrators to create
+        a batch of users using a csv file or generate users
+        with a given prefix.
+        """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
@@ -398,6 +438,7 @@ class DownloadRadiusBatchPdfView(DispatchOrgMixin, RetrieveAPIView):
     permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
 
+    @swagger_auto_schema(responses={200: '(File Byte Stream)'})
     def get(self, request, *args, **kwargs):
         radbatch = self.get_object()
         if radbatch.strategy == 'prefix':
@@ -470,6 +511,15 @@ class RadiusTokenMixin(object):
         user.save(update_fields=['last_login'])
 
 
+@method_decorator(
+    name='post',
+    decorator=swagger_auto_schema(
+        operation_description=(
+            'Used by users to create new accounts, usually to access the internet.'
+        ),
+        responses={201: RegisterResponse},
+    ),
+)
 class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
     authentication_classes = tuple()
 
@@ -507,7 +557,13 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
     def dispatch(self, request, *args, **kwargs):
         return super(ObtainAuthTokenView, self).dispatch(request, *args, **kwargs)
 
+    @swagger_auto_schema(
+        request_body=ObtainTokenRequest, responses={200: ObtainTokenResponse}
+    )
     def post(self, request, *args, **kwargs):
+        """
+        Obtain the user radius token required for authentication in APIs.
+        """
         serializer = self.auth_serializer_class(
             data=request.data, context={'request': request}
         )
@@ -541,6 +597,9 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
     serializer_class = ValidateTokenSerializer
 
     def post(self, request, *args, **kwargs):
+        """
+        Used to check whether the auth token of a user is valid or not.
+        """
         request_token = request.data.get('token')
         response = {'response_code': 'BLANK_OR_INVALID_TOKEN'}
         if request_token:
@@ -573,6 +632,16 @@ class UserAccountingFilter(AccountingFilter):
         ]
 
 
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Returns the radius sessions of the logged-in user and the organization
+        specified in the URL.
+        """,
+    ),
+)
 class UserAccountingView(DispatchOrgMixin, ListAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
@@ -587,6 +656,8 @@ class UserAccountingView(DispatchOrgMixin, ListAPIView):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return super().get_queryset()  # pragma: no cover
         return (
             super()
             .get_queryset()
@@ -600,7 +671,13 @@ user_accounting = UserAccountingView.as_view()
 class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
     authentication_classes = (BearerAuthentication,)
 
+    @swagger_auto_schema(responses={200: '`{"detail":"New password has been saved."}`'})
     def post(self, request, *args, **kwargs):
+        """
+        **Requires the user auth token (Bearer Token).**
+        Allows users to change their password after using
+        the `Reset password` endpoint.
+        """
         self.validate_membership(request.user)
         return super().post(request, *args, **kwargs)
 
@@ -611,7 +688,18 @@ password_change = PasswordChangeView.as_view()
 class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
 
+    @swagger_auto_schema(
+        responses={
+            200: '`{"detail": "Password reset e-mail has been sent."}`',
+            400: '`{"detail": "email field is required"}`',
+            404: '`{"detail": "Not found."}`',
+        }
+    )
     def post(self, request, *args, **kwargs):
+        """
+        This is the classic "password forgotten recovery feature" which
+        sends a reset password token to the email of the user.
+        """
         request.user = self.get_user(request)
         return super().post(request, *args, **kwargs)
 
@@ -623,18 +711,21 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')
-        password_reset_url = password_reset_urls.get(
-            str(self.organization.pk), default_url
-        )
+        if getattr(self, 'swagger_fake_view', False):
+            organization_pk, organization_slug = None, None  # pragma: no cover
+        else:
+            organization_pk = self.organization.pk
+            organization_slug = self.organization.slug
+        password_reset_url = password_reset_urls.get(str(organization_pk), default_url)
         password_reset_url = password_reset_url.format(
-            organization=self.organization.slug, uid=uid, token=token
+            organization=organization_slug, uid=uid, token=token
         )
         context = {'request': self.request, 'password_reset_url': password_reset_url}
         return context
 
     def get_user(self, request):
-        if request.POST.get('email', None):
-            email = request.POST['email']
+        if request.data.get('email', None):
+            email = request.data['email']
             user = get_object_or_404(User, email=email)
             self.validate_membership(user)
             return user
@@ -647,7 +738,16 @@ password_reset = PasswordResetView.as_view()
 class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
     authentication_classes = tuple()
 
+    @swagger_auto_schema(
+        responses={
+            200: '`{"detail": "Password has been reset with the new password."}`',
+        }
+    )
     def post(self, request, *args, **kwargs):
+        """
+        Allows users to confirm their reset password after having
+        it requested via the `Reset password` endpoint.
+        """
         self.validate_user()
         return super().post(request, *args, **kwargs)
 
@@ -682,11 +782,26 @@ class InactiveBearerTokenAuthentication(BearerAuthentication):
             return (token.user, token)
 
 
+@method_decorator(
+    name='post',
+    decorator=swagger_auto_schema(
+        operation_description=(
+            """
+            **Requires the user auth token (Bearer Token).**
+            Used for SMS verification, sends a code via SMS to the
+            phone number of the user.
+            """
+        ),
+        responses={201: ''},
+    ),
+)
 class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
+    # TODO: This looks ugly. Update it when there is a solution
+    # to https://github.com/axnsan12/drf-yasg/issues/626
     serializer_class = serializers.Serializer
 
     def create(self, *args, **kwargs):
@@ -713,7 +828,13 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
     def _error_response(self, message, key='non_field_errors', status=400):
         return Response({key: [message]}, status=status)
 
+    @swagger_auto_schema(responses={201: ''})
     def post(self, request, *args, **kwargs):
+        """
+        **Requires the user auth token (Bearer Token).**
+        Used for SMS verification, allows users to validate the
+        code they receive via SMS.
+        """
         user = request.user
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
@@ -738,6 +859,19 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
 validate_phone_token = ValidatePhoneTokenView.as_view()
 
 
+@method_decorator(
+    name='post',
+    decorator=swagger_auto_schema(
+        operation_description=(
+            """
+            **Requires the user auth token (Bearer Token).**
+            Allows users to change their phone number, will flag the
+            user as inactive and send them a verification code via SMS.
+            """
+        ),
+        responses={200: ''},
+    ),
+)
 class ChangePhoneNumberView(CreatePhoneTokenView):
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
