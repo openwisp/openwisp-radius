@@ -2,6 +2,7 @@
 
 import django.utils.timezone
 import model_utils.fields
+import swapper
 from django.db import migrations, models
 
 import openwisp_radius.base.models
@@ -109,7 +110,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                'swappable': 'OPENWISP_RADIUS_NAS_MODEL',
+                'swappable': swapper.swappable_setting('openwisp_radius', 'Nas'),
                 'db_table': 'nas',
                 'verbose_name_plural': 'NAS',
                 'abstract': False,

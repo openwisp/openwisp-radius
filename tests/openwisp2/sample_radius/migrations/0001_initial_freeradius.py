@@ -111,7 +111,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                'swappable': 'OPENWISP_RADIUS_NAS_MODEL',
+                'swappable': swapper.swappable_setting('openwisp_radius', 'Nas'),
                 'db_table': 'nas',
                 'verbose_name_plural': 'NAS',
                 'abstract': False,

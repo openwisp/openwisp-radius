@@ -79,7 +79,9 @@ class Migration(migrations.Migration):
                     'csvfile',
                     models.FileField(
                         blank=True,
-                        help_text='The csv file containing the user details to be uploaded',
+                        help_text=(
+                            'The csv file containing the user details to be uploaded'
+                        ),
                         null=True,
                         upload_to="",
                         verbose_name='CSV',
@@ -89,7 +91,9 @@ class Migration(migrations.Migration):
                     'prefix',
                     models.CharField(
                         blank=True,
-                        help_text='Usernames generated will be of the format [prefix][number]',
+                        help_text=(
+                            'Usernames generated will be of the format [prefix][number]'
+                        ),
                         max_length=20,
                         null=True,
                         verbose_name='prefix',
@@ -99,7 +103,9 @@ class Migration(migrations.Migration):
                     'pdf',
                     models.FileField(
                         blank=True,
-                        help_text='The pdf file containing list of usernames and passwords',
+                        help_text=(
+                            'The pdf file containing list of usernames and passwords'
+                        ),
                         null=True,
                         upload_to="",
                         verbose_name='PDF',
@@ -197,7 +203,12 @@ class Migration(migrations.Migration):
                     'default',
                     models.BooleanField(
                         default=False,
-                        help_text='The default group is automatically assigned to new users; changing the default group has only effect on new users (existing users will keep being members of their current group)',
+                        help_text=(
+                            'The default group is automatically assigned '
+                            'to new users; changing the default group has only '
+                            'effect on new users (existing users will keep '
+                            'being members of their current group)'
+                        ),
                         verbose_name='is default?',
                     ),
                 ),
@@ -237,7 +248,10 @@ class Migration(migrations.Migration):
                             django.core.validators.RegexValidator(
                                 re.compile('^[^\\s/\\.]+$'),
                                 code='invalid',
-                                message='This value must not contain spaces, dots or slashes.',
+                                message=(
+                                    'This value must not contain spaces, '
+                                    'dots or slashes.'
+                                ),
                             )
                         ],
                     ),

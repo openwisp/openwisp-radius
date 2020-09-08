@@ -1,7 +1,5 @@
-import os
 import uuid
 
-import _pickle as pickle
 import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions

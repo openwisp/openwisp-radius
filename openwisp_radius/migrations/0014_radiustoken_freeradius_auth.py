@@ -22,7 +22,10 @@ class Migration(migrations.Migration):
             name='can_auth',
             field=models.BooleanField(
                 default=False,
-                help_text='Enable the radius token to be used for freeradius authorization request',
+                help_text=(
+                    'Enable the radius token to be used '
+                    'for freeradius authorization request'
+                ),
             ),
         ),
         migrations.AddField(

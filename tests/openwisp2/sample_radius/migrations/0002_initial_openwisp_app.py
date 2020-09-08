@@ -381,7 +381,10 @@ class Migration(migrations.Migration):
                     'can_auth',
                     models.BooleanField(
                         default=False,
-                        help_text='Enable the radius token to be used for freeradius authorization request',
+                        help_text=(
+                            'Enable the radius token to be used for '
+                            'freeradius authorization request'
+                        ),
                     ),
                 ),
                 ('details', models.CharField(blank=True, max_length=64, null=True)),
@@ -457,7 +460,12 @@ class Migration(migrations.Migration):
                     'default',
                     models.BooleanField(
                         default=False,
-                        help_text='The default group is automatically assigned to new users; changing the default group has only effect on new users (existing users will keep being members of their current group)',
+                        help_text=(
+                            'The default group is automatically assigned '
+                            'to new users; changing the default group has '
+                            'only effect on new users (existing users will '
+                            'keep being members of their current group)'
+                        ),
                         verbose_name='is default?',
                     ),
                 ),
@@ -500,7 +508,10 @@ class Migration(migrations.Migration):
                             django.core.validators.RegexValidator(
                                 re.compile('^[^\\s/\\.]+$'),
                                 code='invalid',
-                                message='This value must not contain spaces, dots or slashes.',
+                                message=(
+                                    'This value must not contain spaces, '
+                                    'dots or slashes.'
+                                ),
                             )
                         ],
                     ),
@@ -509,14 +520,21 @@ class Migration(migrations.Migration):
                     'sms_verification',
                     models.BooleanField(
                         default=False,
-                        help_text='whether users who sign up should be required to verify their mobile phone number via SMS',
+                        help_text=(
+                            'whether users who sign up should be '
+                            'required to verify their mobile '
+                            'phone number via SMS'
+                        ),
                     ),
                 ),
                 (
                     'sms_sender',
                     models.CharField(
                         blank=True,
-                        help_text='alpha numeric identifier used as sender for SMS sent by this organization',
+                        help_text=(
+                            'alpha numeric identifier used as sender for '
+                            'SMS sent by this organization'
+                        ),
                         max_length=128,
                         null=True,
                         verbose_name='Sender',
@@ -526,7 +544,10 @@ class Migration(migrations.Migration):
                     'sms_meta_data',
                     jsonfield.fields.JSONField(
                         blank=True,
-                        help_text='Additional configuration for SMS backend in JSON format (optional)',
+                        help_text=(
+                            'Additional configuration for SMS backend '
+                            'in JSON format (optional)'
+                        ),
                         null=True,
                     ),
                 ),
@@ -534,7 +555,10 @@ class Migration(migrations.Migration):
                     'freeradius_allowed_hosts',
                     models.TextField(
                         blank=True,
-                        help_text='Comma separated list of IP addresses allowed to access freeradius API',
+                        help_text=(
+                            'Comma separated list of IP addresses allowed '
+                            'to access freeradius API'
+                        ),
                         null=True,
                     ),
                 ),
@@ -639,7 +663,9 @@ class Migration(migrations.Migration):
                     'csvfile',
                     private_storage.fields.PrivateFileField(
                         blank=True,
-                        help_text='The csv file containing the user details to be uploaded',
+                        help_text=(
+                            'The csv file containing the user details to be uploaded'
+                        ),
                         null=True,
                         storage=private_storage.storage.files.PrivateFileSystemStorage(
                             base_url='/radiusbatch/csv/',
@@ -653,7 +679,9 @@ class Migration(migrations.Migration):
                     'prefix',
                     models.CharField(
                         blank=True,
-                        help_text='Usernames generated will be of the format [prefix][number]',
+                        help_text=(
+                            'Usernames generated will be of the format [prefix][number]'
+                        ),
                         max_length=20,
                         null=True,
                         verbose_name='prefix',
