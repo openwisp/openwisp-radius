@@ -58,7 +58,7 @@ Other goals are listed below:
 * reuse the django user management logic which is very robust and stable
 * ensure passwords are hashed with strong algorithms and freeradius can
   authorize/authenticate using these hashes (that's why we recommend using the
-  ``rml_rest`` freeradius module with the REST API of openwisp-radius)
+  ``rlm_rest`` freeradius module with the REST API of openwisp-radius)
 * integrate openwisp-radius with the rest of the openwisp2 ecosystem
 * provide good documentation on how to install the project, configure it with
   freeradius and use its most important features
