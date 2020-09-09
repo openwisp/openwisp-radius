@@ -7,8 +7,8 @@ API Documentation
    :depth: 4
 
 .. important::
-    `OPENWISP_RADIUS_API </user/settings.html#openwisp-radius-api>`_
-    must be ``True`` to use the API enpoints.
+    The REST API of openwisp-radius is enabled by default and may be turned off by
+    setting `OPENWISP_RADIUS_API <./settings.html#openwisp-radius-api>`_ to ``False``.
 
 Live documentation
 ******************
