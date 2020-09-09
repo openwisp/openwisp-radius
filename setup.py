@@ -61,7 +61,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: System :: Networking',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: GNU GPL v3',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Operating System :: OS Independent',
         'Framework :: Django',
         'Programming Language :: Python :: 3',
