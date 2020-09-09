@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'openwisp_radius',
     'openwisp_users',
     'private_storage',
+    'drf_yasg',
     'django_extensions',
 ]
 

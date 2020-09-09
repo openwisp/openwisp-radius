@@ -6,8 +6,30 @@ API Documentation
    :backlinks: none
    :depth: 4
 
-API endpoints for FreeRADIUS
-############################
+.. important::
+    `OPENWISP_RADIUS_API </user/settings.html#openwisp-radius-api>`_
+    must be ``True`` to use the API enpoints.
+
+Live documentation
+******************
+
+.. image:: /images/swagger_api.png
+   :alt: Swagger API Documentation
+
+A general live API documentation (following the OpenAPI specification) at ``/api/v1/docs/``.
+
+Browsable web interface
+***********************
+.. image:: /images/drf_api_interface.png
+   :alt: API Interface
+
+Additionally, opening any of the endpoints `listed below <#list-of-endpoints>`_
+directly in the browser will show the `browsable API interface of Django-REST-Framework
+<https://www.django-rest-framework.org/topics/browsable-api/>`_,
+which makes it even easier to find out the details of each endpoint.
+
+FreeRADIUS API Endpoints
+************************
 
 The following section is dedicated to API endpoints that are designed
 to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
@@ -16,6 +38,9 @@ to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
     These endpoints can be consumed only by hosts which have
     been added to the `freeradius allowed hosts list
     </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+
+Request Authentication
+======================
 
 There are three methods for request authorization:
 
@@ -33,7 +58,6 @@ following workflow can be used:
 
     curl -X POST http://localhost:8000/api/v1/authorize/ \
          -d "username=<username>&password=<radius_token>"
-
 
 .. note::
     By default, ``<radius_token>`` is valid for authentication for one
@@ -103,6 +127,9 @@ tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
 `Configure the REST module </developer/freeradius.html#configure-the-rest-module>`_.
+
+List of Endpoints
+=================
 
 Authorize
 ---------
@@ -285,8 +312,8 @@ stop_time           Stop time (less or equal to)
 is_open             If stop_time is null
 ==================  ====================================
 
-User API endpoints
-##################
+User API Endpoints
+******************
 
 These API endpoints are designed to be used by users
 (eg: creating an account, changing their password,
@@ -305,10 +332,11 @@ token sent in the form of a "Bearer Token", example:
     curl -H "Authorization: Bearer <user-token>" \
          'http://localhost:8000/api/v1/default/account/session/'
 
+List of Endpoints
+=================
+
 User Registration
 -----------------
-
-Used by users to create new accounts, usually to access the internet.
 
 .. code-block:: text
 
@@ -521,7 +549,8 @@ phone_number       string
 Batch user creation
 -------------------
 
-**Requires the user auth token (Bearer Token)**.
+This API endpoint allows to use the features described in
+:doc:`/user/importing_users` and :doc:`/user/generating_users`.
 
 .. code-block:: text
 

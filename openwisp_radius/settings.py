@@ -25,6 +25,7 @@ def get_settings_value(option, default):
     return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
 
 
+RADIUS_API = get_settings_value('API', True)
 EDITABLE_ACCOUNTING = get_settings_value('EDITABLE_ACCOUNTING', False)
 EDITABLE_POSTAUTH = get_settings_value('EDITABLE_POSTAUTH', False)
 GROUPCHECK_ADMIN = get_settings_value('GROUPCHECK_ADMIN', False)

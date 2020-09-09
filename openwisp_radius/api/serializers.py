@@ -33,8 +33,20 @@ Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
+class AuthorizeSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=User._meta.get_field('username').max_length, write_only=True
+    )
+    password = serializers.CharField(style={'input_type': 'password'}, write_only=True)
+
+
 class RadiusPostAuthSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(required=False, allow_blank=True)
+    password = serializers.CharField(
+        help_text='The `password` is stored only on unsuccessful authorizations.',
+        required=False,
+        allow_blank=True,
+        style={'input_type': 'password'},
+    )
     called_station_id = serializers.CharField(required=False, allow_blank=True)
     calling_station_id = serializers.CharField(required=False, allow_blank=True)
 
@@ -157,16 +169,48 @@ class RadiusOrganizationField(serializers.SlugRelatedField):
 
 
 class RadiusBatchSerializer(serializers.ModelSerializer):
-    organization = serializers.PrimaryKeyRelatedField(read_only=True)
-    organization_slug = RadiusOrganizationField(
-        required=True, label='organization', slug_field='slug', write_only=True
+    organization = serializers.PrimaryKeyRelatedField(
+        help_text=('UUID of the organization in which the radius batch is created.'),
+        read_only=True,
     )
-    users = UserSerializer(many=True, read_only=True)
-    prefix = serializers.CharField(required=False)
-    csvfile = serializers.FileField(required=False)
-    pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
+    organization_slug = RadiusOrganizationField(
+        help_text=('Slug of the organization for creating radius batch.'),
+        required=True,
+        label='organization',
+        slug_field='slug',
+        write_only=True,
+    )
+    users = UserSerializer(many=True, read_only=True,)
+    prefix = serializers.CharField(
+        help_text=(
+            'Prefix for creating usernames. '
+            'Only required when `prefix` strategy is used.`'
+        ),
+        required=False,
+    )
+    csvfile = serializers.FileField(
+        help_text=(
+            'CSV file for extracting user\'s information. '
+            'Only required when `csv` strategy is used.`'
+        ),
+        required=False,
+    )
+    pdf_link = serializers.SerializerMethodField(
+        help_text=(
+            'Downlaod link to PDF file containing user credentials. '
+            'Provided only for `prefix` strategy.`'
+        ),
+        required=False,
+        read_only=True,
+    )
     number_of_users = serializers.IntegerField(
-        required=False, write_only=True, min_value=1
+        help_text=(
+            'Number of users to be generated. '
+            'Only required when `prefix` strategy is used.`'
+        ),
+        required=False,
+        write_only=True,
+        min_value=1,
     )
 
     def get_pdf_link(self, obj):
@@ -217,7 +261,14 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
 
 
 class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
-    phone_number = PhoneNumberField(allow_blank=True, default='')
+    phone_number = PhoneNumberField(
+        help_text=(
+            'Required only when the organization has enabled SMS '
+            'verification in its "Organization RADIUS Settings."'
+        ),
+        allow_blank=True,
+        default='',
+    )
 
     @property
     def is_sms_verification_enabled(self):
