@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg.utils import no_body, swagger_auto_schema
 from ipware import get_client_ip
 from rest_auth import app_settings as rest_auth_settings
 from rest_auth.app_settings import JWTSerializer, TokenSerializer
@@ -792,6 +792,7 @@ class InactiveBearerTokenAuthentication(BearerAuthentication):
             phone number of the user.
             """
         ),
+        request_body=no_body,
         responses={201: ''},
     ),
 )
@@ -800,9 +801,6 @@ class CreatePhoneTokenView(
 ):
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
-    # TODO: This looks ugly. Update it when there is a solution
-    # to https://github.com/axnsan12/drf-yasg/issues/626
-    serializer_class = serializers.Serializer
 
     def create(self, *args, **kwargs):
         request = self.request
