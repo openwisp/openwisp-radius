@@ -43,7 +43,8 @@ and features like
 and much more.
 
 It can be used as a standalone application or integrated with the rest of `OpenWISP <https://openwisp.org>`_.
-It can also be used as a base system or framework on top of which custom tailored solutions can be built.
+It can also be used as a `base system or framework on top of which custom tailored solutions can be built
+<https://openwisp-radius.readthedocs.io/en/latest/developer/how_to_extend.html>`_.
 
 - `Documentation <http://openwisp-radius.readthedocs.io/en/latest/>`_
 - `Change log <https://github.com/openwisp/openwisp-radius/blob/master/CHANGES.rst>`_
