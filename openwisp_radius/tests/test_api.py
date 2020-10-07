@@ -1072,7 +1072,8 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             },
         )
         self.assertEqual(r.status_code, 201)
-        self.assertIn('token', r.data)
+        self.assertIn('access_token', r.data)
+        self.assertIn('refresh_token', r.data)
         self.assertEqual(User.objects.all().count(), user_count + 1)
 
     def test_api_show_only_token_org(self):
