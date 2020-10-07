@@ -2220,3 +2220,132 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token_qs.count(), 1)
         self.assertIn('phone_number', r.data)
         self.assertIn('required', str(r.data['phone_number']))
+
+    def test_phone_number_restriction_in_signup(self):
+        app_settings.ALLOWED_MOBILE_PREFIXES = ['+33']
+        self.assertEqual(User.objects.all().count(), 0)
+        user_param = {
+            'username': 'test',
+            'email': 'test@email.com',
+            'password1': 'password',
+            'password2': 'password',
+        }
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        msg = 'This international mobile prefix is not allowed.'
+
+        with self.subTest('test create user with number allowed at global level'):
+            user_param.update({'phone_number': '+33675579231'})
+            r = self.client.post(url, user_param)
+            self.assertEqual(r.status_code, 201)
+            self.assertEqual(User.objects.all().count(), 1)
+            self.assertIn('key', r.data)
+
+        with self.subTest('test create user with number not allowed at org level'):
+            user_param.update(
+                {
+                    'email': 'test1@email.com',
+                    'username': 'test1',
+                    'phone_number': '+44 7795 106991',
+                }
+            )
+            r = self.client.post(url, user_param)
+            self.assertEqual(r.status_code, 400)
+            self.assertIn(msg, str(r.data['phone_number']))
+            self.assertEqual(User.objects.all().count(), 1)
+
+        with self.subTest('test create user with number allowed at org level'):
+            radius_settings = self.default_org.radius_settings
+            radius_settings.allowed_mobile_prefixes = '+1,+44'
+            radius_settings.full_clean()
+            radius_settings.save()
+            user_param.update(
+                {
+                    'email': 'test1@email.com',
+                    'username': 'test1',
+                    'phone_number': '+44 7795 106991',
+                }
+            )
+            r = self.client.post(url, user_param)
+            self.assertEqual(r.status_code, 201)
+            self.assertEqual(User.objects.all().count(), 2)
+            self.assertIn('key', r.data)
+
+        with self.subTest('test create user with number not allowed'):
+            user_param.update(
+                {
+                    'email': 'test2@email.com',
+                    'username': 'test2',
+                    'phone_number': '+237675752913',
+                }
+            )
+            r = self.client.post(url, user_param)
+            self.assertEqual(r.status_code, 400)
+            self.assertIn(msg, str(r.data['phone_number']))
+            self.assertEqual(User.objects.all().count(), 2)
+
+        app_settings.ALLOWED_MOBILE_PREFIXES = []
+
+    def test_change_phone_number_restriction(self):
+        self.test_register_201()
+        app_settings.ALLOWED_MOBILE_PREFIXES = ['+33']
+        user = User.objects.get(email=self._test_email)
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
+        msg = 'This international mobile prefix is not allowed.'
+
+        self.assertEqual(phone_token_qs.count(), 0)
+
+        with self.subTest('test change number not allowed at global level'):
+            r = self.client.post(
+                url,
+                json.dumps({'phone_number': '+237675579231'}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 400)
+            self.assertIn(msg, str(r.data['phone_number']))
+            self.assertEqual(phone_token_qs.count(), 0)
+
+        with self.subTest('test change number allowed at global level'):
+            phone_number = '+33675579245'
+            r = self.client.post(
+                url,
+                json.dumps({'phone_number': phone_number}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(phone_token_qs.count(), 1)
+            user.refresh_from_db()
+            self.assertEqual(user.phone_number, phone_number)
+
+        with self.subTest('test change number not allowed at org level'):
+            r = self.client.post(
+                url,
+                json.dumps({'phone_number': '+44 7795 106991'}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 400)
+            self.assertIn(msg, str(r.data['phone_number']))
+            self.assertEqual(phone_token_qs.count(), 1)
+
+        with self.subTest('test change number allowed at org level'):
+            radius_settings = self.default_org.radius_settings
+            radius_settings.allowed_mobile_prefixes = '+1,+44'
+            radius_settings.full_clean()
+            radius_settings.save()
+            phone_number = '+44 7795 106991'
+            r = self.client.post(
+                url,
+                json.dumps({'phone_number': phone_number}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(phone_token_qs.count(), 2)
+            user.refresh_from_db()
+            self.assertEqual(user.phone_number, phone_number)
+
+        app_settings.ALLOWED_MOBILE_PREFIXES = []

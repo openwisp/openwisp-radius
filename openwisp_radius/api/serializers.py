@@ -1,5 +1,6 @@
 import logging
 
+import phonenumbers
 import swapper
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
@@ -31,6 +32,20 @@ RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
+
+
+class AllowedMobilePrefixMixin(object):
+    def is_prefix_allowed(self, phone_number, mobile_prefixes):
+        """
+        Verifies if a phone number's international prefix is allowed
+        """
+        country_code = phonenumbers.parse(str(phone_number)).country_code
+        allowed_global_prefixes = set(app_settings.ALLOWED_MOBILE_PREFIXES)
+        allowed_org_prefixes = set(mobile_prefixes)
+        allowed_prefixes = allowed_global_prefixes.union(allowed_org_prefixes)
+        if not allowed_prefixes:
+            return True
+        return ('+' + str(country_code)) in allowed_prefixes
 
 
 class AuthorizeSerializer(serializers.Serializer):
@@ -260,7 +275,9 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
         self.reset_form.save(**opts)
 
 
-class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
+class RegisterSerializer(
+    ErrorDictMixin, AllowedMobilePrefixMixin, BaseRegisterSerializer
+):
     phone_number = PhoneNumberField(
         help_text=(
             'Required only when the organization has enabled SMS '
@@ -284,8 +301,15 @@ class RegisterSerializer(ErrorDictMixin, BaseRegisterSerializer):
             )
 
     def validate_phone_number(self, phone_number):
-        if self.is_sms_verification_enabled and not phone_number:
-            raise serializers.ValidationError(_('This field is required'))
+        org = self.context['view'].organization
+        if self.is_sms_verification_enabled:
+            if not phone_number:
+                raise serializers.ValidationError(_('This field is required'))
+            mobile_prefixes = org.radius_settings.allowed_mobile_prefixes_list
+            if not self.is_prefix_allowed(phone_number, mobile_prefixes):
+                raise serializers.ValidationError(
+                    _('This international mobile prefix is not allowed.')
+                )
         return phone_number
 
     def save(self, request):
@@ -320,7 +344,9 @@ class ValidatePhoneTokenSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=8)
 
 
-class ChangePhoneNumberSerializer(ErrorDictMixin, serializers.Serializer):
+class ChangePhoneNumberSerializer(
+    ErrorDictMixin, AllowedMobilePrefixMixin, serializers.Serializer
+):
     phone_number = PhoneNumberField()
 
     @property
@@ -331,6 +357,12 @@ class ChangePhoneNumberSerializer(ErrorDictMixin, serializers.Serializer):
         if self.user.phone_number == phone_number:
             raise serializers.ValidationError(
                 _('The new phone number must be different than the old one.')
+            )
+        org = self.context['view'].organization
+        mobile_prefixes = org.radius_settings.allowed_mobile_prefixes_list
+        if not self.is_prefix_allowed(phone_number, mobile_prefixes):
+            raise serializers.ValidationError(
+                _('This international mobile prefix is not allowed.')
             )
         return phone_number
 
