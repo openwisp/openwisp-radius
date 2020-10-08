@@ -87,8 +87,8 @@ modules listed ``INSTALLED_APPS``:
         'django_filters',
         # registration
         'rest_framework.authtoken',
-        'rest_auth',
-        'rest_auth.registration',
+        'dj_rest_auth',
+        'dj_rest_auth.registration',
         # openwisp radius
         'openwisp_radius',
         'openwisp_users',

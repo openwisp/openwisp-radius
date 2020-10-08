@@ -23,12 +23,12 @@ from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from ipware import get_client_ip
-from rest_auth import app_settings as rest_auth_settings
-from rest_auth.app_settings import JWTSerializer, TokenSerializer
-from rest_auth.registration.views import RegisterView as BaseRegisterView
-from rest_auth.views import PasswordChangeView as BasePasswordChangeView
-from rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
-from rest_auth.views import PasswordResetView as BasePasswordResetView
+from dj_rest_auth import app_settings as dj_rest_auth_settings
+from dj_rest_auth.app_settings import JWTSerializer, TokenSerializer
+from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
+from dj_rest_auth.views import PasswordChangeView as BasePasswordChangeView
+from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
+from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
 from rest_framework import serializers, status
 from rest_framework.authentication import BaseAuthentication, SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
@@ -549,7 +549,7 @@ register = RegisterView.as_view()
 
 
 class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
-    serializer_class = rest_auth_settings.TokenSerializer
+    serializer_class = dj_rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
     authentication_classes = []
 

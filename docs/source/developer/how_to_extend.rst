@@ -64,8 +64,8 @@ ensuring also that ``openwisp_radius`` has been removed:
         'django_filters',
         # registration
         'rest_framework.authtoken',
-        'rest_auth',
-        'rest_auth.registration',
+        'dj_rest_auth',
+        'dj_rest_auth.registration',
         # social login
         'allauth.socialaccount.providers.facebook',  # optional, can be removed if social login is not needed
         'allauth.socialaccount.providers.google',  # optional, can be removed if social login is not needed

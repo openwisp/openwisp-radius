@@ -34,8 +34,8 @@ INSTALLED_APPS = [
     'django_filters',
     # registration
     'rest_framework.authtoken',
-    'rest_auth',
-    'rest_auth.registration',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     # social login
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.google',
@@ -177,11 +177,11 @@ CELERY_BEAT_SCHEDULE = {
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
 OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
 
-REST_AUTH_SERIALIZERS = {
+dj_rest_auth_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer'
 }
 
-REST_AUTH_REGISTER_SERIALIZERS = {
+dj_rest_auth_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer'
 }
 

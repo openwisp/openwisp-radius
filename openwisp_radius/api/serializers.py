@@ -11,10 +11,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
-from rest_auth.registration.serializers import (
+from dj_rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
 )
-from rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSerializer
+from dj_rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
