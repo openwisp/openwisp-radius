@@ -148,7 +148,8 @@ _GET_IP_LIST_HELP_TEXT = _(
     'Comma separated list of IP addresses allowed to access freeradius API'
 )
 _GET_MOBILE_PREFIX_HELP_TEXT = _(
-    'Comma separated list of international mobile prefixes allowed to register via the user registration API.'
+    'Comma separated list of international mobile prefixes '
+    'allowed to register via the user registration API.'
 )
 
 

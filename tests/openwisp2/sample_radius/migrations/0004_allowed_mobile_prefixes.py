@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from openwisp_radius.base.models import _GET_MOBILE_PREFIX_HELP_TEXT
+
 
 class Migration(migrations.Migration):
 
@@ -14,12 +16,7 @@ class Migration(migrations.Migration):
             model_name='organizationradiussettings',
             name='allowed_mobile_prefixes',
             field=models.TextField(
-                blank=True,
-                help_text=(
-                    'Comma separated list of international mobile prefixes to '
-                    'be restricted.'
-                ),
-                null=True,
+                blank=True, help_text=str(_GET_MOBILE_PREFIX_HELP_TEXT), null=True,
             ),
         ),
     ]
