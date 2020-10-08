@@ -273,7 +273,6 @@ or Cameroon (``+237``).
 
 **Note:** this setting is applicable only for organizations which have enabled SMS verification.
 
-
 Email related settings
 ======================
 
