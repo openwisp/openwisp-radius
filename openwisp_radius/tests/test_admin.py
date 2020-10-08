@@ -166,13 +166,11 @@ class TestAdmin(
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
 
-    def test_radiusaccounting_changelist(self):
-        original_value = app_settings.EDITABLE_ACCOUNTING
-        app_settings.EDITABLE_ACCOUNTING = False
+    @mock.patch.object(app_settings, 'EDITABLE_ACCOUNTING', False)
+    def test_radiusaccounting_changelist_readonly(self):
         url = reverse(f'admin:{self.app_label}_radiusaccounting_changelist')
         response = self.client.get(url)
         self.assertNotContains(response, 'Add accounting')
-        app_settings.EDITABLE_ACCOUNTING = original_value
 
     def test_postauth_change(self):
         options = dict(
