@@ -248,6 +248,31 @@ In the event there is no user in the database corresponding to the ``username`` 
 accounting instance, the failure will be logged with ``warning`` level but the accounting
 will be saved as usual.
 
+``OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``[]``
+
+This setting is used to specify a list of international mobile prefixes which should
+be allowed to register into the system via the `user registration API <api.html#user-registration>`_.
+
+That is, only users with phone numbers using the specified international prefixes will
+be allowed to register.
+
+Leaving this unset or setting it to an empty list (``[]``) will effectively allow
+any international mobile prefix to register (which is the default setting).
+
+For example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ['+44', '+237']
+
+Using the setting above will only allow phone numbers from the UK (``+44``)
+or Cameroon (``+237``).
+
+**Note:** this setting is applicable only for organizations which have enabled SMS verification.
+
 Email related settings
 ======================
 

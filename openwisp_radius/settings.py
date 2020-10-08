@@ -113,3 +113,5 @@ except AssertionError:  # pragma: no cover
         'lower would not be safe and higher would not be practical from '
         'a ux perspective.'
     )
+
+ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])

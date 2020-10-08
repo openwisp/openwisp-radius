@@ -1,5 +1,6 @@
 django>=2.2,<3.2
 swapper>=1.1.0,<1.2.0
+djangorestframework<3.12,>=3.11
 openwisp-utils[rest]~=0.6.3
 passlib>=1.7.1,<1.8.0
 djangorestframework-link-header-pagination>=0.1.1,<0.2.0

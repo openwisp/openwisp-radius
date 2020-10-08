@@ -22,7 +22,11 @@ from . import settings as app_settings
 from .base.admin_actions import disable_action, enable_action
 from .base.admin_filters import DuplicateListFilter, ExpiredListFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
-from .base.models import _GET_IP_LIST_HELP_TEXT, _encode_secret
+from .base.models import (
+    _GET_IP_LIST_HELP_TEXT,
+    _GET_MOBILE_PREFIX_HELP_TEXT,
+    _encode_secret,
+)
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -500,11 +504,23 @@ class AllowedHostsField(forms.CharField):
         return super().prepare_value(value)
 
 
+class AllowedMobilePrefixesField(forms.CharField):
+    def prepare_value(self, value):
+        if not value:
+            value = ','.join(app_settings.ALLOWED_MOBILE_PREFIXES)
+        return super().prepare_value(value)
+
+
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
     freeradius_allowed_hosts = AllowedHostsField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
         help_text=_GET_IP_LIST_HELP_TEXT,
+    )
+    allowed_mobile_prefixes = AllowedMobilePrefixesField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
+        help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
     )
 
 
@@ -520,6 +536,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'freeradius_allowed_hosts',
                     'sms_verification',
                     'sms_sender',
+                    'allowed_mobile_prefixes',
                 )
             },
         ),

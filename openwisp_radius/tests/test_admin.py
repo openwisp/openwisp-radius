@@ -1008,3 +1008,68 @@ class TestAdmin(
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(cache.get('rt-tester'), None)
+
+    def test_organization_radsettings_allowed_mobile_prefixes(self):
+        org = self._get_org()
+        url = reverse(
+            f'admin:{self.app_label_users}_organization_change', args=[org.pk],
+        )
+        radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+        form_data = org.__dict__
+        form_data.update(
+            {
+                "owner-TOTAL_FORMS": "0",
+                "owner-INITIAL_FORMS": "0",
+                "owner-MIN_NUM_FORMS": "0",
+                "owner-MAX_NUM_FORMS": "1",
+                'radius_settings-TOTAL_FORMS': '1',
+                'radius_settings-INITIAL_FORMS': '1',
+                'radius_settings-MIN_NUM_FORMS': '0',
+                'radius_settings-MAX_NUM_FORMS': '1',
+                'radius_settings-0-token': '12345',
+                'radius_settings-0-sms_sender': '',
+                'radius_settings-0-sms_meta_data': 'null',
+                'radius_settings-0-id': radsetting.pk,
+                'radius_settings-0-organization': org.pk,
+            }
+        )
+        with self.subTest('Valid mobile prefix list'):
+            form_data.update({'radius_settings-0-allowed_mobile_prefixes': '+51,+44'})
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.allowed_mobile_prefixes, '+51,+44')
+        with self.subTest('Invalid list'):
+            form_data.update({'radius_settings-0-allowed_mobile_prefixes': '+51, +44'})
+            response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Invalid input. Please enter valid mobile '
+                    'prefixes separated by comma. (no spaces)'
+                ),
+            )
+
+        with self.subTest('Invalid list with spaces'):
+            form_data.update({'radius_settings-0-allowed_mobile_prefixes': ', , , '})
+            response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Invalid input. Please enter valid mobile '
+                    'prefixes separated by comma. (no spaces)'
+                ),
+            )
+
+        with self.subTest('Invalid list with invalid prefix'):
+            form_data.update(
+                {'radius_settings-0-allowed_mobile_prefixes': '+12345,+777700012'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Invalid input. Please enter valid mobile '
+                    'prefixes separated by comma. (no spaces)'
+                ),
+            )
