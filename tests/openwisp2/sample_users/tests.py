@@ -15,11 +15,13 @@ additional_fields = [
 
 class TestUsersAdmin(GetEditFormInlineMixin, BaseTestUsersAdmin):
     app_label = 'sample_users'
+    is_integration_test = True
     _additional_user_fields = additional_fields
 
 
 class TestBasicUsersIntegration(GetEditFormInlineMixin, BaseTestBasicUsersIntegration):
     app_label = 'sample_users'
+    is_integration_test = True
     _additional_user_fields = additional_fields
 
 

@@ -8,7 +8,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
     tests integration with openwisp_users
     """
 
-    pass
+    is_integration_test = True
 
 
 del TestBasicUsersIntegration
