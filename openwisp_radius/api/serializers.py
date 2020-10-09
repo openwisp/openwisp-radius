@@ -4,6 +4,12 @@ import phonenumbers
 import swapper
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
+from dj_rest_auth.registration.serializers import (
+    RegisterSerializer as BaseRegisterSerializer,
+)
+from dj_rest_auth.serializers import (
+    PasswordResetSerializer as BasePasswordResetSerializer,
+)
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -12,10 +18,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
-from rest_auth.registration.serializers import (
-    RegisterSerializer as BaseRegisterSerializer,
-)
-from rest_auth.serializers import PasswordResetSerializer as BasePasswordResetSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
