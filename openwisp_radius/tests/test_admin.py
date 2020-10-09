@@ -166,8 +166,8 @@ class TestAdmin(
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
 
-    @mock.patch.object(app_settings, 'EDITABLE_ACCOUNTING', False)
     def test_radiusaccounting_changelist_readonly(self):
+        self.assertFalse(app_settings.EDITABLE_ACCOUNTING)
         url = reverse(f'admin:{self.app_label}_radiusaccounting_changelist')
         response = self.client.get(url)
         self.assertNotContains(response, 'Add accounting')
