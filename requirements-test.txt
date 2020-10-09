@@ -1,6 +1,7 @@
 responses
 djangorestframework-simplejwt
 django-cors-headers>=2.5.2
+redis~=3.5.0
 packaging
 sphinx
 sphinx_rtd_theme
