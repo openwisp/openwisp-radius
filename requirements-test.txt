@@ -1,5 +1,5 @@
 responses
-djangorestframework-jwt
+djangorestframework-simplejwt
 django-cors-headers>=2.5.2
 packaging
 sphinx
