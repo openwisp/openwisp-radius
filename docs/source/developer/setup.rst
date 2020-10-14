@@ -114,6 +114,13 @@ Add media locations in ``settings.py``:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
 
+Also, add ``AUTH_USER_MODEL`` and ``SITE_ID`` to your ``settings.py``:
+
+.. code-block:: python
+
+    AUTH_USER_MODEL = 'openwisp_users.User'
+    SITE_ID = 1
+
 Add allowed freeradius hosts  in ``settings.py``:
 
 .. code-block:: python
