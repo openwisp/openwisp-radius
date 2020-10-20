@@ -455,18 +455,28 @@ download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 
 class RadiusTokenMixin(object):
-    def _radius_account_nas_stop(self, user, org):
-        try:
-            radacct = RadiusAccounting.objects.get(username=user, organization=org)
-        except RadiusAccounting.DoesNotExist:
-            pass
-        else:
-            radacct.terminate_cause = 'NAS_Request'
-            time = timezone.now()
-            radacct.update_time = time
-            radacct.stop_time = time
-            radacct.full_clean()
-            radacct.save()
+    def _radius_accounting_nas_stop(self, user, organization):
+        """
+        Flags the last open radius session of the
+        specific organization as terminated
+        """
+        radacct = (
+            RadiusAccounting.objects.filter(
+                username=user, organization=organization, stop_time=None
+            )
+            .order_by('start_time')
+            .last()
+        )
+        # nothing to update
+        if not radacct:
+            return
+        # an open session found, flag it as terminated
+        radacct.terminate_cause = 'NAS_Request'
+        time = timezone.now()
+        radacct.update_time = time
+        radacct.stop_time = time
+        radacct.full_clean()
+        radacct.save()
 
     def _delete_used_token(self, user, organization):
         try:
@@ -478,7 +488,7 @@ class RadiusTokenMixin(object):
             # the previously used for organization
             in_use_org = used_radtoken.organization
             if in_use_org != organization:
-                self._radius_account_nas_stop(user, in_use_org)
+                self._radius_accounting_nas_stop(user, in_use_org)
             used_radtoken.delete()
 
     def get_or_create_radius_token(
@@ -492,7 +502,7 @@ class RadiusTokenMixin(object):
             )
         except IntegrityError:
             radius_token = RadiusToken.objects.get(user=user)
-            self._radius_account_nas_stop(user, radius_token.organization)
+            self._radius_accounting_nas_stop(user, radius_token.organization)
             radius_token.organization = organization
         radius_token.can_auth = enable_auth
         radius_token.full_clean()

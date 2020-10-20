@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from datetime import timedelta
 from unittest import mock
 
@@ -595,10 +596,32 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             {'username': 'tester', 'password': 'tester'},
         )
         # Test RadiusAccounting is terminated with correct cause
-        radacct = RadiusAccounting.objects.get(
-            username='tester', organization=self.default_org
+        self.assertEqual(
+            RadiusAccounting.objects.filter(
+                username='tester',
+                organization=self.default_org,
+                terminate_cause='NAS_Request',
+                stop_time__isnull=False,
+            ).count(),
+            1,
         )
-        self.assertEqual(radacct.terminate_cause, 'NAS_Request')
+
+    @freeze_time(START_DATE)
+    def test_radius_accounting_nas_stop_regression(self):
+        # create a first RadiusAccounting object to ensure
+        # we'll have 2 records when the next test method is executed
+        unique_id = uuid.uuid4().hex
+        data = self._prep_start_acct_data()
+        data.update(
+            username='tester',
+            stop_time=START_DATE,
+            terminate_cause='User-Request',
+            unique_id=unique_id,
+            session_id=unique_id,
+        )
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        self.test_user_auth_token_org_accounting_stop()
 
     @freeze_time(START_DATE)
     def test_accounting_400_missing_status_type(self):
