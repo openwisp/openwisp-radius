@@ -604,14 +604,17 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
             except UserToken.DoesNotExist:
                 pass
             else:
+                user = token.user
                 radius_token = self.get_or_create_radius_token(
-                    token.user, self.organization, renew=renew_required
+                    user, self.organization, renew=renew_required
                 )
                 response = {
                     'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
                     'auth_token': token.key,
                     'radius_user_token': radius_token.key,
-                    'username': radius_token.user.username,
+                    'username': user.username,
+                    'is_active': user.is_active,
+                    'phone_number': str(user.phone_number),
                 }
                 self.update_user_last_login(token.user)
                 return Response(response, 200)

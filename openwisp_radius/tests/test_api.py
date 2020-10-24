@@ -1783,8 +1783,16 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
+        user = token.user
+        self.assertEqual(user, RadiusToken.objects.first().user)
         self.assertEqual(
-            response.data['username'], RadiusToken.objects.first().user.username,
+            response.data['username'], user.username,
+        )
+        self.assertEqual(
+            response.data['is_active'], user.is_active,
+        )
+        self.assertEqual(
+            response.data['phone_number'], str(user.phone_number),
         )
 
     @freeze_time(_TEST_DATE)

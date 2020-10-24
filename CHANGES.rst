@@ -11,6 +11,8 @@ Changes
 - Obtain Auth Token View API endpoint: if the user attempting to authenticate
   is inactive, the API will return HTTP status code 401 along with the auth token
   and ``is_active`` attribute
+- Validate Auth Token View API endpoint: added ``is_active`` and ``phone_number``
+  to response data
 
 Version 0.1.0 [2020-09-10]
 --------------------------
