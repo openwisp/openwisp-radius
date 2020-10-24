@@ -443,6 +443,11 @@ Returns:
   the user passsword)
 - the user API access token, which will be needed to authenticate the user to
   eventual subsequent API requests (eg: change password)
+- ``is_active`` attribute of the user
+
+If the user account is inactive the endpoint will send the data anyway but using the
+HTTP status code 401, this way consumers can recognize these users and trigger
+the account verification again if needed (or reject them).
 
 Parameters:
 

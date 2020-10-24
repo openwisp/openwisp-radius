@@ -29,7 +29,6 @@ from ipware import get_client_ip
 from rest_framework import serializers, status
 from rest_framework.authentication import BaseAuthentication, SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
-from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import (
     AuthenticationFailed,
@@ -60,6 +59,7 @@ from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
 from .serializers import (
     AuthorizeSerializer,
+    AuthTokenSerializer,
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
@@ -561,6 +561,7 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         serializer = self.auth_serializer_class(
             data=request.data, context={'request': request}
         )
+        # import ipdb; ipdb.set_trace()
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
@@ -570,9 +571,10 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         self.update_user_last_login(user)
         context = {'view': self, 'request': request, 'token_login': True}
         serializer = self.serializer_class(instance=token, context=context)
-        response = {'radius_user_token': radius_token.key}
+        response = {'radius_user_token': radius_token.key, 'is_active': user.is_active}
         response.update(serializer.data)
-        return Response(response)
+        status_code = 200 if user.is_active else 401
+        return Response(response, status=status_code)
 
     def get_user(self, serializer, *args, **kwargs):
         user = serializer.validated_data['user']

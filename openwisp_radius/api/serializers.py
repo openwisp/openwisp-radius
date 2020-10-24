@@ -12,6 +12,7 @@ from dj_rest_auth.serializers import (
 )
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.backends import AllowAllUsersModelBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.urls import reverse
@@ -19,6 +20,9 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
+from rest_framework.authtoken.serializers import (
+    AuthTokenSerializer as BaseAuthTokenSerializer,
+)
 from rest_framework.exceptions import APIException
 
 from .. import settings as app_settings
@@ -34,6 +38,36 @@ RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
+
+
+class AuthTokenSerializer(BaseAuthTokenSerializer):
+    """
+    Recognizes also inactive users.
+    The API will still reject these users but the
+    consumers need to know the credentials are valid
+    to trigger account verification again.
+    """
+
+    def validate(self, attrs):
+        username = attrs.get('username')
+        password = attrs.get('password')
+
+        if username and password:
+            backend = AllowAllUsersModelBackend()
+            user = backend.authenticate(
+                request=self.context.get('request'),
+                username=username,
+                password=password,
+            )
+            if not user:
+                msg = _('Unable to log in with provided credentials.')
+                raise serializers.ValidationError(msg, code='authorization')
+        else:
+            msg = _('Must include "username" and "password".')
+            raise serializers.ValidationError(msg, code='authorization')
+
+        attrs['user'] = user
+        return attrs
 
 
 class AllowedMobilePrefixMixin(object):

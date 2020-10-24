@@ -4,7 +4,13 @@ Changelog
 Version 0.2.0 [unreleased]
 --------------------------
 
-WIP
+Changes
+~~~~~~~
+
+- Obtain Auth Token View API endpoint: added ``is_active`` attribute to response
+- Obtain Auth Token View API endpoint: if the user attempting to authenticate
+  is inactive, the API will return HTTP status code 401 along with the auth token
+  and ``is_active`` attribute
 
 Version 0.1.0 [2020-09-10]
 --------------------------

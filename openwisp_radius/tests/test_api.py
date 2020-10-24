@@ -1605,6 +1605,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
+        self.assertTrue(response.data['is_active'])
 
     def test_user_auth_token_with_second_organization(self):
         api_views.renew_required = False
@@ -1659,6 +1660,15 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         admin.refresh_from_db()
         self.assertIsNotNone(admin.last_login)
         self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
+
+    def test_user_auth_token_inactive_user(self):
+        url = self._get_url()
+        organization_user = self._get_org_user()
+        organization_user.user.is_active = False
+        organization_user.user.save()
+        response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(response.data['is_active'])
 
 
 class TestClientIpApi(ApiTokenMixin, BaseTestCase):
