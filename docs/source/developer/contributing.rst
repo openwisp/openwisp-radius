@@ -48,15 +48,19 @@ First of all, install the test requirements:
     pip install --no-cache-dir -U -r requirements-test.txt
     npm install -g jslint
 
-Before committing your work check that your changes are not breaking the style conventions with:
+Before committing your work check that your changes are not breaking
+our `coding style conventions <https://openwisp.io/docs/developer/contributing.html#coding-style-conventions>`_:
 
 .. code-block:: shell
 
+    # reformat the code according to the conventions
+    openwisp-qa-format
+    # run QA checks
     ./run-qa-checks
 
 For more information, please see:
 
-- `PEP8: Style Guide for Python Code <https://www.python.org/dev/peps/pep-0008/>`_
+- `OpenWISP Coding Style Conventions <https://openwisp.io/docs/developer/contributing.html#coding-style-conventions>`_
 
 Update the documentation
 ------------------------
