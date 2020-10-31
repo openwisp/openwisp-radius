@@ -93,6 +93,7 @@ modules listed ``INSTALLED_APPS``:
         'openwisp_radius',
         'openwisp_users',
         'private_storage',
+        'drf_yasg',
     ]
 
 These modules are optional, add them only if you need the

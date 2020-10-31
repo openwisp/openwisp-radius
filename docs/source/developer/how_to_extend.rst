@@ -48,6 +48,8 @@ ensuring also that ``openwisp_radius`` has been removed:
 
 .. code-block:: python
 
+    import os
+
     INSTALLED_APPS = [
         # ... other apps ...
         # openwisp admin theme
@@ -73,7 +75,15 @@ ensuring also that ``openwisp_radius`` has been removed:
         # 'myradius', <-- replace with your app-name here
         'openwisp_users',
         'private_storage',
+        'drf_yasg'
     ]
+
+    SITE_ID = 1
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
+
+.. important::
+    Remember to include your radius app's name before proceeding.
 
 .. note::
     For more information about how to work with django projects and django apps, please refer
@@ -178,14 +188,22 @@ Once you have created the models, add the following to your ``settings.py``:
     OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = 'myradius.RadiusAccounting'
     OPENWISP_RADIUS_NAS_MODEL = 'myradius.Nas'
     OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = 'myradius.RadiusUserGroup'
-    OPENWISP_RADIUS_RADIUSPOSTAUTHENTICATION_MODEL = 'myradius.RadiusPostAuth'
+    OPENWISP_RADIUS_RADIUSPOSTAUTH_MODEL = 'myradius.RadiusPostAuth'
+    OPENWISP_RADIUS_RADIUSBATCH_MODEL = 'myradius.RadiusBatch'
+    OPENWISP_RADIUS_RADIUSGROUP_MODEL = 'myradius.RadiusGroup'
+    OPENWISP_RADIUS_RADIUSTOKEN_MODEL = 'myradius.RadiusToken'
+    OPENWISP_RADIUS_PHONETOKEN_MODEL = 'myradius.PhoneToken'
+    OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = 'myradius.OrganizationRadiusSettings'
+
+    # You will need to change AUTH_USER_MODEL if you are extending openwisp_users
+    AUTH_USER_MODEL = 'openwisp_users.User'
 
 Substitute ``myradius`` with the name you chose in step 1.
 
 9. Create database migrations
 -----------------------------
 
-Copy the `migration files from the sample_radius's migration folder <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/migrations/>`
+Copy the `migration files from the sample_radius's migration folder <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/migrations/>`_.
 
 
 Now, create database migrations as per your custom application's requirements::
@@ -375,6 +393,7 @@ The root ``url.py`` file should have the following paths (please read the commen
         path('admin/', admin.site.urls),
         # openwisp-radius urls
         path('accounts/', include('openwisp_users.accounts.urls')),
+        path('api/v1/', include('openwisp_utils.api.urls')),
         # Use only when extending views (dicussed below)
         # path('', include((get_urls(api_views, social_views), 'radius'), namespace='radius')),
         path('', include('openwisp_radius.urls', namespace='radius')), # Remove when extending views
