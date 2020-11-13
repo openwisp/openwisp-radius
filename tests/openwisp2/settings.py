@@ -187,9 +187,9 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # fallback in case the specific org page is not defined
-#     'default': 'https://example.com/{organization}/password/reset/{uid}/{token}',
+#     'default': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
 #     # use the uuid because the slug can change
-#     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://organization.com/{organization}/password/reset/{uid}/{token}',
+#     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://org.com/{organization}/password/reset/confirm/{uid}/{token}',
 # }
 
 OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY = 4
