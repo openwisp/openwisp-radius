@@ -5,7 +5,6 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -395,9 +394,9 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     class Media:
         js = [
             'admin/js/jquery.init.js',
-            static('openwisp-radius/js/strategy-switcher.js'),
+            'openwisp-radius/js/strategy-switcher.js',
         ]
-        css = {'all': (static('openwisp-radius/css/radiusbatch.css'),)}
+        css = {'all': ('openwisp-radius/css/radiusbatch.css',)}
 
     def number_of_users(self, obj):
         return obj.users.count()
