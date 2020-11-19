@@ -26,6 +26,7 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.exceptions import APIException
 
 from .. import settings as app_settings
+from ..base.forms import PasswordResetForm
 from ..utils import load_model
 from .utils import ErrorDictMixin
 
@@ -296,6 +297,8 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):
+    password_reset_form_class = PasswordResetForm
+
     def save(self):
         request = self.context.get('request')
         password_reset_url = self.context.get('password_reset_url')

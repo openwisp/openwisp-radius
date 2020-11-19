@@ -1,6 +1,8 @@
 import re
 
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import PasswordResetForm as BasePasswordResetForm
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -10,6 +12,7 @@ from .models import RADCHECK_PASSWD_TYPE, AbstractNas, AbstractRadiusCheck
 
 radcheck_value_field = AbstractRadiusCheck._meta.get_field('value')
 nas_type_field = AbstractNas._meta.get_field('type')
+User = get_user_model()
 
 
 class ModeSwitcherForm(forms.ModelForm):
@@ -85,3 +88,15 @@ class RadiusBatchForm(forms.ModelForm):
             help_text = f"Refer to the <b><u><a href='{docs_link}'>docs</a></u></b> \
                 for more details on importing users from a CSV"
             self.fields['csvfile'].help_text = help_text
+
+
+class PasswordResetForm(BasePasswordResetForm):
+    def get_users(self, email):
+        """
+        Given an email, return matching user who should receive a reset.
+
+        This allows subclasses to more easily customize the default policies
+        that prevent users with unusable passwords from resetting their password.
+        """
+        user = User.objects.get(email=email)
+        return [user] if user.has_usable_password() else []
