@@ -13,6 +13,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMultiAlternatives
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.crypto import get_random_string
@@ -1490,6 +1491,28 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()), 0)
+
+    @mock.patch.object(EmailMultiAlternatives, 'send')
+    def _test_user_reset_password_helper(self, is_active, mocked_send):
+        user = self._create_user(
+            username='active_user',
+            password='passowrd',
+            email='active@gmail.com',
+            is_active=is_active,
+        )
+        org = self._get_org()
+        self._create_org_user(user=user, organization=org)
+        path = reverse('radius:rest_password_reset', args=[org.slug])
+        r = self.client.post(path, {'email': user.email})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['detail'], 'Password reset e-mail has been sent.')
+        mocked_send.assert_called_once()
+
+    def test_active_user_reset_password(self):
+        self._test_user_reset_password_helper(True)
+
+    def test_inactive_user_reset_password(self):
+        self._test_user_reset_password_helper(False)
 
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
