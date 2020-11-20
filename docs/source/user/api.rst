@@ -541,6 +541,8 @@ Change phone number
 
 Allows users to change their phone number,
 will flag the user as inactive and send them a verification code via SMS.
+The phone number of the user is updated only after this verification code
+has been `verified <#verify-validate-sms-token>`_.
 
 .. code-block:: text
 

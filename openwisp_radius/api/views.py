@@ -609,13 +609,24 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                 radius_token = self.get_or_create_radius_token(
                     user, self.organization, renew=renew_required
                 )
+                if not user.is_active:
+                    phone_token = (
+                        PhoneToken.objects.filter(user=user)
+                        .order_by('-created')
+                        .first()
+                    )
+                    phone_number = (
+                        phone_token.phone_number if phone_token else user.phone_number
+                    )
+                else:
+                    phone_number = user.phone_number
                 response = {
                     'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
                     'auth_token': token.key,
                     'radius_user_token': radius_token.key,
                     'username': user.username,
                     'is_active': user.is_active,
-                    'phone_number': str(user.phone_number),
+                    'phone_number': str(phone_number),
                 }
                 self.update_user_last_login(token.user)
                 return Response(response, 200)
@@ -806,7 +817,10 @@ class CreatePhoneTokenView(
     def create(self, *args, **kwargs):
         request = self.request
         self.validate_membership(request.user)
-        phone_token = PhoneToken(user=request.user, ip=self.get_ident(request))
+        phone_number = request.data.get('phone_number', request.user.phone_number)
+        phone_token = PhoneToken(
+            user=request.user, ip=self.get_ident(request), phone_number=phone_number,
+        )
         try:
             phone_token.full_clean()
         except ValidationError as e:
@@ -851,6 +865,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             return self._error_response(_('Invalid code.'))
         else:
             user.is_active = True
+            user.phone_number = phone_token.phone_number
             user.save()
             return Response(None, status=200)
 
@@ -881,12 +896,12 @@ class ChangePhoneNumberView(CreatePhoneTokenView):
             data=self.request.data, context=self.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)
-        # attempt to create the phone token before
-        # the new number is saved, so that if the
-        # creation of the phone token fails, the
-        # phone number remains unchanged
-        self.create_phone_token(*args, **kwargs)
+        # Becuase phone number of user is changed
+        # only after it is verified, we should first save
+        # the data which will render the user inactive
+        # before we create the phone token
         serializer.save()
+        self.create_phone_token(*args, **kwargs)
         return Response(None, status=200)
 
     def create_phone_token(self, *args, **kwargs):

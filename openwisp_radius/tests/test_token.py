@@ -37,7 +37,9 @@ class TestPhoneToken(BaseTestCase):
         radius_settings.sms_sender = '+595972157632'
         radius_settings.save()
 
-    def _create_token(self, user=None, ip='127.0.0.1', created=None):
+    def _create_token(
+        self, user=None, ip='127.0.0.1', phone_number='+393664351808', created=None
+    ):
         if not user:
             opts = {
                 'username': 'tester',
@@ -48,7 +50,7 @@ class TestPhoneToken(BaseTestCase):
             }
             user = self._create_user(**opts)
             self._create_org_user(**{'user': user})
-        token = PhoneToken(user=user, ip=ip)
+        token = PhoneToken(user=user, ip=ip, phone_number=phone_number)
         if created:
             token.created = created
             token.modified = created
@@ -169,9 +171,9 @@ class TestPhoneToken(BaseTestCase):
         }
         user2 = self._create_user(**opts)
         self._create_org_user(**{'user': user2})
-        self._create_token(user=user2)
+        self._create_token(user=user2, phone_number='+393664351801')
         try:
-            self._create_token(user=user2)
+            self._create_token(user=user2, phone_number='+393664351802')
         except ValidationError as e:
             self.assertIn('ip address', str(e.message_dict))
         else:
@@ -182,9 +184,11 @@ class TestPhoneToken(BaseTestCase):
             **{'username': 'tester', 'password': 'tester', 'is_active': False}
         )
         try:
-            self._create_token(user=user)
+            self._create_token(user=user, phone_number=None)
         except ValidationError as e:
-            self.assertIn('does not have a phone number', str(e.message_dict))
+            self.assertIn(
+                'This field cannot be null.', str(e.message_dict['phone_number']),
+            )
         else:
             self.fail('ValidationError not raised')
 
