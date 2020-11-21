@@ -273,6 +273,28 @@ or Cameroon (``+237``).
 
 **Note:** this setting is applicable only for organizations which have enabled SMS verification.
 
+``OPENWISP_RADIUS_PASSWORD_RESET_URLS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**:
+
+.. code-block:: python
+
+    {
+        'default': 'https://example.com/{organization}/password/reset/confirm/{uid}/{token}'
+    }
+
+This setting is used to set urls which will be send to users by email to reset their passwords
+depending on the organization they belong to.
+
+Each url in this dictionary should have the following format:
+
+`organization_pk`: `my_frontend_domain/{organization}/password/reset/confirm/{uid}/{token}`.
+
+- `organization_pk` refers to the primary key of the organization which users belong to.
+- `my_frontend_domain` refers to the domain on which your frontend application is running. This could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_.
+- `{organization}`, `{uid}` and `{token}` must be present in the url as they are used to generate the unique url for each user in each organization.
+
 Email related settings
 ======================
 
