@@ -281,19 +281,38 @@ or Cameroon (``+237``).
 .. code-block:: python
 
     {
-        'default': 'https://example.com/{organization}/password/reset/confirm/{uid}/{token}'
+        'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
-This setting is used to set urls which will be send to users by email to reset their passwords
-depending on the organization they belong to.
+A dictionary representing the frontend URLs through which end users can complete
+the password reset operation.
 
-Each url in this dictionary should have the following format:
+The frontend could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
+or another in-house captive page solution.
 
-`organization_pk`: `my_frontend_domain/{organization}/password/reset/confirm/{uid}/{token}`.
+Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
+that will be used in case there's no customized URL for a specific organization.
 
-- `organization_pk` refers to the primary key of the organization which users belong to.
-- `my_frontend_domain` refers to the domain on which your frontend application is running. This could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_.
-- `{organization}`, `{uid}` and `{token}` must be present in the url as they are used to generate the unique url for each user in each organization.
+The meaning of the variables in the string is the following:
+
+- ``{site}``: site domain as defined in the
+  `django site framework <https://docs.djangoproject.com/en/dev/ref/contrib/sites/>`_
+  (defaults to example.com and an be changed through the django admin)
+- ``{organization}``: organization slug
+- ``{uid}``: uid of the password reset request
+- ``{token}``: token of the password reset request
+
+If you're using `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
+the configuration is fairly simple, in case the nodejs app is installed in the same domain
+of openwisp-radius, you only have to ensure the domain field in the main Site object is correct,
+if instead the nodejs app is deployed on a different domain, say ``login.wifiservice.com``,
+the configuration should be simply changed to:
+
+.. code-block:: python
+
+    {
+        'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
+    }
 
 Email related settings
 ======================
