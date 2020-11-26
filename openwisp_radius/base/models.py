@@ -1171,11 +1171,12 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             .exists()
         )
         if another_user_has_phone_number:
-            logger.warning(
-                _(f'phone_number: {self.phone_number} belongs to another user')
-            )
             raise ValidationError(
-                {'phone_number': _('Another user has this phone number')}
+                {
+                    'phone_number': _(
+                        'This phone number is already associated to another user.'
+                    )
+                }
             )
         date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
