@@ -234,8 +234,8 @@ if os.environ.get('SAMPLE_APP', False):
 
 if os.environ.get('SAMPLE_APP', False) and TESTING:
     # Required for openwisp-users tests
-    OPENWISP_ORGANIZATON_USER_ADMIN = True
-    OPENWISP_ORGANIZATON_OWNER_ADMIN = True
+    OPENWISP_ORGANIZATION_USER_ADMIN = True
+    OPENWISP_ORGANIZATION_OWNER_ADMIN = True
     OPENWISP_USERS_AUTH_API = True
 
 # CORS headers, useful during development and testing
