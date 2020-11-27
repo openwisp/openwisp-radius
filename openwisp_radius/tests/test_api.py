@@ -2515,7 +2515,24 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r1.status_code, 201)
 
-    def test_phone_number_unique(self):
+    def _test_phone_number_unique_helper(self, phone_number):
+        user = User.objects.get(email='user2@gmail.com')
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
+        self.assertEqual(phone_token_qs.count(), 1)
+
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': phone_number}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('phone_number', r.data)
+        self.assertEqual(phone_token_qs.count(), 1)
+
+    def test_phone_token_phone_number_unique(self):
         self._create_user_helper(
             {
                 'username': 'user1',
@@ -2534,18 +2551,22 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'phone_number': '+237674479231',
             }
         )
-        user = User.objects.get(email='user2@gmail.com')
-        user_token = Token.objects.filter(user=user).last()
-        phone_token_qs = PhoneToken.objects.filter(user=user)
-        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
-        self.assertEqual(phone_token_qs.count(), 1)
+        self._test_phone_number_unique_helper('+237678879231')
 
-        r = self.client.post(
-            url,
-            json.dumps({'phone_number': '+237678879231'}),
-            content_type='application/json',
-            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+    def test_user_phone_number_unique(self):
+        User.objects.create_user(
+            username='user1',
+            email='email1@gmail.com',
+            password='pass',
+            phone_number='+23767779235',
         )
-        self.assertEqual(r.status_code, 400)
-        self.assertIn('phone_number', r.data)
-        self.assertEqual(phone_token_qs.count(), 1)
+        self._create_user_helper(
+            {
+                'username': 'user2',
+                'email': 'user2@gmail.com',
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': '+237674479231',
+            }
+        )
+        self._test_phone_number_unique_helper('+23767779235')

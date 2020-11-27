@@ -1166,8 +1166,8 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             logger.warning(_(f'user {self.user} is already active'))
             raise ValidationError(_('This user is already active.'))
         another_user_has_phone_number = (
-            self._meta.model.objects.filter(phone_number=self.phone_number)
-            .exclude(user=self.user)
+            User.objects.filter(phone_number=self.phone_number)
+            .exclude(pk=self.user.pk)
             .exists()
         )
         if another_user_has_phone_number:
