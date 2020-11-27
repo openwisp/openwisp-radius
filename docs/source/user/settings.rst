@@ -273,6 +273,47 @@ or Cameroon (``+237``).
 
 **Note:** this setting is applicable only for organizations which have enabled SMS verification.
 
+``OPENWISP_RADIUS_PASSWORD_RESET_URLS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**:
+
+.. code-block:: python
+
+    {
+        'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}'
+    }
+
+A dictionary representing the frontend URLs through which end users can complete
+the password reset operation.
+
+The frontend could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
+or another in-house captive page solution.
+
+Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
+that will be used in case there's no customized URL for a specific organization.
+
+The meaning of the variables in the string is the following:
+
+- ``{site}``: site domain as defined in the
+  `django site framework <https://docs.djangoproject.com/en/dev/ref/contrib/sites/>`_
+  (defaults to example.com and an be changed through the django admin)
+- ``{organization}``: organization slug
+- ``{uid}``: uid of the password reset request
+- ``{token}``: token of the password reset request
+
+If you're using `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
+the configuration is fairly simple, in case the nodejs app is installed in the same domain
+of openwisp-radius, you only have to ensure the domain field in the main Site object is correct,
+if instead the nodejs app is deployed on a different domain, say ``login.wifiservice.com``,
+the configuration should be simply changed to:
+
+.. code-block:: python
+
+    {
+        'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
+    }
+
 Email related settings
 ======================
 
