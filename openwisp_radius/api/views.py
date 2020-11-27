@@ -712,8 +712,6 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')
         domain = get_current_site(self.request).domain
-        if 'example.com' not in domain:
-            default_url = default_url.replace('http://localhost:8080', domain)
         if getattr(self, 'swagger_fake_view', False):
             organization_pk, organization_slug = None, None  # pragma: no cover
         else:
@@ -721,7 +719,7 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
             organization_slug = self.organization.slug
         password_reset_url = password_reset_urls.get(str(organization_pk), default_url)
         password_reset_url = password_reset_url.format(
-            organization=organization_slug, uid=uid, token=token
+            organization=organization_slug, uid=uid, token=token, site=domain
         )
         context = {'request': self.request, 'password_reset_url': password_reset_url}
         return context

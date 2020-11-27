@@ -66,9 +66,7 @@ RADCHECK_SECRET_VALIDATORS = get_settings_value(
 
 PASSWORD_RESET_URLS = {
     # fallback in case the specific org page is not defined
-    'default': (
-        'https://example.com/{organization}/password/reset/confirm/{uid}/{token}'
-    ),
+    'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
     # use the uuid because the slug can change
 }
 
