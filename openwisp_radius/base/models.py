@@ -51,8 +51,6 @@ from ..utils import (
 from .validators import ipv6_network_validator
 
 logger = logging.getLogger(__name__)
-
-
 User = get_user_model()
 
 RADOP_CHECK_TYPES = (
@@ -70,7 +68,6 @@ RADOP_CHECK_TYPES = (
     ('=*', '=*'),
     ('!*', '!*'),
 )
-
 RAD_NAS_TYPES = app_settings.EXTRA_NAS_TYPES + (
     ('Async', 'Async'),
     ('Sync', 'Sync'),
@@ -119,16 +116,12 @@ RAD_NAS_TYPES = app_settings.EXTRA_NAS_TYPES + (
     ('WIMAX-WVS', 'WIMAX-WVS: WiMAX voice service'),
     ('Other', 'Other'),
 )
-
-
 RADOP_REPLY_TYPES = (('=', '='), (':=', ':='), ('+=', '+='))
-
 RADCHECK_ATTRIBUTE_TYPES = [
     'Max-Daily-Session',
     'Max-All-Session',
     'Max-Daily-Session-Traffic',
 ]
-
 RADCHECK_PASSWD_TYPE = [
     'Cleartext-Password',
     'NT-Password',
@@ -139,11 +132,8 @@ RADCHECK_PASSWD_TYPE = [
     'SSHA-Password',
     'Crypt-Password',
 ]
-
 RADCHECK_ATTRIBUTE_TYPES += RADCHECK_PASSWD_TYPE
-
 _STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
-
 _NOT_BLANK_MESSAGE = _('This field cannot be blank.')
 _GET_IP_LIST_HELP_TEXT = _(
     'Comma separated list of IP addresses allowed to access freeradius API'
@@ -1150,6 +1140,8 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     verified = models.BooleanField(default=False)
     token = models.CharField(max_length=8, editable=False, default=generate_sms_token)
     ip = models.GenericIPAddressField()
+    # if users change their phone number, a record of the previously
+    # verified phone numbers is kept thanks to this field
     phone_number = PhoneNumberField(blank=False, null=False)
 
     class Meta:
@@ -1165,12 +1157,20 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         if self._state.adding and self.user.is_active:
             logger.warning(_(f'user {self.user} is already active'))
             raise ValidationError(_('This user is already active.'))
-        another_user_has_phone_number = (
+        self._validate_phone_number_uniqueness()
+        self._validate_max_attempts()
+
+    def _validate_phone_number_uniqueness(self):
+        """
+        Users cannot create a phone token if the number
+        is already taken by another user
+        """
+        phone_number_already_taken = (
             User.objects.filter(phone_number=self.phone_number)
             .exclude(pk=self.user.pk)
             .exists()
         )
-        if another_user_has_phone_number:
+        if phone_number_already_taken:
             raise ValidationError(
                 {
                     'phone_number': _(
@@ -1178,6 +1178,12 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                     )
                 }
             )
+
+    def _validate_max_attempts(self):
+        """
+        Enforce limits on the creation of phone tokens to prevent abuse
+        which can lead to excessive expenditure for sending SMS
+        """
         date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
         PhoneToken = load_model('PhoneToken')
