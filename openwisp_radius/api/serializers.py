@@ -28,7 +28,7 @@ from rest_framework.exceptions import APIException
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..utils import load_model
-from .utils import ErrorDictMixin
+from .utils import ErrorDictMixin, is_sms_verification_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -326,22 +326,9 @@ class RegisterSerializer(
         default='',
     )
 
-    @property
-    def is_sms_verification_enabled(self):
-        org = self.context['view'].organization
-        try:
-            return org.radius_settings.sms_verification
-        except ObjectDoesNotExist:
-            raise APIException(
-                _(
-                    'Could not complete operation '
-                    'because of an internal misconfiguration'
-                )
-            )
-
     def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
-        if self.is_sms_verification_enabled:
+        if is_sms_verification_enabled(org):
             if not phone_number:
                 raise serializers.ValidationError(_('This field is required'))
             mobile_prefixes = org.radius_settings.allowed_mobile_prefixes_list
@@ -349,6 +336,9 @@ class RegisterSerializer(
                 raise serializers.ValidationError(
                     _('This international mobile prefix is not allowed.')
                 )
+        else:
+            # Phone number should not be stored if sms verification is disabled
+            phone_number = None
         return phone_number
 
     def save(self, request):
@@ -367,7 +357,7 @@ class RegisterSerializer(
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
-        if self.is_sms_verification_enabled:
+        if is_sms_verification_enabled(org):
             user.is_active = False
         try:
             user.full_clean()
