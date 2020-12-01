@@ -1154,9 +1154,6 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     def clean(self):
         if not hasattr(self, 'user'):
             return
-        if self._state.adding and self.user.is_active:
-            logger.warning(_(f'user {self.user} is already active'))
-            raise ValidationError(_('This user is already active.'))
         self._validate_phone_number_uniqueness()
         self._validate_max_attempts()
 

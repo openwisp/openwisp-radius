@@ -896,12 +896,12 @@ class ChangePhoneNumberView(CreatePhoneTokenView):
             data=self.request.data, context=self.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)
-        # Becuase phone number of user is changed
-        # only after it is verified, we should first save
-        # the data which will render the user inactive
-        # before we create the phone token
-        serializer.save()
+        # attempt to create the phone token before
+        # the user is marked inactive, so that if the
+        # creation of the phone token fails, the
+        # the user's is_active state remains unchanged
         self.create_phone_token(*args, **kwargs)
+        serializer.save()
         return Response(None, status=200)
 
     def create_phone_token(self, *args, **kwargs):
