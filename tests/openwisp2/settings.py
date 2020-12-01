@@ -5,6 +5,7 @@ from celery.schedules import crontab
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TESTING = sys.argv[1] == 'test'
+SHELL = 'shell' in sys.argv or 'shell_plus' in sys.argv
 
 # Set DEBUG to False in production
 DEBUG = True
@@ -97,6 +98,39 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'openwisp_radius.db'),
     }
 }
+
+LOGGING = {
+    'version': 1,
+    'filters': {'require_debug_true': {'()': 'django.utils.log.RequireDebugTrue'}},
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        }
+    },
+}
+
+if not TESTING and SHELL:
+    LOGGING.update(
+        {
+            'loggers': {
+                '': {
+                    # this sets root level logger to log debug and higher level
+                    # logs to console. All other loggers inherit settings from
+                    # root level logger.
+                    'handlers': ['console'],
+                    'level': 'DEBUG',
+                    'propagate': False,
+                },
+                'django.db': {
+                    'level': 'DEBUG',
+                    'handlers': ['console'],
+                    'propagate': False,
+                },
+            }
+        }
+    )
 
 # WARNING: for development only!
 AUTH_PASSWORD_VALIDATORS = []
