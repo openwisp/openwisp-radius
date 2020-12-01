@@ -484,7 +484,7 @@ class RadiusUserGroupInline(StackedInline):
 class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
     model = PhoneToken
     extra = 0
-    readonly_fields = ('verified', 'valid_until', 'attempts', 'ip')
+    readonly_fields = ('verified', 'valid_until', 'attempts', 'phone_number', 'ip')
 
     def has_add_permission(self, request, obj):
         return False

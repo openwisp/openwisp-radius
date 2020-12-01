@@ -405,14 +405,6 @@ class ChangePhoneNumberSerializer(
             )
         return phone_number
 
-    def validate(self, data):
-        self.user.phone_number = data['phone_number']
-        try:
-            self.user.full_clean()
-        except ValidationError as e:
-            raise serializers.ValidationError(self._get_error_dict(e))
-        return data
-
     def save(self):
         self.user.is_active = False
         self.user.save()

@@ -138,3 +138,10 @@ def popluate_uuids(apps, schema_editor):
         for obj in model.objects.all():
             obj.uuid = uuid.uuid4()
             obj.save(update_fields=['uuid'])
+
+
+def populate_phonetoken_phone_number(apps, schema_editor):
+    PhoneToken = get_swapped_model(apps, 'openwisp_radius', 'PhoneToken')
+    for phone_token in PhoneToken.objects.all():
+        phone_token.phone_number = phone_token.user.phone_number
+        phone_token.save(update_fields=['phone_number'])

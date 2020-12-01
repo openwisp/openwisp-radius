@@ -1782,9 +1782,8 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
         return reverse('radius:validate_auth_token', args=[self.default_org.slug])
 
-    def test_validate_auth_token(self):
+    def _test_validate_auth_token_helper(self, user):
         url = self._get_url()
-        user = self._get_user_with_org()
         token = Token.objects.create(user=user)
         # empty payload
         response = self.client.post(url)
@@ -1814,9 +1813,30 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['is_active'], user.is_active,
         )
+        if user.is_active:
+            phone_number = user.phone_number
+        else:
+            phone_number = PhoneToken.objects.filter(user=user).first().phone_number
+
         self.assertEqual(
-            response.data['phone_number'], str(user.phone_number),
+            response.data['phone_number'], str(phone_number),
         )
+
+    def test_validate_auth_token_with_active_user(self):
+        user = self._get_user_with_org()
+        self._test_validate_auth_token_helper(user)
+
+    def test_validate_auth_token_with_inactive_user(self):
+        user = self._get_user_with_org()
+        user.is_active = False
+        user.save()
+        user.refresh_from_db()
+        phone_token = PhoneToken(
+            user=user, ip='127.0.0.1', phone_number='+237675578296'
+        )
+        phone_token.full_clean()
+        phone_token.save()
+        self._test_validate_auth_token_helper(user)
 
     @freeze_time(_TEST_DATE)
     def test_user_auth_updates_last_login(self):
@@ -2028,8 +2048,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
         self.assertEqual(r.status_code, 400)
-        self.assertIn('non_field_errors', r.data)
-        self.assertIn('does not have a phone number', str(r.data['non_field_errors']))
+        self.assertIn('phone_number', r.data)
+        self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
     def test_create_phone_token_400_user_already_active(self):
         self.test_register_201()
@@ -2064,8 +2084,12 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         # generate entropy to ensure correct token is used
-        PhoneToken.objects.create(user=user, ip=phone_token.ip)
-        phone_token = PhoneToken.objects.create(user=user, ip=phone_token.ip)
+        PhoneToken.objects.create(
+            user=user, ip=phone_token.ip, phone_number=phone_token.phone_number,
+        )
+        phone_token = PhoneToken.objects.create(
+            user=user, ip=phone_token.ip, phone_number=phone_token.phone_number
+        )
         self.assertEqual(phone_token.attempts, 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
@@ -2230,6 +2254,20 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token_qs.count(), 2)
         user.refresh_from_db()
         self.assertFalse(user.is_active)
+        self.assertEqual(user.phone_number, user.phone_number)
+
+        code = phone_token_qs.first().token
+        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            json.dumps({'code': code}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(phone_token_qs.count(), 2)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
         self.assertEqual(user.phone_number, new_phone_number)
 
     def test_change_phone_number_400_same_number(self):
@@ -2382,6 +2420,14 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(r.status_code, 200)
             self.assertEqual(phone_token_qs.count(), 1)
+            code = phone_token_qs.get(user=user, phone_number=phone_number).token
+            r = self.client.post(
+                reverse('radius:phone_token_validate', args=[self.default_org.slug]),
+                json.dumps({'code': code}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 200)
             user.refresh_from_db()
             self.assertEqual(user.phone_number, phone_number)
 
@@ -2410,7 +2456,117 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(r.status_code, 200)
             self.assertEqual(phone_token_qs.count(), 2)
+            code = phone_token_qs.get(user=user, phone_number=phone_number).token
+            r = self.client.post(
+                reverse('radius:phone_token_validate', args=[self.default_org.slug]),
+                json.dumps({'code': code}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 200)
             user.refresh_from_db()
             self.assertEqual(user.phone_number, phone_number)
 
         app_settings.ALLOWED_MOBILE_PREFIXES = []
+
+    def _test_change_phone_number_sms_on_helper(self, is_active):
+        self.test_register_201()
+        user = User.objects.get(email=self._test_email)
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
+        old_phone_number = '+237675582041'
+        user.phone_number = old_phone_number
+        user.is_active = is_active
+        user.save()
+        new_phone_number = '+237675582042'
+
+        self.assertEqual(phone_token_qs.count(), 0)
+
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': new_phone_number}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(phone_token_qs.count(), 1)
+        self.assertEqual(phone_token_qs.first().phone_number, new_phone_number)
+        user.refresh_from_db()
+        self.assertEqual(user.phone_number, old_phone_number)
+        self.assertFalse(user.is_active)
+
+    def test_active_user_change_phone_number_sms_on(self):
+        self._test_change_phone_number_sms_on_helper(True)
+
+    def test_inactive_user_change_phone_number_sms_on(self):
+        self._test_change_phone_number_sms_on_helper(False)
+
+    def _create_user_helper(self, options):
+        self._superuser_login()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(url, options)
+        self.assertEqual(r.status_code, 201)
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
+        r1 = self.client.post(
+            url,
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {r.data["key"]}',
+        )
+        self.assertEqual(r1.status_code, 201)
+
+    def _test_phone_number_unique_helper(self, phone_number):
+        user = User.objects.get(email='user2@gmail.com')
+        user_token = Token.objects.filter(user=user).last()
+        phone_token_qs = PhoneToken.objects.filter(user=user)
+        url = reverse('radius:phone_number_change', args=[self.default_org.slug])
+        self.assertEqual(phone_token_qs.count(), 1)
+
+        r = self.client.post(
+            url,
+            json.dumps({'phone_number': phone_number}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('phone_number', r.data)
+        self.assertEqual(phone_token_qs.count(), 1)
+
+    def test_phone_token_phone_number_unique(self):
+        self._create_user_helper(
+            {
+                'username': 'user1',
+                'email': 'user1@gmail.com',
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': '+237678879231',
+            }
+        )
+        self._create_user_helper(
+            {
+                'username': 'user2',
+                'email': 'user2@gmail.com',
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': '+237674479231',
+            }
+        )
+        self._test_phone_number_unique_helper('+237678879231')
+
+    def test_user_phone_number_unique(self):
+        User.objects.create_user(
+            username='user1',
+            email='email1@gmail.com',
+            password='pass',
+            phone_number='+23767779235',
+        )
+        self._create_user_helper(
+            {
+                'username': 'user2',
+                'email': 'user2@gmail.com',
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': '+237674479231',
+            }
+        )
+        self._test_phone_number_unique_helper('+23767779235')
