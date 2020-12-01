@@ -2051,16 +2051,14 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('phone_number', r.data)
         self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
-    def test_create_phone_token_400_user_already_active(self):
+    def test_create_phone_token_201_user_already_active(self):
         self.test_register_201()
         token = Token.objects.last()
         token.user.is_active = True
         token.user.save()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
-        self.assertEqual(r.status_code, 400)
-        self.assertIn('non_field_errors', r.data)
-        self.assertIn('This user is already active', str(r.data['non_field_errors']))
+        self.assertEqual(r.status_code, 201)
 
     @freeze_time(_TEST_DATE)
     def test_create_phone_token_400_limit_reached(self):
@@ -2569,4 +2567,12 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'phone_number': '+237674479231',
             }
         )
+        user = User.objects.get(email='user2@gmail.com')
+        user.is_active = True
+        user.save()
+        user.refresh_from_db()
+        # Testing for Phone token validation error due to same phone number ,
         self._test_phone_number_unique_helper('+23767779235')
+        # is_active state of user should not change because an error
+        # occurred during phone token creation.
+        self.assertTrue(user.is_active)

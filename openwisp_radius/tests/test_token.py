@@ -67,12 +67,10 @@ class TestPhoneToken(BaseTestCase):
         with self.subTest('existing token, running validation again should not fail'):
             self.assertEqual(token.full_clean(), None)
 
-        with self.subTest('new token with active user, validation should fail'):
-            with self.assertRaises(ValidationError) as context_manager:
-                self._create_token(user=token.user)
-            message_dict = context_manager.exception.message_dict
-            self.assertIn('__all__', message_dict)
-            self.assertEqual(message_dict['__all__'], ['This user is already active.'])
+        with self.subTest('new token with active user, validation should not fail'):
+            self._create_token(user=token.user)
+            qs = PhoneToken.objects.all()
+            self.assertEqual(qs.count(), 2)
 
     def test_valid_until(self):
         token = PhoneToken()
