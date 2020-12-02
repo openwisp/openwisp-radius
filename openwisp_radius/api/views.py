@@ -58,6 +58,7 @@ from openwisp_users.api.permissions import IsOrganizationManager
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
+from .permissions import IsSmsVerificationEnabled
 from .serializers import (
     AuthorizeSerializer,
     AuthTokenSerializer,
@@ -812,7 +813,10 @@ class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
     authentication_classes = (InactiveBearerTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+        IsSmsVerificationEnabled,
+        IsAuthenticated,
+    )
 
     def create(self, *args, **kwargs):
         request = self.request
@@ -835,7 +839,10 @@ create_phone_token = CreatePhoneTokenView.as_view()
 
 class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
     authentication_classes = (InactiveBearerTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+        IsSmsVerificationEnabled,
+        IsAuthenticated,
+    )
     serializer_class = ValidatePhoneTokenSerializer
 
     def _error_response(self, message, key='non_field_errors', status=400):
@@ -888,7 +895,10 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
 )
 class ChangePhoneNumberView(CreatePhoneTokenView):
     authentication_classes = (InactiveBearerTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+        IsSmsVerificationEnabled,
+        IsAuthenticated,
+    )
     serializer_class = ChangePhoneNumberSerializer
 
     def create(self, *args, **kwargs):
