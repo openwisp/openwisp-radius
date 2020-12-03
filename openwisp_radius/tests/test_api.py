@@ -2597,16 +2597,17 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 1)
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         phone_number = '+393664255801'
-        r = self.client.post(
-            url,
-            {
-                'username': self._test_email,
-                'email': self._test_email,
-                'password1': 'password',
-                'password2': 'password',
-                'phone_number': phone_number,
-            },
-        )
+        with self.assertNumQueries(50):
+            r = self.client.post(
+                url,
+                {
+                    'username': self._test_email,
+                    'email': self._test_email,
+                    'password1': 'password',
+                    'password2': 'password',
+                    'phone_number': phone_number,
+                },
+            )
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
         self.assertEqual(User.objects.count(), 2)
@@ -2617,25 +2618,29 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
 
     def test_create_phone_token_403(self):
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url)
+        with self.assertNumQueries(1):
+            r = self.client.post(url)
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
     def test_validate_phone_token_403(self):
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
-        r = self.client.post(url)
+        with self.assertNumQueries(1):
+            r = self.client.post(url)
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
     def test_change_phone_number_403(self):
         url = reverse('radius:phone_number_change', args=[self.default_org.slug])
-        r = self.client.post(url)
+        with self.assertNumQueries(1):
+            r = self.client.post(url)
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
     def test_missing_radius_settings(self):
         self.default_org.radius_settings.delete()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
-        r = self.client.post(url)
+        with self.assertNumQueries(1):
+            r = self.client.post(url)
         self.assertEqual(r.status_code, 500)
         self.assertIn('Could not complete operation', str(r.data))
