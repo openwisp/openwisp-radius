@@ -1,0 +1,79 @@
+---
+name: OpenWISP Radius CI Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Python==${{ matrix.python-version }} | ${{ matrix.django-version }}
+    runs-on: ubuntu-18.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - 3.6
+          - 3.7
+        django-version:
+          - django~=2.2
+          - django~=3.0
+          - django~=3.1
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install python dependencies
+        run: |
+          pip install -U pip wheel
+          pip install ${{ matrix.django-version }}
+          pip install -U -r requirements-test.txt
+
+      - name: Install npm dependencies
+        run: sudo npm install -g jslint
+
+      - name: Install openwisp-radius
+        run: python setup.py -q develop
+
+      - name: QA checks
+        run: |
+          ./run-qa-checks
+
+      - name: Tests
+        run: |
+          coverage run --source=openwisp_radius runtests.py
+          # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
+          SAMPLE_APP=1 ./runtests.py --parallel --keepdb
+
+      - name: Upload Coverage
+        run: coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: |
+           python-${{ matrix.python-version }}-${{ matrix.django-version }}
+          COVERALLS_PARALLEL: true
+
+  coveralls:
+    name: Finish Coveralls
+    needs: build
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+      - name: Finished
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --finish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

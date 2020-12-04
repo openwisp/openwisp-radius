@@ -1,8 +1,8 @@
 openwisp-radius
 ===============
 
-.. image:: https://travis-ci.org/openwisp/openwisp-radius.svg?branch=master
-   :target: https://travis-ci.org/openwisp/openwisp-radius
+.. image:: https://github.com/openwisp/openwisp-controller/workflows/OpenWISP%20Radius%20CI%20Build/badge.svg?branch=master
+   :target: https://github.com/openwisp/openwisp-controller/actions?query=workflow%3A%22OpenWISP+Radius+CI+Build%22
    :alt: CI build status
 
 .. image:: https://coveralls.io/repos/github/openwisp/openwisp-radius/badge.svg?branch=master
