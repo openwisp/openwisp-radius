@@ -2599,8 +2599,8 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         phone_number = '+393664255801'
         numQueries = 50
-        # TODO: Remove this when support for django 2 is dropped
-        if django.get_version().startswith('2'):
+        # TODO: Remove this when support for django < 3.0 is dropped
+        if django.VERSION < (3, 0):
             numQueries = 53
         with self.assertNumQueries(numQueries):
             r = self.client.post(
