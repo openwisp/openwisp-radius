@@ -37,7 +37,7 @@ to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
 .. important::
     These endpoints can be consumed only by hosts which have
     been added to the `freeradius allowed hosts list
-    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    <./settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
 
 Request Authentication
 ======================
@@ -56,7 +56,7 @@ following workflow can be used:
 
 .. code-block:: text
 
-    curl -X POST http://localhost:8000/api/v1/authorize/ \
+    curl -X POST http://localhost:8000/api/v1/freeradius/authorize/ \
          -d "username=<username>&password=<radius_token>"
 
 .. note::
@@ -64,7 +64,7 @@ following workflow can be used:
     request only and a new ``<radius_token>`` needs to be `obtained for
     each request <#login-obtain-user-auth-token>`_.
     However, if `OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN
-    </user/settings.html#openwisp-radius-disposable-radius-user-token>`_
+    <./settings.html#openwisp-radius-disposable-radius-user-token>`_
     is set to ``False``, the ``<radius_token>`` is valid for authentication
     as long as freeradius accounting ``Stop`` request is not sent
     or the token is not deleted.
@@ -84,7 +84,7 @@ of bearer token in an authorization header.
 
 .. code-block:: text
 
-      curl -X POST http://localhost:8000/api/v1/authorize/ \
+      curl -X POST http://localhost:8000/api/v1/freeradius/authorize/ \
            -H "Authorization: Bearer <org-uuid> <token>" \
            -d "username=<username>&password=<password>"
 
@@ -97,7 +97,7 @@ of querystring in the request URL.
 
 .. code-block:: text
 
-      curl -X POST http://localhost:8000/api/v1/authorize/?uuid=<org-uuid>&token=<token> \
+      curl -X POST http://localhost:8000/api/v1/freeradius/authorize/?uuid=<org-uuid>&token=<token> \
            -d "username=<username>&password=<password>"
 
 Organization UUID & Token
@@ -126,7 +126,7 @@ Requests authorizing with `bearer-token <#bearer-token>`_ or `querystring
 tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
-`Configure the REST module </developer/freeradius.html#configure-the-rest-module>`_.
+`Configure the REST module <../developer/freeradius.html#configure-the-rest-module>`_.
 
 List of Endpoints
 =================
@@ -147,13 +147,13 @@ Responds to only **POST**.
 
 .. code-block:: text
 
-    /api/v1/authorize/
+    /api/v1/freeradius/authorize/
 
 Example:
 
 .. code-block:: text
 
-    POST /api/v1/authorize/ HTTP/1.1 username=testuser&password=testpassword
+    POST /api/v1/freeradius/authorize/ HTTP/1.1 username=testuser&password=testpassword
 
 ========    ===========================
 Param       Description
@@ -174,7 +174,7 @@ Responds only to **POST**.
 
 .. code-block:: text
 
-    /api/v1/postauth/
+    /api/v1/freeradius/postauth/
 
 ==================   ===================================
 Param                Description
@@ -196,7 +196,7 @@ Accounting
 
 .. code-block:: text
 
-    /api/v1/accounting/
+    /api/v1/freeradius/accounting/
 
 GET
 ~~~
@@ -205,7 +205,7 @@ Returns a list of accounting objects
 
 .. code-block:: text
 
-    GET /api/v1/accounting/
+    GET /api/v1/freeradius/accounting/
 
 .. code-block:: json
 
@@ -286,8 +286,8 @@ traversing with pagination <https://developer.github.com/v3/guides/traversing-wi
     {
       ....
       ....
-      link: <http://testserver/api/v1/accounting/?page=2&page_size=1>; rel=\"next\",
-            <http://testserver/api/v1/accounting/?page=3&page_size=1>; rel=\"last\"
+      link: <http://testserver/api/v1/freeradius/accounting/?page=2&page_size=1>; rel=\"next\",
+            <http://testserver/api/v1/freeradius/accounting/?page=3&page_size=1>; rel=\"last\"
       ....
       ....
     }

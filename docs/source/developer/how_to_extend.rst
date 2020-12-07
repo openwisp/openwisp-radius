@@ -214,7 +214,7 @@ If you are starting with a fresh database, you can apply the migrations::
 
     ./manage.py migrate
 
-However, if you want `migrate an existing freeradius database please read the guide in the setup </developer/setup.html#migratinga-an-existing-freeradius-database>`_.
+However, if you want `migrate an existing freeradius database please read the guide in the setup <./setup.html#migratinga-an-existing-freeradius-database>`_.
 
 .. note::
     For more information, refer to the
@@ -352,7 +352,7 @@ Add allowed freeradius hosts  in ``settings.py``:
 
 .. note::
     Read more about `freeradius allowed hosts in settings page
-    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    <../user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
 
 12. Setup Periodic tasks
 ------------------------
@@ -365,7 +365,7 @@ features and facilitate database cleanup:
 2. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
 ``365`` is given here for ``delete_old_radacct`` in the example settings.
 These arguments are passed to their respective management commands. More information about these parameters can be
-found at the `management commands page </user/management_commands.html>`_.
+found at the `management commands page <../user/management_commands.html>`_.
 
 3. Add the following in your settings.py file::
 
@@ -374,7 +374,7 @@ found at the `management commands page </user/management_commands.html>`_.
 .. note::
     Celery tasks do not start with django server and need to be
     started seperately, please read about running `celery and
-    celery-beat </developer/setup.html#celery-usage>`_ tasks.
+    celery-beat <./setup.html#celery-usage>`_ tasks.
 
 13. Create root URL configuration
 ---------------------------------

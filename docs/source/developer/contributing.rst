@@ -19,7 +19,7 @@ Setup
 -----
 
 Once you have chosen an issue to work on, `setup your machine for development
-</developer/setup.html#installing-for-development>`_
+<./setup.html#installing-for-development>`_
 
 Ensure test coverage does not decrease
 --------------------------------------

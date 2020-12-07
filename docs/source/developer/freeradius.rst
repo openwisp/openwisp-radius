@@ -110,7 +110,7 @@ Example configuration using the PostgreSQL database:
 Configure the SQL counters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``sqlcounter`` module is used to `enforce session limits </user/enforcing_limits.html>`_.
+The ``sqlcounter`` module is used to `enforce session limits <../user/enforcing_limits.html>`_.
 
 The ``mods-available/sqlcounter`` should look like the following:
 
@@ -191,7 +191,7 @@ otherwise in production could be something like ``https://openwisp2.mydomain.org
 
 .. warning::
     Remember you need to add your freeradius server IP address in `openwisp freeradius
-    allowed hosts settings </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    allowed hosts settings <../user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
     If the freeradius server IP is not in allowed hosts, all requests to openwisp
     radius API will return ``403``.
 
@@ -205,7 +205,7 @@ for the available configuration values.
     connect_uri = "<url>"
 
     authorize {
-        uri = "${..connect_uri}/api/v1/authorize/"
+        uri = "${..connect_uri}/api/v1/freeradius/authorize/"
         method = 'post'
         body = 'json'
         data = '{"username": "%{User-Name}", "password": "%{User-Password}"}'
@@ -216,7 +216,7 @@ for the available configuration values.
     authenticate {}
 
     post-auth {
-        uri = "${..connect_uri}/api/v1/postauth/"
+        uri = "${..connect_uri}/api/v1/freeradius/postauth/"
         method = 'post'
         body = 'json'
         data = '{"username": "%{User-Name}", "password": "%{User-Password}", "reply": "%{reply:Packet-Type}", "called_station_id": "%{Called-Station-ID}", "calling_station_id": "%{Calling-Station-ID}"}'
@@ -224,7 +224,7 @@ for the available configuration values.
     }
 
     accounting {
-        uri = "${..connect_uri}/api/v1/accounting/"
+        uri = "${..connect_uri}/api/v1/freeradius/accounting/"
         method = 'post'
         body = 'json'
         data = '{"status_type": "%{Acct-Status-Type}", "session_id": "%{Acct-Session-Id}", "unique_id": "%{Acct-Unique-Session-Id}", "username": "%{User-Name}", "realm": "%{Realm}", "nas_ip_address": "%{NAS-IP-Address}", "nas_port_id": "%{NAS-Port}", "nas_port_type": "%{NAS-Port-Type}", "session_time": "%{Acct-Session-Time}", "authentication": "%{Acct-Authentic}", "input_octets": "%{Acct-Input-Octets}", "output_octets": "%{Acct-Output-Octets}", "called_station_id": "%{Called-Station-Id}", "calling_station_id": "%{Calling-Station-Id}", "terminate_cause": "%{Acct-Terminate-Cause}", "service_type": "%{Service-Type}", "framed_protocol": "%{Framed-Protocol}", "framed_ip_address": "%{Framed-IP-Address}"}'
@@ -235,9 +235,10 @@ Configure the site
 ^^^^^^^^^^^^^^^^^^
 
 Configuration of the ``authorize``, ``authenticate`` and ``postauth`` section as follows,
-there are three ways to `authenticate your freeradius instance with openwisp-radius </user/api.html#organization-api-token>`_, if you are **not** using Radius Token method, please
+there are three ways to `authenticate your freeradius instance with openwisp-radius <../user/api.html#request-authentication>`_,
+if you are **not** using `the Radius Token method <../user/api.html#radius-user-token-recommended>`_, please
 substitute the occurrences of ``<api_token>`` & ``<org-uuid>`` with
-the value of `your organization's UUID & api_token values </user/api.html#organization-api-token>`_:
+the value of `your organization's UUID & api_token values <../user/api.html#bearer-token>`_:
 
 .. code-block:: ini
 
@@ -309,7 +310,7 @@ In case of errors you can run `freeradius in debug mode
 **A common problem, especially during development and testing, is that the
 openwisp-radius application may not be running**, in that case you can find
 out how to run the django development server in the
-`Install for development </developer/setup.html#installing-for-development>`_ section.
+`Install for development <./setup.html#installing-for-development>`_ section.
 
 Also make sure that this server runs on the port specified in
 ``/etc/freeradius/mods-enabled/rest``.

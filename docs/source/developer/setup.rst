@@ -97,7 +97,7 @@ modules listed ``INSTALLED_APPS``:
     ]
 
 These modules are optional, add them only if you need the
-`social login </user/social_login.html>`_. feature:
+`social login <../user/social_login.html>`_. feature:
 
 .. code-block:: python
 
@@ -130,7 +130,7 @@ Add allowed freeradius hosts  in ``settings.py``:
 
 .. note::
     Read more about `freeradius allowed hosts in settings page
-    </user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    <../user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
 
 Add the URLs to your main ``urls.py``:
 
@@ -191,12 +191,12 @@ There are two ways to automate these tasks:
 3. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
 ``365`` is given here for ``delete_old_radacct`` in the example settings.
 These arguments are passed to their respective management commands. More information about these parameters can be
-found at the `management commands page </user/management_commands.html>`_.
+found at the `management commands page <../user/management_commands.html>`_.
 
 .. note::
     Celery tasks do not start with django server and need to be
     started seperately, please read about running `celery and
-    celery-beat </developer/setup.html#celery-usage>`_ tasks.
+    celery-beat <./setup.html#celery-usage>`_ tasks.
 
 2. Crontab (Legacy Method)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -245,7 +245,7 @@ the cloned fork. Then, run:
 
 .. note::
     More information can be found at the
-    `management commands page </user/management_commands.html>`_.
+    `management commands page <../user/management_commands.html>`_.
 
 Installing for development
 --------------------------
