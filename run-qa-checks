@@ -13,7 +13,7 @@ if [[ $TRAVIS_PYTHON_VERSION != 3.6 ]]; then
     pid=$!
     sleep 4
     pylinkvalidate.py http://localhost:8001/
-    kill "${pid}" || true
+    kill "${pid}" 2> /dev/null || true
 fi
 
 rm -rf docs/build/
