@@ -1821,6 +1821,9 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['phone_number'], str(phone_number),
         )
+        self.assertEqual(
+            response.data['email'], user.email,
+        )
 
     def test_validate_auth_token_with_active_user(self):
         user = self._get_user_with_org()

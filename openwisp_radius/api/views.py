@@ -626,6 +626,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                     'auth_token': token.key,
                     'radius_user_token': radius_token.key,
                     'username': user.username,
+                    'email': user.email,
                     'is_active': user.is_active,
                     'phone_number': str(phone_number),
                 }
