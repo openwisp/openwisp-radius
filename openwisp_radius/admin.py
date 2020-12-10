@@ -631,7 +631,7 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
 
     UserAdminInline.inlines += [SocialAccountInline]
 
-    Token = apps.get_model('authtoken', 'Token')
+    Token = apps.get_model('authtoken', 'TokenProxy')
 
     admin.site.unregister(Token)
     admin.site.register(SocialApp, SocialAppAdmin)
