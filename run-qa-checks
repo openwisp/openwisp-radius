@@ -9,7 +9,7 @@ echo 'Checking documentation build status'
 if [[ $TRAVIS_PYTHON_VERSION != 3.6 ]]; then
     # check for broken link
     # remove condition when 3.6 is dropped
-    python -m http.server 8001 -d docs/build/ &>/dev/null &
+    python -m http.server 8001 -d docs/build/html/ &>/dev/null &
     pid=$!
     sleep 4
     pylinkvalidate.py http://localhost:8001/
