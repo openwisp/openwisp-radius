@@ -419,7 +419,12 @@ batch = BatchView.as_view()
 
 class DispatchOrgMixin(object):
     def dispatch(self, *args, **kwargs):
-        self.organization = get_object_or_404(Organization, slug=kwargs['slug'])
+        try:
+            self.organization = Organization.objects.select_related(
+                'radius_settings'
+            ).get(slug=kwargs['slug'])
+        except Organization.DoesNotExist:
+            raise Http404('No Organization matches the given query.')
         return super().dispatch(*args, **kwargs)
 
     def validate_membership(self, user):
