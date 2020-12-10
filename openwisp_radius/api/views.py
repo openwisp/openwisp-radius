@@ -424,7 +424,7 @@ class DispatchOrgMixin(object):
                 'radius_settings'
             ).get(slug=kwargs['slug'])
         except Organization.DoesNotExist:
-            raise Http404("No Organization matches the given query.")
+            raise Http404('No Organization matches the given query.')
         return super().dispatch(*args, **kwargs)
 
     def validate_membership(self, user):
