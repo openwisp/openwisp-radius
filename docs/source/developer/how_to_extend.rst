@@ -16,7 +16,7 @@ just replicate and adapt that code to get a basic derivative of
 *openwisp-radius* working.
 
 If you want to add new users fields, please follow the `tutorial to extend the
-openwisp-users <https://github.com/openwisp/openwisp-users/blob/master#extend-openwisp-users>`_.
+openwisp-users <https://github.com/openwisp/openwisp-users/#extend-openwisp-users>`_.
 As an example, we have extended *openwisp-users* to *sample_users* app and
 added a field ``social_security_number`` in the `sample_users/models.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_users/models.py>`_.
