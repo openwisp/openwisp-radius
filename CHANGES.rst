@@ -1,8 +1,14 @@
 Changelog
 =========
 
-Version 0.2.0 [unreleased]
+Version 0.2.0 [2020-12-11]
 --------------------------
+
+Features
+~~~~~~~~
+
+- Changing the phone number via the API now keeps track of previous phone numbers
+  used by the user to comply with ISP legal requirements
 
 Changes
 ~~~~~~~
@@ -11,8 +17,21 @@ Changes
 - Obtain Auth Token View API endpoint: if the user attempting to authenticate
   is inactive, the API will return HTTP status code 401 along with the auth token
   and ``is_active`` attribute
-- Validate Auth Token View API endpoint: added ``is_active`` and ``phone_number``
-  to response data
+- Validate Auth Token View API endpoint: added ``is_active``, ``phone_number``
+  and ``email`` to response data
+- When changing phone number, user is flagged as inactive only after
+  the phone token is created and sent successfully
+- All API endpoints related to phone token and SMS sending are now
+  disabled (return 403 HTTP response) if SMS verification not enabled
+  at organization level
+
+Bugfixes
+~~~~~~~~
+
+- Removed ``static()`` call from media assets
+- Fixed password reset for inactive users
+- Fixed default password reset URL value and added docs
+- Documentation: fixed several broken internal links
 
 Version 0.1.0 [2020-09-10]
 --------------------------
