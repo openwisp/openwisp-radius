@@ -6,7 +6,8 @@ echo ''
 echo 'Checking documentation build status'
 ./runsphinx-build
 
-if [[ $TRAVIS_PYTHON_VERSION != 3.6 ]]; then
+PYTHON_VERSION=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+if [[ $PYTHON_VERSION != 3.6 ]]; then
     # check for broken link
     # remove condition when 3.6 is dropped
     python -m http.server 8001 -d docs/build/html/ &>/dev/null &
