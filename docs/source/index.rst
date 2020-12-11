@@ -34,8 +34,13 @@ openwisp-radius
    :alt: Feature Highlights
 
 
-**openwisp-radius** is Django reusable app that provides an admin interface to a
+**OpenWISP-RADIUS** is Django reusable app that provides an admin interface to a
 `freeradius <https://freeradius.org/>`_ database.
+
+.. note::
+   If you're building a public wifi service, we suggest
+   to take a look at `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
+   which is built to work with openwisp-radius.
 
 .. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
    :target: http://openwisp.org

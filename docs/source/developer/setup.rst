@@ -326,7 +326,6 @@ Run celery (it is recommended to use a tool like supervisord in production):
     celery -A openwisp2 worker -l info
     celery -A openwisp2 beat -l info
 
-
 Troubleshooting
 ---------------
 

@@ -18,6 +18,11 @@ portal which already supports the RADIUS protocol because it's totally transpare
 for it, that is, the captive portal doesn't even know the user is signing-in with
 a social network.
 
+.. note::
+   If you're building a public wifi service, we suggest
+   to take a look at `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
+   which is built to work with openwisp-radius.
+
 Setup
 -----
 
@@ -101,3 +106,7 @@ the right organization:
 Substitute ``openwisp2.mywifiproject.com``, ``captivepage.mywifiproject.com``
 and ``default`` with the hostname of your openwisp-radius instance, your captive
 page and the organization slug respectively.
+
+Alternatively, you can take a look at
+`openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
+which provides buttons for Facebook, Google and Twitter by default.
