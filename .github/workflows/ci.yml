@@ -45,7 +45,7 @@ jobs:
         run: sudo npm install -g jslint
 
       - name: Install openwisp-radius
-        run: python setup.py -q develop
+        run: pip install -e .
 
       - name: QA checks
         run: |
