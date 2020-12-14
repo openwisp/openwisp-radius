@@ -4,7 +4,6 @@ import uuid
 from datetime import timedelta
 from unittest import mock
 
-import django
 import swapper
 from dateutil import parser
 from django.conf import settings
@@ -2598,21 +2597,16 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 1)
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         phone_number = '+393664255801'
-        numQueries = 50
-        # TODO: Remove this when support for django < 3.0 is dropped
-        if django.VERSION < (3, 0):
-            numQueries = 53
-        with self.assertNumQueries(numQueries):
-            r = self.client.post(
-                url,
-                {
-                    'username': self._test_email,
-                    'email': self._test_email,
-                    'password1': 'password',
-                    'password2': 'password',
-                    'phone_number': phone_number,
-                },
-            )
+        r = self.client.post(
+            url,
+            {
+                'username': self._test_email,
+                'email': self._test_email,
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': phone_number,
+            },
+        )
         self.assertEqual(r.status_code, 201)
         self.assertIn('key', r.data)
         self.assertEqual(User.objects.count(), 2)
