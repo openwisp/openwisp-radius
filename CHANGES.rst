@@ -1,6 +1,17 @@
 Changelog
 =========
 
+Version 0.2.1 [2020-12-14]
+--------------------------
+
+Changes
+~~~~~~~
+
+- Increased openwisp-users and openwisp-utils versions to be
+  consistent with the `OpenWISP 2020-12 release
+  <https://github.com/openwisp/ansible-openwisp2/releases/tag/0.12.0>`_
+- Increased dj-rest-auth to 2.1.2 and weasyprint to 52
+
 Version 0.2.0 [2020-12-11]
 --------------------------
 
