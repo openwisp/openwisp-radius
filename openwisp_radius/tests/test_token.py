@@ -12,6 +12,8 @@ from ..utils import load_model
 from . import _TEST_DATE
 from .mixins import BaseTestCase
 
+from openwisp_utils.tests import capture_any_output
+
 User = get_user_model()
 PhoneToken = load_model('PhoneToken')
 RadiusToken = load_model('RadiusToken')
@@ -37,6 +39,7 @@ class TestPhoneToken(BaseTestCase):
         radius_settings.sms_sender = '+595972157632'
         radius_settings.save()
 
+    @capture_any_output()
     def _create_token(
         self, user=None, ip='127.0.0.1', phone_number='+393664351808', created=None
     ):
