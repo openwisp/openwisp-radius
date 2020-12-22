@@ -212,7 +212,7 @@ class AuthorizeView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
         password = serializer.validated_data.get('password')
-        user = self.get_user(request, username, password)
+        user = self.get_user(request, username)
         if user and self.authenticate_user(request, user, password):
             return Response(self.accept_attributes, status=self.accept_status)
         if app_settings.API_AUTHORIZE_REJECT:
@@ -220,14 +220,14 @@ class AuthorizeView(GenericAPIView):
         else:
             return Response(None, status=200)
 
-    def get_user(self, request, username, password):
+    def get_user(self, request, username):
         """
         return active user or ``None``
         """
         try:
-            user = auth_backend.authenticate(
-                request, username, password
-            ) or User.objects.get(username=username, is_active=True)
+            user = auth_backend.get_user(username) or User.objects.get(
+                username=username, is_active=True
+            )
         except User.DoesNotExist:
             return None
         # ensure user is member of the authenticated org

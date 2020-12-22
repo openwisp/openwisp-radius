@@ -144,7 +144,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self._create_org_user(organization=self._get_org(), user=user1)
 
         self._test_authorize_with_user_auth_helper(user.email, 'tester')
-        self._test_authorize_with_user_auth_helper(user1.username, 'tester1')
 
     def test_authorize_user_with_phone_number_as_username(self):
         user = self._create_user(
@@ -163,7 +162,6 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self._create_org_user(organization=self._get_org(), user=user1)
 
         self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
-        self._test_authorize_with_user_auth_helper(user1.username, 'tester')
 
     def test_authorize_200_querystring(self):
         self._get_org_user()
