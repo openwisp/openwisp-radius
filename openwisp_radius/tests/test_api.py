@@ -1622,9 +1622,8 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
         return reverse('radius:user_auth_token', args=[self.default_org.slug])
 
-    def test_user_auth_token_200(self):
+    def _user_auth_token_helper(self, username):
         url = self._get_url()
-        self._get_org_user()
         response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['key'], Token.objects.first().key)
@@ -1632,6 +1631,20 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
         self.assertTrue(response.data['is_active'])
+
+    def test_user_auth_token_200(self):
+        org_user = self._get_org_user()
+
+        with self.subTest('login with username'):
+            self._user_auth_token_helper(org_user.user.username)
+
+        with self.subTest('login with email'):
+            self._user_auth_token_helper(org_user.user.email)
+
+        with self.subTest('login with phone_number'):
+            org_user.user.phone_number = '+23767778243'
+            org_user.save()
+            self._user_auth_token_helper(org_user.user.phone_number)
 
     def test_user_auth_token_with_second_organization(self):
         api_views.renew_required = False

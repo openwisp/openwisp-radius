@@ -12,7 +12,6 @@ from dj_rest_auth.serializers import (
 )
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.backends import AllowAllUsersModelBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -23,6 +22,8 @@ from rest_framework import serializers
 from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
+
+from openwisp_users.backends import UserAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -53,13 +54,12 @@ class AuthTokenSerializer(BaseAuthTokenSerializer):
         password = attrs.get('password')
 
         if username and password:
-            backend = AllowAllUsersModelBackend()
-            user = backend.authenticate(
-                request=self.context.get('request'),
-                username=username,
-                password=password,
-            )
-            if not user:
+            backend = UserAuthenticationBackend()
+            try:
+                user = backend.get_users(username)[0]
+            except IndexError:
+                user = None
+            if not user or not user.check_password(password):
                 msg = _('Unable to log in with provided credentials.')
                 raise serializers.ValidationError(msg, code='authorization')
         else:
