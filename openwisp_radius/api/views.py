@@ -54,7 +54,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
-from openwisp_users.backends import UserAuthenticationBackend
+from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
@@ -85,7 +85,7 @@ RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
-auth_backend = UserAuthenticationBackend()
+auth_backend = UsersAuthenticationBackend()
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
@@ -225,10 +225,8 @@ class AuthorizeView(GenericAPIView):
         return active user or ``None``
         """
         try:
-            user = auth_backend.get_user(username) or User.objects.get(
-                username=username, is_active=True
-            )
-        except User.DoesNotExist:
+            user = auth_backend.get_users(username).filter(is_active=True)[0]
+        except IndexError:
             return None
         # ensure user is member of the authenticated org
         # or RadiusToken for the user exists.
