@@ -41,6 +41,11 @@ Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
+class AllowAllUsersModelBackend(UsersAuthenticationBackend):
+    def user_can_authenticate(self, user):
+        return True
+
+
 class AuthTokenSerializer(BaseAuthTokenSerializer):
     """
     Recognizes also inactive users.
@@ -54,12 +59,13 @@ class AuthTokenSerializer(BaseAuthTokenSerializer):
         password = attrs.get('password')
 
         if username and password:
-            backend = UsersAuthenticationBackend()
-            try:
-                user = backend.get_users(username)[0]
-            except IndexError:
-                user = None
-            if not user or not user.check_password(password):
+            backend = AllowAllUsersModelBackend()
+            user = backend.authenticate(
+                request=self.context.get('request'),
+                username=username,
+                password=password,
+            )
+            if not user:
                 msg = _('Unable to log in with provided credentials.')
                 raise serializers.ValidationError(msg, code='authorization')
         else:

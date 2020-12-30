@@ -4,7 +4,9 @@ openwisp-utils[rest]~=0.7
 passlib~=1.7.1
 djangorestframework-link-header-pagination~=0.1.1
 weasyprint>=43,<53
-openwisp-users~=0.5.0
+# Needed for the new authentication backend in openwisp-users
+# TODO: remove when the new version of openwisp-users is released
+openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master
 dj-rest-auth~=2.1.2
 django-sendsms~=0.4.0
 jsonfield~=3.1.0
