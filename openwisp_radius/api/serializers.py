@@ -23,7 +23,7 @@ from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
 
-from openwisp_users.backends import UserAuthenticationBackend
+from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -54,7 +54,7 @@ class AuthTokenSerializer(BaseAuthTokenSerializer):
         password = attrs.get('password')
 
         if username and password:
-            backend = UserAuthenticationBackend()
+            backend = UsersAuthenticationBackend()
             try:
                 user = backend.get_users(username)[0]
             except IndexError:
