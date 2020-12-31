@@ -12,7 +12,6 @@ from dj_rest_auth.serializers import (
 )
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.backends import AllowAllUsersModelBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -23,6 +22,8 @@ from rest_framework import serializers
 from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
+
+from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -38,6 +39,11 @@ RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
+
+
+class AllowAllUsersModelBackend(UsersAuthenticationBackend):
+    def user_can_authenticate(self, user):
+        return True
 
 
 class AuthTokenSerializer(BaseAuthTokenSerializer):
