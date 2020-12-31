@@ -101,6 +101,68 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
+    def _test_authorize_with_user_auth_helper(self, username, password):
+        r = self._authorize_user(
+            username=username, password=password, auth_header=self.auth_header
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
+
+    def test_authorize_with_user_auth(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+
+        self._create_org_user(organization=self._get_org(), user=user)
+
+        with self.subTest('Test authorize with username'):
+            self._test_authorize_with_user_auth_helper('tester', 'tester')
+
+        with self.subTest('Test authorize with email'):
+            self._test_authorize_with_user_auth_helper('tester@gmail.com', 'tester')
+
+        with self.subTest('Test authorize with phone_number'):
+            self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
+
+    def test_authorize_user_with_email_as_username(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+        user1 = self._create_user(
+            username='tester@gmail.com',
+            email='tester1@gmail.com',
+            phone_number='+237675679232',
+            password='tester1',
+        )
+        self._create_org_user(organization=self._get_org(), user=user)
+        self._create_org_user(organization=self._get_org(), user=user1)
+
+        self._test_authorize_with_user_auth_helper(user.email, 'tester')
+
+    def test_authorize_user_with_phone_number_as_username(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+        user1 = self._create_user(
+            username='+237675679231',
+            email='tester1@gmail.com',
+            phone_number='+237675679232',
+            password='tester1',
+        )
+        self._create_org_user(organization=self._get_org(), user=user)
+        self._create_org_user(organization=self._get_org(), user=user1)
+
+        self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+
     def test_authorize_200_querystring(self):
         self._get_org_user()
         post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
