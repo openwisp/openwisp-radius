@@ -1,6 +1,25 @@
 Changelog
 =========
 
+Version 0.3.0 [unreleased]
+--------------------------
+
+Features
+~~~~~~~~
+
+- Allowed login via API with email or phone number
+- Allowed freeradius authorize with email or phone number
+
+Changes
+~~~~~~~
+
+N/A.
+
+Bugfixes
+~~~~~~~~
+
+N/A.
+
 Version 0.2.1 [2020-12-14]
 --------------------------
 
