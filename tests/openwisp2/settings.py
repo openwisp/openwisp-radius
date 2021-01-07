@@ -28,8 +28,6 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    # admin
-    'django.contrib.admin',
     # rest framework
     'rest_framework',
     'django_filters',
@@ -43,6 +41,8 @@ INSTALLED_APPS = [
     # openwisp radius
     'openwisp_radius',
     'openwisp_users',
+    # admin
+    'django.contrib.admin',
     'private_storage',
     'drf_yasg',
     'django_extensions',
@@ -78,8 +78,8 @@ TEMPLATES = [
         'OPTIONS': {
             'loaders': [
                 'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',
                 'openwisp_utils.loaders.DependencyLoader',
+                'django.template.loaders.app_directories.Loader',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
