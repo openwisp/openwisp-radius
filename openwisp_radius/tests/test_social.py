@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
+from openwisp_utils.tests import capture_stderr
+
 from ..utils import load_model
 from .mixins import ApiTokenMixin, BaseTestCase
 
@@ -23,6 +25,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         r = self.client.get(reverse(self.view_name, args=['wrong']), {'cp': 'test'})
         self.assertEqual(r.status_code, 404)
 
+    @capture_stderr()
     def test_redirect_cp_suspicious_400(self):
         u = self._create_social_user()
         u.is_staff = True

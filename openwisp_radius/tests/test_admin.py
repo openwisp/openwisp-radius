@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
+from openwisp_utils.tests import capture_any_output
 
 from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
@@ -143,6 +144,7 @@ class TestAdmin(
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
 
+    @capture_any_output()
     def test_radiusaccounting_change(self):
         options = dict(
             unique_id='2',
@@ -389,6 +391,7 @@ class TestAdmin(
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'field-number_of_users')
 
+    @capture_any_output()
     def test_radiusbatch_delete_methods(self):
         n = User.objects.count()
         options = dict(
@@ -818,6 +821,7 @@ class TestAdmin(
             select_widget=True,
         )
 
+    @capture_any_output()
     def test_radiuscheck_user_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
@@ -845,6 +849,7 @@ class TestAdmin(
             select_widget=True,
         )
 
+    @capture_any_output()
     def test_radiusreply_user_fk_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
@@ -932,6 +937,7 @@ class TestAdmin(
             hidden=[data['rg2']],
         )
 
+    @capture_any_output()
     def test_radius_usergroup_user_fk_queryset(self):
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
@@ -978,6 +984,7 @@ class TestAdmin(
             hidden=[data['rg2']],
         )
 
+    @capture_any_output()
     def test_radiustoken_delete_queryset(self):
         # Create & check radius token works
         self._get_org_user()

@@ -27,6 +27,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from openwisp_radius.api import views as api_views
+from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from .. import settings as app_settings
 from ..utils import load_model
@@ -76,6 +77,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
 
+    @capture_any_output()
     def test_authorize_no_token_403(self):
         self._get_org_user()
         response = self._authorize_user()
@@ -88,6 +90,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
             ),
         )
 
+    @capture_any_output()
     def test_authorize_no_username_403(self):
         self._get_org_user()
         self._login_and_obtain_auth_token()
@@ -323,6 +326,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         self.assertEqual(response.status_code, 400)
 
+    @capture_any_output()
     def test_postauth_no_token_403(self):
         response = self.client.post(reverse('radius:postauth'), {'username': 'tester'})
         self.assertEqual(response.status_code, 403)
@@ -446,6 +450,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
                 data_value = _type(data_value)
             self.assertEqual(ra_value, data_value, msg=key)
 
+    @capture_any_output()
     def test_accounting_no_token_403(self):
         response = self.client.post(self._acct_url, {'username': 'tester'})
         self.assertEqual(response.status_code, 403)
@@ -510,6 +515,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_start_coova_chilli(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
@@ -552,6 +558,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_start_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
@@ -579,6 +586,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_update_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
@@ -613,6 +621,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_stop_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
@@ -671,6 +680,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         )
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_radius_accounting_nas_stop_regression(self):
         # create a first RadiusAccounting object to ensure
         # we'll have 2 records when the next test method is executed
@@ -1096,6 +1106,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
 
+    @capture_any_output()
     def test_register_error_missing_radius_settings(self):
         self.assertEqual(User.objects.count(), 0)
         self.default_org.radius_settings.delete()
@@ -1284,6 +1295,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
 
+    @capture_any_output()
     def test_api_password_change(self):
         test_user = User.objects.create_user(
             username='test_name', password='test_password',
@@ -1360,6 +1372,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 401)
 
+    @capture_any_output()
     def test_api_password_reset(self):
         test_user = User.objects.create_user(
             username='test_name', password='test_password', email='test@email.com'
@@ -1735,6 +1748,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('Unable to log in', r.json()['non_field_errors'][0])
 
+    @capture_any_output()
     def test_user_auth_token_400_organization(self):
         url = self._get_url()
         self._get_org_user()
@@ -1814,6 +1828,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
+    @capture_any_output()
     def test_ip_from_setting_invalid(self):
         with mock.patch(self.freeradius_hosts_path, ['localhost']):
             response = self.client.post(reverse('radius:authorize'), self.params)
@@ -1831,6 +1846,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
+    @capture_any_output()
     def test_ip_from_radsetting_invalid(self):
         radsetting = OrganizationRadiusSettings.objects.get(
             organization=self._get_org()
@@ -1842,6 +1858,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data['detail'], self.fail_msg)
 
+    @capture_any_output()
     def test_ip_from_radsetting_not_exist(self):
         org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
         self._create_org_user(**{'organization': org2})
@@ -1907,6 +1924,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         user = self._get_user_with_org()
         self._test_validate_auth_token_helper(user)
 
+    @capture_any_output()
     def test_validate_auth_token_with_inactive_user(self):
         user = self._get_user_with_org()
         user.is_active = False
@@ -2111,6 +2129,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIsNotNone(phonetoken)
         send_messages_mock.assert_called_once()
 
+    @capture_any_output()
     def test_create_phone_token_400_not_member(self):
         self.test_register_201()
         OrganizationUser.objects.all().delete()
@@ -2121,6 +2140,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('non_field_errors', r.data)
         self.assertIn('is not member', str(r.data['non_field_errors']))
 
+    @capture_any_output()
     def test_create_phone_token_400_validation_error(self):
         user = self._get_user_with_org()
         user.is_active = False
@@ -2132,6 +2152,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('phone_number', r.data)
         self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
+    @capture_any_output()
     def test_create_phone_token_201_user_already_active(self):
         self.test_register_201()
         token = Token.objects.last()
@@ -2142,6 +2163,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 201)
 
     @freeze_time(_TEST_DATE)
+    @capture_any_output()
     def test_create_phone_token_400_limit_reached(self):
         self.test_register_201()
         token = Token.objects.last()
@@ -2157,6 +2179,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             else:
                 self.assertEqual(r.status_code, 201)
 
+    @capture_any_output()
     def test_validate_phone_token_200(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -2183,6 +2206,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
 
+    @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
         self.test_create_phone_token_201()
         OrganizationUser.objects.all().delete()
@@ -2211,6 +2235,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('non_field_errors', r.data)
         self.assertIn('Invalid code', str(r.data['non_field_errors']))
 
+    @capture_any_output()
     def test_validate_phone_token_400_expired(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -2235,6 +2260,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             'This verification code has expired', str(r.data['non_field_errors'])
         )
 
+    @capture_any_output()
     def test_validate_phone_token_400_max_attempts(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -2263,6 +2289,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         r = self.client.post(url)
         self.assertEqual(r.status_code, 401)
 
+    @capture_any_output()
     def test_validate_phone_token_400_user_already_active(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -2315,6 +2342,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('code', r.data)
 
+    @capture_any_output()
     def test_change_phone_number_200(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -2467,6 +2495,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
 
         app_settings.ALLOWED_MOBILE_PREFIXES = []
 
+    @capture_any_output()
     def test_change_phone_number_restriction(self):
         self.test_register_201()
         app_settings.ALLOWED_MOBILE_PREFIXES = ['+33']
@@ -2575,9 +2604,11 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(user.phone_number, old_phone_number)
         self.assertFalse(user.is_active)
 
+    @capture_any_output()
     def test_active_user_change_phone_number_sms_on(self):
         self._test_change_phone_number_sms_on_helper(True)
 
+    @capture_any_output()
     def test_inactive_user_change_phone_number_sms_on(self):
         self._test_change_phone_number_sms_on_helper(False)
 
@@ -2611,6 +2642,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('phone_number', r.data)
         self.assertEqual(phone_token_qs.count(), 1)
 
+    @capture_any_output()
     def test_phone_token_phone_number_unique(self):
         self._create_user_helper(
             {
@@ -2632,6 +2664,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self._test_phone_number_unique_helper('+237678879231')
 
+    @capture_any_output()
     def test_user_phone_number_unique(self):
         User.objects.create_user(
             username='user1',
@@ -2693,6 +2726,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(user.phone_number, None)
         self.assertTrue(user.is_active)
 
+    @capture_stderr()
     def test_create_phone_token_403(self):
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         with self.assertNumQueries(1):
@@ -2700,6 +2734,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
+    @capture_stderr()
     def test_validate_phone_token_403(self):
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         with self.assertNumQueries(1):
@@ -2707,6 +2742,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
+    @capture_stderr()
     def test_change_phone_number_403(self):
         url = reverse('radius:phone_number_change', args=[self.default_org.slug])
         with self.assertNumQueries(1):
@@ -2714,6 +2750,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
         self.assertIn('SMS verification is not enabled', str(r.data))
 
+    @capture_stderr()
     def test_missing_radius_settings(self):
         self.default_org.radius_settings.delete()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])

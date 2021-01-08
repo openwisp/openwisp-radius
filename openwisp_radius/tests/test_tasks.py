@@ -3,6 +3,7 @@ from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 
 from openwisp_radius import tasks
+from openwisp_utils.tests import capture_any_output, capture_stdout
 
 from ..utils import load_model
 from . import _RADACCT, FileMixin
@@ -34,6 +35,7 @@ class TestCelery(FileMixin, BaseTestCase):
         batch.add(reader)
         return batch.users.first()
 
+    @capture_stdout()
     def test_cleanup_stale_radacct(self):
         options = _RADACCT.copy()
         options['unique_id'] = '118'
@@ -45,6 +47,7 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertNotEqual(session.session_time, None)
         self.assertEqual(session.update_time, session.stop_time)
 
+    @capture_stdout()
     def test_deactivate_expired_users(self):
         user = self._get_expired_user_from_radius_batch()
         self.assertTrue(user.is_active)
@@ -53,6 +56,7 @@ class TestCelery(FileMixin, BaseTestCase):
         user.refresh_from_db()
         self.assertFalse(user.is_active)
 
+    @capture_stdout()
     def test_delete_old_users(self):
         self._get_expired_user_from_radius_batch()
         self.assertEqual(User.objects.all().count(), 1)
@@ -60,6 +64,7 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertTrue(result.successful())
         self.assertEqual(User.objects.all().count(), 0)
 
+    @capture_any_output()
     def test_delete_old_postauth(self):
         options = dict(username='steve', password='jones', reply='value2')
         self._create_radius_postauth(**options)
@@ -68,6 +73,7 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertTrue(result.successful())
         self.assertEqual(RadiusPostAuth.objects.filter(username='steve').count(), 0)
 
+    @capture_stdout()
     def test_delete_old_radacct(self):
         options = _RADACCT.copy()
         options['stop_time'] = '2017-06-10 11:50:00'
