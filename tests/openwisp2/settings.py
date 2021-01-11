@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'private_storage',
     'drf_yasg',
     'django_extensions',
+    'openwisp2.integrations',
 ]
 
 LOGIN_REDIRECT_URL = 'admin:index'
@@ -235,6 +236,8 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY = 4
 if not TESTING:
     OPENWISP_RADIUS_SMS_TOKEN_MAX_USER_DAILY = 10
+
+OPENWISP_USERS_AUTH_API = True
 
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')

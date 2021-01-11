@@ -7,7 +7,12 @@ the API.
 from rest_framework import serializers
 
 
-class ObtainTokenRequest(serializers.Serializer):
+class ObtainTokenBase(serializers.Serializer):
+    class Meta:
+        ref_name = 'OpenwispRadiusObtainToken'
+
+
+class ObtainTokenRequest(ObtainTokenBase):
     username = serializers.CharField(
         max_length=150,
         write_only=True,
@@ -20,7 +25,7 @@ class ObtainTokenRequest(serializers.Serializer):
     )
 
 
-class ObtainTokenResponse(serializers.Serializer):
+class ObtainTokenResponse(ObtainTokenBase):
     radius_user_token = serializers.CharField(
         max_length=40,
         read_only=True,

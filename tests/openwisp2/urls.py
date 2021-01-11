@@ -15,17 +15,16 @@ if os.environ.get('SAMPLE_APP', False):
     from .sample_radius.api import views as api_views
     from .sample_radius.social import views as social_views
 
-    radius_urls = path(
-        '', include((get_urls(api_views, social_views), 'radius'), namespace='radius')
-    )
+    radius_urls = path('', include((get_urls(api_views, social_views), 'radius')))
 else:
     api_views = None
     social_views = None
-    radius_urls = path('', include('openwisp_radius.urls', namespace='radius'))
+    radius_urls = path('', include('openwisp_radius.urls'))
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('openwisp_utils.api.urls')),
+    path('api/v1/', include('openwisp_users.api.urls')),
     path('accounts/', include('openwisp_users.accounts.urls')),
     radius_urls,
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
