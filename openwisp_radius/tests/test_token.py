@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from freezegun import freeze_time
 
+from openwisp_utils.tests import capture_any_output, capture_stdout
+
 from .. import exceptions
 from .. import settings as app_settings
 from ..utils import load_model
@@ -58,6 +60,7 @@ class TestPhoneToken(BaseTestCase):
         token.save()
         return token
 
+    @capture_any_output()
     def test_is_already_active(self):
         token = self._create_token()
         token.user.is_active = True
@@ -89,12 +92,14 @@ class TestPhoneToken(BaseTestCase):
         self.assertIsInstance(token.token, str)
         self.assertIsInstance(int(token.token), int)
 
+    @capture_stdout()
     def test_is_valid(self):
         token = self._create_token()
         self.assertTrue(token.is_valid(token.token))
         self.assertEqual(token.attempts, 1)
         self.assertTrue(token.verified)
 
+    @capture_any_output()
     def test_max_attempts(self):
         token = self._create_token()
         self.assertEqual(token.attempts, 0)
@@ -116,6 +121,7 @@ class TestPhoneToken(BaseTestCase):
             self.fail('Exception not raised')
 
     @freeze_time(_TEST_DATE)
+    @capture_any_output()
     def test_expired(self):
         token = self._create_token()
         token.valid_until = timezone.now() - timedelta(days=1)
@@ -150,14 +156,17 @@ class TestPhoneToken(BaseTestCase):
             self.fail('ValidationError not raised')
 
     @freeze_time(_TEST_DATE)
+    @capture_any_output()
     def test_user_limit_timezone_causes_change_of_date(self):
         self._test_user_limit()
 
     @freeze_time('2019-04-20T15:05:13-04:00')
+    @capture_any_output()
     def test_user_limit(self):
         self._test_user_limit()
 
     @freeze_time(_TEST_DATE)
+    @capture_any_output()
     def test_ip_limit(self):
         self._create_tokens_limit_test()
         opts = {
@@ -177,6 +186,7 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail('ValidationError not raised')
 
+    @capture_any_output()
     def test_user_without_phone(self):
         user = self._create_user(
             **{'username': 'tester', 'password': 'tester', 'is_active': False}

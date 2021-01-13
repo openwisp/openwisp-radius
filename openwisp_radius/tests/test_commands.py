@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import now
 
+from openwisp_utils.tests import capture_any_output, capture_stdout
+
 from ..utils import load_model
 from . import _RADACCT, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
@@ -17,6 +19,7 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 
 
 class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
+    @capture_any_output()
     def test_cleanup_stale_radacct_command(self):
         options = _RADACCT.copy()
         options['unique_id'] = '117'
@@ -27,6 +30,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertNotEqual(session.session_time, None)
         self.assertEqual(session.update_time, session.stop_time)
 
+    @capture_any_output()
     def test_delete_old_postauth_command(self):
         options = dict(username='steve', password='jones', reply='value1')
         self._create_radius_postauth(**options)
@@ -34,6 +38,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command('delete_old_postauth', 3)
         self.assertEqual(RadiusPostAuth.objects.filter(username='steve').count(), 0)
 
+    @capture_any_output()
     def test_delete_old_radacct_command(self):
         options = _RADACCT.copy()
         options['stop_time'] = '2017-06-10 11:50:00'
@@ -43,6 +48,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command('delete_old_radacct', 3)
         self.assertEqual(RadiusAccounting.objects.filter(unique_id='666').count(), 0)
 
+    @capture_stdout()
     def test_batch_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         path = self._get_path('static/test_batch.csv')
@@ -76,6 +82,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self._call_command('batch_add_users', **options)
 
+    @capture_stdout()
     def test_deactivate_expired_users_command(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
@@ -89,6 +96,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command('deactivate_expired_users')
         self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
+    @capture_stdout()
     def test_delete_old_users_command(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
@@ -113,6 +121,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command('delete_old_users', older_than_months=12)
         self.assertEqual(get_user_model().objects.all().count(), 0)
 
+    @capture_stdout()
     def test_prefix_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         output_pdf = os.path.join(settings.MEDIA_ROOT, 'test_prefix10.pdf')
