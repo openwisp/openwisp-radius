@@ -538,7 +538,7 @@ class TestAdmin(
             radsetting.refresh_from_db()
             # This should fail when the value of FREERADIUS_ALLOWED_HOSTS is
             # stored in the model as well.
-            self.assertEqual(radsetting.freeradius_allowed_hosts, '')
+            self.assertEqual(radsetting.freeradius_allowed_hosts, None)
         with self.subTest('Valid IP list'):
             form_data.update(
                 {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.45'}

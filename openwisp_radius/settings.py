@@ -79,6 +79,10 @@ SMS_TOKEN_HASH_ALGORITHM = get_settings_value('SMS_TOKEN_HASH_ALGORITHM', 'sha25
 SMS_TOKEN_MAX_ATTEMPTS = get_settings_value('SMS_TOKEN_MAX_ATTEMPTS', 3)
 SMS_TOKEN_MAX_USER_DAILY = get_settings_value('SMS_TOKEN_MAX_USER_DAILY', 3)
 SMS_TOKEN_MAX_IP_DAILY = get_settings_value('SMS_TOKEN_MAX_IP_DAILY', 25)
+ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])
+OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
+    'OPTIONAL_REGISTRATION_FIELDS', 'disabled'
+)
 
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS
@@ -111,5 +115,3 @@ except AssertionError:  # pragma: no cover
         'lower would not be safe and higher would not be practical from '
         'a ux perspective.'
     )
-
-ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])

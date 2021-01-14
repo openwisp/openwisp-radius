@@ -314,6 +314,26 @@ the configuration should be simply changed to:
         'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
+
+``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``disabled``
+
+This setting is used to specify if the user's optional fields (``first_name``, ``last_name``, ``location`` and ``birth_date``) 
+should either be optionally allowed, ignored or required in the `User Registration API <api.html#user-registration>`_.
+It can take any of the following values:
+
+- ``allowed``: value of user's optional fields will be save to the database but they are not required.
+- ``disabled``: value of user's optional fields are not required and will not be saved to the database if supplied.
+- ``mandatory``: value of user's optional fields are required and will be saved to the database.
+
+For example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS = 'disabled'
+
 Email related settings
 ======================
 

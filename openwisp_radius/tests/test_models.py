@@ -1,4 +1,5 @@
 import os
+from unittest import mock
 from uuid import UUID
 
 import swapper
@@ -10,6 +11,7 @@ from django.urls import reverse
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
+from .. import settings as app_settings
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
     DEFAULT_SESSION_TRAFFIC_LIMIT,
@@ -181,6 +183,23 @@ class TestRadiusPostAuth(BaseTestCase):
     def test_id(self):
         radiuspostauth = RadiusPostAuth(username='test id')
         self.assertIsInstance(radiuspostauth.pk, UUID)
+
+
+class TestOrganizationRadiusSettings(BaseTestCase):
+    @mock.patch.object(app_settings, 'OPTIONAL_REGISTRATION_FIELDS', 'disabled')
+    def test_org_settings_same_globally(self):
+        org = self._get_org()
+        org.radius_settings.first_name = 'disabled'
+        org.radius_settings.last_name = 'disabled'
+        org.radius_settings.location = 'disabled'
+        org.radius_settings.birth_date = 'disabled'
+        org.radius_settings.full_clean()
+        org.radius_settings.save()
+
+        self.assertIsNone(org.radius_settings.first_name)
+        self.assertIsNone(org.radius_settings.last_name)
+        self.assertIsNone(org.radius_settings.location)
+        self.assertIsNone(org.radius_settings.birth_date)
 
 
 class TestRadiusGroup(BaseTestCase):
