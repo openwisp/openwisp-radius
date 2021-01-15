@@ -318,7 +318,7 @@ the configuration should be simply changed to:
 ``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``disabled``
+**Default**: ``{'first_name': 'disabled', 'last_name': 'disabled', 'location': 'disabled', 'birth_date': 'disabled'}``
 
 This setting is used to specify if the user's optional fields (``first_name``, ``last_name``, ``location`` and ``birth_date``) 
 should either be optionally allowed, ignored or required in the `User Registration API <api.html#user-registration>`_.
@@ -332,7 +332,13 @@ For example:
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS = 'disabled'
+    OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS = {'first_name': 'disabled', 'last_name': 'disabled', 'location': 'allowed', 'birth_date': 'mandatory'}
+
+In the example above;
+
+- ``first_name`` and ``last_name`` fields are not required and their values if provided are ignored.
+- ``location`` field is not required but its value will be save to the database if provided.
+- ``birth_date`` field is required and a ``ValidationError`` exception is raised if its value is not provided. 
 
 Email related settings
 ======================

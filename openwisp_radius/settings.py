@@ -81,7 +81,13 @@ SMS_TOKEN_MAX_USER_DAILY = get_settings_value('SMS_TOKEN_MAX_USER_DAILY', 3)
 SMS_TOKEN_MAX_IP_DAILY = get_settings_value('SMS_TOKEN_MAX_IP_DAILY', 25)
 ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])
 OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
-    'OPTIONAL_REGISTRATION_FIELDS', 'disabled'
+    'OPTIONAL_REGISTRATION_FIELDS',
+    {
+        'first_name': 'disabled',
+        'last_name': 'disabled',
+        'birth_date': 'disabled',
+        'location': 'disabled',
+    },
 )
 
 try:  # pragma: no cover

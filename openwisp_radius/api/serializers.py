@@ -351,10 +351,9 @@ class RegisterSerializer(
         return phone_number
 
     def validate_optional_fields(self, field_name, field_value, org):
-        field_setting = (
-            getattr(org.radius_settings, field_name)
-            or app_settings.OPTIONAL_REGISTRATION_FIELDS
-        )
+        field_setting = getattr(
+            org.radius_settings, field_name
+        ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
         if field_setting == 'mandatory' and not field_value:
             raise serializers.ValidationError(
                 {f'{field_name}': _('This field is required.')}

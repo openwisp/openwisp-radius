@@ -44,6 +44,7 @@ RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
+OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 
 
 class OrganizationFirstMixin(MultitenantAdminMixin):
@@ -515,28 +516,28 @@ class AllowedMobilePrefixesField(forms.CharField):
 class FirstNameField(forms.ChoiceField):
     def prepare_value(self, value):
         if not value:
-            value = app_settings.OPTIONAL_REGISTRATION_FIELDS
+            value = OPTIONAL_SETTINGS.get('first_name')
         return super().prepare_value(value)
 
 
 class LastNameField(forms.ChoiceField):
     def prepare_value(self, value):
         if not value:
-            value = app_settings.OPTIONAL_REGISTRATION_FIELDS
+            value = OPTIONAL_SETTINGS.get('last_name')
         return super().prepare_value(value)
 
 
 class LocationField(forms.ChoiceField):
     def prepare_value(self, value):
         if not value:
-            value = app_settings.OPTIONAL_REGISTRATION_FIELDS
+            value = OPTIONAL_SETTINGS.get('location')
         return super().prepare_value(value)
 
 
 class BirthDateField(forms.ChoiceField):
     def prepare_value(self, value):
         if not value:
-            value = app_settings.OPTIONAL_REGISTRATION_FIELDS
+            value = OPTIONAL_SETTINGS.get('birth_date')
         return super().prepare_value(value)
 
 

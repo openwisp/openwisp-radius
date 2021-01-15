@@ -1169,13 +1169,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             self.allowed_mobile_prefixes = None
 
     def _clean_optional_fields(self):
-        if self.first_name == app_settings.OPTIONAL_REGISTRATION_FIELDS:
+        global_settings = app_settings.OPTIONAL_REGISTRATION_FIELDS
+        if self.first_name == global_settings.get('first_name'):
             self.first_name = None
-        if self.last_name == app_settings.OPTIONAL_REGISTRATION_FIELDS:
+        if self.last_name == global_settings.get('last_name'):
             self.last_name = None
-        if self.location == app_settings.OPTIONAL_REGISTRATION_FIELDS:
+        if self.location == global_settings.get('location'):
             self.location = None
-        if self.birth_date == app_settings.OPTIONAL_REGISTRATION_FIELDS:
+        if self.birth_date == global_settings.get('birth_date'):
             self.birth_date = None
 
     def save_cache(self, *args, **kwargs):

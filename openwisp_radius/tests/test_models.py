@@ -186,12 +186,22 @@ class TestRadiusPostAuth(BaseTestCase):
 
 
 class TestOrganizationRadiusSettings(BaseTestCase):
-    @mock.patch.object(app_settings, 'OPTIONAL_REGISTRATION_FIELDS', 'disabled')
+
+    optional_settings_params = {
+        'first_name': 'disabled',
+        'last_name': 'allowed',
+        'birth_date': 'disabled',
+        'location': 'mandatory',
+    }
+
+    @mock.patch.object(
+        app_settings, 'OPTIONAL_REGISTRATION_FIELDS', optional_settings_params,
+    )
     def test_org_settings_same_globally(self):
         org = self._get_org()
         org.radius_settings.first_name = 'disabled'
-        org.radius_settings.last_name = 'disabled'
-        org.radius_settings.location = 'disabled'
+        org.radius_settings.last_name = 'allowed'
+        org.radius_settings.location = 'mandatory'
         org.radius_settings.birth_date = 'disabled'
         org.radius_settings.full_clean()
         org.radius_settings.save()
