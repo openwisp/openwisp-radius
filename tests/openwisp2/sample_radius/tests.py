@@ -19,6 +19,9 @@ from openwisp_radius.tests.test_batch_add_users import (
 from openwisp_radius.tests.test_commands import TestCommands as BaseTestCommands
 from openwisp_radius.tests.test_models import TestNas as BaseTestNas
 from openwisp_radius.tests.test_models import (
+    TestOrganizationRadiusSettings as BaseTestOrganizationRadiusSettings,
+)
+from openwisp_radius.tests.test_models import (
     TestPrivateCsvFile as BaseTestPrivateCsvFile,
 )
 from openwisp_radius.tests.test_models import (
@@ -149,6 +152,10 @@ class TestApiValidateToken(BaseTestApiValidateToken):
     pass
 
 
+class TestOrganizationRadiusSettings(BaseTestOrganizationRadiusSettings):
+    pass
+
+
 del BaseTestAdmin
 del BaseTestApi
 del BaseTestApiReject
@@ -174,3 +181,4 @@ del BaseTestPhoneToken
 del BaseTestUsersIntegration
 del BaseTestUtils
 del BaseTestUpgradeFromDjangoFreeradius
+del BaseTestOrganizationRadiusSettings

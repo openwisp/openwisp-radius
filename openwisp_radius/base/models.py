@@ -54,9 +54,9 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 OPTIONAL_FIELD_CHOICES = (
-    ('disabled', 'Disabled'),
-    ('allowed', 'Allowed'),
-    ('mandatory', 'Mandatory'),
+    ('disabled', _('Disabled')),
+    ('allowed', _('Allowed')),
+    ('mandatory', _('Mandatory')),
 )
 
 RADOP_CHECK_TYPES = (
@@ -1170,14 +1170,9 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     def _clean_optional_fields(self):
         global_settings = app_settings.OPTIONAL_REGISTRATION_FIELDS
-        if self.first_name == global_settings.get('first_name'):
-            self.first_name = None
-        if self.last_name == global_settings.get('last_name'):
-            self.last_name = None
-        if self.location == global_settings.get('location'):
-            self.location = None
-        if self.birth_date == global_settings.get('birth_date'):
-            self.birth_date = None
+        for field in ['first_name', 'last_name', 'location', 'birth_date']:
+            if getattr(self, field) == global_settings.get(field):
+                setattr(self, field, None)
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)

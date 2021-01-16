@@ -350,6 +350,10 @@ Parameters:
 Param              Description
 ===============    ===============================
 username           string
+first_name         string (*)
+last_name          string (*)
+birth_date         string (*)
+location           string (*)
 email              string
 password1          string
 password2          string
@@ -358,6 +362,10 @@ phone_number       string (*)
 
 (*) ``phone_number`` is required only when the organization has enabled
 SMS verification in its "Organization RADIUS Settings".
+
+(*) ``first_name``, ``last_name``, ``birth_date`` and ``location`` are optional fields 
+and can be `configured <./settings.html#openwisp-radius-optional-registration-fields>`_ 
+to be optionally allowed, ignored or required.
 
 Reset password
 --------------
