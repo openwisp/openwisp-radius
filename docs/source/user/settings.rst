@@ -371,6 +371,18 @@ the configuration should be simply changed to:
         'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
+``OPENWISP_RADIUS_REGISTRATION_API_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+Indicates whether the API registration view is enabled or not. When this setting is disabled
+(i.e. ``False``), the registration API view is disabled. Unless specified,
+this defaults to the global value for each organization.
+
+**Note**: This setting can be overridden by individual organizations via the admin
+interface in `organization-specific settings <api.html#user-registration>`_.
+
 Email related settings
 ======================
 

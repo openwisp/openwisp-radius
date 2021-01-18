@@ -59,7 +59,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
-from .permissions import IsSmsVerificationEnabled
+from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
 from .serializers import (
     AuthorizeSerializer,
     AuthTokenSerializer,
@@ -538,6 +538,7 @@ class RadiusTokenMixin(object):
 )
 class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
     authentication_classes = tuple()
+    permission_classes = (IsRegistrationEnabled,)
 
     def get_response_data(self, user):
         data = super().get_response_data(user)

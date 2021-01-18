@@ -5,6 +5,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.forms.widgets import Select
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -26,6 +27,7 @@ from .base.models import (
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
+    _GET_REGISTRATION_ENDPOINT_HELP_TEXT,
     _encode_secret,
 )
 from .utils import load_model
@@ -518,6 +520,10 @@ class FallbackChoiceField(FallbackFieldMixin, forms.ChoiceField):
     pass
 
 
+class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
+    pass
+
+
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
     freeradius_allowed_hosts = FallbackCharField(
         required=False,
@@ -555,6 +561,18 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
     )
+    registration_api_enabled = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                ('', f'Default ({app_settings.REGISTRATION_API_ENABLED})'),
+                (True, 'True'),
+                (False, 'False'),
+            ]
+        ),
+        help_text=_GET_REGISTRATION_ENDPOINT_HELP_TEXT,
+        fallback='',
+    )
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
@@ -574,6 +592,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'sms_verification',
                     'sms_sender',
                     'allowed_mobile_prefixes',
+                    'registration_api_enabled',
                 )
             },
         ),

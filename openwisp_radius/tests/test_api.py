@@ -1639,6 +1639,39 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     def test_inactive_user_reset_password(self):
         self._test_user_reset_password_helper(False)
 
+    @capture_stderr()
+    def test_organization_registration_enabled(self):
+        org = self._get_org()
+        url = reverse('radius:rest_register', args=[org.slug])
+
+        with self.subTest('Test registration endpoint enabled by default'):
+            r = self.client.post(
+                url,
+                {
+                    'username': 'test@openwisp.org',
+                    'email': 'test@openwisp.org',
+                    'password1': 'password',
+                    'password2': 'password',
+                },
+            )
+            self.assertEqual(r.status_code, 201)
+            self.assertIn('key', r.data)
+
+        with self.subTest('Test registration endpoint disabled for org'):
+            settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
+            settings_obj.registration_api_enabled = False
+            settings_obj.save()
+            r = self.client.post(
+                url,
+                {
+                    'username': 'test2@openwisp.org',
+                    'email': 'test2@openwisp.org',
+                    'password1': 'password',
+                    'password2': 'password',
+                },
+            )
+            self.assertEqual(r.status_code, 403)
+
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
     @classmethod
