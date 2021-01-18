@@ -50,12 +50,6 @@ START_DATE = '2019-04-20T22:14:09+01:00'
 
 class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     _test_email = 'test@openwisp.org'
-    optional_settings_params = {
-        'first_name': 'disabled',
-        'last_name': 'allowed',
-        'birth_date': 'disabled',
-        'location': 'mandatory',
-    }
 
     def setUp(self):
         cache.clear()
@@ -1113,7 +1107,14 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertTrue(user.is_active)
 
     @mock.patch.object(
-        app_settings, 'OPTIONAL_REGISTRATION_FIELDS', optional_settings_params
+        app_settings,
+        'OPTIONAL_REGISTRATION_FIELDS',
+        {
+            'first_name': 'disabled',
+            'last_name': 'allowed',
+            'birth_date': 'disabled',
+            'location': 'mandatory',
+        },
     )
     def test_optional_fields_registration(self):
         self._superuser_login()

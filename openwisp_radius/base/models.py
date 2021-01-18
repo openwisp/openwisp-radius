@@ -149,8 +149,8 @@ _GET_MOBILE_PREFIX_HELP_TEXT = _(
     'allowed to register via the user registration API.'
 )
 _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
-    'Chose if this user field should be disabled, allowed or mandatory '
-    'during user registration.'
+    'Whether this field should be disabled, allowed or mandatory '
+    'in the user registration API.'
 )
 
 

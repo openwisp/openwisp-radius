@@ -499,78 +499,61 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
 UserAdminInline.inlines += [RadiusUserGroupInline, PhoneTokenInline]
 
 
-class AllowedHostsField(forms.CharField):
+class FallbackFieldMixin(object):
+    def __init__(self, fallback, *args, **kwargs):
+        self.fallback = fallback
+        super().__init__(*args, **kwargs)
+
     def prepare_value(self, value):
         if not value:
-            value = ','.join(app_settings.FREERADIUS_ALLOWED_HOSTS)
+            value = self.fallback
         return super().prepare_value(value)
 
 
-class AllowedMobilePrefixesField(forms.CharField):
-    def prepare_value(self, value):
-        if not value:
-            value = ','.join(app_settings.ALLOWED_MOBILE_PREFIXES)
-        return super().prepare_value(value)
+class FallbackCharField(FallbackFieldMixin, forms.CharField):
+    pass
 
 
-class FirstNameField(forms.ChoiceField):
-    def prepare_value(self, value):
-        if not value:
-            value = OPTIONAL_SETTINGS.get('first_name')
-        return super().prepare_value(value)
-
-
-class LastNameField(forms.ChoiceField):
-    def prepare_value(self, value):
-        if not value:
-            value = OPTIONAL_SETTINGS.get('last_name')
-        return super().prepare_value(value)
-
-
-class LocationField(forms.ChoiceField):
-    def prepare_value(self, value):
-        if not value:
-            value = OPTIONAL_SETTINGS.get('location')
-        return super().prepare_value(value)
-
-
-class BirthDateField(forms.ChoiceField):
-    def prepare_value(self, value):
-        if not value:
-            value = OPTIONAL_SETTINGS.get('birth_date')
-        return super().prepare_value(value)
+class FallbackChoiceField(FallbackFieldMixin, forms.ChoiceField):
+    pass
 
 
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
-    freeradius_allowed_hosts = AllowedHostsField(
+    freeradius_allowed_hosts = FallbackCharField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
         help_text=_GET_IP_LIST_HELP_TEXT,
+        fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
     )
-    allowed_mobile_prefixes = AllowedMobilePrefixesField(
+    allowed_mobile_prefixes = FallbackCharField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
+        fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
-    first_name = FirstNameField(
+    first_name = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         choices=OPTIONAL_FIELD_CHOICES,
+        fallback=OPTIONAL_SETTINGS.get('first_name', 'disabled'),
     )
-    last_name = LastNameField(
+    last_name = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         choices=OPTIONAL_FIELD_CHOICES,
+        fallback=OPTIONAL_SETTINGS.get('last_name', 'disabled'),
     )
-    location = LocationField(
+    location = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         choices=OPTIONAL_FIELD_CHOICES,
+        fallback=OPTIONAL_SETTINGS.get('location', 'disabled'),
     )
-    birth_date = BirthDateField(
+    birth_date = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         choices=OPTIONAL_FIELD_CHOICES,
+        fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
     )
 
 

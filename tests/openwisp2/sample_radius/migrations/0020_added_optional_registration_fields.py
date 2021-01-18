@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from openwisp_radius.base.models import _GET_OPTIONAL_FIELDS_HELP_TEXT
+
 
 class Migration(migrations.Migration):
 
@@ -20,10 +22,7 @@ class Migration(migrations.Migration):
                     ('allowed', 'Allowed'),
                     ('mandatory', 'Mandatory'),
                 ],
-                help_text=(
-                    'Chose if this user field should be disabled, '
-                    'allowed or mandatory during user registration.'
-                ),
+                help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
                 max_length=12,
                 null=True,
                 verbose_name='birth date',
@@ -39,10 +38,7 @@ class Migration(migrations.Migration):
                     ('allowed', 'Allowed'),
                     ('mandatory', 'Mandatory'),
                 ],
-                help_text=(
-                    'Chose if this user field should be disabled, '
-                    'allowed or mandatory during user registration.'
-                ),
+                help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
                 max_length=12,
                 null=True,
                 verbose_name='first name',
@@ -58,10 +54,7 @@ class Migration(migrations.Migration):
                     ('allowed', 'Allowed'),
                     ('mandatory', 'Mandatory'),
                 ],
-                help_text=(
-                    'Chose if this user field should be disabled, '
-                    'allowed or mandatory during user registration.'
-                ),
+                help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
                 max_length=12,
                 null=True,
                 verbose_name='last name',
@@ -77,10 +70,7 @@ class Migration(migrations.Migration):
                     ('allowed', 'Allowed'),
                     ('mandatory', 'Mandatory'),
                 ],
-                help_text=(
-                    'Chose if this user field should be disabled, '
-                    'allowed or mandatory during user registration.'
-                ),
+                help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
                 max_length=12,
                 null=True,
                 verbose_name='location',
