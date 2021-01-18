@@ -50,6 +50,12 @@ START_DATE = '2019-04-20T22:14:09+01:00'
 
 class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     _test_email = 'test@openwisp.org'
+    optional_settings_params = {
+        'first_name': 'disabled',
+        'last_name': 'allowed',
+        'birth_date': 'disabled',
+        'location': 'mandatory',
+    }
 
     def setUp(self):
         cache.clear()
@@ -1105,6 +1111,46 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
+
+    @mock.patch.object(
+        app_settings, 'OPTIONAL_REGISTRATION_FIELDS', optional_settings_params
+    )
+    def test_optional_fields_registration(self):
+        self._superuser_login()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'password1': 'password',
+            'password2': 'password',
+            'first_name': 'first name',
+            'location': 'test location',
+            'last_name': 'last name',
+            'birth_date': '1998-08-19',
+        }
+        r = self.client.post(url, params)
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('key', r.data)
+        user = User.objects.get(email=self._test_email)
+        self.assertEqual(user.first_name, '')
+        self.assertEqual(user.last_name, 'last name')
+        self.assertEqual(user.location, 'test location')
+        self.assertIsNone(user.birth_date)
+
+        with self.subTest('test org level setting'):
+            self.default_org.radius_settings.birth_date = 'mandatory'
+            self.default_org.radius_settings.full_clean()
+            self.default_org.radius_settings.save()
+            params['username'] = 'test'
+            params['email'] = 'test@gmail.com'
+            params['location'] = ''
+            r = self.client.post(url, params)
+            self.assertEqual(r.status_code, 400)
+            self.assertEqual(len(r.data.keys()), 1)
+            self.assertIn('location', r.data)
+            self.assertEqual(r.data['location'], 'This field is required.')
+            user_count = User.objects.filter(email='test@gmail.com').count()
+            self.assertEqual(user_count, 0)
 
     @capture_any_output()
     def test_register_error_missing_radius_settings(self):

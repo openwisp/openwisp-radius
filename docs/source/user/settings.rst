@@ -314,6 +314,51 @@ the configuration should be simply changed to:
         'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
+``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**:
+
+.. code-block:: python
+
+    {
+        'first_name': 'disabled',
+        'last_name': 'disabled',
+        'birth_date': 'disabled',
+        'location': 'disabled',
+    }
+
+This setting is used to specify if the user's optional fields (``first_name``, ``last_name``, ``location`` and ``birth_date``) 
+should either be optionally allowed, ignored or required in the `User Registration API <api.html#user-registration>`_.
+It can take any of the following values:
+
+- ``disabled``: this is the **default** setting. Value of user's optional fields are not required and will not be saved to the database if supplied.
+- ``allowed``: value of user's optional fields will be save to the database but they are not required.
+- ``mandatory``: value of user's optional fields are required and will be saved to the database.
+
+For example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS = {
+        'first_name': 'disabled',
+        'last_name': 'disabled',
+        'birth_date': 'mandatory',
+        'location': 'allowed', 
+    }
+
+In the global setting above;
+
+- ``first_name`` and ``last_name`` fields are not required and their values if provided are ignored.
+- ``location`` field is not required but its value will be save to the database if provided.
+- ``birth_date`` field is required and a ``ValidationError`` exception is raised if its value is not provided.
+
+These fields can also be configured to behave in a similar manner at the organization level by setting them in the admin 
+as shown in the screenshot below:
+
+.. image:: /images/optional_fields.png
+    :alt: optional field setting
+
 Email related settings
 ======================
 

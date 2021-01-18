@@ -330,6 +330,10 @@ class RegisterSerializer(
         allow_blank=True,
         default='',
     )
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    location = serializers.CharField(required=False)
+    birth_date = serializers.DateField(required=False)
 
     def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
@@ -345,6 +349,18 @@ class RegisterSerializer(
             # Phone number should not be stored if sms verification is disabled
             phone_number = None
         return phone_number
+
+    def validate_optional_fields(self, field_name, field_value, org):
+        field_setting = getattr(
+            org.radius_settings, field_name
+        ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
+        if field_setting == 'mandatory' and not field_value:
+            raise serializers.ValidationError(
+                {f'{field_name}': _('This field is required.')}
+            )
+        if field_setting == 'disabled':
+            field_value = ''
+        return field_value
 
     def save(self, request):
         adapter = get_adapter()
@@ -362,6 +378,12 @@ class RegisterSerializer(
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
+        for field_name in ['first_name', 'last_name', 'location', 'birth_date']:
+            value = self.validate_optional_fields(
+                field_name, self.validated_data.get(field_name, ''), org
+            )
+            if value:
+                setattr(user, field_name, value)
         if is_sms_verification_enabled(org):
             user.is_active = False
         try:

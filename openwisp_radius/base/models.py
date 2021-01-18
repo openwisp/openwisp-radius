@@ -53,6 +53,12 @@ from .validators import ipv6_network_validator
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+OPTIONAL_FIELD_CHOICES = (
+    ('disabled', _('Disabled')),
+    ('allowed', _('Allowed')),
+    ('mandatory', _('Mandatory')),
+)
+
 RADOP_CHECK_TYPES = (
     ('=', '='),
     (':=', ':='),
@@ -141,6 +147,10 @@ _GET_IP_LIST_HELP_TEXT = _(
 _GET_MOBILE_PREFIX_HELP_TEXT = _(
     'Comma separated list of international mobile prefixes '
     'allowed to register via the user registration API.'
+)
+_GET_OPTIONAL_FIELDS_HELP_TEXT = _(
+    'Chose if this user field should be disabled, allowed or mandatory '
+    'during user registration.'
 )
 
 
@@ -1043,6 +1053,38 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     allowed_mobile_prefixes = models.TextField(
         null=True, blank=True, help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
     )
+    first_name = models.CharField(
+        verbose_name=_('first name'),
+        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
+        max_length=12,
+        null=True,
+        blank=True,
+        choices=OPTIONAL_FIELD_CHOICES,
+    )
+    last_name = models.CharField(
+        verbose_name=_('last name'),
+        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
+        max_length=12,
+        null=True,
+        blank=True,
+        choices=OPTIONAL_FIELD_CHOICES,
+    )
+    location = models.CharField(
+        verbose_name=_('location'),
+        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
+        max_length=12,
+        null=True,
+        blank=True,
+        choices=OPTIONAL_FIELD_CHOICES,
+    )
+    birth_date = models.CharField(
+        verbose_name=_('birth date'),
+        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
+        max_length=12,
+        null=True,
+        blank=True,
+        choices=OPTIONAL_FIELD_CHOICES,
+    )
 
     class Meta:
         verbose_name = _('Organization radius settings')
@@ -1077,6 +1119,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             )
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
+        self._clean_optional_fields()
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
@@ -1092,7 +1135,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             )
         elif allowed_hosts_set:
             if allowed_hosts_set == settings_allowed_hosts_set:
-                self.freeradius_allowed_hosts = ''
+                self.freeradius_allowed_hosts = None
             else:
                 try:
                     for ip_address in allowed_hosts_set:
@@ -1109,6 +1152,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     def _clean_allowed_mobile_prefixes(self):
         valid_country_codes = phonenumbers.COUNTRY_CODE_TO_REGION_CODE.keys()
+        allowed_mobile_prefixes_set = set(self.allowed_mobile_prefixes_list)
+        settings_allowed_mobile_prefixes_set = set(app_settings.ALLOWED_MOBILE_PREFIXES)
         for code in self.allowed_mobile_prefixes_list:
             if not code or code[0] != '+' or int(code[1:]) not in valid_country_codes:
                 raise ValidationError(
@@ -1119,6 +1164,15 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                         )
                     }
                 )
+
+        if allowed_mobile_prefixes_set == settings_allowed_mobile_prefixes_set:
+            self.allowed_mobile_prefixes = None
+
+    def _clean_optional_fields(self):
+        global_settings = app_settings.OPTIONAL_REGISTRATION_FIELDS
+        for field in ['first_name', 'last_name', 'location', 'birth_date']:
+            if getattr(self, field) == global_settings.get(field):
+                setattr(self, field, None)
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)
