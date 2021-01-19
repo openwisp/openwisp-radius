@@ -26,8 +26,8 @@ from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
-    OPTIONAL_FIELD_CHOICES,
     _GET_REGISTRATION_ENDPOINT_HELP_TEXT,
+    OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
 from .utils import load_model
