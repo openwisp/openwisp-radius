@@ -567,13 +567,13 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                 'fields': (
                     'token',
                     'freeradius_allowed_hosts',
-                    'sms_verification',
-                    'sms_sender',
-                    'allowed_mobile_prefixes',
                     'first_name',
                     'last_name',
                     'birth_date',
                     'location',
+                    'sms_verification',
+                    'sms_sender',
+                    'allowed_mobile_prefixes',
                 )
             },
         ),
