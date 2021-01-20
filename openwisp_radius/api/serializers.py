@@ -350,6 +350,10 @@ class RegisterSerializer(
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
+        # ensuring email is always converted to lowercase
+        email = str(user.email)
+        email = email.lower()
+        user.email = email
         # commit=False does not save the user to the DB yet
         adapter.save_user(request, user, self, commit=False)
         # the custom_signup method contains the openwisp specific logic

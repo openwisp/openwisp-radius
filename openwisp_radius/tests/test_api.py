@@ -1096,6 +1096,16 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
 
+    def test_register_email_ignorecase(self):
+        user = self._create_user(
+            username='tester',
+            email='Tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+
+        self.assertEqual(user.email, 'tester@gmail.com')
+
     def test_register_error_missing_radius_settings(self):
         self.assertEqual(User.objects.count(), 0)
         self.default_org.radius_settings.delete()
