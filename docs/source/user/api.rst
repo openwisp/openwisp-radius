@@ -128,6 +128,34 @@ tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 For information on how to configure FreeRADIUS to send the bearer tokens, see
 `Configure the REST module <../developer/freeradius.html#configure-the-rest-module>`_.
 
+API Throttling
+==============
+
+To override the default API throttling settings, add the following to your ``settings.py`` file:
+
+.. code-block:: python
+
+    REST_FRAMEWORK = {
+        'DEFAULT_THROTTLE_CLASSES': [
+            'rest_framework.throttling.ScopedRateThrottle',
+        ],
+        'DEFAULT_THROTTLE_RATES': {
+            # None by default
+            'authorize': None,
+            'postauth': None,
+            'accounting': None,
+            'obtain_auth_token': None,
+            'validate_auth_token': None,
+            'create_phone_token': None,
+            'validate_phone_token': None,
+            # Relaxed throttling Policy
+            'others': '400/hour',
+        },
+    }
+
+The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
+``second``, ``minute``, ``hour`` or ``day`` as the throttle period, setting it to ``None`` will result in no throttling.
+
 List of Endpoints
 =================
 
