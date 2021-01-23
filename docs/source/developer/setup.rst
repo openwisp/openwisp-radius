@@ -141,6 +141,7 @@ Add the URLs to your main ``urls.py``:
     urlpatterns = [
         # ... other urls in your project ...
         # openwisp-radius urls
+        path('admin/', admin.site.urls), # Web interface urls
         path('accounts/', include('openwisp_users.accounts.urls')),
         path('', include('openwisp_radius.urls', namespace='radius'))
     ]
