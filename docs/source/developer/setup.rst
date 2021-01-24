@@ -148,7 +148,6 @@ Add the URLs to your main ``urls.py``:
         path('api/v1/', include('openwisp_users.api.urls')),
         path('accounts/', include('openwisp_users.accounts.urls')),
         path('', include('openwisp_radius.urls', namespace='radius'))
-        
     ]
 
 Then run:
