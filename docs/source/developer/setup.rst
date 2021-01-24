@@ -140,10 +140,15 @@ Add the URLs to your main ``urls.py``:
 
     urlpatterns = [
         # ... other urls in your project ...
+        
+        # django admin interface urls
+        path('admin/', admin.site.urls),
         # openwisp-radius urls
-        path('admin/', admin.site.urls), # Web interface urls
+        path('api/v1/', include('openwisp_utils.api.urls')),
+        path('api/v1/', include('openwisp_users.api.urls')),
         path('accounts/', include('openwisp_users.accounts.urls')),
         path('', include('openwisp_radius.urls', namespace='radius'))
+        
     ]
 
 Then run:
