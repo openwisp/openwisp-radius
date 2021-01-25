@@ -1106,6 +1106,24 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
 
+    def test_lowercase_registration_email(self):
+        self._superuser_login()
+        self.assertEqual(User.objects.count(), 1)
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            {
+                'username': 'Tester@example.com',
+                'email': 'Tester@example.com',
+                'password1': 'password',
+                'password2': 'password',
+            },
+        )
+        self.assertEqual(r.status_code, 201)
+        user = User.objects.get(email='tester@example.com')
+
+        self.assertEqual(user.email, 'tester@example.com')
+
     @mock.patch.object(
         app_settings,
         'OPTIONAL_REGISTRATION_FIELDS',

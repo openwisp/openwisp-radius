@@ -350,6 +350,12 @@ class RegisterSerializer(
             phone_number = None
         return phone_number
 
+    def validate_email(self, email):
+        # Overriding validate_email method to convert email to lowercase.
+        # First the validated email is returned from DRF's field level email validator
+        # and the returned email is converted to lowercase
+        return super().validate_email(email).lower()
+
     def validate_optional_fields(self, field_name, field_value, org):
         field_setting = getattr(
             org.radius_settings, field_name
