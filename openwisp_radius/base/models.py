@@ -683,6 +683,7 @@ class AbstractRadiusUserGroup(
         db_table = 'radusergroup'
         verbose_name = _('user group')
         verbose_name_plural = _('user groups')
+        unique_together = ('user', 'group')
         abstract = True
 
     def __str__(self):

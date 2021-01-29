@@ -609,6 +609,9 @@ class Migration(migrations.Migration):
                 to=swapper.get_model_name('openwisp_radius', 'RadiusGroup'),
             ),
         ),
+        migrations.AlterUniqueTogether(
+            name='radiususergroup', unique_together={('user', 'group')},
+        ),
         migrations.CreateModel(
             name='RadiusBatch',
             fields=[
