@@ -9,6 +9,8 @@ Features
 
 - Allowed login via API with email or phone number
 - Allowed freeradius authorize with email or phone number
+- Allowed the usage of subnets in `OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS
+  <https://openwisp-radius.readthedocs.io/en/latest/user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_
 
 Changes
 ~~~~~~~
