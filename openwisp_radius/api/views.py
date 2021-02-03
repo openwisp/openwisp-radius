@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 from uuid import UUID
 
@@ -101,16 +102,24 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                 ip_list = None
             else:
                 cache.set(f'ip-{uuid}', ip_list)
-        return ip_list
+        return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
 
     def _check_client_ip_and_return(self, request, uuid):
         client_ip, _is_routable = get_client_ip(request)
         ip_list = self._get_ip_list(uuid)
-        if bool(
-            (ip_list and client_ip in ip_list)
-            or (not ip_list and client_ip in app_settings.FREERADIUS_ALLOWED_HOSTS)
-        ):
-            return (AnonymousUser(), uuid)
+
+        for ip in ip_list:
+            try:
+                if ipaddress.ip_address(client_ip) in ipaddress.ip_network(ip):
+                    return (AnonymousUser(), uuid)
+            except ValueError:
+                invalid_addr_message = _(
+                    f'Request rejected: ({ip}) in organization settings or '
+                    'settings.py is not a valid IP address. '
+                    'Please contact administrator.'
+                )
+                logger.warning(invalid_addr_message)
+                raise AuthenticationFailed(invalid_addr_message)
         message = _(
             f'Request rejected: Client IP address ({client_ip}) is not in '
             'the list of IP addresses allowed to consume the freeradius API.'

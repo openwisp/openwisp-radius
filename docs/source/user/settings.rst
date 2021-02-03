@@ -150,7 +150,7 @@ the following to your project ``settings.py``:
 
 **Default**: ``[]``
 
-List of host IP addresses allowed to consume the freeradius
+List of host IP addresses or subnets allowed to consume the freeradius
 API endpoints (Authorize, Accounting and Postauth), i.e the value
 of this option should be the IP address of your freeradius
 instance. Example: If your freeradius instance is running on
@@ -159,6 +159,11 @@ Similarly, if your freeradius instance is on a different host in
 the private network, the value should be the private IP of freeradius
 host like ``192.0.2.50``. If your freeradius is on a public network,
 please use the public IP of your freeradius instance.
+
+You can use subnets when freeradius is hosted on a variable IP, eg:
+
+- ``198.168.0.0/24`` to allow the entire LAN.
+- ``0.0.0.0/0`` to allow any address (useful for development / testing).
 
 This value can be overridden per organization in the organization
 change page. You can skip setting this option if you intend to set
@@ -169,7 +174,7 @@ it from organization change page for each organization.
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1', '192.0.2.10']
+    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1', '192.0.2.10', '192.168.0.0/24']
 
 If this option and organization change page option are both
 empty, then all freeradius API requests for the organization
