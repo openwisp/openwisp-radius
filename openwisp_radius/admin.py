@@ -26,7 +26,7 @@ from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
-    _GET_REGISTRATION_ENDPOINT_HELP_TEXT,
+    _REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
@@ -537,6 +537,18 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
+    registration_enabled = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                ('', _('Default') + f' ({app_settings.REGISTRATION_API_ENABLED})'),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
+    )
     first_name = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
@@ -561,18 +573,6 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
     )
-    registration_api_enabled = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                ('', f'Default ({app_settings.REGISTRATION_API_ENABLED})'),
-                (True, 'True'),
-                (False, 'False'),
-            ]
-        ),
-        help_text=_GET_REGISTRATION_ENDPOINT_HELP_TEXT,
-        fallback='',
-    )
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
@@ -585,6 +585,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                 'fields': (
                     'token',
                     'freeradius_allowed_hosts',
+                    'registration_enabled',
                     'first_name',
                     'last_name',
                     'birth_date',
@@ -592,7 +593,6 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'sms_verification',
                     'sms_sender',
                     'allowed_mobile_prefixes',
-                    'registration_api_enabled',
                 )
             },
         ),

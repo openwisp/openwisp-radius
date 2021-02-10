@@ -152,7 +152,7 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
     'Whether this field should be disabled, allowed or mandatory '
     'in the user registration API.'
 )
-_GET_REGISTRATION_ENDPOINT_HELP_TEXT = _(
+_REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
 
@@ -1088,8 +1088,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         choices=OPTIONAL_FIELD_CHOICES,
     )
-    registration_api_enabled = models.BooleanField(
-        null=True, blank=True, default=True, help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
+    registration_enabled = models.BooleanField(
+        null=True,
+        blank=True,
+        default=True,
+        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
 
     class Meta:
