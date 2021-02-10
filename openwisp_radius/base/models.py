@@ -686,6 +686,7 @@ class AbstractRadiusUserGroup(
         db_table = 'radusergroup'
         verbose_name = _('user group')
         verbose_name_plural = _('user groups')
+        unique_together = ('user', 'group')
         abstract = True
 
     def __str__(self):
@@ -1145,13 +1146,13 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             else:
                 try:
                     for ip_address in allowed_hosts_set:
-                        ipaddress.ip_address(ip_address)
+                        ipaddress.ip_network(ip_address)
                 except ValueError:
                     raise ValidationError(
                         {
                             'freeradius_allowed_hosts': _(
-                                'Invalid input. Please enter valid ip '
-                                'addresses separated by comma. (no spaces)'
+                                'Invalid input. Please enter valid ip addresses '
+                                'or subnets separated by comma. (no spaces)'
                             )
                         }
                     )

@@ -1910,10 +1910,14 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_ip_from_setting_invalid(self):
+        test_fail_msg = (
+            'Request rejected: (localhost) in organization settings or '
+            'settings.py is not a valid IP address. Please contact administrator.'
+        )
         with mock.patch(self.freeradius_hosts_path, ['localhost']):
             response = self.client.post(reverse('radius:authorize'), self.params)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], self.fail_msg)
+        self.assertEqual(response.data['detail'], test_fail_msg)
 
     def test_ip_from_radsetting_valid(self):
         with mock.patch(self.freeradius_hosts_path, []):
@@ -1928,6 +1932,10 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_ip_from_radsetting_invalid(self):
+        test_fail_msg = (
+            'Request rejected: (127.0.0.500) in organization settings or '
+            'settings.py is not a valid IP address. Please contact administrator.'
+        )
         radsetting = OrganizationRadiusSettings.objects.get(
             organization=self._get_org()
         )
@@ -1936,7 +1944,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         with mock.patch(self.freeradius_hosts_path, []):
             response = self.client.post(reverse('radius:authorize'), self.params)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], self.fail_msg)
+        self.assertEqual(response.data['detail'], test_fail_msg)
 
     @capture_any_output()
     def test_ip_from_radsetting_not_exist(self):
