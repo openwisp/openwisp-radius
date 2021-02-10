@@ -1659,7 +1659,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
 
         with self.subTest('Test registration endpoint disabled for org'):
             settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
-            settings_obj.registration_api_enabled = False
+            settings_obj.registration_enabled = False
             settings_obj.save()
             r = self.client.post(
                 url,

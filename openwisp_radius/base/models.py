@@ -1089,10 +1089,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
     )
     registration_enabled = models.BooleanField(
-        null=True,
-        blank=True,
-        default=True,
-        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        null=True, blank=True, default=True, help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
 
     class Meta:

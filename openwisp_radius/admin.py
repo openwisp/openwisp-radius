@@ -507,7 +507,7 @@ class FallbackFieldMixin(object):
         super().__init__(*args, **kwargs)
 
     def prepare_value(self, value):
-        if not value:
+        if value is None:
             value = self.fallback
         return super().prepare_value(value)
 
