@@ -5,6 +5,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.forms.widgets import Select
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -25,6 +26,7 @@ from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
+    _REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
@@ -505,7 +507,7 @@ class FallbackFieldMixin(object):
         super().__init__(*args, **kwargs)
 
     def prepare_value(self, value):
-        if not value:
+        if value is None:
             value = self.fallback
         return super().prepare_value(value)
 
@@ -515,6 +517,10 @@ class FallbackCharField(FallbackFieldMixin, forms.CharField):
 
 
 class FallbackChoiceField(FallbackFieldMixin, forms.ChoiceField):
+    pass
+
+
+class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
     pass
 
 
@@ -530,6 +536,18 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+    )
+    registration_enabled = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                ('', _('Default') + f' ({app_settings.REGISTRATION_API_ENABLED})'),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
     )
     first_name = FallbackChoiceField(
         required=False,
@@ -567,6 +585,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                 'fields': (
                     'token',
                     'freeradius_allowed_hosts',
+                    'registration_enabled',
                     'first_name',
                     'last_name',
                     'birth_date',
