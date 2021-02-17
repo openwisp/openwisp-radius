@@ -524,6 +524,12 @@ class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
     pass
 
 
+def _enabled_disabled_helper():
+    if app_settings.REGISTRATION_API_ENABLED:
+        return _('Enabled')
+    return _('Disabled')
+
+
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
     freeradius_allowed_hosts = FallbackCharField(
         required=False,
@@ -541,7 +547,7 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         required=False,
         widget=Select(
             choices=[
-                ('', _('Default') + f' ({app_settings.REGISTRATION_API_ENABLED})'),
+                ('', _('Default') + f' ({_enabled_disabled_helper()})'),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
             ]

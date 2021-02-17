@@ -381,12 +381,23 @@ the configuration should be simply changed to:
 
 **Default**: ``True``
 
-Indicates whether the API registration view is enabled or not. When this setting is disabled
-(i.e. ``False``), the registration API view is disabled. Unless specified,
-this defaults to the global value for each organization.
+Indicates whether the API registration view is enabled or not.
+When this setting is disabled (i.e. ``False``), the registration API view is disabled.
 
-**Note**: This setting can be overridden by individual organizations via the admin
-interface in `organization-specific settings <api.html#user-registration>`_.
+**This setting can be overridden in individual organizations
+via the admin interface**, by going to *Organizations*
+then edit a specific organization and scroll down to
+*"Organization RADIUS settings"*, as shown in the screenshot below.
+
+.. image:: /images/organization_registration_setting.png
+   :alt: Organization RADIUS settings
+
+.. note::
+
+    We recommend using the override via the admin interface only when there
+    are special organizations which need a different configuration, otherwise,
+    if all the organization use the same configuration, we recommend
+    changing the global setting.
 
 Email related settings
 ======================

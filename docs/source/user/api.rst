@@ -338,6 +338,12 @@ List of Endpoints
 User Registration
 -----------------
 
+.. important::
+
+    This endpoint is enabled by default but can be disabled either
+    via a `global setting or from the admin interface
+    <settings.html#openwisp-radius-registration-api-enabled>`_.
+
 .. code-block:: text
 
   /api/v1/<organization-slug>/account/
@@ -366,13 +372,6 @@ SMS verification in its "Organization RADIUS Settings".
 (\*\*) ``first_name``, ``last_name``, ``birth_date`` and ``location``
 are optional fields which are disabled by default to make the registration
 simple, but can be `enabled through configuration <./settings.html#openwisp-radius-optional-registration-fields>`_.
-
-This endpoint can be enabled/disabled from "Organization RADIUS Settings"
-of each organization, or with a `global setting <settings.html#openwisp-radius-registration-api-enabled>`_
-that applies to all organizations unless overridden as shown below:
-
-.. image:: /images/organization_registration_setting.png
-   :alt: Organization change page freeradius settings
 
 Reset password
 --------------
