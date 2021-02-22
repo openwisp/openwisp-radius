@@ -23,5 +23,17 @@ def is_sms_verification_enabled(org):
             f'Got exception while accessing radius_settings for {org.name}'
         )
         raise APIException(
-            _('Could not complete operation ' 'because of an internal misconfiguration')
+            _('Could not complete operation because of an internal misconfiguration')
+        )
+
+
+def needs_identity_verification(org):
+    try:
+        return org.radius_settings.needs_identity_verification
+    except ObjectDoesNotExist:
+        logger.exception(
+            f'Got exception while accessing radius_settings for {org.name}'
+        )
+        raise APIException(
+            _('Could not complete operation because of an internal misconfiguration')
         )

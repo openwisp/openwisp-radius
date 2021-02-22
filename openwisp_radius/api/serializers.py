@@ -28,7 +28,11 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..utils import load_model
-from .utils import ErrorDictMixin, is_sms_verification_enabled
+from .utils import (
+    ErrorDictMixin,
+    is_sms_verification_enabled,
+    needs_identity_verification,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +388,7 @@ class RegisterSerializer(
             )
             if value:
                 setattr(user, field_name, value)
-        if is_sms_verification_enabled(org):
+        if needs_identity_verification(org):
             user.is_active = False
         try:
             user.full_clean()

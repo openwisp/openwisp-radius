@@ -107,6 +107,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         super().setUp()
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_verification = True
+        radius_settings.needs_identity_verification = True
         radius_settings.sms_sender = '+595972157632'
         radius_settings.sms_meta_data = {
             'clientId': 3,

@@ -26,6 +26,7 @@ from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
+    _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
     _REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
@@ -44,6 +45,7 @@ PhoneToken = load_model('PhoneToken')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
@@ -59,6 +61,10 @@ class OrganizationFirstMixin(MultitenantAdminMixin):
 
 class TimeStampedEditableAdmin(TimeReadonlyAdminMixin, ModelAdmin):
     ordering = ['created']
+
+
+class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
+    pass
 
 
 @admin.register(RadiusCheck)
@@ -498,7 +504,16 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-UserAdminInline.inlines += [RadiusUserGroupInline, PhoneTokenInline]
+class RegisteredUserInline(admin.StackedInline):
+    model = RegisteredUser
+    form = AlwaysHasChangedForm
+
+
+UserAdminInline.inlines += [
+    RadiusUserGroupInline,
+    PhoneTokenInline,
+    RegisteredUserInline,
+]
 
 
 class FallbackFieldMixin(object):
@@ -530,7 +545,7 @@ def _enabled_disabled_helper():
     return _('Disabled')
 
 
-class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
+class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
     freeradius_allowed_hosts = FallbackCharField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
@@ -553,6 +568,18 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
             ]
         ),
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
+    )
+    needs_identity_verification = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                ('', _('Default') + f' ({_enabled_disabled_helper()})'),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
         fallback='',
     )
     first_name = FallbackChoiceField(
@@ -583,7 +610,7 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
-    form = AlwaysHasChangedForm
+    form = OrganizationRadiusSettingsForm
     fieldsets = (
         (
             None,
@@ -592,6 +619,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'token',
                     'freeradius_allowed_hosts',
                     'registration_enabled',
+                    'needs_identity_verification',
                     'first_name',
                     'last_name',
                     'birth_date',
