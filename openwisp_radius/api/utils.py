@@ -4,6 +4,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 
+from .. import settings as app_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,9 +33,4 @@ def needs_identity_verification(org):
     try:
         return org.radius_settings.needs_identity_verification
     except ObjectDoesNotExist:
-        logger.exception(
-            f'Got exception while accessing radius_settings for {org.name}'
-        )
-        raise APIException(
-            _('Could not complete operation because of an internal misconfiguration')
-        )
+        return app_settings.NEEDS_IDENTITY_VERIFICATION

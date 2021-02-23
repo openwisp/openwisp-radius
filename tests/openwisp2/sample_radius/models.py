@@ -1,4 +1,6 @@
+from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import signals
 
 from openwisp_radius.base.models import (
     AbstractNas,
@@ -14,8 +16,10 @@ from openwisp_radius.base.models import (
     AbstractRadiusReply,
     AbstractRadiusToken,
     AbstractRadiusUserGroup,
+    AbstractRegisteredUser,
 )
 
+User = get_user_model()
 
 class DetailsModel(models.Model):
     details = models.CharField(max_length=64, blank=True, null=True)
@@ -87,3 +91,22 @@ class OrganizationRadiusSettings(DetailsModel, AbstractOrganizationRadiusSetting
 class PhoneToken(DetailsModel, AbstractPhoneToken):
     class Meta(AbstractPhoneToken.Meta):
         abstract = False
+
+
+class RegisteredUser(DetailsModel, AbstractRegisteredUser):
+    class Meta(AbstractRegisteredUser.Meta):
+        abstract = False
+
+
+def auto_create_registered_user(sender, instance, created, **kwargs):
+    if created:
+        RegisteredUser.objects.create(user=instance)
+
+
+# Create a new RegisteredUser object for every user
+signals.post_save.connect(
+    auto_create_registered_user,
+    sender=User,
+    weak=False,
+    dispatch_uid='models.auto_create_registered_user',
+)

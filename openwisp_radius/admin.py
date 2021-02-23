@@ -504,9 +504,16 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-class RegisteredUserInline(admin.StackedInline):
+class RegisteredUserInline(StackedInline):
     model = RegisteredUser
+    extra = 0
     form = AlwaysHasChangedForm
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 UserAdminInline.inlines += [
