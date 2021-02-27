@@ -81,11 +81,17 @@ class TestRadiusCheck(BaseTestCase):
         self.assertIsInstance(radiuscheck.pk, UUID)
 
     def test_auto_username(self):
+        org = self.default_org
         u = get_user_model().objects.create(
             username='test', email='test@test.org', password='test'
         )
+        self._create_org_user(organization=org, user=u)
         c = self._create_radius_check(
-            user=u, op=':=', attribute='Max-Daily-Session', value='3600'
+            user=u,
+            op=':=',
+            attribute='Max-Daily-Session',
+            value='3600',
+            organization=org,
         )
         self.assertEqual(c.username, u.username)
 
@@ -100,11 +106,17 @@ class TestRadiusCheck(BaseTestCase):
             self.fail('ValidationError not raised')
 
     def test_change_user_username(self):
+        org = self.default_org
         u = get_user_model().objects.create(
             username='test', email='test@test.org', password='test'
         )
+        self._create_org_user(organization=org, user=u)
         c = self._create_radius_check(
-            user=u, op=':=', attribute='Max-Daily-Session', value='3600'
+            user=u,
+            op=':=',
+            attribute='Max-Daily-Session',
+            value='3600',
+            organization=org,
         )
         u.username = 'changed'
         u.full_clean()
@@ -129,6 +141,26 @@ class TestRadiusCheck(BaseTestCase):
         )
         self.assertEqual(obj.value, '891fc570507eef023cbfec043dd5f2b1')
 
+    def test_user_different_organization(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        org2 = self._create_org(**{'name': 'org2', 'slug': 'org2'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        try:
+            self._create_radius_check(
+                user=u,
+                op=':=',
+                attribute='Max-Daily-Session',
+                value='3600',
+                organization=org2,
+            )
+        except ValidationError as e:
+            self.assertIn('organization', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
+
 
 class TestRadiusReply(BaseTestCase):
     def test_string_representation(self):
@@ -140,11 +172,17 @@ class TestRadiusReply(BaseTestCase):
         self.assertIsInstance(radiusreply.pk, UUID)
 
     def test_auto_username(self):
+        org = self.default_org
         u = get_user_model().objects.create(
             username='test', email='test@test.org', password='test'
         )
+        self._create_org_user(organization=org, user=u)
         r = self._create_radius_reply(
-            user=u, attribute='Reply-Message', op=':=', value='Login failed'
+            user=u,
+            attribute='Reply-Message',
+            op=':=',
+            value='Login failed',
+            organization=org,
         )
         self.assertEqual(r.username, u.username)
 
@@ -159,11 +197,17 @@ class TestRadiusReply(BaseTestCase):
             self.fail('ValidationError not raised')
 
     def test_change_user_username(self):
+        org = self.default_org
         u = get_user_model().objects.create(
             username='test', email='test@test.org', password='test'
         )
+        self._create_org_user(organization=org, user=u)
         r = self._create_radius_reply(
-            user=u, attribute='Reply-Message', op=':=', value='Login failed'
+            user=u,
+            attribute='Reply-Message',
+            op=':=',
+            value='Login failed',
+            organization=org,
         )
         u.username = 'changed'
         u.full_clean()
@@ -171,6 +215,26 @@ class TestRadiusReply(BaseTestCase):
         r.refresh_from_db()
         # ensure related records have been updated
         self.assertEqual(r.username, u.username)
+
+    def test_user_different_organization(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        org2 = self._create_org(**{'name': 'org2', 'slug': 'org2'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        try:
+            self._create_radius_reply(
+                user=u,
+                attribute='Reply-Message',
+                op=':=',
+                value='Login failed',
+                organization=org2,
+            )
+        except ValidationError as e:
+            self.assertIn('organization', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
 
 
 class TestRadiusPostAuth(BaseTestCase):
