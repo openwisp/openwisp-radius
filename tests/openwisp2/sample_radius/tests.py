@@ -1,17 +1,25 @@
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
-from openwisp_radius.tests.test_api import TestApi as BaseTestApi
-from openwisp_radius.tests.test_api import TestApiPhoneToken as BaseTestApiPhoneToken
-from openwisp_radius.tests.test_api import TestApiReject as BaseTestApiReject
-from openwisp_radius.tests.test_api import TestApiUserToken as BaseTestApiUserToken
-from openwisp_radius.tests.test_api import (
-    TestApiValidateToken as BaseTestApiValidateToken,
+from openwisp_radius.tests.test_api.test_freeradius_api import (
+    TestApiReject as BaseTestApiReject,
 )
-from openwisp_radius.tests.test_api import TestAutoGroupname as BaseTestAutoGroupname
-from openwisp_radius.tests.test_api import (
+from openwisp_radius.tests.test_api.test_freeradius_api import (
+    TestAutoGroupname as BaseTestAutoGroupname,
+)
+from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestAutoGroupnameDisabled as BaseTestAutoGroupnameDisabled,
 )
-from openwisp_radius.tests.test_api import (
+from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
+)
+from openwisp_radius.tests.test_api.test_phone_token import (
+    TestApiPhoneToken as BaseTestApiPhoneToken,
+)
+from openwisp_radius.tests.test_api.test_phone_token import (
+    TestApiValidateToken as BaseTestApiValidateToken,
+)
+from openwisp_radius.tests.test_api.test_registration import TestApi as BaseTestApi
+from openwisp_radius.tests.test_api.test_rest_token import (
+    TestApiUserToken as BaseTestApiUserToken,
 )
 from openwisp_radius.tests.test_batch_add_users import (
     TestCSVUpload as BaseTestCSVUpload,
