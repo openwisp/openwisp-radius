@@ -21,6 +21,7 @@ from openwisp_radius.base.models import (
 
 User = get_user_model()
 
+
 class DetailsModel(models.Model):
     details = models.CharField(max_length=64, blank=True, null=True)
 

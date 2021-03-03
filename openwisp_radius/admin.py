@@ -506,7 +506,6 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
 
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
-    extra = 0
     form = AlwaysHasChangedForm
 
     def has_add_permission(self, request, obj):
