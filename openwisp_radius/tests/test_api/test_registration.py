@@ -28,8 +28,8 @@ from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ... import settings as app_settings
 from ...utils import load_model
+from .. import FileMixin
 from ..mixins import ApiTokenMixin, BaseTestCase
-from .. import _TEST_DATE, FileMixin
 
 User = get_user_model()
 RadiusToken = load_model('RadiusToken')
@@ -1311,7 +1311,7 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         self.assertEqual(User.objects.count(), 0)
         path_csv = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'static', 'test_batch.csv'
+            os.path.dirname(os.path.dirname(__file__)), 'static', 'test_batch.csv'
         )
         with open(path_csv, 'rt') as file:
             data = self._radius_batch_csv_data(csvfile=file)

@@ -175,9 +175,8 @@ class AuthorizeView(GenericAPIView):
         """
         try:
             filter_kwargs = dict(is_active=True)
-            # get organization settings from id in token to check for verification
-            org_settings = Organization.objects.get(pk=request._auth).radius_settings
-            if org_settings.needs_identity_verification:
+            organization = Organization.objects.get(pk=request._auth)
+            if needs_identity_verification(organization):
                 filter_kwargs['registereduser__is_verified'] = True
             user = auth_backend.get_users(username).filter(**filter_kwargs)[0]
         except IndexError:
