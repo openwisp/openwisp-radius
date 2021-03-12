@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -45,6 +45,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 
+from openwisp_radius.models import RegisteredUser
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -63,7 +64,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import ErrorDictMixin, needs_identity_verification
+from .utils import ErrorDictMixin, IDVerificationHelper
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -342,6 +343,8 @@ class RegisterView(
 
     def get_response_data(self, user):
         data = super().get_response_data(user)
+        # create a RegisteredUser object for every user that registers through API
+        RegisteredUser.objects.create(user=user)
         radius_token = self.get_or_create_radius_token(
             user, self.organization, enable_auth=False
         )
@@ -352,7 +355,9 @@ class RegisterView(
 register = RegisterView.as_view()
 
 
-class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
+class ObtainAuthTokenView(
+    DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken, IDVerificationHelper
+):
     throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
@@ -385,16 +390,15 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         response = {
             'radius_user_token': radius_token.key,
             'is_active': user.is_active,
-            'is_verified': user.registereduser.is_verified,
+            'is_verified': self._is_user_verified(user),
         }
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
         organization = Organization.objects.get(slug=kwargs['slug'])
         # If identity verification is required, check if user is verified
-        if (
-            needs_identity_verification(organization)
-            and not user.registereduser.is_verified
-        ):
+        if self._needs_identity_verification(
+            organization
+        ) and not self._is_user_verified(user):
             status_code = 401
         return Response(response, status=status_code)
 
@@ -411,7 +415,9 @@ class ValidateTokenSerializer(serializers.Serializer):
     token = serializers.CharField()
 
 
-class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
+class ValidateAuthTokenView(
+    DispatchOrgMixin, RadiusTokenMixin, CreateAPIView, IDVerificationHelper
+):
     throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
 
@@ -431,7 +437,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                 radius_token = self.get_or_create_radius_token(
                     user, self.organization, renew=renew_required
                 )
-                if not user.registereduser.is_verified:
+                if not self._is_user_verified(user):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by('-created')
@@ -449,7 +455,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                     'username': user.username,
                     'email': user.email,
                     'is_active': user.is_active,
-                    'is_verified': user.registereduser.is_verified,
+                    'is_verified': self._is_user_verified(user),
                     'phone_number': str(phone_number),
                 }
                 self.update_user_last_login(token.user)

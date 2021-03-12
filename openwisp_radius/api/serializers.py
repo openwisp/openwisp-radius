@@ -28,11 +28,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..utils import load_model
-from .utils import (
-    ErrorDictMixin,
-    is_sms_verification_enabled,
-    needs_identity_verification,
-)
+from .utils import ErrorDictMixin, IDVerificationHelper, is_sms_verification_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +320,10 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
 
 
 class RegisterSerializer(
-    ErrorDictMixin, AllowedMobilePrefixMixin, BaseRegisterSerializer
+    ErrorDictMixin,
+    AllowedMobilePrefixMixin,
+    BaseRegisterSerializer,
+    IDVerificationHelper,
 ):
     phone_number = PhoneNumberField(
         help_text=(
@@ -388,7 +387,7 @@ class RegisterSerializer(
             )
             if value:
                 setattr(user, field_name, value)
-        if needs_identity_verification(org):
+        if self._needs_identity_verification(org):
             user.is_active = False
         try:
             user.full_clean()

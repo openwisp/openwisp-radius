@@ -108,17 +108,3 @@ class RegisteredUser(AbstractRegisteredUser):
     class Meta(AbstractRegisteredUser.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'RegisteredUser')
-
-
-def auto_create_registered_user(sender, instance, created, **kwargs):
-    if created:
-        RegisteredUser.objects.create(user=instance)
-
-
-# Create a new RegisteredUser object for every user
-signals.post_save.connect(
-    auto_create_registered_user,
-    sender=User,
-    weak=False,
-    dispatch_uid='models.auto_create_registered_user',
-)

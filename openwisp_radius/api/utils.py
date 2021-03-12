@@ -17,6 +17,20 @@ class ErrorDictMixin(object):
         return dict_
 
 
+class IDVerificationHelper(object):
+    def _needs_identity_verification(self, org):
+        try:
+            return org.radius_settings.needs_identity_verification
+        except ObjectDoesNotExist:
+            return app_settings.NEEDS_IDENTITY_VERIFICATION
+
+    def _is_user_verified(self, user):
+        try:
+            return user.registereduser.is_verified
+        except ObjectDoesNotExist:
+            return False
+
+
 def is_sms_verification_enabled(org):
     try:
         return org.radius_settings.sms_verification
@@ -27,10 +41,3 @@ def is_sms_verification_enabled(org):
         raise APIException(
             _('Could not complete operation because of an internal misconfiguration')
         )
-
-
-def needs_identity_verification(org):
-    try:
-        return org.radius_settings.needs_identity_verification
-    except ObjectDoesNotExist:
-        return app_settings.NEEDS_IDENTITY_VERIFICATION

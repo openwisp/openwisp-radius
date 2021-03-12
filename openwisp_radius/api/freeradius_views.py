@@ -17,7 +17,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..utils import load_model
 from .serializers import AuthorizeSerializer, RadiusPostAuthSerializer
-from .utils import needs_identity_verification
+from .utils import IDVerificationHelper
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 logger = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return uuid, token
 
 
-class AuthorizeView(GenericAPIView):
+class AuthorizeView(GenericAPIView, IDVerificationHelper):
     authentication_classes = (FreeradiusApiAuthentication,)
     accept_attributes = {'control:Auth-Type': 'Accept'}
     accept_status = 200
@@ -176,7 +176,7 @@ class AuthorizeView(GenericAPIView):
         try:
             filter_kwargs = dict(is_active=True)
             organization = Organization.objects.get(pk=request._auth)
-            if needs_identity_verification(organization):
+            if self._needs_identity_verification(organization):
                 filter_kwargs['registereduser__is_verified'] = True
             user = auth_backend.get_users(username).filter(**filter_kwargs)[0]
         except IndexError:
