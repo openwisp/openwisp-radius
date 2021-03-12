@@ -28,6 +28,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 from private_storage.storage.files import PrivateFileSystemStorage
 
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 
@@ -49,7 +50,6 @@ from ..utils import (
     validate_csvfile,
 )
 from .validators import ipv6_network_validator
-from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

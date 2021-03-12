@@ -399,6 +399,38 @@ then edit a specific organization and scroll down to
     if all the organization use the same configuration, we recommend
     changing the global setting.
 
+``NEEDS_IDENTITY_VERIFICATION``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Indicates whether organizations require a user to be verified in order to login.
+This can be overridden globally or for each organization separately via the admin
+interface.
+
+If this is enabled, each registered user should be verified using a verification method,
+by default, the following choices are available:
+  - No Identity Verification (When verification is disabled)
+  - Mobile Phone
+
+A new verification method can be added or an existing method can be removed using the
+``register_verification_choice`` and ``unregister_verification_choice`` functions
+respectively. For example:
+
+.. code-block:: python
+
+    from openwisp_radius.verification_methods import (
+        register_verification_choice,
+        unregister_verification_choice,
+    )
+
+    # Enable registering via national digital ID
+    register_verification_choice('national_id', 'National Digital ID')
+
+    # Remove mobile verification method
+    unregister_verification_choice('mobile')
+
+
 Email related settings
 ======================
 

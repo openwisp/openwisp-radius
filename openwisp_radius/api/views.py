@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -45,7 +45,6 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 
-from openwisp_radius.models import RegisteredUser
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -80,6 +79,7 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 auth_backend = UsersAuthenticationBackend()

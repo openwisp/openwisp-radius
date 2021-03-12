@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db.models import signals
 from swapper import swappable_setting
 
 from .base.models import (

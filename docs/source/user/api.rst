@@ -486,6 +486,7 @@ Returns:
 - the user API access token, which will be needed to authenticate the user to
   eventual subsequent API requests (eg: change password)
 - ``is_active`` attribute of the user
+- ``is_verified`` attribute of the user
 
 If the user account is inactive the endpoint will send the data anyway but using the
 HTTP status code 401, this way consumers can recognize these users and trigger
@@ -523,6 +524,7 @@ radius_user_token  string
 response_code      string to be used for translation
 username           string
 is_active          boolean
+is_verified        boolean
 phone_number       string
 =================  ===============================
 
