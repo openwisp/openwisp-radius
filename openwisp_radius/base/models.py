@@ -49,6 +49,7 @@ from ..utils import (
     validate_csvfile,
 )
 from .validators import ipv6_network_validator
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -57,10 +58,6 @@ OPTIONAL_FIELD_CHOICES = (
     ('disabled', _('Disabled')),
     ('allowed', _('Allowed')),
     ('mandatory', _('Mandatory')),
-)
-IDENTITY_VERIFICATION_CHOICES = (
-    (None, _('No Identity Verification')),
-    ('mobile', _('Mobile Phone')),
 )
 
 RADOP_CHECK_TYPES = (
