@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.db import models
 
 from openwisp_radius.base.models import (
@@ -17,8 +16,6 @@ from openwisp_radius.base.models import (
     AbstractRadiusUserGroup,
     AbstractRegisteredUser,
 )
-
-User = get_user_model()
 
 
 class DetailsModel(models.Model):

@@ -4,6 +4,8 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
+
 
 class Migration(migrations.Migration):
 
@@ -40,10 +42,7 @@ class Migration(migrations.Migration):
                     'identity_verification',
                     models.CharField(
                         blank=True,
-                        choices=[
-                            (None, 'No Identity Verification'),
-                            ('mobile', 'Mobile Phone'),
-                        ],
+                        choices=IDENTITY_VERIFICATION_CHOICES,
                         default=None,
                         max_length=64,
                         null=True,

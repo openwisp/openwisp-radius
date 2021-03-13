@@ -1,6 +1,5 @@
 import logging
 
-from django.contrib.auth import get_user_model
 from swapper import swappable_setting
 
 from .base.models import (
@@ -21,8 +20,6 @@ from .base.models import (
 )
 
 logger = logging.getLogger(__name__)
-
-User = get_user_model()
 
 
 class RadiusCheck(AbstractRadiusCheck):
