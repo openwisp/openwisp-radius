@@ -394,10 +394,9 @@ class ObtainAuthTokenView(
         }
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
-        organization = Organization.objects.get(slug=kwargs['slug'])
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
-            organization
+            {'slug': kwargs['slug']}
         ) and not self._is_user_verified(user):
             status_code = 401
         return Response(response, status=status_code)

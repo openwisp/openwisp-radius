@@ -3,10 +3,13 @@ import logging
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
+from swapper import load_model
 
 from .. import settings as app_settings
 
 logger = logging.getLogger(__name__)
+
+Organization = load_model('openwisp_users', 'Organization')
 
 
 class ErrorDictMixin(object):
@@ -18,8 +21,11 @@ class ErrorDictMixin(object):
 
 
 class IDVerificationHelper(object):
-    def _needs_identity_verification(self, org):
+    def _needs_identity_verification(self, organization_filter_kwargs):
         try:
+            org = Organization.objects.select_related('radius_settings').get(
+                **organization_filter_kwargs
+            )
             return org.radius_settings.needs_identity_verification
         except ObjectDoesNotExist:
             return app_settings.NEEDS_IDENTITY_VERIFICATION

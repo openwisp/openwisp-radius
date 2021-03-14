@@ -1054,7 +1054,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     needs_identity_verification = models.BooleanField(
         null=True,
         blank=True,
-        default=False,
+        default=None,
         help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
     )
     sms_sender = models.CharField(

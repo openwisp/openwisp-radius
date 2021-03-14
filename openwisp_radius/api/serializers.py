@@ -387,7 +387,9 @@ class RegisterSerializer(
             )
             if value:
                 setattr(user, field_name, value)
-        if self._needs_identity_verification(org):
+        if self._needs_identity_verification(
+            {'slug': self.context['view'].kwargs['slug']}
+        ):
             user.is_active = False
         try:
             user.full_clean()

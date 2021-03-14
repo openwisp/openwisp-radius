@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             name='needs_identity_verification',
             field=models.BooleanField(
                 blank=True,
-                default=False,
+                default=None,
                 help_text='Whether identity verification is required at the time of'
                 ' user registration',
                 null=True,
