@@ -23,6 +23,7 @@ from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
 
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
@@ -36,6 +37,7 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
@@ -337,6 +339,14 @@ class RegisterSerializer(
     last_name = serializers.CharField(required=False)
     location = serializers.CharField(required=False)
     birth_date = serializers.DateField(required=False)
+    identity_verification = serializers.ChoiceField(
+        help_text=(
+            'Required only when the organization has mandatory identity '
+            'verification in its "Organization RADIUS Settings."'
+        ),
+        default='',
+        choices=IDENTITY_VERIFICATION_CHOICES,
+    )
 
     def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
@@ -373,11 +383,17 @@ class RegisterSerializer(
         adapter.save_user(request, user, self, commit=False)
         # the custom_signup method contains the openwisp specific logic
         self.custom_signup(request, user)
+        # create a RegisteredUser object for every user that registers through API
+        RegisteredUser.objects.create(
+            user=user,
+            identity_verification=self.validated_data['identity_verification'],
+        )
         setup_user_email(request, user, [])
         return user
 
     def custom_signup(self, request, user, save=True):
         phone_number = self.validated_data['phone_number']
+        identity_verification = self.validated_data['identity_verification']
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
@@ -391,6 +407,14 @@ class RegisterSerializer(
             {'slug': self.context['view'].kwargs['slug']}
         ):
             user.is_active = False
+            if identity_verification is None:
+                raise serializers.ValidationError(
+                    {
+                        'identity_verification': _(
+                            'This field is required for this organization'
+                        )
+                    }
+                )
         try:
             user.full_clean()
         except ValidationError as e:

@@ -343,8 +343,6 @@ class RegisterView(
 
     def get_response_data(self, user):
         data = super().get_response_data(user)
-        # create a RegisteredUser object for every user that registers through API
-        RegisteredUser.objects.create(user=user)
         radius_token = self.get_or_create_radius_token(
             user, self.organization, enable_auth=False
         )
