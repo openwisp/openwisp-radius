@@ -545,8 +545,8 @@ class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
     pass
 
 
-def _enabled_disabled_helper():
-    if app_settings.REGISTRATION_API_ENABLED:
+def _enabled_disabled_helper(field):
+    if getattr(app_settings, field):
         return _('Enabled')
     return _('Disabled')
 
@@ -568,7 +568,11 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         required=False,
         widget=Select(
             choices=[
-                ('', _('Default') + f' ({_enabled_disabled_helper()})'),
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("REGISTRATION_API_ENABLED")})',
+                ),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
             ]
@@ -580,7 +584,11 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         required=False,
         widget=Select(
             choices=[
-                ('', _('Default') + f' ({_enabled_disabled_helper()})'),
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("NEEDS_IDENTITY_VERIFICATION")})',
+                ),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
             ]

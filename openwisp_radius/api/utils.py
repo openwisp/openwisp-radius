@@ -26,7 +26,10 @@ class IDVerificationHelper(object):
             org = Organization.objects.select_related('radius_settings').get(
                 **organization_filter_kwargs
             )
-            return org.radius_settings.needs_identity_verification
+            id_ver = org.radius_settings.needs_identity_verification
+            if id_ver is None:
+                return app_settings.NEEDS_IDENTITY_VERIFICATION
+            return id_ver
         except ObjectDoesNotExist:
             return app_settings.NEEDS_IDENTITY_VERIFICATION
 

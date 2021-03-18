@@ -13,6 +13,10 @@ from openwisp_utils.tests import capture_any_output
 from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
 from ..utils import load_model
+from ..verification_methods import (
+    register_verification_choice,
+    unregister_verification_choice,
+)
 from . import CallCommandMixin, FileMixin, PostParamsMixin
 from .mixins import BaseTestCase
 
@@ -1078,3 +1082,22 @@ class TestAdmin(
                     'prefixes separated by comma. (no spaces)'
                 ),
             )
+
+    def test_inline_registereduser(self):
+        app_label = User._meta.app_label
+        user = User.objects.first()
+        url = reverse(f'admin:{app_label}_user_change', args=[user.pk])
+
+        with self.subTest('Inline exists'):
+            response = self.client.get(url)
+            self.assertContains(response, 'id_registereduser-0-identity_verification')
+
+        with self.subTest('Register new choice'):
+            register_verification_choice('national_id', verbose_name='National ID')
+            response = self.client.get(url)
+            self.assertContains(response, '<option value="national_id">National ID')
+
+        with self.subTest('Unregister existing choice'):
+            unregister_verification_choice('mobile')
+            response = self.client.get(url)
+            self.assertNotContains(response, '<option value="mobile">Mobile Phone')

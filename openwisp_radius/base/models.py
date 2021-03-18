@@ -1359,7 +1359,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(models.Model):
+class AbstractRegisteredUser(AutoUsernameMixin, models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     identity_verification = models.CharField(
         max_length=64,
@@ -1374,6 +1374,3 @@ class AbstractRegisteredUser(models.Model):
         abstract = True
         verbose_name = _('Identity Verification')
         verbose_name_plural = verbose_name
-
-    def __str__(self):
-        return str(self.user.username)
