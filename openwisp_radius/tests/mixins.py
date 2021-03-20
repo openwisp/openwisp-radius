@@ -86,10 +86,10 @@ class GetEditFormInlineMixin(object):
                 'phonetoken_set-MIN_NUM_FORMS': 0,
                 'phonetoken_set-MAX_NUM_FORMS': 0,
                 # registered user inline
-                'registereduser-TOTAL_FORMS': 0,
-                'registereduser-INITIAL_FORMS': 0,
-                'registereduser-MIN_NUM_FORMS': 0,
-                'registereduser-MAX_NUM_FORMS': 0,
+                'registered_user-TOTAL_FORMS': 0,
+                'registered_user-INITIAL_FORMS': 0,
+                'registered_user-MIN_NUM_FORMS': 0,
+                'registered_user-MAX_NUM_FORMS': 0,
             }
         )
         return params

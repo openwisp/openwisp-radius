@@ -1083,14 +1083,14 @@ class TestAdmin(
                 ),
             )
 
-    def test_inline_registereduser(self):
+    def test_inline_registered_user(self):
         app_label = User._meta.app_label
         user = User.objects.first()
         url = reverse(f'admin:{app_label}_user_change', args=[user.pk])
 
         with self.subTest('Inline exists'):
             response = self.client.get(url)
-            self.assertContains(response, 'id_registereduser-0-identity_verification')
+            self.assertContains(response, 'id_registered_user-0-identity_verification')
 
         with self.subTest('Register new choice'):
             register_verification_choice('national_id', verbose_name='National ID')

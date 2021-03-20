@@ -1360,7 +1360,11 @@ class AbstractPhoneToken(TimeStampedEditableModel):
 
 
 class AbstractRegisteredUser(AutoUsernameMixin, models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='registered_user',
+    )
     identity_verification = models.CharField(
         max_length=64,
         default=None,
