@@ -155,6 +155,7 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
 _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
+_ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 
 
 class AutoUsernameMixin(object):
@@ -162,8 +163,19 @@ class AutoUsernameMixin(object):
         """
         automatically sets username
         """
+        if (
+            self.username
+            and User.objects.filter(username=self.username).exists()
+            and not self.user
+        ):
+            self.user = User.objects.get(username=self.username)
+
         if self.user:
             self.username = self.user.username
+            if hasattr(self, 'organization') and not self.user.is_member(
+                self.organization
+            ):
+                raise ValidationError({'organization': _ORGANIZATION_HELP_TEXT})
         elif not self.username:
             raise ValidationError(
                 {'username': _NOT_BLANK_MESSAGE, 'user': _NOT_BLANK_MESSAGE}
