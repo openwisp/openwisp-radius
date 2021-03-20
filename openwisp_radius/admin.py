@@ -7,10 +7,10 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.forms.widgets import Select
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from openwisp_users.admin import OrganizationAdmin
-from openwisp_users.admin import UserAdmin as UserAdminInline
+from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
 from openwisp_utils.admin import (
     AlwaysHasChangedMixin,
@@ -507,19 +507,32 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
-
-    def has_add_permission(self, request, obj):
-        return False
+    extra = 0
 
     def has_delete_permission(self, request, obj=None):
         return False
 
 
-UserAdminInline.inlines += [
+UserAdmin.inlines.insert(0, RegisteredUserInline)
+UserAdmin.inlines += [
     RadiusUserGroupInline,
     PhoneTokenInline,
-    RegisteredUserInline,
 ]
+
+
+def get_is_verified(self, obj):
+    try:
+        value = 'yes' if obj.registered_user.is_verified else 'no'
+    except Exception:
+        value = 'unknown'
+
+    return mark_safe(f'<img src="/static/admin/img/icon-{value}.svg" alt="{value}">')
+
+
+UserAdmin.get_is_verified = get_is_verified
+UserAdmin.get_is_verified.short_description = _('Verified')
+UserAdmin.list_display.insert(3, 'get_is_verified')
+UserAdmin.list_select_related = ('registered_user',)
 
 
 class FallbackFieldMixin(object):
@@ -671,7 +684,7 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         def has_delete_permission(self, request, obj=None):
             return False
 
-    UserAdminInline.inlines += [SocialAccountInline]
+    UserAdmin.inlines += [SocialAccountInline]
 
     Token = apps.get_model('authtoken', 'Token')
 
