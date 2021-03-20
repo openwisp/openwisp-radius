@@ -410,8 +410,9 @@ interface.
 
 If this is enabled, each registered user should be verified using a verification method,
 by default, the following choices are available:
-- No Identity Verification (When verification is disabled)
-- Mobile Phone
+
+- Email (No Identity Verification)
+- Mobile Phone (SMS)
 
 Adding support for more identity verification methods
 #####################################################

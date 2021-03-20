@@ -2,8 +2,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
 IDENTITY_VERIFICATION_CHOICES = [
-    (None, _('No Identity Verification')),
-    ('mobile', _('Mobile Phone')),
+    (None, _('Email (No Identity Verification)')),
+    ('mobile', _('Mobile Phone (SMS)')),
 ]
 
 
