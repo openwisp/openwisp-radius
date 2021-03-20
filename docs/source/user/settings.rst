@@ -414,7 +414,7 @@ by default, the following choices are available:
 - Mobile Phone
 
 Adding support for more identity verification methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#####################################################
 
 For those intend to implement additional identity verification methods, such as a
 National ID card, a new verification method can be added or an existing method can be
