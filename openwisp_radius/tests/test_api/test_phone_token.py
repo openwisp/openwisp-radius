@@ -216,10 +216,11 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
     @capture_any_output()
-    def test_create_phone_token_201_user_already_active(self):
+    def test_create_phone_token_201_user_already_verified(self):
         self.test_register_201()
         token = Token.objects.last()
-        token.user.is_active = True
+        token.user.registered_user.is_verified = True
+        token.user.registered_user.save()
         token.user.save()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
@@ -353,10 +354,11 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 401)
 
     @capture_any_output()
-    def test_validate_phone_token_400_user_already_active(self):
+    def test_validate_phone_token_400_user_already_verified(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
-        user.is_active = True
+        user.registered_user.is_verified = True
+        user.registered_user.save()
         user.save()
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
@@ -368,7 +370,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
-        self.assertIn('already active', str(r.data['non_field_errors']))
+        self.assertIn('already verified', str(r.data['non_field_errors']))
 
     def test_validate_phone_token_400_no_token(self):
         self.test_register_201()

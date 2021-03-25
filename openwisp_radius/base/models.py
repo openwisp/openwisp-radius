@@ -14,7 +14,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Count, ProtectedError
@@ -1326,9 +1326,14 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return self.verified
 
     def __check(self, token):
-        if self.user.is_active:
-            logger.warning(_(f'User {self.user.pk} is already active'))
-            raise exceptions.UserAlreadyActive(_('This user is already active.'))
+        try:
+            if self.user.registered_user.is_verified:
+                logger.warning(_(f'User {self.user.pk} is already verified'))
+                raise exceptions.UserAlreadyVerified(
+                    _('This user is already verified.')
+                )
+        except ObjectDoesNotExist:
+            pass
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
                 _(

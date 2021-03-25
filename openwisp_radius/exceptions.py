@@ -2,7 +2,7 @@ class PhoneTokenException(Exception):
     pass
 
 
-class UserAlreadyActive(PhoneTokenException):
+class UserAlreadyVerified(PhoneTokenException):
     pass
 
 
