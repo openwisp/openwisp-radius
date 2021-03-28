@@ -204,6 +204,16 @@ API and user token related settings
 
 These settings control details related to the API and the radius user token.
 
+``OPENWISP_RADIUS_API_BASEURL``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``/radiusbatch/csv/``
+
+If you have a seperate instance of openwisp-radius API on a
+different domain, you can use this option to change the base of the image
+download url, this will enable you to point to your API server's domain,
+example value: https://myradius.myapp.com/radiusbatch/csv/.
+
 ``OPENWISP_RADIUS_API``
 ~~~~~~~~~~~~~~~~~~~~~~~
 

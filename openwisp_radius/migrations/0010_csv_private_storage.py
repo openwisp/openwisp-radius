@@ -7,6 +7,8 @@ from django.db import migrations
 
 import openwisp_radius.base.models
 
+from .. import settings as app_settings
+
 
 class Migration(migrations.Migration):
 
@@ -23,7 +25,7 @@ class Migration(migrations.Migration):
                 help_text='The csv file containing the user details to be uploaded',
                 null=True,
                 storage=private_storage.storage.files.PrivateFileSystemStorage(
-                    base_url='/radiusbatch/csv/',
+                    base_url=app_settings.RADIUS_API_BASEURL,
                     location=settings.PRIVATE_STORAGE_ROOT,
                 ),
                 upload_to=openwisp_radius.base.models._get_csv_file_location,

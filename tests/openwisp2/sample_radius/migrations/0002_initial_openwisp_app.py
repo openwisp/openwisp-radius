@@ -20,6 +20,7 @@ import openwisp_radius.utils
 import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
+from openwisp_radius.settings import RADIUS_API_BASEURL
 
 
 class Migration(migrations.Migration):
@@ -671,7 +672,7 @@ class Migration(migrations.Migration):
                         ),
                         null=True,
                         storage=private_storage.storage.files.PrivateFileSystemStorage(
-                            base_url='/radiusbatch/csv/',
+                            base_url=RADIUS_API_BASEURL,
                             location=settings.PRIVATE_STORAGE_ROOT,
                         ),
                         upload_to=openwisp_radius.base.models._get_csv_file_location,
