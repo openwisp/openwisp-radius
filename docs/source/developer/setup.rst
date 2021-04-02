@@ -35,6 +35,9 @@ Install from pypi:
 
 .. code-block:: shell
 
+    # REQUIRED: update base python packages
+    pip install -U pip setuptools wheel
+    # install openwisp-radius
     pip install openwisp-radius
 
 Install development version
@@ -44,21 +47,30 @@ Install tarball:
 
 .. code-block:: shell
 
+    # REQUIRED: update base python packages
+    pip install -U pip setuptools wheel
+    # install openwisp-radius
     pip install https://github.com/openwisp/openwisp-radius/tarball/master
 
 Alternatively you can install via pip using git:
 
 .. code-block:: shell
 
+    # REQUIRED: update base python packages
+    pip install -U pip setuptools wheel
+    # install openwisp-radius
     pip install -e git+git://github.com/openwisp/openwisp-radius#egg=openwisp-radius
 
 If you want to contribute, install your cloned fork:
 
 .. code-block:: shell
 
+    # REQUIRED: update base python packages
+    pip install -U pip setuptools wheel
+    # install your forked openwisp-radius
     git clone git@github.com:<your_fork>/openwisp-radius.git
     cd openwisp-radius
-    python setup.py develop
+    pip install -e .
 
 Setup (integrate in an existing django project)
 -----------------------------------------------
@@ -140,7 +152,7 @@ Add the URLs to your main ``urls.py``:
 
     urlpatterns = [
         # ... other urls in your project ...
-        
+
         # django admin interface urls
         path('admin/', admin.site.urls),
         # openwisp-radius urls
