@@ -364,9 +364,16 @@ class RegisterSerializer(
         return phone_number
 
     def validate_optional_fields(self, field_name, field_value, org):
-        field_setting = getattr(
-            org.radius_settings, field_name
-        ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
+        if field_name == 'identity_verification':
+            field_setting = (
+                'mandatory'
+                if self._needs_identity_verification({'slug': org.slug}) is True
+                else None
+            )
+        else:
+            field_setting = getattr(
+                org.radius_settings, field_name
+            ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
         if field_setting == 'mandatory' and not field_value:
             raise serializers.ValidationError(
                 {f'{field_name}': _('This field is required.')}
@@ -393,11 +400,16 @@ class RegisterSerializer(
 
     def custom_signup(self, request, user, save=True):
         phone_number = self.validated_data['phone_number']
-        identity_verification = self.validated_data['identity_verification']
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
-        for field_name in ['first_name', 'last_name', 'location', 'birth_date']:
+        for field_name in [
+            'first_name',
+            'last_name',
+            'location',
+            'birth_date',
+            'identity_verification',
+        ]:
             value = self.validate_optional_fields(
                 field_name, self.validated_data.get(field_name, ''), org
             )
@@ -407,14 +419,6 @@ class RegisterSerializer(
             {'slug': self.context['view'].kwargs['slug']}
         ):
             user.is_active = False
-            if identity_verification is None:
-                raise serializers.ValidationError(
-                    {
-                        'identity_verification': _(
-                            'This field is required for this organization'
-                        )
-                    }
-                )
         try:
             user.full_clean()
         except ValidationError as e:

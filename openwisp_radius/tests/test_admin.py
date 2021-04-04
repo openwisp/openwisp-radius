@@ -1104,6 +1104,8 @@ class TestAdmin(
             self.assertNotContains(
                 response, '<option value="mobile">Mobile Phone (SMS)'
             )
+        # re-register so that other tests are not affected
+        register_verification_choice('mobile')
 
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()

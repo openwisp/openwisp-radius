@@ -127,6 +127,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '',
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -149,6 +150,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 201)
@@ -170,6 +172,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+393664255801',
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -504,6 +507,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             'email': 'test@email.com',
             'password1': 'password',
             'password2': 'password',
+            'identity_verification': 'mobile',
         }
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         msg = 'This international mobile prefix is not allowed.'
@@ -716,6 +720,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237678879231',
+                'identity_verification': 'mobile',
             }
         )
         self._create_user_helper(
@@ -725,6 +730,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
+                'identity_verification': 'mobile',
             }
         )
         self._test_phone_number_unique_helper('+237678879231')
@@ -744,6 +750,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
+                'identity_verification': 'mobile',
             }
         )
         user = User.objects.get(email='user2@gmail.com')
@@ -781,6 +788,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 201)

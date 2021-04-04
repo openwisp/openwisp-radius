@@ -1690,3 +1690,32 @@ class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
                 },
             )
             self.assertEqual(r.status_code, 403)
+
+    def test_register_verification_field(self):
+        self._superuser_login()
+        self.default_org.radius_settings.needs_identity_verification = True
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'password1': 'password',
+            'password2': 'password',
+        }
+        # Ensure no user is created and error is raised
+        users_count = User.objects.count()
+        r = self.client.post(url, params)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.data['identity_verification'], 'This field is required.')
+        self.assertEqual(User.objects.count(), users_count)
+
+        with self.subTest('method `mobile` when verification optional'):
+            self.default_org.radius_settings.needs_identity_verification = False
+            self.default_org.radius_settings.save()
+            params['username'] = 'test2'
+            params['email'] = 'test2@gmail.com'
+            params['identity_verification'] = 'mobile'
+            r = self.client.post(url, params)
+            self.assertEqual(r.status_code, 201)
+            self.assertEqual(User.objects.count(), 2)
