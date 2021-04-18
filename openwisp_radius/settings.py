@@ -26,7 +26,7 @@ def get_settings_value(option, default):
 
 
 RADIUS_API = get_settings_value('API', True)
-RADIUS_API_BASEURL = get_settings_value('API_BASEURL', '/radiusbatch/csv/')
+RADIUS_API_BASEURL = get_settings_value('API_BASEURL', '/')
 EDITABLE_ACCOUNTING = get_settings_value('EDITABLE_ACCOUNTING', False)
 EDITABLE_POSTAUTH = get_settings_value('EDITABLE_POSTAUTH', False)
 GROUPCHECK_ADMIN = get_settings_value('GROUPCHECK_ADMIN', False)
@@ -123,3 +123,6 @@ except AssertionError:  # pragma: no cover
         'lower would not be safe and higher would not be practical from '
         'a ux perspective.'
     )
+
+# Path of urls that need to be refered in migrations files.
+CSV_URL_PATH = 'radiusbatch/csv/'

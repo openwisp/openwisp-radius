@@ -2,6 +2,7 @@
 
 import re
 import uuid
+from urllib.parse import urljoin
 
 import django.core.validators
 import django.db.models.deletion
@@ -20,7 +21,7 @@ import openwisp_radius.utils
 import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
-from openwisp_radius.settings import RADIUS_API_BASEURL
+from openwisp_radius.settings import CSV_URL_PATH, RADIUS_API_BASEURL
 
 
 class Migration(migrations.Migration):
@@ -672,7 +673,7 @@ class Migration(migrations.Migration):
                         ),
                         null=True,
                         storage=private_storage.storage.files.PrivateFileSystemStorage(
-                            base_url=RADIUS_API_BASEURL,
+                            base_url=urljoin(RADIUS_API_BASEURL, CSV_URL_PATH),
                             location=settings.PRIVATE_STORAGE_ROOT,
                         ),
                         upload_to=openwisp_radius.base.models._get_csv_file_location,
