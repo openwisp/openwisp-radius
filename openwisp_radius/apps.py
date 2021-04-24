@@ -1,9 +1,11 @@
 import swapper
-from django.apps import AppConfig
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
+
+from openwisp_utils.api.apps import ApiAppConfig
+from openwisp_utils.utils import default_or_test
 
 from .receivers import (
     create_default_groups_handler,
@@ -14,12 +16,29 @@ from .receivers import (
 from .utils import load_model, update_user_related_records
 
 
-class OpenwispRadiusConfig(AppConfig):
+class OpenwispRadiusConfig(ApiAppConfig):
     name = 'openwisp_radius'
     label = 'openwisp_radius'
     verbose_name = 'Freeradius'
 
+    API_ENABLED = True
+    REST_FRAMEWORK_SETTINGS = {
+        'DEFAULT_THROTTLE_RATES': {
+            # None by default
+            'authorize': None,
+            'postauth': None,
+            'accounting': None,
+            'obtain_auth_token': None,
+            'validate_auth_token': None,
+            'create_phone_token': None,
+            'validate_phone_token': None,
+            # Relaxed throttling Policy
+            'others': default_or_test('400/hour', None),
+        },
+    }
+
     def ready(self, *args, **kwargs):
+        super().ready(*args, **kwargs)
         self.connect_signals()
         self.add_default_menu_items()
 

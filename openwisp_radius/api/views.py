@@ -122,6 +122,7 @@ class AccountingView(ListCreateAPIView):
           processing the response without generating warnings
     """
 
+    throttle_scope = 'accounting'
     queryset = RadiusAccounting.objects.all().order_by('-start_time')
     authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusAccountingSerializer
@@ -179,7 +180,11 @@ class AccountingView(ListCreateAPIView):
 accounting = AccountingView.as_view()
 
 
-class BatchView(CreateAPIView):
+class ThrottledAPIMixin(object):
+    throttle_scope = 'others'
+
+
+class BatchView(ThrottledAPIMixin, CreateAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
@@ -232,7 +237,7 @@ class DispatchOrgMixin(object):
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
-class DownloadRadiusBatchPdfView(DispatchOrgMixin, RetrieveAPIView):
+class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
@@ -329,7 +334,9 @@ class RadiusTokenMixin(object):
         responses={201: RegisterResponse},
     ),
 )
-class RegisterView(RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView):
+class RegisterView(
+    ThrottledAPIMixin, RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView
+):
     authentication_classes = tuple()
     permission_classes = (IsRegistrationEnabled,)
 
@@ -346,6 +353,7 @@ register = RegisterView.as_view()
 
 
 class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
+    throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
     authentication_classes = []
@@ -393,6 +401,7 @@ class ValidateTokenSerializer(serializers.Serializer):
 
 
 class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
+    throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
 
     def post(self, request, *args, **kwargs):
@@ -456,7 +465,7 @@ class UserAccountingFilter(AccountingFilter):
         """,
     ),
 )
-class UserAccountingView(DispatchOrgMixin, ListAPIView):
+class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
     serializer_class = RadiusAccountingSerializer
@@ -482,7 +491,7 @@ class UserAccountingView(DispatchOrgMixin, ListAPIView):
 user_accounting = UserAccountingView.as_view()
 
 
-class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
+class PasswordChangeView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordChangeView):
     authentication_classes = (BearerAuthentication,)
 
     @swagger_auto_schema(responses={200: '`{"detail":"New password has been saved."}`'})
@@ -499,7 +508,7 @@ class PasswordChangeView(DispatchOrgMixin, BasePasswordChangeView):
 password_change = PasswordChangeView.as_view()
 
 
-class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
+class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
 
     @swagger_auto_schema(
@@ -550,7 +559,9 @@ class PasswordResetView(DispatchOrgMixin, BasePasswordResetView):
 password_reset = PasswordResetView.as_view()
 
 
-class PasswordResetConfirmView(DispatchOrgMixin, BasePasswordResetConfirmView):
+class PasswordResetConfirmView(
+    ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
+):
     authentication_classes = tuple()
 
     @swagger_auto_schema(
@@ -614,6 +625,7 @@ class InactiveBearerTokenAuthentication(BearerAuthentication):
 class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
+    throttle_scope = 'create_phone_token'
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
@@ -640,6 +652,7 @@ create_phone_token = CreatePhoneTokenView.as_view()
 
 
 class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
+    throttle_scope = 'validate_phone_token'
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
@@ -695,7 +708,7 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
         responses={200: ''},
     ),
 )
-class ChangePhoneNumberView(CreatePhoneTokenView):
+class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
