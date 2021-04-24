@@ -180,11 +180,11 @@ class AccountingView(ListCreateAPIView):
 accounting = AccountingView.as_view()
 
 
-class ProtectedAPIMixin(object):
+class ThrottledAPIMixin(object):
     throttle_scope = 'others'
 
 
-class BatchView(ProtectedAPIMixin, CreateAPIView):
+class BatchView(ThrottledAPIMixin, CreateAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
@@ -237,7 +237,7 @@ class DispatchOrgMixin(object):
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
-class DownloadRadiusBatchPdfView(ProtectedAPIMixin, DispatchOrgMixin, RetrieveAPIView):
+class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.all()
@@ -335,7 +335,7 @@ class RadiusTokenMixin(object):
     ),
 )
 class RegisterView(
-    ProtectedAPIMixin, RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView
+    ThrottledAPIMixin, RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView
 ):
     authentication_classes = tuple()
     permission_classes = (IsRegistrationEnabled,)
@@ -465,7 +465,7 @@ class UserAccountingFilter(AccountingFilter):
         """,
     ),
 )
-class UserAccountingView(ProtectedAPIMixin, DispatchOrgMixin, ListAPIView):
+class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticated,)
     serializer_class = RadiusAccountingSerializer
@@ -491,7 +491,7 @@ class UserAccountingView(ProtectedAPIMixin, DispatchOrgMixin, ListAPIView):
 user_accounting = UserAccountingView.as_view()
 
 
-class PasswordChangeView(ProtectedAPIMixin, DispatchOrgMixin, BasePasswordChangeView):
+class PasswordChangeView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordChangeView):
     authentication_classes = (BearerAuthentication,)
 
     @swagger_auto_schema(responses={200: '`{"detail":"New password has been saved."}`'})
@@ -508,7 +508,7 @@ class PasswordChangeView(ProtectedAPIMixin, DispatchOrgMixin, BasePasswordChange
 password_change = PasswordChangeView.as_view()
 
 
-class PasswordResetView(ProtectedAPIMixin, DispatchOrgMixin, BasePasswordResetView):
+class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
 
     @swagger_auto_schema(
@@ -560,7 +560,7 @@ password_reset = PasswordResetView.as_view()
 
 
 class PasswordResetConfirmView(
-    ProtectedAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
+    ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
 ):
     authentication_classes = tuple()
 
@@ -708,7 +708,7 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
         responses={200: ''},
     ),
 )
-class ChangePhoneNumberView(ProtectedAPIMixin, CreatePhoneTokenView):
+class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     authentication_classes = (InactiveBearerTokenAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
