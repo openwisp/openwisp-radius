@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # openwisp admin theme
     'openwisp_utils.admin_theme',
+    'openwisp_users.accounts',
     # all-auth
     'django.contrib.sites',
     'allauth',
