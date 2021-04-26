@@ -272,6 +272,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token.attempts, 1)
         user.refresh_from_db()
         self.assertTrue(user.is_active)
+        self.assertTrue(user.registered_user.is_verified)
+        self.assertEqual(user.registered_user.identity_verification, 'mobile')
 
     @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
@@ -620,6 +622,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(phone_token_qs.count(), 1)
 
         with self.subTest('test change number allowed at org level'):
+            user.registered_user.is_verified = False
+            user.registered_user.save()
             radius_settings = self.default_org.radius_settings
             radius_settings.allowed_mobile_prefixes = '+1,+44'
             radius_settings.full_clean()

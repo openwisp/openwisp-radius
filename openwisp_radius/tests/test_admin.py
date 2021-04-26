@@ -1169,7 +1169,7 @@ class TestAdmin(
             )
 
         with self.subTest('Verified users filter'):
-            response = self.client.get(f'{url}?is_verified=true')
+            response = self.client.get(url, {'is_verified': 'true'})
             self.assertContains(response, get_expected_html('yes'))
             self.assertNotContains(response, get_expected_html('no'))
             self.assertNotContains(response, get_expected_html('unknown'))

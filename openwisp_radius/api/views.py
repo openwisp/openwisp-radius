@@ -702,9 +702,11 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             return self._error_response(_('Invalid code.'))
         else:
             user.registered_user.is_verified = True
+            user.registered_user.identity_verification = 'mobile'
             user.is_active = True
             user.phone_number = phone_token.phone_number
             user.save()
+            user.registered_user.save()
             return Response(None, status=200)
 
 
