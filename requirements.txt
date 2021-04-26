@@ -1,6 +1,7 @@
 django>=3.0,<3.2
 swapper~=1.1.0
-openwisp-utils[rest]~=0.7
+# TODO: change this when next point version of openwisp-utils is released
+openwisp-utils[rest] @ https://github.com/openwisp/openwisp-utils/tarball/master
 passlib~=1.7.1
 djangorestframework-link-header-pagination~=0.1.1
 weasyprint>=43,<53
@@ -13,5 +14,5 @@ jsonfield~=3.1.0
 django-private-storage~=2.2
 celery~=4.4.0
 django-ipware~=3.0.0
-drf-yasg~=1.20.0
+
 
