@@ -1,31 +1,68 @@
 import ipaddress
 import logging
 
+import drf_link_header_pagination
 import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
+from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from ipware import get_client_ip
-from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BaseAuthentication, SessionAuthentication
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ParseError
-from rest_framework.generics import CreateAPIView, GenericAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    GenericAPIView,
+    ListAPIView,
+    ListCreateAPIView,
+)
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..utils import load_model
-from .serializers import AuthorizeSerializer, RadiusPostAuthSerializer
+from .serializers import (
+    AuthorizeSerializer,
+    RadiusAccountingSerializer,
+    RadiusPostAuthSerializer,
+)
+from .utils import DispatchOrgMixin, ThrottledAPIMixin
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model('RadiusToken')
+RadiusAccounting = load_model('RadiusAccounting')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 auth_backend = UsersAuthenticationBackend()
+
+
+# Radius Accounting
+class AccountingFilter(filters.FilterSet):
+    start_time = filters.DateTimeFilter(field_name='start_time', lookup_expr='gte')
+    stop_time = filters.DateTimeFilter(field_name='stop_time', lookup_expr='lte')
+    is_open = filters.BooleanFilter(
+        field_name='stop_time', lookup_expr='isnull', label='Is Open'
+    )
+
+    class Meta:
+        model = RadiusAccounting
+        fields = (
+            'username',
+            'called_station_id',
+            'calling_station_id',
+            'start_time',
+            'stop_time',
+            'is_open',
+        )
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
@@ -216,6 +253,82 @@ class AuthorizeView(GenericAPIView):
 authorize = AuthorizeView.as_view()
 
 
+class AccountingViewPagination(drf_link_header_pagination.LinkHeaderPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class AccountingView(ListCreateAPIView):
+    """
+    HEADER: Pagination is provided using a Link header
+            https://developer.github.com/v3/guides/traversing-with-pagination/
+
+    GET: get list of accounting objects
+
+    POST: add or update accounting information (start, interim-update, stop);
+          does not return any JSON response so that freeradius will avoid
+          processing the response without generating warnings
+    """
+
+    throttle_scope = 'accounting'
+    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+    authentication_classes = (FreeradiusApiAuthentication,)
+    serializer_class = RadiusAccountingSerializer
+    pagination_class = AccountingViewPagination
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = AccountingFilter
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.auth)
+
+    def get(self, request, *args, **kwargs):
+        """
+        **API Endpoint used by FreeRADIUS server.**
+        Returns a list of accounting objects
+        """
+        return super().get(self, request, *args, **kwargs)
+
+    @swagger_auto_schema(responses={201: '', 200: ''})
+    def post(self, request, *args, **kwargs):
+        """
+        **API Endpoint used by FreeRADIUS server.**
+        Add or update accounting information (start, interim-update, stop);
+        does not return any JSON response so that freeradius will avoid
+        processing the response without generating warnings
+        """
+        data = request.data.copy()
+        # Accounting-On and Accounting-Off are not implemented and
+        # hence  ignored right now - may be implemented in the future
+        if data.get('status_type', None) in ['Accounting-On', 'Accounting-Off']:
+            return Response(None)
+        # Create or Update
+        try:
+            instance = self.get_queryset().get(unique_id=data.get('unique_id'))
+        except RadiusAccounting.DoesNotExist:
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
+            serializer.create(acct_data)
+            headers = self.get_success_headers(serializer.data)
+            return Response(None, status=201, headers=headers)
+        else:
+            serializer = self.get_serializer(instance, data=data, partial=False)
+            serializer.is_valid(raise_exception=True)
+            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
+            serializer.update(instance, acct_data)
+            return Response(None)
+
+    def _data_to_acct_model(self, valid_data):
+        acct_org = Organization.objects.get(pk=self.request.auth)
+        valid_data.pop('status_type', None)
+        valid_data['organization'] = acct_org
+        return valid_data
+
+
+accounting = AccountingView.as_view()
+
+
 class PostAuthView(CreateAPIView):
     authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusPostAuthSerializer
@@ -237,3 +350,46 @@ class PostAuthView(CreateAPIView):
 
 
 postauth = PostAuthView.as_view()
+
+
+class UserAccountingFilter(AccountingFilter):
+    class Meta(AccountingFilter.Meta):
+        fields = [
+            field for field in AccountingFilter.Meta.fields if field != 'username'
+        ]
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Returns the radius sessions of the logged-in user and the organization
+        specified in the URL.
+        """,
+    ),
+)
+class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RadiusAccountingSerializer
+    pagination_class = AccountingViewPagination
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = UserAccountingFilter
+    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+
+    def list(self, request, *args, **kwargs):
+        self.request = request
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return super().get_queryset()  # pragma: no cover
+        return (
+            super()
+            .get_queryset()
+            .filter(organization=self.organization, username=self.request.user.username)
+        )
+
+
+user_accounting = UserAccountingView.as_view()
