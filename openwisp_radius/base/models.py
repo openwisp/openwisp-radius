@@ -8,6 +8,7 @@ from datetime import timedelta
 from hashlib import md5, sha1
 from io import StringIO
 from os import urandom
+from urllib.parse import urljoin
 
 import phonenumbers
 import swapper
@@ -803,7 +804,8 @@ class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
 
 
 _get_csv_file_private_storage = PrivateFileSystemStorage(
-    location=settings.PRIVATE_STORAGE_ROOT, base_url='/radiusbatch/csv/',
+    location=settings.PRIVATE_STORAGE_ROOT,
+    base_url=urljoin(app_settings.RADIUS_API_BASEURL, app_settings.CSV_URL_PATH),
 )
 
 
