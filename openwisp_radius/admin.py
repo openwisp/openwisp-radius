@@ -616,7 +616,6 @@ OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
 # minimum required to configure social login and check if it's working
 if app_settings.SOCIAL_LOGIN_ENABLED:
     from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
-    from django.apps import apps
 
     class SocialAccountInline(admin.StackedInline):
         model = SocialAccount
@@ -630,11 +629,8 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
             return False
 
     UserAdminInline.inlines += [SocialAccountInline]
-
-    Token = apps.get_model('authtoken', 'TokenProxy')
-
-    admin.site.unregister(Token)
     admin.site.register(SocialApp, SocialAppAdmin)
+
 
 if settings.DEBUG:
 
