@@ -7,6 +7,5 @@ sphinx
 sphinx_rtd_theme
 freezegun
 django-extensions
-# TODO: change this when next point version of openwisp-utils is released
-openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master
+openwisp-utils[qa]
 pylinkvalidator
