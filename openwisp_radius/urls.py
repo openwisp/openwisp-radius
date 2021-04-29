@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from django.urls import include, path
 
 from . import settings as app_settings
@@ -17,7 +19,7 @@ def get_urls(api_views=None, social_views=None):
     urls = [
         path('api/v1/', include(get_api_urls(api_views))),
         path(
-            'radiusbatch/csv/<path:csvfile>',
+            urljoin(app_settings.CSV_URL_PATH, '<path:csvfile>'),
             rad_batch_csv_download_view,
             name='serve_private_file',
         ),
