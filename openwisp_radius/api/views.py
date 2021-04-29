@@ -375,7 +375,6 @@ class ObtainAuthTokenView(
         serializer = self.auth_serializer_class(
             data=request.data, context={'request': request}
         )
-        # import ipdb; ipdb.set_trace()
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
