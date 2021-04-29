@@ -14,4 +14,3 @@ jsonfield~=3.1.0
 django-private-storage~=2.2
 celery~=4.4.0
 django-ipware~=3.0.0
-
