@@ -1366,7 +1366,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(AutoUsernameMixin, models.Model):
+class AbstractRegisteredUser(UUIDModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
