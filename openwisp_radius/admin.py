@@ -688,7 +688,7 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         def has_delete_permission(self, request, obj=None):
             return False
 
-    UserAdminInline.inlines += [SocialAccountInline]
+    UserAdmin.inlines += [SocialAccountInline]
     admin.site.register(SocialApp, SocialAppAdmin)
 
 
