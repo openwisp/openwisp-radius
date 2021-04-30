@@ -328,7 +328,7 @@ class RegisterSerializer(
     IDVerificationHelper,
 ):
     phone_number = PhoneNumberField(
-        help_text=(
+        help_text=_(
             'Required only when the organization has enabled SMS '
             'verification in its "Organization RADIUS Settings."'
         ),
@@ -340,7 +340,7 @@ class RegisterSerializer(
     location = serializers.CharField(required=False)
     birth_date = serializers.DateField(required=False)
     identity_verification = serializers.ChoiceField(
-        help_text=(
+        help_text=_(
             'Required only when the organization has mandatory identity '
             'verification in its "Organization RADIUS Settings."'
         ),
