@@ -675,7 +675,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token_qs.first().phone_number, new_phone_number)
         user.refresh_from_db()
         self.assertEqual(user.phone_number, old_phone_number)
-        self.assertFalse(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     @capture_any_output()
     def test_active_user_change_phone_number_sms_on(self):

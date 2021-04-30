@@ -739,9 +739,9 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         )
         serializer.is_valid(raise_exception=True)
         # attempt to create the phone token before
-        # the user is marked inactive, so that if the
+        # the user is marked unverified, so that if the
         # creation of the phone token fails, the
-        # the user's is_active state remains unchanged
+        # the user's is_verified state remains unchanged
         self.create_phone_token(*args, **kwargs)
         serializer.save()
         return Response(None, status=200)

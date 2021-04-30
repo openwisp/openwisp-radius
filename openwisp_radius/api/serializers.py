@@ -456,5 +456,5 @@ class ChangePhoneNumberSerializer(
         return phone_number
 
     def save(self):
-        self.user.is_active = False
-        self.user.save()
+        self.user.registered_user.is_verified = False
+        self.user.registered_user.save()
