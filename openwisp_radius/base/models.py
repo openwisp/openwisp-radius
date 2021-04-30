@@ -15,7 +15,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Count, ProtectedError
@@ -29,6 +29,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 from private_storage.storage.files import PrivateFileSystemStorage
 
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 
@@ -157,6 +158,9 @@ _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
 _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
+_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
+    'Whether identity verification is required at the time of user registration'
+)
 
 
 class AutoUsernameMixin(object):
@@ -1049,6 +1053,12 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             'phone number via SMS'
         ),
     )
+    needs_identity_verification = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
+    )
     sms_sender = models.CharField(
         _('Sender'),
         max_length=128,
@@ -1318,9 +1328,14 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return self.verified
 
     def __check(self, token):
-        if self.user.is_active:
-            logger.warning(_(f'User {self.user.pk} is already active'))
-            raise exceptions.UserAlreadyActive(_('This user is already active.'))
+        try:
+            if self.user.registered_user.is_verified:
+                logger.warning(_(f'User {self.user.pk} is already verified'))
+                raise exceptions.UserAlreadyVerified(
+                    _('This user is already verified.')
+                )
+        except ObjectDoesNotExist:
+            pass
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
                 _(
@@ -1349,3 +1364,24 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
         return token == self.token
+
+
+class AbstractRegisteredUser(UUIDModel):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='registered_user',
+    )
+    identity_verification = models.CharField(
+        max_length=64,
+        default=None,
+        blank=True,
+        null=True,
+        choices=IDENTITY_VERIFICATION_CHOICES,
+    )
+    is_verified = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+        verbose_name = _('Identity Verification')
+        verbose_name_plural = verbose_name

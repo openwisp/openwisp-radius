@@ -63,7 +63,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import ErrorDictMixin
+from .utils import ErrorDictMixin, IDVerificationHelper
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -79,6 +79,7 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 auth_backend = UsersAuthenticationBackend()
@@ -352,7 +353,9 @@ class RegisterView(
 register = RegisterView.as_view()
 
 
-class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken):
+class ObtainAuthTokenView(
+    DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken, IDVerificationHelper
+):
     throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
@@ -372,7 +375,6 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         serializer = self.auth_serializer_class(
             data=request.data, context={'request': request}
         )
-        # import ipdb; ipdb.set_trace()
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
@@ -382,9 +384,18 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         self.update_user_last_login(user)
         context = {'view': self, 'request': request, 'token_login': True}
         serializer = self.serializer_class(instance=token, context=context)
-        response = {'radius_user_token': radius_token.key, 'is_active': user.is_active}
+        response = {
+            'radius_user_token': radius_token.key,
+            'is_active': user.is_active,
+            'is_verified': self._is_user_verified(user),
+        }
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
+        # If identity verification is required, check if user is verified
+        if self._needs_identity_verification(
+            {'slug': kwargs['slug']}
+        ) and not self._is_user_verified(user):
+            status_code = 401
         return Response(response, status=status_code)
 
     def get_user(self, serializer, *args, **kwargs):
@@ -400,7 +411,9 @@ class ValidateTokenSerializer(serializers.Serializer):
     token = serializers.CharField()
 
 
-class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
+class ValidateAuthTokenView(
+    DispatchOrgMixin, RadiusTokenMixin, CreateAPIView, IDVerificationHelper
+):
     throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
 
@@ -420,7 +433,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                 radius_token = self.get_or_create_radius_token(
                     user, self.organization, renew=renew_required
                 )
-                if not user.is_active:
+                if not self._is_user_verified(user):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by('-created')
@@ -438,6 +451,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                     'username': user.username,
                     'email': user.email,
                     'is_active': user.is_active,
+                    'is_verified': self._is_user_verified(user),
                     'phone_number': str(phone_number),
                 }
                 self.update_user_last_login(token.user)
@@ -686,9 +700,12 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         if not is_valid:
             return self._error_response(_('Invalid code.'))
         else:
+            user.registered_user.is_verified = True
+            user.registered_user.identity_verification = 'mobile'
             user.is_active = True
             user.phone_number = phone_token.phone_number
             user.save()
+            user.registered_user.save()
             return Response(None, status=200)
 
 
@@ -722,9 +739,9 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         )
         serializer.is_valid(raise_exception=True)
         # attempt to create the phone token before
-        # the user is marked inactive, so that if the
+        # the user is marked unverified, so that if the
         # creation of the phone token fails, the
-        # the user's is_active state remains unchanged
+        # the user's is_verified state remains unchanged
         self.create_phone_token(*args, **kwargs)
         serializer.save()
         return Response(None, status=200)

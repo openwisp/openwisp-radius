@@ -16,6 +16,7 @@ from .base.models import (
     AbstractRadiusReply,
     AbstractRadiusToken,
     AbstractRadiusUserGroup,
+    AbstractRegisteredUser,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,3 +98,9 @@ class PhoneToken(AbstractPhoneToken):
     class Meta(AbstractPhoneToken.Meta):
         abstract = False
         swappable = swappable_setting('openwisp_radius', 'PhoneToken')
+
+
+class RegisteredUser(AbstractRegisteredUser):
+    class Meta(AbstractRegisteredUser.Meta):
+        abstract = False
+        swappable = swappable_setting('openwisp_radius', 'RegisteredUser')

@@ -258,11 +258,13 @@ if os.environ.get('SAMPLE_APP', False):
     OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = 'sample_radius.RadiusAccounting'
     OPENWISP_RADIUS_NAS_MODEL = 'sample_radius.Nas'
     OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = 'sample_radius.RadiusUserGroup'
+    OPENWISP_RADIUS_REGISTEREDUSER_MODEL = 'sample_radius.RadiusUserGroup'
     OPENWISP_RADIUS_RADIUSPOSTAUTH_MODEL = 'sample_radius.RadiusPostAuth'
     OPENWISP_RADIUS_RADIUSBATCH_MODEL = 'sample_radius.RadiusBatch'
     OPENWISP_RADIUS_RADIUSGROUP_MODEL = 'sample_radius.RadiusGroup'
     OPENWISP_RADIUS_RADIUSTOKEN_MODEL = 'sample_radius.RadiusToken'
     OPENWISP_RADIUS_PHONETOKEN_MODEL = 'sample_radius.PhoneToken'
+    OPENWISP_RADIUS_REGISTEREDUSER_MODEL = 'sample_radius.RegisteredUser'
     OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = (
         'sample_radius.OrganizationRadiusSettings'
     )

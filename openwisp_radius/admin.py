@@ -7,10 +7,10 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.forms.widgets import Select
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from openwisp_users.admin import OrganizationAdmin
-from openwisp_users.admin import UserAdmin as UserAdminInline
+from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
 from openwisp_utils.admin import (
     AlwaysHasChangedMixin,
@@ -20,12 +20,17 @@ from openwisp_utils.admin import (
 
 from . import settings as app_settings
 from .base.admin_actions import disable_action, enable_action
-from .base.admin_filters import DuplicateListFilter, ExpiredListFilter
+from .base.admin_filters import (
+    DuplicateListFilter,
+    ExpiredListFilter,
+    RegisteredUserFilter,
+)
 from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
 from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
+    _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
     _REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
@@ -44,6 +49,7 @@ PhoneToken = load_model('PhoneToken')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
@@ -59,6 +65,10 @@ class OrganizationFirstMixin(MultitenantAdminMixin):
 
 class TimeStampedEditableAdmin(TimeReadonlyAdminMixin, ModelAdmin):
     ordering = ['created']
+
+
+class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
+    pass
 
 
 @admin.register(RadiusCheck)
@@ -498,7 +508,36 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-UserAdminInline.inlines += [RadiusUserGroupInline, PhoneTokenInline]
+class RegisteredUserInline(StackedInline):
+    model = RegisteredUser
+    form = AlwaysHasChangedForm
+    extra = 0
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+UserAdmin.inlines.insert(0, RegisteredUserInline)
+UserAdmin.inlines += [
+    RadiusUserGroupInline,
+    PhoneTokenInline,
+]
+UserAdmin.list_filter += (RegisteredUserFilter,)
+
+
+def get_is_verified(self, obj):
+    try:
+        value = 'yes' if obj.registered_user.is_verified else 'no'
+    except Exception:
+        value = 'unknown'
+
+    return mark_safe(f'<img src="/static/admin/img/icon-{value}.svg" alt="{value}">')
+
+
+UserAdmin.get_is_verified = get_is_verified
+UserAdmin.get_is_verified.short_description = _('Verified')
+UserAdmin.list_display.insert(3, 'get_is_verified')
+UserAdmin.list_select_related = ('registered_user',)
 
 
 class FallbackFieldMixin(object):
@@ -524,13 +563,13 @@ class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
     pass
 
 
-def _enabled_disabled_helper():
-    if app_settings.REGISTRATION_API_ENABLED:
+def _enabled_disabled_helper(field):
+    if getattr(app_settings, field):
         return _('Enabled')
     return _('Disabled')
 
 
-class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
+class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
     freeradius_allowed_hosts = FallbackCharField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
@@ -547,12 +586,32 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
         required=False,
         widget=Select(
             choices=[
-                ('', _('Default') + f' ({_enabled_disabled_helper()})'),
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("REGISTRATION_API_ENABLED")})',
+                ),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
             ]
         ),
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
+    )
+    needs_identity_verification = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("NEEDS_IDENTITY_VERIFICATION")})',
+                ),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
         fallback='',
     )
     first_name = FallbackChoiceField(
@@ -583,7 +642,7 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
-    form = AlwaysHasChangedForm
+    form = OrganizationRadiusSettingsForm
     fieldsets = (
         (
             None,
@@ -592,6 +651,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'token',
                     'freeradius_allowed_hosts',
                     'registration_enabled',
+                    'needs_identity_verification',
                     'first_name',
                     'last_name',
                     'birth_date',
@@ -628,7 +688,7 @@ if app_settings.SOCIAL_LOGIN_ENABLED:
         def has_delete_permission(self, request, obj=None):
             return False
 
-    UserAdminInline.inlines += [SocialAccountInline]
+    UserAdmin.inlines += [SocialAccountInline]
     admin.site.register(SocialApp, SocialAppAdmin)
 
 

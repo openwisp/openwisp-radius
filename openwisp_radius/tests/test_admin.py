@@ -13,6 +13,10 @@ from openwisp_utils.tests import capture_any_output
 from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
 from ..utils import load_model
+from ..verification_methods import (
+    register_verification_choice,
+    unregister_verification_choice,
+)
 from . import CallCommandMixin, FileMixin, PostParamsMixin
 from .mixins import BaseTestCase
 
@@ -24,6 +28,7 @@ RadiusCheck = load_model('RadiusCheck')
 RadiusToken = load_model('RadiusToken')
 RadiusGroup = load_model('RadiusGroup')
 RadiusReply = load_model('RadiusReply')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
@@ -1078,3 +1083,105 @@ class TestAdmin(
                     'prefixes separated by comma. (no spaces)'
                 ),
             )
+
+    def test_inline_registered_user(self):
+        app_label = User._meta.app_label
+        user = User.objects.first()
+        url = reverse(f'admin:{app_label}_user_change', args=[user.pk])
+
+        with self.subTest('Inline exists'):
+            response = self.client.get(url)
+            self.assertContains(response, 'id_registered_user-TOTAL_FORMS')
+
+        with self.subTest('Register new choice'):
+            register_verification_choice('national_id', verbose_name='National ID')
+            response = self.client.get(url)
+            self.assertContains(response, '<option value="national_id">National ID')
+
+        with self.subTest('Unregister existing choice'):
+            unregister_verification_choice('mobile')
+            response = self.client.get(url)
+            self.assertNotContains(
+                response, '<option value="mobile">Mobile Phone (SMS)'
+            )
+        # re-register so that other tests are not affected
+        register_verification_choice('mobile')
+
+    def test_get_is_verified_user_admin_list(self):
+        unknown = User.objects.first()
+        self.assertIsNotNone(unknown)
+        verified = User(
+            username='verified', password='verified', email='verified@test.com'
+        )
+        verified.full_clean()
+        verified.save()
+        RegisteredUser.objects.create(
+            user=verified, identity_verification='mobile_phone', is_verified=True
+        )
+        unverified = User.objects.create(
+            username='unverified', password='unverified', email='unverified@test.com'
+        )
+        unverified.full_clean()
+        unverified.save()
+        RegisteredUser.objects.create(
+            user=unverified, identity_verification='mobile_phone', is_verified=False
+        )
+        app_label = User._meta.app_label
+        url = reverse(f'admin:{app_label}_user_changelist')
+        response = self.client.get(url)
+
+        def get_expected_html(value):
+            return (
+                '<td class="field-get_is_verified"><img src="/static/admin/img/icon-'
+                f'{value}.svg" alt="{value}">'
+            )
+
+        self.assertContains(response, get_expected_html('yes'))
+        self.assertContains(response, get_expected_html('no'))
+        self.assertContains(response, get_expected_html('unknown'))
+
+    def test_registered_user_filter(self):
+        unknown = User.objects.first()
+        self.assertIsNotNone(unknown)
+        verified = User(
+            username='verified', password='verified', email='verified@test.com'
+        )
+        verified.full_clean()
+        verified.save()
+        RegisteredUser.objects.create(
+            user=verified, identity_verification='mobile_phone', is_verified=True
+        )
+        unverified = User.objects.create(
+            username='unverified', password='unverified', email='unverified@test.com'
+        )
+        unverified.full_clean()
+        unverified.save()
+        RegisteredUser.objects.create(
+            user=unverified, identity_verification='mobile_phone', is_verified=False
+        )
+        app_label = User._meta.app_label
+        url = reverse(f'admin:{app_label}_user_changelist')
+
+        def get_expected_html(value):
+            return (
+                '<td class="field-get_is_verified"><img src="/static/admin/img/icon-'
+                f'{value}.svg" alt="{value}">'
+            )
+
+        with self.subTest('Verified users filter'):
+            response = self.client.get(url, {'is_verified': 'true'})
+            self.assertContains(response, get_expected_html('yes'))
+            self.assertNotContains(response, get_expected_html('no'))
+            self.assertNotContains(response, get_expected_html('unknown'))
+
+        with self.subTest('Unverified users filter'):
+            response = self.client.get(f'{url}?is_verified=false')
+            self.assertNotContains(response, get_expected_html('yes'))
+            self.assertContains(response, get_expected_html('no'))
+            self.assertNotContains(response, get_expected_html('unknown'))
+
+        with self.subTest('Unknown verification users filter'):
+            response = self.client.get(f'{url}?is_verified=unknown')
+            self.assertNotContains(response, get_expected_html('yes'))
+            self.assertNotContains(response, get_expected_html('no'))
+            self.assertContains(response, get_expected_html('unknown'))

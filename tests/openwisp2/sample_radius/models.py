@@ -14,6 +14,7 @@ from openwisp_radius.base.models import (
     AbstractRadiusReply,
     AbstractRadiusToken,
     AbstractRadiusUserGroup,
+    AbstractRegisteredUser,
 )
 
 
@@ -86,4 +87,9 @@ class OrganizationRadiusSettings(DetailsModel, AbstractOrganizationRadiusSetting
 
 class PhoneToken(DetailsModel, AbstractPhoneToken):
     class Meta(AbstractPhoneToken.Meta):
+        abstract = False
+
+
+class RegisteredUser(DetailsModel, AbstractRegisteredUser):
+    class Meta(AbstractRegisteredUser.Meta):
         abstract = False

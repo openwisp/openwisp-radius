@@ -28,6 +28,7 @@ from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ... import settings as app_settings
 from ...utils import load_model
+from .. import FileMixin
 from ..mixins import ApiTokenMixin, BaseTestCase
 
 User = get_user_model()
@@ -41,7 +42,7 @@ Organization = swapper.load_model('openwisp_users', 'Organization')
 START_DATE = '2019-04-20T22:14:09+01:00'
 
 
-class TestApi(ApiTokenMixin, BaseTestCase):
+class TestApi(ApiTokenMixin, FileMixin, BaseTestCase):
     _test_email = 'test@openwisp.org'
     _acct_url = reverse('radius:accounting')
 
@@ -97,6 +98,17 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+
+    def test_authorize_unverified_user(self):
+        self._get_org_user()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
 
     def _test_authorize_with_user_auth_helper(self, username, password):
         r = self._authorize_user(
@@ -249,6 +261,19 @@ class TestApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data, None)
+
+    def test_authorize_radius_token_unverified_user(self):
+        user = self._get_org_user()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=user.organization
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        response = self.client.post(
+            reverse('radius:user_auth_token', args=[user.organization.slug]),
+            data={'username': 'tester', 'password': 'tester'},
+        )
+        self.assertEqual(response.status_code, 401)
 
     def test_postauth_radius_token_expired_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -1665,3 +1690,32 @@ class TestApi(ApiTokenMixin, BaseTestCase):
                 },
             )
             self.assertEqual(r.status_code, 403)
+
+    def test_register_verification_field(self):
+        self._superuser_login()
+        self.default_org.radius_settings.needs_identity_verification = True
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'password1': 'password',
+            'password2': 'password',
+        }
+        # Ensure no user is created and error is raised
+        users_count = User.objects.count()
+        r = self.client.post(url, params)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.data['identity_verification'], 'This field is required.')
+        self.assertEqual(User.objects.count(), users_count)
+
+        with self.subTest('method `mobile` when verification optional'):
+            self.default_org.radius_settings.needs_identity_verification = False
+            self.default_org.radius_settings.save()
+            params['username'] = 'test2'
+            params['email'] = 'test2@gmail.com'
+            params['identity_verification'] = 'mobile'
+            r = self.client.post(url, params)
+            self.assertEqual(r.status_code, 201)
+            self.assertEqual(User.objects.count(), 2)

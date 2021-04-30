@@ -17,6 +17,7 @@ from .mixins import BaseTestCase
 User = get_user_model()
 PhoneToken = load_model('PhoneToken')
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 
 
 class TestRadiusToken(BaseTestCase):
@@ -61,16 +62,17 @@ class TestPhoneToken(BaseTestCase):
         return token
 
     @capture_any_output()
-    def test_is_already_active(self):
+    def test_is_already_verified(self):
         token = self._create_token()
-        token.user.is_active = True
-        token.user.save()
+        RegisteredUser.objects.create(
+            user=token.user, identity_verification='mobile_phone', is_verified=True
+        )
         token.refresh_from_db()
 
         with self.subTest('existing token, running validation again should not fail'):
             self.assertEqual(token.full_clean(), None)
 
-        with self.subTest('new token with active user, validation should not fail'):
+        with self.subTest('new token with verified user, validation should not fail'):
             self._create_token(user=token.user)
             qs = PhoneToken.objects.all()
             self.assertEqual(qs.count(), 2)
