@@ -3,6 +3,7 @@ import logging
 import phonenumbers
 import swapper
 from allauth.account.adapter import get_adapter
+from allauth.account.models import EmailAddress
 from allauth.account.utils import setup_user_email
 from dj_rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
@@ -391,6 +392,8 @@ class RegisterSerializer(
         except ValidationError as e:
             raise serializers.ValidationError(self._get_error_dict(e))
         user.save()
+        email = EmailAddress(user=user, email=user.email)
+        email.send_confirmation(request=request, signup=True)
         orgUser = OrganizationUser(organization=org, user=user)
         orgUser.full_clean()
         orgUser.save()
