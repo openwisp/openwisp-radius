@@ -1,6 +1,6 @@
+from openwisp_radius.api.freeradius_views import AccountingView as BaseAccountingView
 from openwisp_radius.api.freeradius_views import AuthorizeView as BaseAuthorizeView
 from openwisp_radius.api.freeradius_views import PostAuthView as BasePostAuthView
-from openwisp_radius.api.views import AccountingView as BaseAccountingView
 from openwisp_radius.api.views import BatchView as BaseBatchView
 from openwisp_radius.api.views import ChangePhoneNumberView as BaseChangePhoneNumberView
 from openwisp_radius.api.views import CreatePhoneTokenView as BaseCreatePhoneTokenView
