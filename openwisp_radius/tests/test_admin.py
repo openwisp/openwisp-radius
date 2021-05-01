@@ -51,16 +51,6 @@ class TestAdmin(
     app_label = 'openwisp_radius'
     app_label_users = 'openwisp_users'
 
-    operator_permission_filters = [
-        {'codename__endswith': 'nas'},
-        {'codename__endswith': 'accounting'},
-        {'codename__endswith': 'batch'},
-        {'codename__endswith': 'check'},
-        {'codename__endswith': 'reply'},
-        {'codename__endswith': 'group'},
-        {'codename__endswith': 'user'},
-    ]
-
     _RADCHECK_ENTRY = {
         'username': 'Monica',
         'value': 'Cam0_liX',
