@@ -5,24 +5,16 @@ import drf_link_header_pagination
 import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from ipware import get_client_ip
-from rest_framework.authentication import BaseAuthentication, SessionAuthentication
+from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ParseError
-from rest_framework.generics import (
-    CreateAPIView,
-    GenericAPIView,
-    ListAPIView,
-    ListCreateAPIView,
-)
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import CreateAPIView, GenericAPIView, ListCreateAPIView
 from rest_framework.response import Response
 
-from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
@@ -32,7 +24,6 @@ from .serializers import (
     RadiusAccountingSerializer,
     RadiusPostAuthSerializer,
 )
-from .utils import DispatchOrgMixin, ThrottledAPIMixin
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 logger = logging.getLogger(__name__)
@@ -350,46 +341,3 @@ class PostAuthView(CreateAPIView):
 
 
 postauth = PostAuthView.as_view()
-
-
-class UserAccountingFilter(AccountingFilter):
-    class Meta(AccountingFilter.Meta):
-        fields = [
-            field for field in AccountingFilter.Meta.fields if field != 'username'
-        ]
-
-
-@method_decorator(
-    name='get',
-    decorator=swagger_auto_schema(
-        operation_description="""
-        **Requires the user auth token (Bearer Token).**
-        Returns the radius sessions of the logged-in user and the organization
-        specified in the URL.
-        """,
-    ),
-)
-class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
-    authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsAuthenticated,)
-    serializer_class = RadiusAccountingSerializer
-    pagination_class = AccountingViewPagination
-    filter_backends = (DjangoFilterBackend,)
-    filter_class = UserAccountingFilter
-    queryset = RadiusAccounting.objects.all().order_by('-start_time')
-
-    def list(self, request, *args, **kwargs):
-        self.request = request
-        return super().list(request, *args, **kwargs)
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return super().get_queryset()  # pragma: no cover
-        return (
-            super()
-            .get_queryset()
-            .filter(organization=self.organization, username=self.request.user.username)
-        )
-
-
-user_accounting = UserAccountingView.as_view()
