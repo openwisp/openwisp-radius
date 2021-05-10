@@ -1,7 +1,6 @@
 import logging
 from uuid import UUID
 
-import drf_link_header_pagination
 import swapper
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
@@ -22,7 +21,6 @@ from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
-from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
@@ -34,7 +32,6 @@ from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
-    ListCreateAPIView,
     RetrieveAPIView,
 )
 from rest_framework.permissions import (
@@ -47,13 +44,12 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
-from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException
 from ..utils import generate_pdf, load_model
 from . import freeradius_views
-from .freeradius_views import FreeradiusApiAuthentication
+from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
 from .serializers import (
     AuthTokenSerializer,
@@ -67,117 +63,18 @@ from .utils import ErrorDictMixin
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
+accounting = freeradius_views.accounting
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 renew_required = app_settings.DISPOSABLE_RADIUS_USER_TOKEN
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
-PhoneToken = load_model('PhoneToken')
-RadiusToken = load_model('RadiusToken')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
-RadiusPostAuth = load_model('RadiusPostAuth')
-RadiusAccounting = load_model('RadiusAccounting')
-RadiusBatch = load_model('RadiusBatch')
-OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
-auth_backend = UsersAuthenticationBackend()
-
-
-# Radius Accounting
-class AccountingFilter(filters.FilterSet):
-    start_time = filters.DateTimeFilter(field_name='start_time', lookup_expr='gte')
-    stop_time = filters.DateTimeFilter(field_name='stop_time', lookup_expr='lte')
-    is_open = filters.BooleanFilter(
-        field_name='stop_time', lookup_expr='isnull', label='Is Open'
-    )
-
-    class Meta:
-        model = RadiusAccounting
-        fields = (
-            'username',
-            'called_station_id',
-            'calling_station_id',
-            'start_time',
-            'stop_time',
-            'is_open',
-        )
-
-
-class AccountingViewPagination(drf_link_header_pagination.LinkHeaderPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
-class AccountingView(ListCreateAPIView):
-    """
-    HEADER: Pagination is provided using a Link header
-            https://developer.github.com/v3/guides/traversing-with-pagination/
-
-    GET: get list of accounting objects
-
-    POST: add or update accounting information (start, interim-update, stop);
-          does not return any JSON response so that freeradius will avoid
-          processing the response without generating warnings
-    """
-
-    throttle_scope = 'accounting'
-    queryset = RadiusAccounting.objects.all().order_by('-start_time')
-    authentication_classes = (FreeradiusApiAuthentication,)
-    serializer_class = RadiusAccountingSerializer
-    pagination_class = AccountingViewPagination
-    filter_backends = (DjangoFilterBackend,)
-    filter_class = AccountingFilter
-
-    def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.auth)
-
-    def get(self, request, *args, **kwargs):
-        """
-        **API Endpoint used by FreeRADIUS server.**
-        Returns a list of accounting objects
-        """
-        return super().get(self, request, *args, **kwargs)
-
-    @swagger_auto_schema(responses={201: '', 200: ''})
-    def post(self, request, *args, **kwargs):
-        """
-        **API Endpoint used by FreeRADIUS server.**
-        Add or update accounting information (start, interim-update, stop);
-        does not return any JSON response so that freeradius will avoid
-        processing the response without generating warnings
-        """
-        data = request.data.copy()
-        # Accounting-On and Accounting-Off are not implemented and
-        # hence  ignored right now - may be implemented in the future
-        if data.get('status_type', None) in ['Accounting-On', 'Accounting-Off']:
-            return Response(None)
-        # Create or Update
-        try:
-            instance = self.get_queryset().get(unique_id=data.get('unique_id'))
-        except RadiusAccounting.DoesNotExist:
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
-            serializer.create(acct_data)
-            headers = self.get_success_headers(serializer.data)
-            return Response(None, status=201, headers=headers)
-        else:
-            serializer = self.get_serializer(instance, data=data, partial=False)
-            serializer.is_valid(raise_exception=True)
-            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
-            serializer.update(instance, acct_data)
-            return Response(None)
-
-    def _data_to_acct_model(self, valid_data):
-        acct_org = Organization.objects.get(pk=self.request.auth)
-        valid_data.pop('status_type', None)
-        valid_data['organization'] = acct_org
-        return valid_data
-
-
-accounting = AccountingView.as_view()
+PhoneToken = load_model('PhoneToken')
+RadiusAccounting = load_model('RadiusAccounting')
+RadiusToken = load_model('RadiusToken')
+RadiusBatch = load_model('RadiusBatch')
 
 
 class ThrottledAPIMixin(object):
