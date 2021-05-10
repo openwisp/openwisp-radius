@@ -14,12 +14,12 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
 from openwisp_radius.tests.test_api.test_phone_verification import (
     TestApiPhoneToken as BaseTestApiPhoneToken,
 )
-from openwisp_radius.tests.test_api.test_rest_token import (
-    TestApiValidateToken as BaseTestApiValidateToken,
-)
 from openwisp_radius.tests.test_api.test_registration import TestApi as BaseTestApi
 from openwisp_radius.tests.test_api.test_rest_token import (
     TestApiUserToken as BaseTestApiUserToken,
+)
+from openwisp_radius.tests.test_api.test_rest_token import (
+    TestApiValidateToken as BaseTestApiValidateToken,
 )
 from openwisp_radius.tests.test_batch_add_users import (
     TestCSVUpload as BaseTestCSVUpload,

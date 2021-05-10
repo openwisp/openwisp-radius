@@ -5,7 +5,6 @@ from unittest import mock
 import swapper
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 

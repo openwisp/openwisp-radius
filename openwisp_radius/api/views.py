@@ -269,7 +269,6 @@ class ObtainAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToke
         serializer = self.auth_serializer_class(
             data=request.data, context={'request': request}
         )
-        # import ipdb; ipdb.set_trace()
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
@@ -317,6 +316,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                 radius_token = self.get_or_create_radius_token(
                     user, self.organization, renew=renew_required
                 )
+                phone_number = user.phone_number
                 if not user.is_active:
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
@@ -326,8 +326,8 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                     phone_number = (
                         phone_token.phone_number if phone_token else user.phone_number
                     )
-                else:
-                    phone_number = user.phone_number
+                if phone_number:
+                    phone_number = str(phone_number)
                 response = {
                     'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
                     'auth_token': token.key,
@@ -335,7 +335,7 @@ class ValidateAuthTokenView(DispatchOrgMixin, RadiusTokenMixin, CreateAPIView):
                     'username': user.username,
                     'email': user.email,
                     'is_active': user.is_active,
-                    'phone_number': str(phone_number),
+                    'phone_number': phone_number,
                 }
                 self.update_user_last_login(token.user)
                 return Response(response, 200)

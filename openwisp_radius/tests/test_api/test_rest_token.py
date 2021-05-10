@@ -149,6 +149,9 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         else:
             phone_number = PhoneToken.objects.filter(user=user).first().phone_number
 
+        if phone_number:
+            phone_number = str(phone_number)
+
         self.assertEqual(
             response.data['phone_number'], phone_number,
         )
@@ -158,6 +161,12 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
 
     def test_validate_auth_token_with_active_user(self):
         user = self._get_user_with_org()
+        self._test_validate_auth_token_helper(user)
+
+    def test_validate_auth_token_phone_number_null(self):
+        user = self._get_user_with_org()
+        user.phone_number = None
+        user.save()
         self._test_validate_auth_token_helper(user)
 
     @capture_any_output()
