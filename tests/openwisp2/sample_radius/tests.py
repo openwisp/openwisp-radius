@@ -11,10 +11,10 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
 from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
 )
-from openwisp_radius.tests.test_api.test_phone_token import (
+from openwisp_radius.tests.test_api.test_phone_verification import (
     TestApiPhoneToken as BaseTestApiPhoneToken,
 )
-from openwisp_radius.tests.test_api.test_phone_token import (
+from openwisp_radius.tests.test_api.test_rest_token import (
     TestApiValidateToken as BaseTestApiValidateToken,
 )
 from openwisp_radius.tests.test_api.test_registration import TestApi as BaseTestApi
