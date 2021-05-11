@@ -12,6 +12,7 @@ from .. import _TEST_DATE
 from ..mixins import ApiTokenMixin, BaseTestCase
 
 RadiusToken = load_model('RadiusToken')
+PhoneToken = load_model('PhoneToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
@@ -106,3 +107,89 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(response.status_code, 401)
         self.assertFalse(response.data['is_active'])
+
+
+class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
+    def _get_url(self):
+        return reverse('radius:validate_auth_token', args=[self.default_org.slug])
+
+    def _test_validate_auth_token_helper(self, user):
+        url = self._get_url()
+        token = Token.objects.create(user=user)
+        # empty payload
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
+        # invalid token
+        payload = dict(token='some-random-string')
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
+        # valid token
+        payload = dict(token=token.key)
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data['response_code'], 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
+        )
+        self.assertEqual(response.data['auth_token'], token.key)
+        self.assertEqual(
+            response.data['radius_user_token'], RadiusToken.objects.first().key,
+        )
+        user = token.user
+        self.assertEqual(user, RadiusToken.objects.first().user)
+        self.assertEqual(
+            response.data['username'], user.username,
+        )
+        self.assertEqual(
+            response.data['is_active'], user.is_active,
+        )
+        if user.is_active:
+            phone_number = user.phone_number
+        else:
+            phone_number = PhoneToken.objects.filter(user=user).first().phone_number
+
+        if phone_number:
+            phone_number = str(phone_number)
+
+        self.assertEqual(
+            response.data['phone_number'], phone_number,
+        )
+        self.assertEqual(
+            response.data['email'], user.email,
+        )
+
+    def test_validate_auth_token_with_active_user(self):
+        user = self._get_user_with_org()
+        self._test_validate_auth_token_helper(user)
+
+    def test_validate_auth_token_phone_number_null(self):
+        user = self._get_user_with_org()
+        user.phone_number = None
+        user.save()
+        self._test_validate_auth_token_helper(user)
+
+    @capture_any_output()
+    def test_validate_auth_token_with_inactive_user(self):
+        user = self._get_user_with_org()
+        user.is_active = False
+        user.save()
+        user.refresh_from_db()
+        phone_token = PhoneToken(
+            user=user, ip='127.0.0.1', phone_number='+237675578296'
+        )
+        phone_token.full_clean()
+        phone_token.save()
+        self._test_validate_auth_token_helper(user)
+
+    @freeze_time(_TEST_DATE)
+    def test_user_auth_updates_last_login(self):
+        admin = self._get_admin()
+        token = Token.objects.create(user=admin)
+        payload = dict(token=token.key)
+        self.assertEqual(admin.last_login, None)
+        response = self.client.post(self._get_url(), payload)
+        self.assertEqual(response.status_code, 200)
+        admin.refresh_from_db()
+        self.assertIsNotNone(admin.last_login)
+        self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
