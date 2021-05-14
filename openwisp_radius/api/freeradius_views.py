@@ -210,11 +210,10 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             return None
         # ensure user is member of the authenticated org
         # or RadiusToken for the user exists.
+        lookup_options = dict(user=user, organization_id=request.auth)
         if (
-            RadiusToken.objects.filter(user=user).exists()
-            or OrganizationUser.objects.filter(
-                user=user, organization_id=request.auth
-            ).exists()
+            RadiusToken.objects.filter(**lookup_options).exists()
+            or OrganizationUser.objects.filter(**lookup_options).exists()
         ):
             return user
         return None
@@ -236,7 +235,12 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         radius user token
         """
         try:
-            token = RadiusToken.objects.get(user=user, can_auth=True, key=password)
+            token = RadiusToken.objects.get(
+                user=user,
+                can_auth=True,
+                key=password,
+                organization_id=self.request.auth,
+            )
         except RadiusToken.DoesNotExist:
             return False
         if app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
@@ -275,7 +279,7 @@ class AccountingView(ListCreateAPIView):
     filter_class = AccountingFilter
 
     def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.auth)
+        return super().get_queryset().filter(organization_id=self.request.auth)
 
     def get(self, request, *args, **kwargs):
         """
