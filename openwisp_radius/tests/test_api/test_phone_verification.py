@@ -142,7 +142,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
     @capture_any_output()
-    def test_create_phone_token_201_user_already_verified(self):
+    def test_create_phone_token_400_user_already_verified(self):
         self.test_register_201()
         token = Token.objects.last()
         token.user.registered_user.is_verified = True
@@ -150,7 +150,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         token.user.save()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
-        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json(), {'user': 'This user is already verified.'})
 
     @freeze_time(_TEST_DATE)
     @capture_any_output()
@@ -599,12 +600,15 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             content_type='application/json',
             HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(phone_token_qs.count(), 1)
-        self.assertEqual(phone_token_qs.first().phone_number, new_phone_number)
-        user.refresh_from_db()
-        self.assertEqual(user.phone_number, old_phone_number)
-        self.assertFalse(user.registered_user.is_verified)
+        if is_active:
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(phone_token_qs.count(), 1)
+            self.assertEqual(phone_token_qs.first().phone_number, new_phone_number)
+            user.refresh_from_db()
+            self.assertEqual(user.phone_number, old_phone_number)
+            self.assertFalse(user.registered_user.is_verified)
+        else:
+            self.assertEqual(r.status_code, 401)
 
     @capture_any_output()
     def test_active_user_change_phone_number_sms_on(self):

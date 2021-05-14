@@ -1327,7 +1327,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         self.save()
         return self.verified
 
-    def __check(self, token):
+    def _validate_already_verified(self):
         try:
             if self.user.registered_user.is_verified:
                 logger.warning(_(f'User {self.user.pk} is already verified'))
@@ -1336,6 +1336,9 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
         except ObjectDoesNotExist:
             pass
+
+    def __check(self, token):
+        self._validate_already_verified()
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
                 _(

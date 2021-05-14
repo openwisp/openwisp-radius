@@ -46,7 +46,7 @@ from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 
 from .. import settings as app_settings
-from ..exceptions import PhoneTokenException
+from ..exceptions import PhoneTokenException, UserAlreadyVerified
 from ..utils import generate_pdf, load_model
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
@@ -552,9 +552,13 @@ class CreatePhoneTokenView(
         )
         try:
             phone_token.full_clean()
+            if kwargs.get('enforce_unverified', True):
+                phone_token._validate_already_verified()
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
+        except UserAlreadyVerified as e:
+            raise serializers.ValidationError({'user': str(e)})
         phone_token.save()
         return Response(None, status=201)
 
@@ -646,6 +650,7 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         return Response(None, status=200)
 
     def create_phone_token(self, *args, **kwargs):
+        kwargs['enforce_unverified'] = False
         return super().create(*args, **kwargs)
 
 
