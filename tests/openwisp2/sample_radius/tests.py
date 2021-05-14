@@ -1,4 +1,5 @@
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
+from openwisp_radius.tests.test_api.test_api import TestApi as BaseTestApi
 from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestApiReject as BaseTestApiReject,
 )
@@ -9,12 +10,14 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestAutoGroupnameDisabled as BaseTestAutoGroupnameDisabled,
 )
 from openwisp_radius.tests.test_api.test_freeradius_api import (
+    TestFreeradiusApi as BaseTestFreeradiusApi,
+)
+from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
 )
 from openwisp_radius.tests.test_api.test_phone_verification import (
     TestApiPhoneToken as BaseTestApiPhoneToken,
 )
-from openwisp_radius.tests.test_api.test_registration import TestApi as BaseTestApi
 from openwisp_radius.tests.test_api.test_rest_token import (
     TestApiUserToken as BaseTestApiUserToken,
 )
@@ -64,6 +67,10 @@ class TestAdmin(BaseTestAdmin):
 
 
 class TestApi(BaseTestApi):
+    pass
+
+
+class TestFreeradiusApi(BaseTestFreeradiusApi):
     pass
 
 
@@ -166,6 +173,7 @@ class TestOrganizationRadiusSettings(BaseTestOrganizationRadiusSettings):
 
 del BaseTestAdmin
 del BaseTestApi
+del BaseTestFreeradiusApi
 del BaseTestApiReject
 del BaseTestAutoGroupname
 del BaseTestAutoGroupnameDisabled
