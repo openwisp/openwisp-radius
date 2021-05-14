@@ -452,5 +452,9 @@ class ChangePhoneNumberSerializer(
         return phone_number
 
     def save(self):
+        # we do not update the phone number of the user
+        # yet, tha will be done by the phone token validation view
+        # once the phone number has been validated
+        # at this point we flag the user as unverified again
         self.user.registered_user.is_verified = False
         self.user.registered_user.save()

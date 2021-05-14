@@ -600,6 +600,8 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             user.registered_user.is_verified = True
             user.registered_user.identity_verification = 'mobile'
             user.is_active = True
+            # now that the phone number is verified
+            # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
             user.registered_user.save()
