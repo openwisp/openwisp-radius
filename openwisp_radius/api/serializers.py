@@ -418,7 +418,7 @@ class RegisterSerializer(
         if self._needs_identity_verification(
             {'slug': self.context['view'].kwargs['slug']}
         ):
-            user.is_active = False
+            user.is_active = True
         try:
             user.full_clean()
         except ValidationError as e:

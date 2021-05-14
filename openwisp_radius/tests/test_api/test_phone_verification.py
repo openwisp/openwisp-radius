@@ -81,7 +81,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         self.assertTrue(user.is_member(self.default_org))
         self.assertEqual(user.phone_number, phone_number)
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
 
     def test_register_400_duplicate_phone_number(self):
         self.test_register_201()
@@ -220,7 +220,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         phone_token.refresh_from_db()
         self.assertEqual(phone_token.attempts, 1)
         self.assertIn('non_field_errors', r.data)
@@ -243,7 +243,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         phone_token.refresh_from_db()
         self.assertEqual(phone_token.attempts, 1)
         self.assertIn('non_field_errors', r.data)
@@ -273,7 +273,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                     str(r.data['non_field_errors']),
                 )
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
 
     def test_validate_phone_token_401(self):
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
@@ -352,7 +352,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(phone_token_qs.count(), 2)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         self.assertEqual(user.phone_number, user.phone_number)
 
         code = phone_token_qs.first().token
