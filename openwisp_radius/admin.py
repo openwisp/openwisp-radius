@@ -7,35 +7,18 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.forms.widgets import Select
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
-from openwisp_utils.admin import (
-    AlwaysHasChangedMixin,
-    ReadOnlyAdmin,
-    TimeReadonlyAdminMixin,
-)
+from openwisp_utils.admin import ReadOnlyAdmin, TimeReadonlyAdminMixin
 
 from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm
-from .base.models import (
-    _GET_IP_LIST_HELP_TEXT,
-    _GET_MOBILE_PREFIX_HELP_TEXT,
-    _GET_OPTIONAL_FIELDS_HELP_TEXT,
-    _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
-    _PASSWORD_RESET_URL_HELP_TEXT,
-    _REGISTRATION_ENABLED_HELP_TEXT,
-    _SAML_REGISTRATION_ENABLED_HELP_TEXT,
-    _SMS_VERIFICATION_HELP_TEXT,
-    _SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
-    OPTIONAL_FIELD_CHOICES,
-)
-from .settings import PASSWORD_RESET_URLS, RADIUS_API_BASEURL, RADIUS_API_URLCONF
+from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -551,167 +534,8 @@ UserAdmin.list_display.insert(3, 'get_is_verified')
 UserAdmin.list_select_related = ('registered_user',)
 
 
-class FallbackFieldMixin(object):
-    def __init__(self, fallback, *args, **kwargs):
-        self.fallback = fallback
-        super().__init__(*args, **kwargs)
-
-    def prepare_value(self, value):
-        if value is None:
-            value = self.fallback
-        return super().prepare_value(value)
-
-
-class FallbackCharField(FallbackFieldMixin, forms.CharField):
-    pass
-
-
-class FallbackChoiceField(FallbackFieldMixin, forms.ChoiceField):
-    pass
-
-
-class FallbackNullChoiceField(FallbackFieldMixin, forms.NullBooleanField):
-    pass
-
-
-def _enabled_disabled_helper(field):
-    if getattr(app_settings, field):
-        return _('Enabled')
-    return _('Disabled')
-
-
-class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
-    freeradius_allowed_hosts = FallbackCharField(
-        required=False,
-        widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
-        help_text=_GET_IP_LIST_HELP_TEXT,
-        fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
-    )
-    allowed_mobile_prefixes = FallbackCharField(
-        required=False,
-        widget=forms.Textarea(attrs={'rows': 2, 'cols': 34}),
-        help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
-        fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
-    )
-    registration_enabled = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                (
-                    '',
-                    _('Default')
-                    + f' ({_enabled_disabled_helper("REGISTRATION_API_ENABLED")})',
-                ),
-                (True, _('Enabled')),
-                (False, _('Disabled')),
-            ]
-        ),
-        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
-        fallback='',
-    )
-    needs_identity_verification = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                (
-                    '',
-                    _('Default')
-                    + f' ({_enabled_disabled_helper("NEEDS_IDENTITY_VERIFICATION")})',
-                ),
-                (True, _('Enabled')),
-                (False, _('Disabled')),
-            ]
-        ),
-        help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
-        fallback='',
-    )
-    saml_registration_enabled = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                (
-                    '',
-                    _('Default')
-                    + f' ({_enabled_disabled_helper("SAML_REGISTRATION_ENABLED")})',
-                ),
-                (True, _('Enabled')),
-                (False, _('Disabled')),
-            ]
-        ),
-        help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
-        fallback='',
-        label='SAML registration enabled',
-    )
-    social_registration_enabled = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                (
-                    '',
-                    _('Default')
-                    + f' ({_enabled_disabled_helper("SOCIAL_REGISTRATION_ENABLED")})',
-                ),
-                (True, _('Enabled')),
-                (False, _('Disabled')),
-            ]
-        ),
-        help_text=_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
-        fallback='',
-    )
-    sms_verification = FallbackNullChoiceField(
-        required=False,
-        widget=Select(
-            choices=[
-                (
-                    '',
-                    _('Default')
-                    + f' ({_enabled_disabled_helper("SMS_VERIFICATION_ENABLED")})',
-                ),
-                (True, _('Enabled')),
-                (False, _('Disabled')),
-            ]
-        ),
-        help_text=_SMS_VERIFICATION_HELP_TEXT,
-        fallback='',
-    )
-    first_name = FallbackChoiceField(
-        required=False,
-        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
-        choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('first_name', 'disabled'),
-    )
-    last_name = FallbackChoiceField(
-        required=False,
-        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
-        choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('last_name', 'disabled'),
-    )
-    location = FallbackChoiceField(
-        required=False,
-        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
-        choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('location', 'disabled'),
-    )
-    birth_date = FallbackChoiceField(
-        required=False,
-        help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
-        choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
-    )
-    password_reset_url = FallbackCharField(
-        required=False,
-        widget=forms.URLInput(attrs={'size': 60}),
-        help_text=_PASSWORD_RESET_URL_HELP_TEXT,
-        fallback=PASSWORD_RESET_URLS.get('default'),
-        label=OrganizationRadiusSettings._meta.get_field(
-            'password_reset_url'
-        ).verbose_name,
-    )
-
-
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
-    form = OrganizationRadiusSettingsForm
     fieldsets = (
         (
             None,
