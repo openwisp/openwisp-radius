@@ -274,6 +274,30 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertNotEqual(response.content, b'{"control:Auth-Type":"Accept"}')
         self.assertEqual(response.status_code, 200)
 
+    def test_authorize_unverified_user(self):
+        self._get_org_user()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
+
+    def test_authorize_radius_token_unverified_user(self):
+        user = self._get_org_user()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=user.organization
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        response = self.client.post(
+            reverse('radius:user_auth_token', args=[user.organization.slug]),
+            data={'username': 'tester', 'password': 'tester'},
+        )
+        self.assertEqual(response.status_code, 401)
+
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params()
@@ -1143,17 +1167,17 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         org = self._get_org()
         self.assertEqual(cache.get(f'ip-{org.pk}'), None)
         with self.subTest('Without Cache'):
-            authorize_and_asset(4, [])
+            authorize_and_asset(5, [])
         with self.subTest('With Cache'):
-            authorize_and_asset(2, [])
+            authorize_and_asset(3, [])
         with self.subTest('Organization Settings Updated'):
             radsetting = OrganizationRadiusSettings.objects.get(organization=org)
             radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
             radsetting.save()
-            authorize_and_asset(2, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_asset(3, ['127.0.0.1', '192.0.2.0'])
         with self.subTest('Cache Deleted'):
             cache.clear()
-            authorize_and_asset(4, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_asset(5, ['127.0.0.1', '192.0.2.0'])
 
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse('radius:authorize'), self.params)

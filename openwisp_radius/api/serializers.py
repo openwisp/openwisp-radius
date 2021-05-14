@@ -23,12 +23,13 @@ from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
 
+from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..utils import load_model
-from .utils import ErrorDictMixin, is_sms_verification_enabled
+from .utils import ErrorDictMixin, IDVerificationHelper, is_sms_verification_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 User = get_user_model()
@@ -320,10 +322,13 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
 
 
 class RegisterSerializer(
-    ErrorDictMixin, AllowedMobilePrefixMixin, BaseRegisterSerializer
+    ErrorDictMixin,
+    AllowedMobilePrefixMixin,
+    BaseRegisterSerializer,
+    IDVerificationHelper,
 ):
     phone_number = PhoneNumberField(
-        help_text=(
+        help_text=_(
             'Required only when the organization has enabled SMS '
             'verification in its "Organization RADIUS Settings."'
         ),
@@ -334,6 +339,14 @@ class RegisterSerializer(
     last_name = serializers.CharField(required=False)
     location = serializers.CharField(required=False)
     birth_date = serializers.DateField(required=False)
+    identity_verification = serializers.ChoiceField(
+        help_text=_(
+            'Required only when the organization has mandatory identity '
+            'verification in its "Organization RADIUS Settings."'
+        ),
+        default='',
+        choices=IDENTITY_VERIFICATION_CHOICES,
+    )
 
     def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
@@ -351,9 +364,16 @@ class RegisterSerializer(
         return phone_number
 
     def validate_optional_fields(self, field_name, field_value, org):
-        field_setting = getattr(
-            org.radius_settings, field_name
-        ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
+        if field_name == 'identity_verification':
+            field_setting = (
+                'mandatory'
+                if self._needs_identity_verification({'slug': org.slug}) is True
+                else None
+            )
+        else:
+            field_setting = getattr(
+                org.radius_settings, field_name
+            ) or app_settings.OPTIONAL_REGISTRATION_FIELDS.get(field_name)
         if field_setting == 'mandatory' and not field_value:
             raise serializers.ValidationError(
                 {f'{field_name}': _('This field is required.')}
@@ -370,6 +390,11 @@ class RegisterSerializer(
         adapter.save_user(request, user, self, commit=False)
         # the custom_signup method contains the openwisp specific logic
         self.custom_signup(request, user)
+        # create a RegisteredUser object for every user that registers through API
+        RegisteredUser.objects.create(
+            user=user,
+            identity_verification=self.validated_data['identity_verification'],
+        )
         setup_user_email(request, user, [])
         return user
 
@@ -378,14 +403,18 @@ class RegisterSerializer(
         if phone_number != self.fields['phone_number'].default:
             user.phone_number = phone_number
         org = self.context['view'].organization
-        for field_name in ['first_name', 'last_name', 'location', 'birth_date']:
+        for field_name in [
+            'first_name',
+            'last_name',
+            'location',
+            'birth_date',
+            'identity_verification',
+        ]:
             value = self.validate_optional_fields(
                 field_name, self.validated_data.get(field_name, ''), org
             )
             if value:
                 setattr(user, field_name, value)
-        if is_sms_verification_enabled(org):
-            user.is_active = False
         try:
             user.full_clean()
         except ValidationError as e:
@@ -423,5 +452,9 @@ class ChangePhoneNumberSerializer(
         return phone_number
 
     def save(self):
-        self.user.is_active = False
-        self.user.save()
+        # we do not update the phone number of the user
+        # yet, tha will be done by the phone token validation view
+        # once the phone number has been validated
+        # at this point we flag the user as unverified again
+        self.user.registered_user.is_verified = False
+        self.user.registered_user.save()

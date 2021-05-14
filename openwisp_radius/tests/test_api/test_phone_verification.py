@@ -29,6 +29,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         super().setUp()
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_verification = True
+        radius_settings.needs_identity_verification = True
         radius_settings.sms_sender = '+595972157632'
         radius_settings.sms_meta_data = {
             'clientId': 3,
@@ -48,6 +49,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '',
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -70,6 +72,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 201)
@@ -78,7 +81,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         self.assertTrue(user.is_member(self.default_org))
         self.assertEqual(user.phone_number, phone_number)
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     def test_register_400_duplicate_phone_number(self):
         self.test_register_201()
@@ -91,6 +95,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+393664255801',
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -137,10 +142,11 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('This field cannot be null.', str(r.data['phone_number']))
 
     @capture_any_output()
-    def test_create_phone_token_201_user_already_active(self):
+    def test_create_phone_token_201_user_already_verified(self):
         self.test_register_201()
         token = Token.objects.last()
-        token.user.is_active = True
+        token.user.registered_user.is_verified = True
+        token.user.registered_user.save()
         token.user.save()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
@@ -189,6 +195,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token.attempts, 1)
         user.refresh_from_db()
         self.assertTrue(user.is_active)
+        self.assertTrue(user.registered_user.is_verified)
+        self.assertEqual(user.registered_user.identity_verification, 'mobile')
 
     @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
@@ -213,7 +221,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         phone_token.refresh_from_db()
         self.assertEqual(phone_token.attempts, 1)
         self.assertIn('non_field_errors', r.data)
@@ -236,7 +244,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         phone_token.refresh_from_db()
         self.assertEqual(phone_token.attempts, 1)
         self.assertIn('non_field_errors', r.data)
@@ -266,7 +274,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                     str(r.data['non_field_errors']),
                 )
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     def test_validate_phone_token_401(self):
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
@@ -274,10 +283,11 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 401)
 
     @capture_any_output()
-    def test_validate_phone_token_400_user_already_active(self):
+    def test_validate_phone_token_400_user_already_verified(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
-        user.is_active = True
+        user.registered_user.is_verified = True
+        user.registered_user.save()
         user.save()
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
@@ -289,7 +299,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
-        self.assertIn('already active', str(r.data['non_field_errors']))
+        self.assertIn('already verified', str(r.data['non_field_errors']))
 
     def test_validate_phone_token_400_no_token(self):
         self.test_register_201()
@@ -344,22 +354,27 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(phone_token_qs.count(), 2)
         user.refresh_from_db()
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         self.assertEqual(user.phone_number, user.phone_number)
 
-        code = phone_token_qs.first().token
-        url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
-        r = self.client.post(
-            url,
-            json.dumps({'code': code}),
-            content_type='application/json',
-            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
-        )
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(phone_token_qs.count(), 2)
-        user.refresh_from_db()
-        self.assertTrue(user.is_active)
-        self.assertEqual(user.phone_number, new_phone_number)
+        with self.subTest('user is flagged as unverified'):
+            self.assertFalse(user.registered_user.is_verified)
+
+        with self.subTest('test verification'):
+            code = phone_token_qs.first().token
+            url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
+            r = self.client.post(
+                url,
+                json.dumps({'code': code}),
+                content_type='application/json',
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            )
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(phone_token_qs.count(), 2)
+            user.refresh_from_db()
+            self.assertTrue(user.is_active)
+            self.assertTrue(user.registered_user.is_verified)
+            self.assertEqual(user.phone_number, new_phone_number)
 
     def test_change_phone_number_400_same_number(self):
         self.test_create_phone_token_201()
@@ -423,6 +438,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             'email': 'test@email.com',
             'password1': 'password',
             'password2': 'password',
+            'identity_verification': 'mobile',
         }
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         msg = 'This international mobile prefix is not allowed.'
@@ -535,6 +551,8 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(phone_token_qs.count(), 1)
 
         with self.subTest('test change number allowed at org level'):
+            user.registered_user.is_verified = False
+            user.registered_user.save()
             radius_settings = self.default_org.radius_settings
             radius_settings.allowed_mobile_prefixes = '+1,+44'
             radius_settings.full_clean()
@@ -586,7 +604,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token_qs.first().phone_number, new_phone_number)
         user.refresh_from_db()
         self.assertEqual(user.phone_number, old_phone_number)
-        self.assertFalse(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     @capture_any_output()
     def test_active_user_change_phone_number_sms_on(self):
@@ -635,6 +653,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237678879231',
+                'identity_verification': 'mobile',
             }
         )
         self._create_user_helper(
@@ -644,6 +663,7 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
+                'identity_verification': 'mobile',
             }
         )
         self._test_phone_number_unique_helper('+237678879231')
@@ -663,17 +683,22 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
+                'identity_verification': 'mobile',
             }
         )
         user = User.objects.get(email='user2@gmail.com')
         user.is_active = True
         user.save()
-        user.refresh_from_db()
+        user.registered_user.is_verified = True
+        user.registered_user.save()
         # Testing for Phone token validation error due to same phone number ,
         self._test_phone_number_unique_helper('+23767779235')
+        user.refresh_from_db()
+        user.registered_user.refresh_from_db()
         # is_active state of user should not change because an error
         # occurred during phone token creation.
         self.assertTrue(user.is_active)
+        self.assertTrue(user.registered_user.is_verified)
 
 
 class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
@@ -700,6 +725,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
+                'identity_verification': 'mobile',
             },
         )
         self.assertEqual(r.status_code, 201)
@@ -709,6 +735,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.is_member(self.default_org))
         self.assertEqual(user.phone_number, None)
         self.assertTrue(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     @capture_stderr()
     def test_create_phone_token_403(self):

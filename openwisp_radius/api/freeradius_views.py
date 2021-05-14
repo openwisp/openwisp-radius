@@ -24,6 +24,7 @@ from .serializers import (
     RadiusAccountingSerializer,
     RadiusPostAuthSerializer,
 )
+from .utils import IDVerificationHelper
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 logger = logging.getLogger(__name__)
@@ -161,7 +162,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return uuid, token
 
 
-class AuthorizeView(GenericAPIView):
+class AuthorizeView(GenericAPIView, IDVerificationHelper):
     authentication_classes = (FreeradiusApiAuthentication,)
     accept_attributes = {'control:Auth-Type': 'Accept'}
     accept_status = 200
@@ -201,7 +202,10 @@ class AuthorizeView(GenericAPIView):
         return active user or ``None``
         """
         try:
-            user = auth_backend.get_users(username).filter(is_active=True)[0]
+            filter_kwargs = dict(is_active=True)
+            if self._needs_identity_verification({'pk': request._auth}):
+                filter_kwargs['registered_user__is_verified'] = True
+            user = auth_backend.get_users(username).filter(**filter_kwargs)[0]
         except IndexError:
             return None
         # ensure user is member of the authenticated org
