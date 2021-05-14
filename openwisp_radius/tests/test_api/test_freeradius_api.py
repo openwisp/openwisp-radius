@@ -234,7 +234,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
     def test_user_auth_token_disposed_after_auth(self):
-        app_settings.DISPOSABLE_RADIUS_USER_TOKEN = True
         self._get_org_user()
         rad_token = self._login_and_obtain_auth_token()
         # Success but disable radius_token for authorization
