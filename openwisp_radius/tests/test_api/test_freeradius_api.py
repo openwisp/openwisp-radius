@@ -263,6 +263,17 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(rad_token, second_rad_token)
 
+    def test_authorize_multiple_org_interaction(self):
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        org2 = self._create_org(name='org2', slug='org2')
+        rad_settings = OrganizationRadiusSettings.objects.create(organization=org2)
+        # authorize authenticating as org2
+        auth_header = f'Bearer {org2.pk} {rad_settings.token}'
+        response = self._authorize_user(auth_header=auth_header)
+        self.assertNotEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.status_code, 200)
+
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params()
