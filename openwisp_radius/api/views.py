@@ -27,7 +27,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import AuthenticationFailed, NotFound, ParseError
+from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
@@ -503,22 +503,6 @@ class PasswordResetConfirmView(
 password_reset_confirm = PasswordResetConfirmView.as_view()
 
 
-class InactiveBearerTokenAuthentication(BearerAuthentication):
-    """
-    Overrides the Bearer Authentication of openwisp-users
-    to allow inactive users to authenticate against
-    some specific API endpoints.
-    """
-
-    def authenticate_credentials(self, key):
-        try:
-            token = UserToken.objects.select_related('user').get(key=key)
-        except UserToken.DoesNotExist:
-            raise AuthenticationFailed(_('Invalid token.'))
-        else:
-            return (token.user, token)
-
-
 @method_decorator(
     name='post',
     decorator=swagger_auto_schema(
@@ -537,7 +521,7 @@ class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
     throttle_scope = 'create_phone_token'
-    authentication_classes = (InactiveBearerTokenAuthentication,)
+    authentication_classes = (BearerAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
         IsAuthenticated,
@@ -568,7 +552,7 @@ create_phone_token = CreatePhoneTokenView.as_view()
 
 class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
     throttle_scope = 'validate_phone_token'
-    authentication_classes = (InactiveBearerTokenAuthentication,)
+    authentication_classes = (BearerAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
         IsAuthenticated,
@@ -629,7 +613,7 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
     ),
 )
 class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
-    authentication_classes = (InactiveBearerTokenAuthentication,)
+    authentication_classes = (BearerAuthentication,)
     permission_classes = (
         IsSmsVerificationEnabled,
         IsAuthenticated,

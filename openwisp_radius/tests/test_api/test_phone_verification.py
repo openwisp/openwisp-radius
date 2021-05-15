@@ -21,7 +21,7 @@ RadiusToken = load_model('RadiusToken')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
-class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
+class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     _test_email = 'test@openwisp.org'
 
@@ -132,8 +132,6 @@ class TestApiPhoneToken(ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     def test_create_phone_token_400_validation_error(self):
         user = self._get_user_with_org()
-        user.is_active = False
-        user.save()
         token = Token.objects.create(user=user)
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
