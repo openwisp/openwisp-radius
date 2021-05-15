@@ -16,7 +16,7 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
 )
 from openwisp_radius.tests.test_api.test_phone_verification import (
-    TestApiPhoneToken as BaseTestApiPhoneToken,
+    TestPhoneVerification as BaseTestPhoneVerification,
 )
 from openwisp_radius.tests.test_api.test_rest_token import (
     TestApiUserToken as BaseTestApiUserToken,
@@ -180,7 +180,7 @@ del BaseTestAutoGroupnameDisabled
 del BaseTestApiUserToken
 del BaseTestApiValidateToken
 del BaseTestOgranizationRadiusSettings
-del BaseTestApiPhoneToken
+del BaseTestPhoneVerification
 del BaseTestCSVUpload
 del BaseTestCommands
 del BaseTestNas
