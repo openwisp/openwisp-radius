@@ -16,6 +16,9 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
 )
 from openwisp_radius.tests.test_api.test_phone_verification import (
+    TestIsSmsVerificationEnabled as BaseTestIsSmsVerificationEnabled,
+)
+from openwisp_radius.tests.test_api.test_phone_verification import (
     TestPhoneVerification as BaseTestPhoneVerification,
 )
 from openwisp_radius.tests.test_api.test_rest_token import (
@@ -90,7 +93,11 @@ class TestOgranizationRadiusSettings(BaseTestOgranizationRadiusSettings):
     pass
 
 
-class TestApiPhoneToken(BaseTestApiPhoneToken):
+class TestPhoneVerification(BaseTestPhoneVerification):
+    pass
+
+
+class TestIsSmsVerificationEnabled(BaseTestIsSmsVerificationEnabled):
     pass
 
 
@@ -181,6 +188,7 @@ del BaseTestApiUserToken
 del BaseTestApiValidateToken
 del BaseTestOgranizationRadiusSettings
 del BaseTestPhoneVerification
+del BaseTestIsSmsVerificationEnabled
 del BaseTestCSVUpload
 del BaseTestCommands
 del BaseTestNas
