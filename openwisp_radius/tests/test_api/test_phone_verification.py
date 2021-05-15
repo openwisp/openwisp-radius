@@ -22,9 +22,6 @@ OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
 class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
-
-    _test_email = 'test@openwisp.org'
-
     def setUp(self):
         super().setUp()
         radius_settings = self.default_org.radius_settings
@@ -37,6 +34,27 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         }
         radius_settings.full_clean()
         radius_settings.save()
+
+    _extra_registration_params = {
+        'phone_number': '+393664255801',
+        'identity_verification': 'mobile',
+    }
+
+    def _register_user(self):
+        return super()._register_user(extra_params=self._extra_registration_params)
+
+    def test_register_201_mobile_phone_verification(self):
+        r = self._register_user()
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('key', r.data)
+        self.assertEqual(User.objects.count(), 2)
+        user = User.objects.get(email=self._test_email)
+        self.assertTrue(user.is_member(self.default_org))
+        self.assertEqual(
+            user.phone_number, self._extra_registration_params['phone_number']
+        )
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.registered_user.is_verified)
 
     def test_register_phone_required(self):
         self.assertEqual(User.objects.count(), 0)
@@ -55,37 +73,8 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('phone_number', r.data)
 
-    def test_register_201(self):
-        # ensure session authentication does not interfere with the API
-        # otherwise users being logged in the admin and testing the API
-        # will get failures. Rather than telling them to log out from the admin
-        # we'll handle this case and avoid the issue altogether
-        self._superuser_login()
-        self.assertEqual(User.objects.count(), 1)
-        url = reverse('radius:rest_register', args=[self.default_org.slug])
-        phone_number = '+393664255801'
-        r = self.client.post(
-            url,
-            {
-                'username': self._test_email,
-                'email': self._test_email,
-                'password1': 'password',
-                'password2': 'password',
-                'phone_number': phone_number,
-                'identity_verification': 'mobile',
-            },
-        )
-        self.assertEqual(r.status_code, 201)
-        self.assertIn('key', r.data)
-        self.assertEqual(User.objects.count(), 2)
-        user = User.objects.get(email=self._test_email)
-        self.assertTrue(user.is_member(self.default_org))
-        self.assertEqual(user.phone_number, phone_number)
-        self.assertTrue(user.is_active)
-        self.assertFalse(user.registered_user.is_verified)
-
     def test_register_400_duplicate_phone_number(self):
-        self.test_register_201()
+        self._register_user()
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         r = self.client.post(
             url,
@@ -109,7 +98,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @mock.patch('openwisp_radius.utils.SmsMessage.send')
     def test_create_phone_token_201(self, send_messages_mock):
-        self.test_register_201()
+        self._register_user()
         token = Token.objects.last()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
@@ -120,7 +109,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_create_phone_token_400_not_member(self):
-        self.test_register_201()
+        self._register_user()
         OrganizationUser.objects.all().delete()
         token = Token.objects.last()
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
@@ -141,7 +130,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_create_phone_token_400_user_already_verified(self):
-        self.test_register_201()
+        self._register_user()
         token = Token.objects.last()
         token.user.registered_user.is_verified = True
         token.user.registered_user.save()
@@ -154,7 +143,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
     @freeze_time(_TEST_DATE)
     @capture_any_output()
     def test_create_phone_token_400_limit_reached(self):
-        self.test_register_201()
+        self._register_user()
         token = Token.objects.last()
         token_header = f'Bearer {token.key}'
         max_value = app_settings.SMS_TOKEN_MAX_USER_DAILY
@@ -301,7 +290,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertIn('already verified', str(r.data['non_field_errors']))
 
     def test_validate_phone_token_400_no_token(self):
-        self.test_register_201()
+        self._register_user()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         self.assertEqual(PhoneToken.objects.count(), 0)
@@ -316,7 +305,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         )
 
     def test_validate_phone_token_400_code_blank(self):
-        self.test_register_201()
+        self._register_user()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
@@ -327,7 +316,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertIn('code', r.data)
 
     def test_validate_phone_token_400_missing_code(self):
-        self.test_register_201()
+        self._register_user()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
@@ -496,7 +485,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_change_phone_number_restriction(self):
-        self.test_register_201()
+        self._register_user()
         app_settings.ALLOWED_MOBILE_PREFIXES = ['+33']
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
@@ -579,7 +568,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         app_settings.ALLOWED_MOBILE_PREFIXES = []
 
     def _test_change_phone_number_sms_on_helper(self, is_active):
-        self.test_register_201()
+        self._register_user()
         user = User.objects.get(email=self._test_email)
         user_token = Token.objects.filter(user=user).last()
         phone_token_qs = PhoneToken.objects.filter(user=user)
@@ -704,9 +693,6 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
 
 class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
-
-    _test_email = 'test@openwisp.org'
-
     def setUp(self):
         super().setUp()
         radius_settings = self.default_org.radius_settings

@@ -117,12 +117,30 @@ class DefaultOrgMixin(CreateRadiusObjectsMixin):
 
 
 class ApiTokenMixin(BasePostParamsMixin):
+    _test_email = 'test@openwisp.org'
+
     def setUp(self):
         super().setUp()
         org = self.default_org
         rad = self.default_org.radius_settings
         self.auth_header = f'Bearer {org.pk} {rad.token}'
         self.token_querystring = f'?token={rad.token}&uuid={str(org.pk)}'
+
+    def _register_user(self, extra_params=None):
+        self._superuser_login()
+        self.assertEqual(User.objects.count(), 1)
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'password1': 'password',
+            'password2': 'password',
+        }
+        if extra_params:
+            params.update(extra_params)
+        response = self.client.post(url, params,)
+        self.assertEqual(response.status_code, 201)
+        return response
 
     def _radius_batch_csv_data(self, **kwargs):
         options = self._get_post_defaults(

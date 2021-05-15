@@ -36,8 +36,6 @@ START_DATE = '2019-04-20T22:14:09+01:00'
 
 
 class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
-    _test_email = 'test@openwisp.org'
-
     def setUp(self):
         cache.clear()
         super().setUp()
@@ -136,19 +134,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # otherwise users being logged in the admin and testing the API
         # will get failures. Rather than telling them to log out from the admin
         # we'll handle this case and avoid the issue altogether
-        self._superuser_login()
-        self.assertEqual(User.objects.count(), 1)
-        url = reverse('radius:rest_register', args=[self.default_org.slug])
-        r = self.client.post(
-            url,
-            {
-                'username': self._test_email,
-                'email': self._test_email,
-                'password1': 'password',
-                'password2': 'password',
-            },
-        )
-        self.assertEqual(r.status_code, 201)
+        r = self._register_user()
+        self.assertEqual(r.status_code, 201)  # redundant but left for clarity
         self.assertIn('key', r.data)
         self.assertIn('radius_user_token', r.data)
         self.assertEqual(User.objects.count(), 2)
