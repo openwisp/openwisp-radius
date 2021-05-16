@@ -7,12 +7,12 @@ IDENTITY_VERIFICATION_CHOICES = [
 ]
 
 
-def register_verification_choice(name, *args, **kwargs):
+def register_identity_verification_method(name, *args, **kwargs):
     verbose_name = kwargs.get('verbose_name', name)
     IDENTITY_VERIFICATION_CHOICES.append((name, _(verbose_name)))
 
 
-def unregister_verification_choice(name):
+def unregister_identity_verification_method(name):
     for index, (key, value) in enumerate(IDENTITY_VERIFICATION_CHOICES):
         if key == name:
             IDENTITY_VERIFICATION_CHOICES.pop(index)

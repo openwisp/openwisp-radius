@@ -429,21 +429,23 @@ Adding support for more identity verification methods
 
 For those intend to implement additional identity verification methods, such as a
 National ID card, a new verification method can be added or an existing method can be
-removed using the ``register_verification_choice`` and ``unregister_verification_choice``
-functions respectively. For example:
+removed using the ``register_identity_verification_method``
+and ``unregister_identity_verification_method`` functions respectively.
+
+For example:
 
 .. code-block:: python
 
     from openwisp_radius.verification_methods import (
-        register_verification_choice,
-        unregister_verification_choice,
+        register_identity_verification_method,
+        unregister_identity_verification_method,
     )
 
     # Enable registering via national digital ID
-    register_verification_choice('national_id', 'National Digital ID')
+    register_identity_verification_method('national_id', 'National Digital ID')
 
     # Remove mobile verification method
-    unregister_verification_choice('mobile')
+    unregister_identity_verification_method('mobile')
 
 Email related settings
 ======================

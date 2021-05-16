@@ -14,8 +14,8 @@ from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
 from ..utils import load_model
 from ..verification_methods import (
-    register_verification_choice,
-    unregister_verification_choice,
+    register_identity_verification_method,
+    unregister_identity_verification_method,
 )
 from . import CallCommandMixin, FileMixin, PostParamsMixin
 from .mixins import BaseTestCase
@@ -1094,18 +1094,20 @@ class TestAdmin(
             self.assertContains(response, 'id_registered_user-TOTAL_FORMS')
 
         with self.subTest('Register new choice'):
-            register_verification_choice('national_id', verbose_name='National ID')
+            register_identity_verification_method(
+                'national_id', verbose_name='National ID'
+            )
             response = self.client.get(url)
             self.assertContains(response, '<option value="national_id">National ID')
 
         with self.subTest('Unregister existing choice'):
-            unregister_verification_choice('mobile')
+            unregister_identity_verification_method('mobile')
             response = self.client.get(url)
             self.assertNotContains(
                 response, '<option value="mobile">Mobile Phone (SMS)'
             )
         # re-register so that other tests are not affected
-        register_verification_choice('mobile')
+        register_identity_verification_method('mobile')
 
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
