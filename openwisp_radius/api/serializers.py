@@ -458,3 +458,31 @@ class ChangePhoneNumberSerializer(
         # at this point we flag the user as unverified again
         self.user.registered_user.is_verified = False
         self.user.registered_user.save()
+
+
+class RadiusUserSerializer(serializers.ModelSerializer):
+    """
+    Used to return information about the logged in user
+    """
+
+    is_verified = serializers.BooleanField(source='registered_user.is_verified')
+    identity_verification = serializers.CharField(
+        source='registered_user.identity_verification', allow_null=True,
+    )
+    radius_user_token = serializers.CharField(source='radius_token.key', default=None)
+
+    class Meta:
+        model = User
+        fields = [
+            'username',
+            'email',
+            'phone_number',
+            'first_name',
+            'last_name',
+            'birth_date',
+            'location',
+            'is_active',
+            'is_verified',
+            'identity_verification',
+            'radius_user_token',
+        ]

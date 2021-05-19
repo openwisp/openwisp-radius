@@ -19,6 +19,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ... import settings as app_settings
@@ -146,6 +147,58 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
         self.assertFalse(user.registered_user.is_verified)
+
+    def test_radius_user_serializer(self):
+        self._register_user()
+        try:
+            user = User.objects.select_related('radius_token', 'registered_user').get(
+                email=self._test_email
+            )
+            admin = User.objects.select_related('radius_token', 'registered_user').get(
+                username='admin'
+            )
+        except User.DoesNotExist as e:
+            self.fail(f'user not found: {e}')
+
+        with self.assertNumQueries(0):
+            data = RadiusUserSerializer(user).data
+
+        with self.subTest('test full data'):
+            self.assertEqual(
+                data,
+                {
+                    'username': user.username,
+                    'email': user.email,
+                    'phone_number': user.phone_number,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'birth_date': user.birth_date,
+                    'location': user.location,
+                    'is_active': user.is_active,
+                    'is_verified': user.registered_user.is_verified,
+                    'identity_verification': user.registered_user.identity_verification,
+                    'radius_user_token': user.radius_token.key,
+                },
+            )
+
+        with self.subTest('test partial data'):
+            data = RadiusUserSerializer(admin).data
+            self.assertEqual(
+                data,
+                {
+                    'username': admin.username,
+                    'email': admin.email,
+                    'phone_number': admin.phone_number,
+                    'first_name': admin.first_name,
+                    'last_name': admin.last_name,
+                    'birth_date': '1987-03-23',
+                    'location': '',
+                    'is_active': admin.is_active,
+                    'is_verified': None,
+                    'identity_verification': None,
+                    'radius_user_token': None,
+                },
+            )
 
     @mock.patch.object(
         app_settings,

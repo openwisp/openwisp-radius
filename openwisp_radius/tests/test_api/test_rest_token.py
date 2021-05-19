@@ -22,13 +22,19 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
     def _user_auth_token_helper(self, username):
         url = self._get_url()
-        response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
+        with self.assertNumQueries(21):
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['key'], Token.objects.first().key)
         self.assertEqual(
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
         self.assertTrue(response.data['is_active'])
+        self.assertIn('is_verified', response.data)
+        self.assertIn('identity_verification', response.data)
+        self.assertIn('radius_user_token', response.data)
 
     def test_user_auth_token_200(self):
         org_user = self._get_org_user()
@@ -127,7 +133,8 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
         # valid token
         payload = dict(token=token.key)
-        response = self.client.post(url, payload)
+        with self.assertNumQueries(17):
+            response = self.client.post(url, payload)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data['response_code'], 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
@@ -158,6 +165,9 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.data['email'], user.email,
         )
+        self.assertIn('is_verified', response.data)
+        self.assertIn('identity_verification', response.data)
+        self.assertIn('radius_user_token', response.data)
 
     def test_validate_auth_token_with_active_user(self):
         user = self._get_user_with_org()

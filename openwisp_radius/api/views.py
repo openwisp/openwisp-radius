@@ -42,6 +42,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 
+from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 
@@ -274,17 +275,11 @@ class ObtainAuthTokenView(
         serializer.is_valid(raise_exception=True)
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
-        radius_token = self.get_or_create_radius_token(
-            user, self.organization, renew=renew_required
-        )
+        self.get_or_create_radius_token(user, self.organization, renew=renew_required)
         self.update_user_last_login(user)
         context = {'view': self, 'request': request, 'token_login': True}
         serializer = self.serializer_class(instance=token, context=context)
-        response = {
-            'radius_user_token': radius_token.key,
-            'is_active': user.is_active,
-            'is_verified': self._is_user_verified(user),
-        }
+        response = RadiusUserSerializer(user).data
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
         # If identity verification is required, check if user is verified
@@ -326,31 +321,27 @@ class ValidateAuthTokenView(
                 pass
             else:
                 user = token.user
-                radius_token = self.get_or_create_radius_token(
+                self.get_or_create_radius_token(
                     user, self.organization, renew=renew_required
                 )
-                phone_number = user.phone_number
+                # user may be in the process of changing the phone number
+                # in that case show the new phone number (which is not verified yet)
                 if not self._is_user_verified(user):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by('-created')
                         .first()
                     )
-                    phone_number = (
+                    user.phone_number = (
                         phone_token.phone_number if phone_token else user.phone_number
                     )
-                if phone_number:
-                    phone_number = str(phone_number)
-                response = {
-                    'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
-                    'auth_token': token.key,
-                    'radius_user_token': radius_token.key,
-                    'username': user.username,
-                    'email': user.email,
-                    'is_active': user.is_active,
-                    'is_verified': self._is_user_verified(user),
-                    'phone_number': phone_number,
-                }
+                response = RadiusUserSerializer(user).data
+                response.update(
+                    {
+                        'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
+                        'auth_token': token.key,
+                    }
+                )
                 self.update_user_last_login(token.user)
                 return Response(response, 200)
         return Response(response, 401)
