@@ -1094,9 +1094,7 @@ class TestAdmin(
             self.assertContains(response, 'id_registered_user-TOTAL_FORMS')
 
         with self.subTest('Register new choice'):
-            register_identity_verification_method(
-                'national_id', verbose_name='National ID'
-            )
+            register_identity_verification_method('national_id', 'National ID')
             response = self.client.get(url)
             self.assertContains(response, '<option value="national_id">National ID')
 
@@ -1107,7 +1105,7 @@ class TestAdmin(
                 response, '<option value="mobile">Mobile Phone (SMS)'
             )
         # re-register so that other tests are not affected
-        register_identity_verification_method('mobile')
+        register_identity_verification_method('mobile', 'Mobile phone')
 
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()

@@ -7,9 +7,8 @@ IDENTITY_VERIFICATION_CHOICES = [
 ]
 
 
-def register_identity_verification_method(name, *args, **kwargs):
-    verbose_name = kwargs.get('verbose_name', name)
-    IDENTITY_VERIFICATION_CHOICES.append((name, _(verbose_name)))
+def register_identity_verification_method(name, verbose_name):
+    IDENTITY_VERIFICATION_CHOICES.append((name, verbose_name))
 
 
 def unregister_identity_verification_method(name):
