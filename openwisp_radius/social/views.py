@@ -1,5 +1,5 @@
 import swapper
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, SuspiciousOperation
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -38,10 +38,6 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
             raise PermissionDenied()
         user = request.user
         is_member = user.is_member(org)
-        # to avoid this, we should fix this:
-        # https://github.com/openwisp/openwisp-users/issues/34
-        if user.is_staff and not is_member:
-            raise SuspiciousOperation()
         # add user to organization
         if not is_member:
             orgUser = OrganizationUser(organization=org, user=user)
