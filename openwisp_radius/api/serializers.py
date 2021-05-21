@@ -23,11 +23,11 @@ from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
 
-from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
+from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import load_model
 from .utils import ErrorDictMixin, IDVerificationHelper, is_sms_verification_enabled
 
@@ -339,13 +339,13 @@ class RegisterSerializer(
     last_name = serializers.CharField(required=False)
     location = serializers.CharField(required=False)
     birth_date = serializers.DateField(required=False)
-    identity_verification = serializers.ChoiceField(
+    method = serializers.ChoiceField(
         help_text=_(
             'Required only when the organization has mandatory identity '
             'verification in its "Organization RADIUS Settings."'
         ),
         default='',
-        choices=IDENTITY_VERIFICATION_CHOICES,
+        choices=REGISTRATION_METHOD_CHOICES,
     )
 
     def validate_phone_number(self, phone_number):
@@ -364,7 +364,7 @@ class RegisterSerializer(
         return phone_number
 
     def validate_optional_fields(self, field_name, field_value, org):
-        if field_name == 'identity_verification':
+        if field_name == 'method':
             field_setting = (
                 'mandatory'
                 if self._needs_identity_verification({'slug': org.slug}) is True
@@ -392,8 +392,7 @@ class RegisterSerializer(
         self.custom_signup(request, user)
         # create a RegisteredUser object for every user that registers through API
         RegisteredUser.objects.create(
-            user=user,
-            identity_verification=self.validated_data['identity_verification'],
+            user=user, method=self.validated_data['method'],
         )
         setup_user_email(request, user, [])
         return user
@@ -408,7 +407,7 @@ class RegisterSerializer(
             'last_name',
             'location',
             'birth_date',
-            'identity_verification',
+            'method',
         ]:
             value = self.validate_optional_fields(
                 field_name, self.validated_data.get(field_name, ''), org
@@ -466,9 +465,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
     """
 
     is_verified = serializers.BooleanField(source='registered_user.is_verified')
-    identity_verification = serializers.CharField(
-        source='registered_user.identity_verification', allow_null=True,
-    )
+    method = serializers.CharField(source='registered_user.method', allow_null=True,)
     radius_user_token = serializers.CharField(source='radius_token.key', default=None)
 
     class Meta:
@@ -483,6 +480,6 @@ class RadiusUserSerializer(serializers.ModelSerializer):
             'location',
             'is_active',
             'is_verified',
-            'identity_verification',
+            'method',
             'radius_user_token',
         ]

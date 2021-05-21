@@ -26,7 +26,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         super().setUp()
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_verification = True
-        radius_settings.needs_identity_verification = True
+        radius_settings.needs_method = True
         radius_settings.sms_sender = '+595972157632'
         radius_settings.sms_meta_data = {
             'clientId': 3,
@@ -37,7 +37,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     _extra_registration_params = {
         'phone_number': '+393664255801',
-        'identity_verification': 'mobile',
+        'method': 'mobile_phone',
     }
 
     def _register_user(self):
@@ -67,7 +67,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '',
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -84,7 +84,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+393664255801',
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             },
         )
         self.assertEqual(r.status_code, 400)
@@ -184,7 +184,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
         self.assertTrue(user.registered_user.is_verified)
-        self.assertEqual(user.registered_user.identity_verification, 'mobile')
+        self.assertEqual(user.registered_user.method, 'mobile_phone')
 
     @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
@@ -426,7 +426,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
             'email': 'test@email.com',
             'password1': 'password',
             'password2': 'password',
-            'identity_verification': 'mobile',
+            'method': 'mobile_phone',
         }
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         msg = 'This international mobile prefix is not allowed.'
@@ -644,7 +644,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237678879231',
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             }
         )
         self._create_user_helper(
@@ -654,7 +654,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             }
         )
         self._test_phone_number_unique_helper('+237678879231')
@@ -674,7 +674,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': '+237674479231',
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             }
         )
         user = User.objects.get(email='user2@gmail.com')
@@ -713,7 +713,7 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
                 'password1': 'password',
                 'password2': 'password',
                 'phone_number': phone_number,
-                'identity_verification': 'mobile',
+                'method': 'mobile_phone',
             },
         )
         self.assertEqual(r.status_code, 201)

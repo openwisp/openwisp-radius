@@ -4,6 +4,7 @@ import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -12,11 +13,8 @@ from openwisp_utils.tests import capture_any_output
 
 from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
+from ..registration import register_registration_method, unregister_registration_method
 from ..utils import load_model
-from ..verification_methods import (
-    register_identity_verification_method,
-    unregister_identity_verification_method,
-)
 from . import CallCommandMixin, FileMixin, PostParamsMixin
 from .mixins import BaseTestCase
 
@@ -1094,18 +1092,39 @@ class TestAdmin(
             self.assertContains(response, 'id_registered_user-TOTAL_FORMS')
 
         with self.subTest('Register new choice'):
-            register_identity_verification_method('national_id', 'National ID')
+            register_registration_method('national_id', 'National ID')
             response = self.client.get(url)
             self.assertContains(response, '<option value="national_id">National ID')
 
+        # not strictly an admin test but grouped here for convenience
+        with self.subTest('test duplicate register'):
+            with self.assertRaises(ImproperlyConfigured):
+                register_registration_method('national_id', 'National ID')
+
+        # not strictly an admin test but grouped here for convenience
+        with self.subTest('test fail_loud=False'):
+            try:
+                register_registration_method(
+                    'national_id', 'National ID', fail_loud=False
+                )
+            except ImproperlyConfigured:
+                self.fail('Unexpected failure')
+
         with self.subTest('Unregister existing choice'):
-            unregister_identity_verification_method('mobile')
+            unregister_registration_method('national_id')
             response = self.client.get(url)
-            self.assertNotContains(
-                response, '<option value="mobile">Mobile Phone (SMS)'
-            )
-        # re-register so that other tests are not affected
-        register_identity_verification_method('mobile', 'Mobile phone')
+            self.assertNotContains(response, '<option value="national_id">National ID')
+
+        # not strictly an admin test but grouped here for convenience
+        with self.assertRaises(ImproperlyConfigured):
+            unregister_registration_method('national_id')
+
+        # not strictly an admin test but grouped here for convenience
+        with self.subTest('test fail_loud=False'):
+            try:
+                unregister_registration_method('national_id', fail_loud=False)
+            except ImproperlyConfigured:
+                self.fail('Unexpected failure')
 
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
@@ -1116,7 +1135,7 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, identity_verification='mobile_phone', is_verified=True
+            user=verified, method='mobile_phone', is_verified=True
         )
         unverified = User.objects.create(
             username='unverified', password='unverified', email='unverified@test.com'
@@ -1124,7 +1143,7 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, identity_verification='mobile_phone', is_verified=False
+            user=unverified, method='mobile_phone', is_verified=False
         )
         app_label = User._meta.app_label
         url = reverse(f'admin:{app_label}_user_changelist')
@@ -1149,7 +1168,7 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, identity_verification='mobile_phone', is_verified=True
+            user=verified, method='mobile_phone', is_verified=True
         )
         unverified = User.objects.create(
             username='unverified', password='unverified', email='unverified@test.com'
@@ -1157,7 +1176,7 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, identity_verification='mobile_phone', is_verified=False
+            user=unverified, method='mobile_phone', is_verified=False
         )
         app_label = User._meta.app_label
         url = reverse(f'admin:{app_label}_user_changelist')

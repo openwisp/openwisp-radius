@@ -421,31 +421,40 @@ interface.
 If this is enabled, each registered user should be verified using a verification method,
 by default, the following choices are available:
 
+- Unspecified
+- Manually created
 - Email (No Identity Verification)
-- Mobile Phone (SMS)
+- Mobile phone number verification via SMS
 
-Adding support for more identity verification methods
-#####################################################
+Adding support for more registration/verification methods
+#########################################################
 
-For those intend to implement additional identity verification methods, such as a
-National ID card, a new verification method can be added or an existing method can be
-removed using the ``register_identity_verification_method``
-and ``unregister_identity_verification_method`` functions respectively.
+For those who need to implement additional registration and identity
+verification methods, such as supporting a National ID card, new methods
+can be added or an existing method can be removed using
+the ``register_registration_method``
+and ``unregister_registration_method`` functions respectively.
 
 For example:
 
 .. code-block:: python
 
-    from openwisp_radius.verification_methods import (
-        register_identity_verification_method,
-        unregister_identity_verification_method,
+    from openwisp_radius.registration import (
+        register_registration_method,
+        unregister_registration_method,
     )
 
     # Enable registering via national digital ID
-    register_identity_verification_method('national_id', 'National Digital ID')
+    register_registration_method('national_id', 'National Digital ID')
 
     # Remove mobile verification method
-    unregister_identity_verification_method('mobile')
+    unregister_registration_method('mobile_phone')
+
+**Note**: both functions will fail if a specific registration method
+is already registered or unregistered, unless the keyword argument
+``fail_loud`` is passed as ``False`` (this useful when working with
+additional registration methods which are supported by multiple
+custom modules).
 
 Email related settings
 ======================

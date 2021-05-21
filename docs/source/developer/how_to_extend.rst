@@ -196,6 +196,7 @@ Once you have created the models, add the following to your ``settings.py``:
     OPENWISP_RADIUS_RADIUSTOKEN_MODEL = 'myradius.RadiusToken'
     OPENWISP_RADIUS_PHONETOKEN_MODEL = 'myradius.PhoneToken'
     OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = 'myradius.OrganizationRadiusSettings'
+    OPENWISP_RADIUS_REGISTEREDUSER_MODEL = 'myradius.RegisteredUser'
 
     # You will need to change AUTH_USER_MODEL if you are extending openwisp_users
     AUTH_USER_MODEL = 'openwisp_users.User'
@@ -445,7 +446,6 @@ If you want only extend the API views and not social views, you can use
 .. note::
     For more information about django views, please refer to the
     `views section in the django documentation <https://docs.djangoproject.com/en/dev/topics/http/views/>`_.
-
 
 2. Extending the Social Views
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

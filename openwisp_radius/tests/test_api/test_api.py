@@ -176,7 +176,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     'location': user.location,
                     'is_active': user.is_active,
                     'is_verified': user.registered_user.is_verified,
-                    'identity_verification': user.registered_user.identity_verification,
+                    'method': user.registered_user.method,
                     'radius_user_token': user.radius_token.key,
                 },
             )
@@ -195,7 +195,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     'location': '',
                     'is_active': admin.is_active,
                     'is_verified': None,
-                    'identity_verification': None,
+                    'method': None,
                     'radius_user_token': None,
                 },
             )
@@ -295,7 +295,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         users_count = User.objects.count()
         r = self.client.post(url, params)
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.data['identity_verification'], 'This field is required.')
+        self.assertEqual(r.data['method'], 'This field is required.')
         self.assertEqual(User.objects.count(), users_count)
 
         with self.subTest('method `mobile` when verification optional'):
@@ -303,7 +303,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.default_org.radius_settings.save()
             params['username'] = 'test2'
             params['email'] = 'test2@gmail.com'
-            params['identity_verification'] = 'mobile'
+            params['method'] = 'mobile_phone'
             r = self.client.post(url, params)
             self.assertEqual(r.status_code, 201)
             self.assertEqual(User.objects.count(), 2)

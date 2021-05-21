@@ -577,7 +577,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             return self._error_response(_('Invalid code.'))
         else:
             user.registered_user.is_verified = True
-            user.registered_user.identity_verification = 'mobile'
+            user.registered_user.method = 'mobile_phone'
             user.is_active = True
             # now that the phone number is verified
             # we can write it to the user field

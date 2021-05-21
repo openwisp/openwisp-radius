@@ -29,7 +29,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 from private_storage.storage.files import PrivateFileSystemStorage
 
-from openwisp_radius.verification_methods import IDENTITY_VERIFICATION_CHOICES
+from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 
@@ -1369,22 +1369,35 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(UUIDModel):
+class AbstractRegisteredUser(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='registered_user',
+        primary_key=True,
     )
-    identity_verification = models.CharField(
+    method = models.CharField(
+        _('registration method'),
+        help_text=_(
+            'users can sign up in different ways, some methods are valid as '
+            'indirect identity verification (eg: mobile phone SIM card in '
+            'most countries)'
+        ),
         max_length=64,
-        default=None,
         blank=True,
-        null=True,
-        choices=IDENTITY_VERIFICATION_CHOICES,
+        default='',
+        choices=REGISTRATION_METHOD_CHOICES,
     )
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(
+        _('verified'),
+        help_text=_(
+            'whether the user has completed any identity '
+            'verification process sucessfully'
+        ),
+        default=False,
+    )
 
     class Meta:
         abstract = True
-        verbose_name = _('Identity Verification')
+        verbose_name = _('Registration Information')
         verbose_name_plural = verbose_name

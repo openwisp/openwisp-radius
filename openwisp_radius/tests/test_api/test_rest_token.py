@@ -33,7 +33,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertTrue(response.data['is_active'])
         self.assertIn('is_verified', response.data)
-        self.assertIn('identity_verification', response.data)
+        self.assertIn('method', response.data)
         self.assertIn('radius_user_token', response.data)
 
     def test_user_auth_token_200(self):
@@ -166,7 +166,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
             response.data['email'], user.email,
         )
         self.assertIn('is_verified', response.data)
-        self.assertIn('identity_verification', response.data)
+        self.assertIn('method', response.data)
         self.assertIn('radius_user_token', response.data)
 
     def test_validate_auth_token_with_active_user(self):
