@@ -1,5 +1,6 @@
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
@@ -72,6 +73,14 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertIn(querystring, r.url)
         user = User.objects.filter(username='socialuser').first()
         self.assertTrue(user.is_member(self.default_org))
+        try:
+            reg_user = user.registered_user
+        except ObjectDoesNotExist:
+            self.fail('RegisteredUser instance not found')
+        self.assertEqual(reg_user.method, 'social_login')
+        # social login is not a legally valid identity verification method
+        # so this should be always False when users sign up with this method
+        self.assertFalse(reg_user.is_verified)
 
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()

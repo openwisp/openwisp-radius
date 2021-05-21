@@ -425,6 +425,7 @@ by default, the following choices are available:
 - Manually created
 - Email (No Identity Verification)
 - Mobile phone number verification via SMS
+- Social login
 
 Adding support for more registration/verification methods
 #########################################################

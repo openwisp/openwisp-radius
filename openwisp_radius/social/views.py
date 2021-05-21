@@ -1,5 +1,5 @@
 import swapper
-from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, SuspiciousOperation
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -11,6 +11,7 @@ from ..utils import load_model
 
 Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
@@ -46,6 +47,14 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
             orgUser = OrganizationUser(organization=org, user=user)
             orgUser.full_clean()
             orgUser.save()
+        try:
+            user.registered_user
+        except ObjectDoesNotExist:
+            registered_user = RegisteredUser(
+                user=user, method='social_login', is_verified=False
+            )
+            registered_user.full_clean()
+            registered_user.save()
 
     def get_redirect_url(self, request, organization):
         """

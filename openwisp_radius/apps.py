@@ -7,12 +7,14 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_utils.api.apps import ApiAppConfig
 from openwisp_utils.utils import default_or_test
 
+from . import settings as app_settings
 from .receivers import (
     create_default_groups_handler,
     organization_post_save,
     organization_pre_save,
     set_default_group_handler,
 )
+from .registration import register_registration_method
 from .utils import load_model, update_user_related_records
 
 
@@ -41,6 +43,9 @@ class OpenwispRadiusConfig(ApiAppConfig):
         super().ready(*args, **kwargs)
         self.connect_signals()
         self.add_default_menu_items()
+
+        if app_settings.SOCIAL_LOGIN_ENABLED:
+            register_registration_method('social_login', _('Social login'))
 
     def connect_signals(self):
         Organization = swapper.load_model('openwisp_users', 'Organization')
