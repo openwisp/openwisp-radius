@@ -277,7 +277,7 @@ class ObtainAuthTokenView(
         token, _ = UserToken.objects.get_or_create(user=user)
         self.get_or_create_radius_token(user, self.organization, renew=renew_required)
         self.update_user_last_login(user)
-        context = {'view': self, 'request': request, 'token_login': True}
+        context = {'view': self, 'request': request}
         serializer = self.serializer_class(instance=token, context=context)
         response = RadiusUserSerializer(user).data
         response.update(serializer.data)
@@ -308,6 +308,7 @@ class ValidateAuthTokenView(
     throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
 
+    @swagger_auto_schema(request_body=ValidateTokenSerializer)
     def post(self, request, *args, **kwargs):
         """
         Used to check whether the auth token of a user is valid or not.
@@ -336,12 +337,13 @@ class ValidateAuthTokenView(
                         phone_token.phone_number if phone_token else user.phone_number
                     )
                 response = RadiusUserSerializer(user).data
-                response.update(
-                    {
-                        'response_code': 'AUTH_TOKEN_VALIDATION_SUCCESSFUL',
-                        'auth_token': token.key,
-                    }
-                )
+                context = {'view': self, 'request': request}
+                token_data = rest_auth_settings.TokenSerializer(
+                    token, context=context
+                ).data
+                token_data['auth_token'] = token_data.pop('key')
+                token_data['response_code'] = 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
+                response.update(token_data)
                 self.update_user_last_login(token.user)
                 return Response(response, 200)
         return Response(response, 401)

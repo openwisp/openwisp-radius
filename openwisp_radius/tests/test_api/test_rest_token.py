@@ -20,12 +20,14 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
         return reverse('radius:user_auth_token', args=[self.default_org.slug])
 
-    def _user_auth_token_helper(self, username):
-        url = self._get_url()
+    def _post_credentials(self):
         with self.assertNumQueries(21):
-            response = self.client.post(
-                url, {'username': 'tester', 'password': 'tester'}
+            return self.client.post(
+                self._get_url(), {'username': 'tester', 'password': 'tester'}
             )
+
+    def _user_auth_token_helper(self, username):
+        response = self._post_credentials()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['key'], Token.objects.first().key)
         self.assertEqual(
