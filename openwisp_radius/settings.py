@@ -40,6 +40,7 @@ BATCH_MAIL_SUBJECT = get_settings_value('BATCH_MAIL_SUBJECT', 'Credentials')
 BATCH_MAIL_SENDER = get_settings_value('BATCH_MAIL_SENDER', settings.DEFAULT_FROM_EMAIL)
 API_AUTHORIZE_REJECT = get_settings_value('API_AUTHORIZE_REJECT', False)
 SOCIAL_LOGIN_ENABLED = 'allauth.socialaccount' in settings.INSTALLED_APPS
+SAML_LOGIN_ENABLED = 'djangosaml2' in settings.INSTALLED_APPS
 DISPOSABLE_RADIUS_USER_TOKEN = get_settings_value('DISPOSABLE_RADIUS_USER_TOKEN', True)
 API_ACCOUNTING_AUTO_GROUP = get_settings_value('API_ACCOUNTING_AUTO_GROUP', True)
 FREERADIUS_ALLOWED_HOSTS = get_settings_value('FREERADIUS_ALLOWED_HOSTS', [])
