@@ -478,19 +478,31 @@ Responds only to **POST**.
 
 Returns:
 
-- the user radius token, which can be used to authenticate
+- ``radius_user_token``: the user radius token, which can be used to authenticate
   the user in the captive portal by sending it in place of the user password
   (it will be passed to freeradius which in turn will send it to the
   `authorize API endpoint <#authorize>`_ which will recognize the token as
   the user passsword)
-- the user API access token, which will be needed to authenticate the user to
+- ``key``: the user API access token, which will be needed to authenticate the user to
   eventual subsequent API requests (eg: change password)
-- ``is_active`` attribute of the user
-- ``is_verified`` attribute of the user
+- ``is_active`` if it's ``false`` it means the user has been banned
+- ``is_verified`` when identity verification is enabled, it indicates
+  whether the user has completed an indirect identity verification
+  process like confirming their mobile phone number
+- ``method`` registration/verification method used by the user to register,
+  eg: ``mobile_phone``, ``social_login``, etc.
+- ``username``
+- ``email``
+- ``phone_number``
+- ``first_name``
+- ``last_name``
+- ``birth_date``
+- ``location``
 
-If the user account is inactive the endpoint will send the data anyway but using the
-HTTP status code 401, this way consumers can recognize these users and trigger
-the account verification again if needed (or reject them).
+If the user account is inactive or unverified the endpoint will send the data
+anyway but using the HTTP status code 401, this way consumers can recognize
+these users and trigger the appropriate response needed (eg: reject them
+or initiate account verification).
 
 Parameters:
 
@@ -519,14 +531,15 @@ Parameters:
 =================  ===============================
 Param              Description
 =================  ===============================
-auth_token         string
-radius_user_token  string
-response_code      string to be used for translation
-username           string
-is_active          boolean
-is_verified        boolean
-phone_number       string
+token              the rest auth token to validate
 =================  ===============================
+
+The user information is returned in the response (similarly to
+`Obtain User Auth Token <#login-obtain-user-auth-token>`__),
+along with the following additional parameter:
+
+- ``response_code``: string indicating whether the result is successful or not,
+  to be used for translation.
 
 User Radius Sessions
 --------------------
