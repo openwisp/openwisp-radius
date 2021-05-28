@@ -8,6 +8,8 @@ from django.urls import include, path
 
 from openwisp_radius.urls import get_urls
 
+from . import views
+
 if os.environ.get('SAMPLE_APP', False):
     # If you are extending the API views or social views,
     # please import them, otherwise pass `None` in place
@@ -27,6 +29,16 @@ urlpatterns = [
     path('api/v1/', include('openwisp_users.api.urls')),
     path('accounts/', include('openwisp_users.accounts.urls')),
     radius_urls,
+    path(
+        'captive-portal-mock/login/',
+        views.captive_portal_login,
+        name='captive_portal_login_mock',
+    ),
+    path(
+        'captive-portal-mock/logout/',
+        views.captive_portal_logout,
+        name='captive_portal_logout_mock',
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += staticfiles_urlpatterns()
