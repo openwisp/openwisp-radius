@@ -60,6 +60,7 @@ openwisp-radius
    /user/social_login
    /user/api
    /developer/how_to_extend
+   /developer/captive_portal_mock.rst
    /general/support
    /developer/contributing
    /general/goals
