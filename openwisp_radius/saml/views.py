@@ -14,6 +14,7 @@ from djangosaml2.views import (  # noqa
 )
 from rest_framework.authtoken.models import Token
 
+from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import load_model
 from .utils import get_url_or_path
@@ -48,7 +49,7 @@ class AssertionConsumerServiceView(RadiusTokenMixin, BaseAssertionConsumerServic
             user.registered_user
         except ObjectDoesNotExist:
             registered_user = RegisteredUser(
-                user=user, method='social_login', is_verified=False
+                user=user, method='saml', is_verified=app_settings.SAML_IS_VERIFIED
             )
             registered_user.full_clean()
             registered_user.save()

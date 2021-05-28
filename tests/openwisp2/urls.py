@@ -15,12 +15,16 @@ if os.environ.get('SAMPLE_APP', False):
     # please import them, otherwise pass `None` in place
     # of these values
     from .sample_radius.api import views as api_views
+    from .sample_radius.saml import views as saml_views
     from .sample_radius.social import views as social_views
 
-    radius_urls = path('', include((get_urls(api_views, social_views), 'radius')))
+    radius_urls = path(
+        '', include((get_urls(api_views, social_views, saml_views), 'radius'))
+    )
 else:
     api_views = None
     social_views = None
+    saml_views = None
     radius_urls = path('', include('openwisp_radius.urls'))
 
 urlpatterns = [

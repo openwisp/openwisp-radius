@@ -5,7 +5,6 @@ from django.urls import include, path
 from . import settings as app_settings
 from .api.urls import get_api_urls
 from .private_storage.views import rad_batch_csv_download_view
-from .saml.urls import get_saml_urls
 
 
 def get_urls(api_views=None, social_views=None, saml_views=None):
@@ -34,6 +33,8 @@ def get_urls(api_views=None, social_views=None, saml_views=None):
             )
         )
     if app_settings.SAML_LOGIN_ENABLED:
+        from .saml.urls import get_saml_urls
+
         urls.append(path('radius/saml2/', include(get_saml_urls(saml_views))),)
     return urls
 

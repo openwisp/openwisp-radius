@@ -55,7 +55,7 @@ INSTALLED_APPS = [
 LOGIN_REDIRECT_URL = '/admin/index'
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
+    'openwisp_users.backends.UsersAuthenticationBackend',
     'djangosaml2.backends.Saml2Backend',
 )
 

@@ -9,3 +9,4 @@ freezegun
 django-extensions
 openwisp-utils[qa]
 pylinkvalidator
+djangosaml2~=1.2.0
