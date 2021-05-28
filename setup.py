@@ -38,7 +38,10 @@ setup(
         'django>=3.0,<3.2',
         'swapper~=1.1.0',
         # TODO: change this when next point version of openwisp-utils is released
-        'openwisp-utils[rest] @ https://github.com/openwisp/openwisp-utils/tarball/master',
+        (
+            'openwisp-utils[rest] @'
+            'https://github.com/openwisp/openwisp-utils/tarball/master'
+        ),
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
         'weasyprint>=43,<53',
