@@ -109,7 +109,7 @@ modules listed ``INSTALLED_APPS``:
     ]
 
 These modules are optional, add them only if you need the
-`social login <../user/social_login.html>`_. feature:
+`social login <../user/social_login.html>`_ feature:
 
 .. code-block:: python
 
@@ -120,6 +120,16 @@ These modules are optional, add them only if you need the
         'allauth.socialaccount.providers.google',
     ]
 
+This module is optional, add this only if you need the
+`Single Sign-On (SAML) <../user/saml_login.html>`_ feature:
+
+.. code-block:: python
+
+    INSTALLED_APPS += [
+        # sAML login
+        'djangosaml2',
+    ]
+
 Add media locations in ``settings.py``:
 
 .. code-block:: python
@@ -127,12 +137,16 @@ Add media locations in ``settings.py``:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
 
-Also, add ``AUTH_USER_MODEL`` and ``SITE_ID`` to your ``settings.py``:
+Also, add ``AUTH_USER_MODEL``, ``AUTHENTICATION_BACKENDS`` and ``SITE_ID`` to
+your ``settings.py``:
 
 .. code-block:: python
 
     AUTH_USER_MODEL = 'openwisp_users.User'
     SITE_ID = 1
+    AUTHENTICATION_BACKENDS = (
+        'openwisp_users.backends.UsersAuthenticationBackend',
+    )
 
 Add allowed freeradius hosts  in ``settings.py``:
 
