@@ -135,7 +135,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data['response_code'], 'BLANK_OR_INVALID_TOKEN')
         # valid token
         payload = dict(token=token.key)
-        with self.assertNumQueries(17):
+        with self.assertNumQueries(16):
             response = self.client.post(url, payload)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

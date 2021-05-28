@@ -317,7 +317,9 @@ class ValidateAuthTokenView(
         response = {'response_code': 'BLANK_OR_INVALID_TOKEN'}
         if request_token:
             try:
-                token = UserToken.objects.select_related('user').get(key=request_token)
+                token = UserToken.objects.select_related(
+                    'user', 'user__registered_user'
+                ).get(key=request_token)
             except UserToken.DoesNotExist:
                 pass
             else:
