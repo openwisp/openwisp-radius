@@ -195,9 +195,10 @@ This setting can be used to set the maximum size limit for firmware images, eg:
 
     OPENWISP_RADIUS_MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
-**Notes**:
+.. note::
 
-- Value must be specified in bytes. ``None`` means unlimited.
+    The numeric value represents the size of files in bytes.
+    Setting this to ``None`` will mean there's no max size.
 
 API and user token related settings
 ===================================
@@ -286,7 +287,9 @@ For example:
 Using the setting above will only allow phone numbers from the UK (``+44``)
 or Cameroon (``+237``).
 
-**Note:** this setting is applicable only for organizations which have enabled SMS verification.
+.. note::
+
+    This setting is applicable only for organizations which have enabled SMS verification.
 
 ``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -468,11 +471,13 @@ For example:
     # Remove mobile verification method
     unregister_registration_method('mobile_phone')
 
-**Note**: both functions will fail if a specific registration method
-is already registered or unregistered, unless the keyword argument
-``fail_loud`` is passed as ``False`` (this useful when working with
-additional registration methods which are supported by multiple
-custom modules).
+.. note::
+
+    Both functions will fail if a specific registration method
+    is already registered or unregistered, unless the keyword argument
+    ``fail_loud`` is passed as ``False`` (this useful when working with
+    additional registration methods which are supported by multiple
+    custom modules).
 
 Email related settings
 ======================
