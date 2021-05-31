@@ -392,6 +392,7 @@ first_name         string (\*\*)
 last_name          string (\*\*)
 birth_date         string (\*\*)
 location           string (\*\*)
+method             string (\*\*\*)
 ===============    ===============================
 
 (\*) ``phone_number`` is required only when the organization has enabled
@@ -400,6 +401,11 @@ SMS verification in its "Organization RADIUS Settings".
 (\*\*) ``first_name``, ``last_name``, ``birth_date`` and ``location``
 are optional fields which are disabled by default to make the registration
 simple, but can be `enabled through configuration <./settings.html#openwisp-radius-optional-registration-fields>`_.
+
+(\*\*) ``method`` must be one of the available
+`registration/verification methods <./settings.html#openwisp-radius-needs-identity-verification>`_;
+if identity verification is disabled for a particular org, an empty string
+will be acceptable.
 
 Reset password
 --------------

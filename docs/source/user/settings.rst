@@ -418,14 +418,31 @@ Indicates whether organizations require a user to be verified in order to login.
 This can be overridden globally or for each organization separately via the admin
 interface.
 
-If this is enabled, each registered user should be verified using a verification method,
-by default, the following choices are available:
+If this is enabled, each registered user should be verified using a verification method.
+The following choices are available by default:
 
-- Unspecified
-- Manually created
-- Email (No Identity Verification)
-- Mobile phone number verification via SMS
-- Social login
+- ``''`` (empty string): unspecified
+- ``manual``: manually created
+- ``email``: Email (No Identity Verification)
+- ``mobile_phone``: Mobile phone number verification via SMS
+- ``social_login``: Social login, enabled only if ``allauth.socialaccount``
+  is listed in ``settings.INSTALLED_APPS``
+
+.. note::
+
+    Of the methods listed above, ``mobile_phone`` is generally
+    accepted as a legal and valid form of indirect identity verification
+    in those countries who require to provide
+    a valid ID document before buying a SIM card.
+
+    Organizations which are required by law to identify their users
+    before allowing them to access the network (eg: ISPs) can restrict
+    users to register only through this method and can configure the system
+    to only `allow international mobile prefixes <#openwisp-radius-allowed-mobile-prefixes>`_
+    of countries which require a valid ID document to buy a SIM card.
+
+    **Disclaimer:** these are just suggestions on possible configurations
+    of OpenWISP RADIUS and must not be considered as legal advice.
 
 Adding support for more registration/verification methods
 #########################################################
