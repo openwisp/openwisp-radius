@@ -62,7 +62,7 @@ Ensure your ``settings.py`` looks like the following:
         'djangosaml2.middleware.SamlSessionMiddleware',
     ]
 
-Ensure your main ``urls.py`` contains the ``allauth.urls``:
+Ensure your main ``urls.py`` contains the ``openwisp_users.accounts.urls``:
 
 .. code-block:: python
 

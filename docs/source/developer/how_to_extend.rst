@@ -470,8 +470,8 @@ Remember to use these views in root URL configurations in point 11.
 If you want only extend the API views and not social views, you can use
 ``get_urls(api_views, None)`` to get social_views from *openwisp_radius*.
 
-1. Extending the SAML Views
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+3. Extending the SAML Views
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The SAML view classes can be extended into other django applications as well. Note
 that it is not required for extending *openwisp-radius* to your app and this change
@@ -481,7 +481,7 @@ Create a view file as done in `saml views.py <https://github.com/openwisp/openwi
 
 Remember to use these views in root URL configurations in point 11.
 If you want only extend the API views and social view but not SAML views, you can use
-``get_urls(api_views, social_views, None)`` to get social_views from *openwisp_radius*.
+``get_urls(api_views, social_views, None)`` to get saml_views from *openwisp_radius*.
 
 .. note::
     For more information about django views, please refer to the
