@@ -1,17 +1,14 @@
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from djangosaml2.views import (
     AssertionConsumerServiceView as BaseAssertionConsumerServiceView,
 )
-from djangosaml2.views import (  # noqa
-    LoginView,
-    LogoutInitView,
-    LogoutView,
-    MetadataView,
-)
+from djangosaml2.views import LoginView as BaseLoginView
+from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
 from rest_framework.authtoken.models import Token
 
 from .. import settings as app_settings
@@ -72,4 +69,18 @@ class AssertionConsumerServiceView(RadiusTokenMixin, BaseAssertionConsumerServic
         return (
             f'{relay_state}?username={user.username}&token={token.key}&'
             f'radius_user_token={rad_token.key}'
+        )
+
+
+class LoginView(BaseLoginView):
+    def load_sso_kwargs(self, sso_kwargs):
+        service_config = (
+            getattr(settings, 'SAML_CONFIG', {}).get('service', {}).get('sp', None)
+        )
+        sso_kwargs['requested_authn_context'] = service_config.get(
+            'requested_authn_context', None
+        )
+        sso_kwargs['isPassive'] = service_config.get('isPassive', False)
+        sso_kwargs['attribute_consuming_service_index'] = service_config.get(
+            'attribute_consuming_service_index', '1'
         )
