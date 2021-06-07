@@ -4,17 +4,16 @@ import sys
 from unittest import mock
 
 import swapper
+from allauth.account.forms import default_token_generator
+from allauth.account.utils import user_pk_to_url_str
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.test import override_settings
 from django.urls import reverse
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -564,7 +563,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(mail.outbox), mail_count + 1)
 
         url_kwargs = {
-            'uid': urlsafe_base64_encode(force_bytes(test_user.pk)),
+            'uid': user_pk_to_url_str(test_user),
             'token': default_token_generator.make_token(test_user),
         }
         password_confirm_url = reverse(
@@ -575,7 +574,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = {
             'new_password1': 'test_new_password',
             'new_password2': 'test_new_password',
-            'uid': force_text(url_kwargs['uid']),
+            'uid': url_kwargs['uid'],
             'token': '-wrong-token-',
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
@@ -605,7 +604,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = {
             'new_password1': 'test_new_password',
             'new_password2': 'test_new_password',
-            'uid': force_text(url_kwargs['uid']),
+            'uid': url_kwargs['uid'],
             'token': url_kwargs['token'],
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
