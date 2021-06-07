@@ -486,7 +486,7 @@ class PasswordResetConfirmView(
             try:
                 uid = url_str_to_user_pk(self.request.POST['uid'])
                 user = User.objects.get(pk=uid)
-            except (User.DoesNotExist, ValueError, ValidationError):
+            except (User.DoesNotExist, ValidationError):
                 raise Http404()
             self.validate_membership(user)
             return user

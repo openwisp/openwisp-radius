@@ -48,7 +48,7 @@ setup(
         # Needed for the new authentication backend in openwisp-users
         # TODO: remove when the new version of openwisp-users is released
         'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
-        'dj-rest-auth~=2.1.2',
+        'dj-rest-auth~=2.1.6',
         'django-sendsms~=0.4.0',
         'jsonfield~=3.1.0',
         'django-private-storage~=2.2',
