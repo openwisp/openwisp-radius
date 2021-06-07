@@ -12,7 +12,7 @@ DEBUG = True
 
 SECRET_KEY = '&a@f(0@lrl%606smticbu20=pvribdvubk5=gjti8&n1y%bi&4'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
 
 INSTALLED_APPS = [
@@ -51,8 +51,7 @@ INSTALLED_APPS = [
     'djangosaml2',
 ]
 
-# Bug in djangosaml2: https://git.io/JGUb9
-LOGIN_REDIRECT_URL = '/admin/index'
+LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTHENTICATION_BACKENDS = (
     'openwisp_users.backends.UsersAuthenticationBackend',
@@ -81,7 +80,7 @@ MIDDLEWARE = [
 
 SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SAML_ALLOWED_HOSTS = ['*']
+SAML_ALLOWED_HOSTS = []
 SAML_USE_NAME_ID_AS_USERNAME = True
 SAML_CREATE_UNKNOWN_USER = True
 SAML_CONFIG = {}
