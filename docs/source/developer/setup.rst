@@ -120,16 +120,6 @@ These modules are optional, add them only if you need the
         'allauth.socialaccount.providers.google',
     ]
 
-This module is optional, add this only if you need the
-`Single Sign-On (SAML) <../user/saml_login.html>`_ feature:
-
-.. code-block:: python
-
-    INSTALLED_APPS += [
-        # sAML login
-        'djangosaml2',
-    ]
-
 Add media locations in ``settings.py``:
 
 .. code-block:: python

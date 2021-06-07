@@ -26,7 +26,11 @@ a SSO.
 Setup
 -----
 
-Install required dependencies::
+Install required system dependencies:
+
+    sudo apt install xmlsec1
+
+Install Python dependencies::
 
     pip install openwisp-radius[saml]
 
@@ -36,7 +40,7 @@ Ensure your ``settings.py`` looks like the following:
 
     INSTALLED_APPS = [
         # ... other apps ..
-        # apps needed for SA<L> login
+        # apps needed for SAML login
         'rest_framework.authtoken',
         'django.contrib.sites',
         'allauth',
@@ -64,7 +68,7 @@ Ensure your main ``urls.py`` contains the ``allauth.urls``:
 
     urlpatterns = [
         # .. other urls ...
-        path('accounts/', include('allauth.urls')),
+        path('accounts/', include('openwisp_users.accounts.urls')),
     ]
 
 Configure the SAML Settings
@@ -85,8 +89,9 @@ the right organization:
 
 .. code-block:: html
 
-    <a href="https://openwisp2.mywifiproject.com//radius/saml2/login/?RelayState=https://captivepage.mywifiproject.com%3Forg%3Ddefault
-       class="button">Log in with Facebook
+    <a href="https://openwisp2.mywifiproject.com/radius/saml2/login/?RelayState=https://captivepage.mywifiproject.com%3Forg%3Ddefault
+       class="button">
+       Log in with SSO
     </a>
 
 Substitute ``openwisp2.mywifiproject.com``, ``https://captivepage.mywifiproject.com``

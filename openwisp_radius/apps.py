@@ -48,7 +48,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
             register_registration_method('social_login', _('Social login'))
         if app_settings.SAML_LOGIN_ENABLED:
             register_registration_method(
-                'saml', _(app_settings.SAML_REGISTRATION_METHOD_LABEL)
+                'saml', app_settings.SAML_REGISTRATION_METHOD_LABEL
             )
 
     def connect_signals(self):
