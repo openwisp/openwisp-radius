@@ -507,6 +507,9 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
