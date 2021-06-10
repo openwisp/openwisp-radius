@@ -77,9 +77,6 @@ class LoginView(BaseLoginView):
         service_config = (
             getattr(settings, 'SAML_CONFIG', {}).get('service', {}).get('sp', None)
         )
-        sso_kwargs['requested_authn_context'] = service_config.get(
-            'requested_authn_context', None
-        )
         sso_kwargs['isPassive'] = service_config.get('isPassive', False)
         sso_kwargs['attribute_consuming_service_index'] = service_config.get(
             'attribute_consuming_service_index', '1'

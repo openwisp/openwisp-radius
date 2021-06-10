@@ -55,7 +55,9 @@ setup(
         'celery~=4.4.0',
         'django-ipware~=3.0.0',
     ],
-    extras_require={'saml': ['djangosaml2~=1.3.0']},
+    extras_require={
+        'saml': ['djangosaml2 @ https://github.com/pandafy/djangosaml2/tarball/master']
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
