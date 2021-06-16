@@ -1,14 +1,14 @@
 import logging
-from uuid import UUID
 
 import swapper
+from allauth.account.forms import default_token_generator
+from allauth.account.utils import url_str_to_user_pk, user_pk_to_url_str
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
 from dj_rest_auth.views import PasswordChangeView as BasePasswordChangeView
 from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -17,8 +17,6 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
@@ -436,7 +434,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         user = self.request.user
         if not user.pk:
             return
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        uid = user_pk_to_url_str(user)
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         default_url = password_reset_urls.get('default')
@@ -486,10 +484,9 @@ class PasswordResetConfirmView(
     def validate_user(self, *args, **kwargs):
         if self.request.POST.get('uid', None):
             try:
-                uid = force_text(urlsafe_base64_decode(self.request.POST['uid']))
-                uid = UUID(str(uid))
+                uid = url_str_to_user_pk(self.request.POST['uid'])
                 user = User.objects.get(pk=uid)
-            except (User.DoesNotExist, ValueError):
+            except (User.DoesNotExist, ValueError, ValidationError):
                 raise Http404()
             self.validate_membership(user)
             return user
