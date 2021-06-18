@@ -1,13 +1,13 @@
 django>=3.0,<3.2
 swapper~=1.1.0
 # TODO: change this when next point version of openwisp-utils is released
-openwisp-utils[rest] @ https://github.com/openwisp/openwisp-utils/tarball/master
+openwisp-utils[rest] @ https://github.com/niteshsinha17/openwisp-utils/tarball/gsoc/new-navigation-menu-design
 passlib~=1.7.1
 djangorestframework-link-header-pagination~=0.1.1
 weasyprint>=43,<53
 # Needed for the new authentication backend in openwisp-users
 # TODO: remove when the new version of openwisp-users is released
-openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master
+openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/issues/253-register-menu-groups
 dj-rest-auth~=2.1.2
 django-sendsms~=0.4.0
 jsonfield~=3.1.0
