@@ -1,5 +1,4 @@
 import swapper
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
