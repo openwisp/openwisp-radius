@@ -106,7 +106,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
 
     def regiser_menu_groups(self):
         register_menu_group(
-            position=20,
+            position=30,
             config={
                 'label': _('Radius sessions'),
                 'model': f'{self.label}.RadiusAccounting',
