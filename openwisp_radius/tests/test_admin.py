@@ -1204,3 +1204,9 @@ class TestAdmin(
             self.assertNotContains(response, get_expected_html('yes'))
             self.assertNotContains(response, get_expected_html('no'))
             self.assertContains(response, get_expected_html('unknown'))
+
+    def test_admin_menu_groups(self):
+        # Test menu group (openwisp-utils menu group) for RadiusAccounting models
+        response = self.client.get(reverse('admin:index'))
+        url = reverse(f'admin:{self.app_label}_radiusaccounting_changelist')
+        self.assertContains(response, f'<a class="menu-link" href="{url}">')
