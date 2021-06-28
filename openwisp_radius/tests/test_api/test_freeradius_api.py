@@ -14,6 +14,7 @@ from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output
 
+from ... import registration
 from ... import settings as app_settings
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase
@@ -22,6 +23,7 @@ User = get_user_model()
 RadiusToken = load_model('RadiusToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusPostAuth = load_model('RadiusPostAuth')
+RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
@@ -284,6 +286,24 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
+
+    @mock.patch.object(registration, 'AUTHORIZE_UNVERIFIED', ['mobile_phone'])
+    def test_authorize_unverified_user_with_special_method(self):
+        org_user = self._get_org_user()
+        reg_user = RegisteredUser(
+            user=org_user.user, method='mobile_phone', is_verified=False
+        )
+        reg_user.full_clean()
+        reg_user.save()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        with self.assertNumQueries(4):
+            response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
 
     def test_authorize_radius_token_unverified_user(self):
         user = self._get_org_user()

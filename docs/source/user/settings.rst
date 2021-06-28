@@ -479,6 +479,25 @@ For example:
     additional registration methods which are supported by multiple
     custom modules).
 
+.. warning::
+
+    If you need to implement a registration method that needs to grant limited
+    internet access to unverified users so they can complete their
+    verification process online on other websites which cannot be predicted
+    and hence cannot be added to the walled garden, you can pass
+    ``authorize_unverified=True`` to the ``register_registration_method``
+    function.
+
+    This is needed to implement payment flows in which users insert
+    a specific 3D secure code in the website of their bank.
+    Keep in mind that you should create a specific limited radius group
+    for these unverified users.
+
+    Payment flows and credit/debit card verification are fully implemented
+    in **OpenWISP Subscriptions**, a premium module available only to
+    customers of the
+    `commercial support offering of OpenWISP <../general/support.html>`_.
+
 Email related settings
 ======================
 

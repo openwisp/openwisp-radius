@@ -10,10 +10,14 @@ REGISTRATION_METHOD_CHOICES = [
     ('mobile_phone', _('Mobile phone number verification via SMS')),
 ]
 
+AUTHORIZE_UNVERIFIED = []
+
 logger = logging.getLogger(__name__)
 
 
-def register_registration_method(name, verbose_name, fail_loud=True):
+def register_registration_method(
+    name, verbose_name, authorize_unverified=False, fail_loud=True
+):
     # check if it's a duplicate
     duplicate = False
     for method_tuple in REGISTRATION_METHOD_CHOICES:
@@ -27,6 +31,10 @@ def register_registration_method(name, verbose_name, fail_loud=True):
         raise ImproperlyConfigured(f'Method {name} is already registered')
     else:
         logger.info(f'Method {name} is already registered')
+    # needed to implement 3D secure verification
+    # when doing credit/debit card payments
+    if authorize_unverified and name not in AUTHORIZE_UNVERIFIED:
+        AUTHORIZE_UNVERIFIED.append(name)
 
 
 def unregister_registration_method(name, fail_loud=True):

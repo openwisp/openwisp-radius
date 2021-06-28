@@ -5,6 +5,7 @@ import drf_link_header_pagination
 import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,6 +18,7 @@ from rest_framework.response import Response
 
 from openwisp_users.backends import UsersAuthenticationBackend
 
+from .. import registration
 from .. import settings as app_settings
 from ..utils import load_model
 from .serializers import (
@@ -199,13 +201,11 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     def get_user(self, request, username):
         """
-        return active user or ``None``
+        return user or ``None``
         """
+        conditions = self._get_user_query_conditions(request)
         try:
-            filter_kwargs = dict(is_active=True)
-            if self._needs_identity_verification({'pk': request._auth}):
-                filter_kwargs['registered_user__is_verified'] = True
-            user = auth_backend.get_users(username).filter(**filter_kwargs)[0]
+            user = auth_backend.get_users(username).filter(conditions)[0]
         except IndexError:
             return None
         # ensure user is member of the authenticated org
@@ -217,6 +217,27 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         ):
             return user
         return None
+
+    def _get_user_query_conditions(self, request):
+        is_active = Q(is_active=True)
+        needs_verification = self._needs_identity_verification({'pk': request._auth})
+        # if no identity verification enabled for this org,
+        # just ensure user is active
+        if not needs_verification:
+            return is_active
+        # if identity verification is enabled
+        is_verified = Q(registered_user__is_verified=True)
+        AUTHORIZE_UNVERIFIED = registration.AUTHORIZE_UNVERIFIED
+        # and no method should authorize unverified users
+        # ensure user is active AND verified
+        if not AUTHORIZE_UNVERIFIED:
+            return is_active & is_verified
+        # in case some methods are allowed to authorize unverified users
+        # ensure user is active AND
+        # (user is verified OR user uses one of these methods)
+        else:
+            authorize_unverified = Q(registered_user__method__in=AUTHORIZE_UNVERIFIED)
+            return is_active & (is_verified | authorize_unverified)
 
     def authenticate_user(self, request, user, password):
         """
