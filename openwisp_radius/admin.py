@@ -525,7 +525,7 @@ UserAdmin.inlines += [
     RadiusUserGroupInline,
     PhoneTokenInline,
 ]
-UserAdmin.list_filter += (RegisteredUserFilter,)
+UserAdmin.list_filter += (RegisteredUserFilter, 'registered_user__method')
 
 
 def get_is_verified(self, obj):
