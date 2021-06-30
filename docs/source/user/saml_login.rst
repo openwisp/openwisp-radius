@@ -101,3 +101,21 @@ page and the organization slug respectively.
 Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Single Sign-On (SAML) by default.
+
+Settings
+--------
+
+``SAML_REGISTRATION_METHOD_LABEL``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``'Single Sign-On (SAML)'``
+
+Sets the verbose name of SAML registration method.
+
+``SAML_IS_VERIFIED``
+~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Setting this to ``True`` will mark automatically mark users as ``Verfied``
+on registration.
