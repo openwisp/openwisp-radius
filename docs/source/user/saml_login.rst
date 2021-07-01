@@ -105,15 +105,15 @@ which provides buttons for Single Sign-On (SAML) by default.
 Settings
 --------
 
-``SAML_REGISTRATION_METHOD_LABEL``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``'Single Sign-On (SAML)'``
 
 Sets the verbose name of SAML registration method.
 
-``SAML_IS_VERIFIED``
-~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_SAML_IS_VERIFIED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 
