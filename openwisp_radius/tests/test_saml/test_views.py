@@ -3,7 +3,6 @@ from urllib.parse import parse_qs, urlparse
 
 import swapper
 from django.contrib.auth import SESSION_KEY, get_user_model
-from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from djangosaml2.tests import auth_response, conf
@@ -11,6 +10,7 @@ from djangosaml2.utils import get_session_id_from_saml2, saml2_from_httpredirect
 from rest_framework.authtoken.models import Token
 
 from openwisp_radius.saml.utils import get_url_or_path
+from openwisp_users.tests.utils import TestOrganizationMixin
 
 from .utils import TestSamlUtilities
 
@@ -35,14 +35,16 @@ KEY_PATH = os.path.join(BASE_PATH, 'mycert.key')
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
-class TestAssertionConsumerServiceView(TestSamlUtilities, TestCase):
+class TestAssertionConsumerServiceView(
+    TestOrganizationMixin, TestSamlUtilities, TestCase
+):
     login_url = reverse('radius:saml2_login')
 
     def _get_relay_state(self, redirect_url, org_slug):
         return f'{redirect_url}?org={org_slug}'
 
     def _get_saml_response_for_acs_view(self, relay_state):
-        response = self.client.get(self.login_url)
+        response = self.client.get(self.login_url, {'RelayState': relay_state})
         saml2_req = saml2_from_httpredirect_request(response.url)
         session_id = get_session_id_from_saml2(saml2_req)
         self.add_outstanding_query(session_id, relay_state)
@@ -82,22 +84,6 @@ class TestAssertionConsumerServiceView(TestSamlUtilities, TestCase):
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
 
-    def test_organization_slug_absent(self):
-        expected_redirect_url = 'https://captive-portal.example.com'
-        org_slug = ''
-        relay_state = self._get_relay_state(
-            redirect_url=expected_redirect_url, org_slug=org_slug
-        )
-        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
-        with self.assertRaises(ImproperlyConfigured):
-            self.client.post(
-                reverse('radius:saml2_acs'),
-                {
-                    'SAMLResponse': self.b64_for_post(saml_response),
-                    'RelayState': relay_state,
-                },
-            )
-
     def test_relay_state_relative_path(self):
         expected_redirect_path = '/captive/portal/page'
         org_slug = 'default'
@@ -116,3 +102,31 @@ class TestAssertionConsumerServiceView(TestSamlUtilities, TestCase):
         self.assertEqual(get_url_or_path(response.url), expected_redirect_path)
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
+
+
+@override_settings(
+    SAML_CONFIG=conf.create_conf(
+        sp_host='sp.example.com',
+        idp_hosts=['idp.example.com'],
+        metadata_file=METADATA_PATH,
+    ),
+    SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
+    SAML_USE_NAME_ID_AS_USERNAME=False,
+)
+class TestLoginView(TestCase):
+    login_url = reverse('radius:saml2_login')
+
+    def test_organization_slug(self):
+        redirect_url = 'https://captive-portal.example.com'
+
+        with self.subTest('Organization slug not present in URL'):
+            response = self.client.get(self.login_url, {'RelayState': redirect_url})
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Authentication Error')
+
+        with self.subTest('Incorrect organization slug present in URL'):
+            response = self.client.get(
+                self.login_url, {'RelayState': f'{redirect_url}&org=non-existent-org'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Authentication Error')

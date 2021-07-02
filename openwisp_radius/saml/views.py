@@ -1,9 +1,10 @@
+import logging
 from urllib.parse import parse_qs, urlparse
 
 import swapper
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from djangosaml2.views import (
     AssertionConsumerServiceView as BaseAssertionConsumerServiceView,
 )
@@ -16,22 +17,37 @@ from ..api.views import RadiusTokenMixin
 from ..utils import load_model
 from .utils import get_url_or_path
 
+logger = logging.getLogger(__name__)
+
 Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = load_model('RadiusToken')
 RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
-class AssertionConsumerServiceView(RadiusTokenMixin, BaseAssertionConsumerServiceView):
-    def get_organization_from_relay_state(self):
+class OrganizationSamlMixin(object):
+    def get_org_slug_from_relay_state(self):
         try:
-            parsed_url = urlparse(self.request.POST.get('RelayState'), None)
+            parsed_url = urlparse(
+                self.request.POST.get(
+                    'RelayState', self.request.GET.get('RelayState', None),
+                )
+            )
+
             org_slug = parse_qs(parsed_url.query)['org'][0]
         except (KeyError, IndexError):
             raise ImproperlyConfigured('Organization slug not provided')
         else:
-            return get_object_or_404(Organization, slug=org_slug)
+            return org_slug
 
+    def get_organization_from_relay_state(self):
+        org_slug = self.get_org_slug_from_relay_state()
+        return get_object_or_404(Organization, slug=org_slug)
+
+
+class AssertionConsumerServiceView(
+    OrganizationSamlMixin, RadiusTokenMixin, BaseAssertionConsumerServiceView
+):
     def post_login_hook(self, request, user, session_info):
         """ If desired, a hook to add logic after a user has successfully logged in.
         """
@@ -72,7 +88,7 @@ class AssertionConsumerServiceView(RadiusTokenMixin, BaseAssertionConsumerServic
         )
 
 
-class LoginView(BaseLoginView):
+class LoginView(OrganizationSamlMixin, BaseLoginView):
     def load_sso_kwargs(self, sso_kwargs):
         service_config = (
             getattr(settings, 'SAML_CONFIG', {}).get('service', {}).get('sp', None)
@@ -81,3 +97,15 @@ class LoginView(BaseLoginView):
         sso_kwargs['attribute_consuming_service_index'] = service_config.get(
             'attribute_consuming_service_index', '1'
         )
+
+    def get(self, request, *args, **kwargs):
+        # Check correct organization slug is present in the request
+        try:
+            org_slug = self.get_organization_from_relay_state()
+            assert Organization.objects.filter(slug=org_slug).exists()
+        except (ImproperlyConfigured, AssertionError) as error:
+            if isinstance(error, AssertionError):
+                logger.error('Organization with the provided slug does not exist')
+            return render(request, 'djangosaml2/login_error.html')
+
+        return super().get(request, *args, **kwargs)

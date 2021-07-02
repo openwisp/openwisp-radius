@@ -51,6 +51,9 @@ from openwisp_radius.tests.test_models import TestRadiusReply as BaseTestRadiusR
 from openwisp_radius.tests.test_saml.test_views import (
     TestAssertionConsumerServiceView as BaseTestAssertionConsumerServiceView,
 )
+from openwisp_radius.tests.test_saml.test_views import (
+    TestLoginView as BaseTestLoginView,
+)
 from openwisp_radius.tests.test_social import TestSocial as BaseTestSocial
 from openwisp_radius.tests.test_token import TestPhoneToken as BaseTestPhoneToken
 from openwisp_radius.tests.test_token import TestRadiusToken as BaseTestRadiusToken
@@ -182,6 +185,10 @@ class TestOrganizationRadiusSettings(BaseTestOrganizationRadiusSettings):
 
 
 class TestAssertionConsumerServiceView(BaseTestAssertionConsumerServiceView):
+    pass
+
+
+class TestLoginView(BaseTestLoginView):
     pass
 
 
