@@ -5,7 +5,7 @@ from django.utils.module_loading import import_string
 from djangosaml2.cache import OutstandingQueriesCache
 
 
-class TestSamlUtilities:
+class TestSamlMixins:
     """
     This class contains contains methods copied from djangosaml2.tests.SAML2Tests.
     """

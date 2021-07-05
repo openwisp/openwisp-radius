@@ -101,7 +101,7 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
     def get(self, request, *args, **kwargs):
         # Check correct organization slug is present in the request
         try:
-            org_slug = self.get_organization_from_relay_state()
+            org_slug = self.get_org_slug_from_relay_state()
             assert Organization.objects.filter(slug=org_slug).exists()
         except (ImproperlyConfigured, AssertionError) as error:
             if isinstance(error, AssertionError):

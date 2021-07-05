@@ -298,7 +298,7 @@ Install your forked repo:
 
     git clone git://github.com/<your_username>/openwisp-radius
     cd openwisp-radius/
-    python setup.py develop
+    pip install -e .[saml]
 
 Install test requirements:
 
@@ -354,6 +354,6 @@ If you encounter any issue during installation, run:
 
 .. code-block:: shell
 
-    pip install . -r requirements-test.txt
+    pip install -e .[saml] -r requirements-test.txt
 
 instead of ``pip install -r requirements-test.txt``

@@ -12,7 +12,7 @@ from rest_framework.authtoken.models import Token
 from openwisp_radius.saml.utils import get_url_or_path
 from openwisp_users.tests.utils import TestOrganizationMixin
 
-from .utils import TestSamlUtilities
+from .utils import TestSamlMixins
 
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 RadiusToken = swapper.load_model('openwisp_radius', 'RadiusToken')
@@ -35,9 +35,7 @@ KEY_PATH = os.path.join(BASE_PATH, 'mycert.key')
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
-class TestAssertionConsumerServiceView(
-    TestOrganizationMixin, TestSamlUtilities, TestCase
-):
+class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, TestCase):
     login_url = reverse('radius:saml2_login')
 
     def _get_relay_state(self, redirect_url, org_slug):
