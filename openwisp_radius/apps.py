@@ -2,6 +2,7 @@ import swapper
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
+from swapper import get_model_name
 
 from openwisp_utils.admin_theme.menu import register_menu_group
 from openwisp_utils.api.apps import ApiAppConfig
@@ -108,9 +109,57 @@ class OpenwispRadiusConfig(ApiAppConfig):
         register_menu_group(
             position=30,
             config={
-                'label': _('Radius sessions'),
-                'model': f'{self.label}.RadiusAccounting',
-                'name': 'changelist',
-                'icon': 'radius-sessions',
+                'label': _('FREERADIUS'),
+                'items': {
+                    1: {
+                        'label': _('Accountings'),
+                        'model': get_model_name(self.label, 'RadiusAccounting'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-accounting',
+                    },
+                    2: {
+                        'label': _('Batch user Creation'),
+                        'model': get_model_name(self.label, 'RadiusBatch'),
+                        'name': 'changelist',
+                        'icon': 'ow-batch-creation',
+                    },
+                    3: {
+                        'label': _('Checks'),
+                        'model': get_model_name(self.label, 'RadiusCheck'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-checks',
+                    },
+                    4: {
+                        'label': _('Groups'),
+                        'model': get_model_name(self.label, 'RadiusGroup'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-group',
+                    },
+                    5: {
+                        'label': _('NAS'),
+                        'model': get_model_name(self.label, 'Nas'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-nas',
+                    },
+                    6: {
+                        'label': _('Post Auth Log'),
+                        'model': get_model_name(self.label, 'RadiusPostAuth'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-post-log',
+                    },
+                    7: {
+                        'label': _('Radius Token'),
+                        'model': get_model_name(self.label, 'RadiusToken'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-token',
+                    },
+                    8: {
+                        'label': _('Replies'),
+                        'model': get_model_name(self.label, 'RadiusReply'),
+                        'name': 'changelist',
+                        'icon': 'ow-radius-replies',
+                    },
+                },
+                'icon': 'ow-radius',
             },
         )

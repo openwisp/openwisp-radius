@@ -1,7 +1,7 @@
 django>=3.0,<3.2
 swapper~=1.1.0
 # TODO: change this when next point version of openwisp-utils is released
-# TODO: Needs to point to openwisp before merge
+# TODO: needs to point to openwisp before merge
 openwisp-utils[rest] @ https://github.com/niteshsinha17/openwisp-utils/tarball/gsoc/new-navigation-menu-design
 passlib~=1.7.1
 djangorestframework-link-header-pagination~=0.1.1

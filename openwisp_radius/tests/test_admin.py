@@ -1206,7 +1206,26 @@ class TestAdmin(
             self.assertContains(response, get_expected_html('unknown'))
 
     def test_admin_menu_groups(self):
-        # Test menu group (openwisp-utils menu group) for RadiusAccounting models
+        # Test menu group (openwisp-utils menu group) for RadiusAccounting, RadiusBatch,
+        # RadiusCheck, RadiusGroup, Nas, RadiusPostAuth, RadiusToken, and RadiusReply
+        # models
+
+        self._login()
+        models = [
+            'radiusaccounting',
+            'radiusbatch',
+            'radiuscheck',
+            'radiusgroup',
+            'nas',
+            'radiuspostauth',
+            'radiustoken',
+            'radiusreply',
+        ]
         response = self.client.get(reverse('admin:index'))
-        url = reverse(f'admin:{self.app_label}_radiusaccounting_changelist')
-        self.assertContains(response, f'<a class="menu-link" href="{url}">')
+        for model in models:
+            with self.subTest(f'test_admin_group_for_{model}_model'):
+                url = reverse(f'admin:{self.app_label}_{model}_changelist')
+                self.assertContains(response, f'<a class="mg-link" href="{url}">')
+        with self.subTest('test_free_radius_group_is_registered'):
+            html = '<div class="mg-dropdown-label">FREERADIUS </div>'
+            self.assertContains(response, html, html=True)
