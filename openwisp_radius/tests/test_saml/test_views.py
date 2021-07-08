@@ -114,8 +114,8 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
 class TestLoginView(TestCase):
     login_url = reverse('radius:saml2_login')
 
-    def test_organization_slug(self):
-        redirect_url = 'https://captive-portal.example.com'
+    def test_organization_absolute_path(self):
+        redirect_url = 'https://captive-portal.example.com/login/'
 
         with self.subTest('Organization slug not present in URL'):
             response = self.client.get(self.login_url, {'RelayState': redirect_url})
