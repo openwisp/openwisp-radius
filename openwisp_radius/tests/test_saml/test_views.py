@@ -59,7 +59,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
         expected_query_params = {
             'username': ['org_user'],
             'token': [Token.objects.get(user_id=user_id).key],
-            'radius_user_token': [RadiusToken.objects.get(user_id=user_id).key],
+            'login_method': ['saml'],
         }
         self.assertDictEqual(query_params, expected_query_params)
 

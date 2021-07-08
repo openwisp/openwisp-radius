@@ -78,13 +78,11 @@ class AssertionConsumerServiceView(
             For example, some sites may require user registration if the user has not
             yet been provisioned.
         """
-        organization = self.get_organization_from_relay_state()
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)
-        rad_token = self.get_or_create_radius_token(user, organization)
         return (
             f'{relay_state}?username={user.username}&token={token.key}&'
-            f'radius_user_token={rad_token.key}'
+            f'login_method=saml'
         )
 
 
