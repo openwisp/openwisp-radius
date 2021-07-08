@@ -105,7 +105,7 @@ Install (and add to the requirement of your project) openwisp-radius::
 
 .. note::
     Use ``pip install openwisp-radius[saml]`` if you intend to use
-    `Single Sign-On (SAML) <../user/saml_login.html>`_ feature.
+    `Single Sign-On (SAML) <../user/saml.html>`_ feature.
 
 3. Add ``EXTENDED_APPS``
 ------------------------

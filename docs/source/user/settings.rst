@@ -535,4 +535,4 @@ Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 .. note::
 
     To learn about configuring SAML Login refer to the
-    `"Settings" section of SAML Login documentation <saml_login.html#settings>`_
+    `"Settings" section of SAML Login documentation <saml.html#settings>`_
