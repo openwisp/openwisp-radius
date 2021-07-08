@@ -89,7 +89,7 @@ the right organization:
 
 .. code-block:: html
 
-    <a href="https://openwisp2.mywifiproject.com/radius/saml2/login/?RelayState=https://captivepage.mywifiproject.com%3Forg%3Ddefault
+    <a href="https://openwisp2.mywifiproject.com/radius/saml2/login/?RelayState=https://captivepage.mywifiproject.com%3Forg%3Ddefault"
        class="button">
        Log in with SSO
     </a>
