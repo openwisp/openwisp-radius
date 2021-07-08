@@ -2,18 +2,28 @@
 Single Sign-On (SAML)
 =====================
 
-SAML login is supported by generating an additional temporary token right
-after users authenticates via SSO, the user is then redirected to the
-captive page with two querystring parameters: ``username`` and ``token``.
+`SAML <http://saml.xml.org/about-saml>`_ is supported by generating
+an additional temporary token right after users authenticates via SSO,
+the user is then redirected to the captive page with 3 querystring
+parameters:
 
-The captive page must recognize these two parameters and automatically perform
-the submit action of the login form: ``username`` should obviously used for the
-username field, while ``token`` should be used for the password field.
+- ``username``
+- ``token`` (REST auth token)
+- ``login_method=saml``
+
+The captive page must recognize these two parameters, validate the token
+and automatically perform the submit action of the captive portal login form:
+``username`` should obviously used for the username field,
+while ``token`` should be used for the password field.
+
+The third parameter, ``login_method=saml``, is needed because it allows
+the captive page to remember that the user logged in via SAML,
+because it will need to perform the `SAML logout <#logout>`_ later on.
 
 The internal REST API of openwisp-radius will recognize the token and authorize
 the user.
 
-This kind of implementation allows to implement the SAML login with any captive
+This kind of implementation allows to support SAML with any captive
 portal which already supports the RADIUS protocol because it's totally transparent
 for it, that is, the captive portal doesn't even know the user is signing-in with
 a SSO.
@@ -101,6 +111,17 @@ page and the organization slug respectively.
 Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Single Sign-On (SAML) by default.
+
+Logout
+------
+
+When logging out a user which logged in via SAML, the captive page
+should also call the SAML logout URL: ``/radius/saml2/logout/``.
+
+The `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
+app supports this with minimal configuration, refer to the
+`"Configuring SAML Login & Logout" <https://github.com/openwisp/openwisp-wifi-login-pages#configuring-saml-login-logout>`_
+section.
 
 Settings
 --------
