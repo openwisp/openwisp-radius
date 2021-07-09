@@ -2,13 +2,11 @@
 {% load i18n %}
 
 {% block content %}
-    <h1> {% blocktrans %} Authorization error {% endblocktrans %} </h1>
-    <p> {% blocktrans %} You are already logged in and you are trying to go to the login page again. {% endblocktrans %}
-    </p>
+    <h1>{% trans "Authorization error" %}</h1>
+    <p>{% blocktrans %}You are already logged in and you are trying to go to the login page again.{% endblocktrans %}</p>
 
-    <p> {% blocktrans %} You may have been redirected here when trying to access some content
-        that required extra privileges that you do not have. {% endblocktrans %} </p>
+    <p> {% blocktrans %}You may have been redirected here when trying to access some content
+        that required extra privileges that you do not have.{% endblocktrans %}</p>
 
-    <p> {% blocktrans %} Please {% endblocktrans %} <a href="{% url 'radius:saml2_logout' %}"> {% blocktrans %} logout
-            {% blocktrans %} </a> {% endblocktrans %}and login as a different user {% endblocktrans %}</p>
+    <p>{% trans "Please" %} <a href="{% url 'radius:saml2_logout' %}">{% trans "logout" %}</a> {% trans "and login as a different user" %}</p>
 {% endblock %}

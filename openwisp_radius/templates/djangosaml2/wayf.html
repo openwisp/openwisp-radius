@@ -2,8 +2,8 @@
 {% load i18n %}
 
 {% block content %}
-    <h1> {% blocktrans %} Where are you from? {% endblocktrans %} </h1>
-    <p> {% blocktrans %} Please select your {% endblocktrans %} <strong> {% blocktrans %} Identity Provider {% endblocktrans %} </strong> {% blocktrans %} from the following list: {% endblocktrans %} </p>
+    <h1>{% trans "Where are you from?" %}</h1>
+    <p>{% trans "Please select your" %} <strong>{% trans "Identity Provider" %}</strong> {% trans "from the following list" %}</p>
     <ul>
         {% for url, name in available_idps %}
         <li><a
@@ -12,4 +12,3 @@
         {% endfor %}
     </ul>
 {% endblock %}
-
