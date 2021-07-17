@@ -1311,7 +1311,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             f'{org_radius_settings.organization.name} verification code: {self.token}'
         )
         sms_message = SmsMessage(
-            body=message,
+            body=str(message),
             from_phone=str(org_radius_settings.sms_sender),
             to=[str(self.phone_number)],
         )
