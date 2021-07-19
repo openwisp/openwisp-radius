@@ -36,6 +36,8 @@ def captive_portal_login(request):
             unique_id=id_,
             session_id=id_,
             nas_ip_address='127.0.0.1',
+            calling_station_id='00:00:00:00:00:00',
+            called_station_id='11:00:00:00:00:11',
         )
         ra.full_clean()
         ra.save()
