@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlparse
 
 import swapper
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404, render
 from djangosaml2.views import (
     AssertionConsumerServiceView as BaseAssertionConsumerServiceView,
@@ -36,7 +36,7 @@ class OrganizationSamlMixin(object):
 
             org_slug = parse_qs(parsed_url.query)['org'][0]
         except (KeyError, IndexError):
-            raise ImproperlyConfigured('Organization slug not provided')
+            raise ValueError('Organization slug not provided')
         else:
             return org_slug
 
@@ -100,10 +100,11 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
         # Check correct organization slug is present in the request
         try:
             org_slug = self.get_org_slug_from_relay_state()
-            assert Organization.objects.filter(slug=org_slug).exists()
-        except (ImproperlyConfigured, AssertionError) as error:
-            if isinstance(error, AssertionError):
-                logger.error('Organization with the provided slug does not exist')
+            assert Organization.objects.filter(
+                slug=org_slug
+            ).exists(), 'Organization with the provided slug does not exist'
+        except (ValueError, AssertionError) as error:
+            logger.error(str(error))
             return render(request, 'djangosaml2/login_error.html')
 
         return super().get(request, *args, **kwargs)

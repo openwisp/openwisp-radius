@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import swapper
@@ -118,13 +119,20 @@ class TestLoginView(TestCase):
         redirect_url = 'https://captive-portal.example.com/login/'
 
         with self.subTest('Organization slug not present in URL'):
-            response = self.client.get(self.login_url, {'RelayState': redirect_url})
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, 'Authentication Error')
+            with patch('logging.Logger.error') as mocked_logger:
+                response = self.client.get(self.login_url, {'RelayState': redirect_url})
+                mocked_logger.assert_called_once_with('Organization slug not provided')
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'Authentication Error')
 
         with self.subTest('Incorrect organization slug present in URL'):
-            response = self.client.get(
-                self.login_url, {'RelayState': f'{redirect_url}&org=non-existent-org'}
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, 'Authentication Error')
+            with patch('logging.Logger.error') as mocked_logger:
+                response = self.client.get(
+                    self.login_url,
+                    {'RelayState': f'{redirect_url}?org=non-existent-org'},
+                )
+                mocked_logger.assert_called_once_with(
+                    'Organization with the provided slug does not exist'
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'Authentication Error')
