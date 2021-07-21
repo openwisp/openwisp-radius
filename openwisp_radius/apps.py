@@ -106,60 +106,58 @@ class OpenwispRadiusConfig(ApiAppConfig):
         instance.delete_cache()
 
     def regiser_menu_groups(self):
-        register_menu_group(
-            position=30,
-            config={
-                'label': _('FREERADIUS'),
-                'items': {
-                    1: {
-                        'label': _('Accountings'),
-                        'model': get_model_name(self.label, 'RadiusAccounting'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-accounting',
-                    },
-                    2: {
-                        'label': _('Batch user Creation'),
-                        'model': get_model_name(self.label, 'RadiusBatch'),
-                        'name': 'changelist',
-                        'icon': 'ow-batch-creation',
-                    },
-                    3: {
-                        'label': _('Checks'),
-                        'model': get_model_name(self.label, 'RadiusCheck'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-checks',
-                    },
-                    4: {
-                        'label': _('Groups'),
-                        'model': get_model_name(self.label, 'RadiusGroup'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-group',
-                    },
-                    5: {
-                        'label': _('NAS'),
-                        'model': get_model_name(self.label, 'Nas'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-nas',
-                    },
-                    6: {
-                        'label': _('Post Auth Log'),
-                        'model': get_model_name(self.label, 'RadiusPostAuth'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-post-log',
-                    },
-                    7: {
-                        'label': _('Radius Token'),
-                        'model': get_model_name(self.label, 'RadiusToken'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-token',
-                    },
-                    8: {
-                        'label': _('Replies'),
-                        'model': get_model_name(self.label, 'RadiusReply'),
-                        'name': 'changelist',
-                        'icon': 'ow-radius-replies',
-                    },
-                },
-                'icon': 'ow-radius',
+        items = {
+            1: {
+                'label': _('Accounting Sessions'),
+                'model': get_model_name(self.label, 'RadiusAccounting'),
+                'name': 'changelist',
+                'icon': 'ow-radius-accounting',
             },
+            2: {
+                'label': _('Groups'),
+                'model': get_model_name(self.label, 'RadiusGroup'),
+                'name': 'changelist',
+                'icon': 'ow-radius-group',
+            },
+            3: {
+                'label': _('NAS'),
+                'model': get_model_name(self.label, 'Nas'),
+                'name': 'changelist',
+                'icon': 'ow-radius-nas',
+            },
+            4: {
+                'label': _('Checks'),
+                'model': get_model_name(self.label, 'RadiusCheck'),
+                'name': 'changelist',
+                'icon': 'ow-radius-checks',
+            },
+            5: {
+                'label': _('Replies'),
+                'model': get_model_name(self.label, 'RadiusReply'),
+                'name': 'changelist',
+                'icon': 'ow-radius-replies',
+            },
+            6: {
+                'label': _('Batch user Creation'),
+                'model': get_model_name(self.label, 'RadiusBatch'),
+                'name': 'changelist',
+                'icon': 'ow-batch-creation',
+            },
+            7: {
+                'label': _('Post Auth Log'),
+                'model': get_model_name(self.label, 'RadiusPostAuth'),
+                'name': 'changelist',
+                'icon': 'ow-radius-post-log',
+            },
+        }
+        if getattr(app_settings, 'DEBUG', False):
+            items[8] = {
+                'label': _('Radius Token'),
+                'model': get_model_name(self.label, 'RadiusToken'),
+                'name': 'changelist',
+                'icon': 'ow-radius-token',
+            }
+        register_menu_group(
+            position=70,
+            config={'label': _('RADIUS'), 'items': items, 'icon': 'ow-radius'},
         )

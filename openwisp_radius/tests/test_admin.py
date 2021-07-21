@@ -1227,5 +1227,5 @@ class TestAdmin(
                 url = reverse(f'admin:{self.app_label}_{model}_changelist')
                 self.assertContains(response, f'<a class="mg-link" href="{url}">')
         with self.subTest('test_free_radius_group_is_registered'):
-            html = '<div class="mg-dropdown-label">FREERADIUS </div>'
+            html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)

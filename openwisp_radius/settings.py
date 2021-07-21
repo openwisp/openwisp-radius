@@ -11,6 +11,7 @@ from django.utils.translation import gettext_lazy as _
 # that can work before registered Apps are
 # ready in django.setup() process.
 logger = logging.getLogger('pre_django_setup')
+DEBUG = settings.DEBUG
 
 
 def get_settings_value(option, default):
