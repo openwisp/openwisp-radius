@@ -13,7 +13,7 @@ User = get_user_model()
 
 
 class TestSocial(ApiTokenMixin, BaseTestCase):
-    view_name = 'radius:redirect_cp'
+    view_name = 'radius_social:redirect_cp'
 
     def get_url(self):
         return reverse(self.view_name, args=[self.default_org.slug])

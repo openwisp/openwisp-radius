@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
@@ -36,6 +38,7 @@ from .base.models import (
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
+from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -448,10 +451,14 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         extra_context = extra_context or {}
         radbatch = RadiusBatch.objects.get(pk=object_id)
         if radbatch.strategy == 'prefix':
-            extra_context['download_rad_batch_pdf_url'] = reverse(
+            batch_pdf_api_url = reverse(
                 'radius:download_rad_batch_pdf',
+                urlconf=RADIUS_API_URLCONF,
                 args=[radbatch.organization.slug, object_id],
             )
+            if RADIUS_API_BASEURL:
+                batch_pdf_api_url = urljoin(RADIUS_API_BASEURL, batch_pdf_api_url)
+            extra_context['download_rad_batch_pdf_url'] = batch_pdf_api_url
         return super().change_view(
             request,
             object_id,

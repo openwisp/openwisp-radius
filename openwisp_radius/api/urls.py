@@ -7,8 +7,9 @@ from . import views
 def get_api_urls(api_views=None):
     if not api_views:
         api_views = views
+    url_patterns = []
     if app_settings.RADIUS_API:
-        return [
+        url_patterns = [
             path('freeradius/authorize/', api_views.authorize, name='authorize'),
             path('freeradius/postauth/', api_views.postauth, name='postauth'),
             path('freeradius/accounting/', api_views.accounting, name='accounting'),
@@ -74,5 +75,4 @@ def get_api_urls(api_views=None):
                 name='download_rad_batch_pdf',
             ),
         ]
-    else:
-        return []
+    return (url_patterns, 'radius')

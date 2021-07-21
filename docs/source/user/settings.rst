@@ -256,6 +256,15 @@ API and user token related settings
 
 These settings control details related to the API and the radius user token.
 
+``OPENWISP_RADIUS_API_URLCONF``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``None``
+
+Changes the urlconf option of django urls to point the monitoring API
+urls to another installed module, example, ``myapp.urls``.
+(Useful when you have a seperate API instance.)
+
 ``OPENWISP_RADIUS_API_BASEURL``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

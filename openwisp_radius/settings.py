@@ -27,6 +27,7 @@ def get_settings_value(option, default):
 
 RADIUS_API = get_settings_value('API', True)
 RADIUS_API_BASEURL = get_settings_value('API_BASEURL', '/')
+RADIUS_API_URLCONF = get_settings_value('API_URLCONF', None)
 EDITABLE_ACCOUNTING = get_settings_value('EDITABLE_ACCOUNTING', False)
 EDITABLE_POSTAUTH = get_settings_value('EDITABLE_POSTAUTH', False)
 GROUPCHECK_ADMIN = get_settings_value('GROUPCHECK_ADMIN', False)

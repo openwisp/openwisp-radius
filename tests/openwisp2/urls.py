@@ -18,9 +18,7 @@ if os.environ.get('SAMPLE_APP', False):
     from .sample_radius.saml import views as saml_views
     from .sample_radius.social import views as social_views
 
-    radius_urls = path(
-        '', include((get_urls(api_views, social_views, saml_views), 'radius'))
-    )
+    radius_urls = path('', include(get_urls(api_views, social_views, saml_views)))
 else:
     api_views = None
     social_views = None
