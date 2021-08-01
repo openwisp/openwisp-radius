@@ -88,7 +88,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'openwisp_utils.admin_theme.context_processor.menu_items',
+                'openwisp_utils.admin_theme.context_processor.menu_groups',
             ],
         },
     }
