@@ -7,7 +7,7 @@ REGISTRATION_METHOD_CHOICES = [
     ('', 'Unspecified'),
     ('manual', _('Manually created')),
     ('email', _('Email (No Identity Verification)')),
-    ('mobile_phone', _('Mobile phone number verification via SMS')),
+    ('mobile_phone', _('Mobile phone verification')),
 ]
 
 AUTHORIZE_UNVERIFIED = []
