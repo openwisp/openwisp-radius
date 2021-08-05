@@ -9,9 +9,14 @@ def set_default_group_handler(sender, instance, created, **kwargs):
         RadiusGroup = load_model('RadiusGroup')
         RadiusUserGroup = load_model('RadiusUserGroup')
         queryset = RadiusGroup.objects.filter(
-            default=True, organization_id=instance.organization.pk
+            default=True, organization_id=instance.organization_id
         )
-        if queryset.exists() and not instance.user.radiususergroup_set.exists():
+        if (
+            queryset.exists()
+            and not instance.user.radiususergroup_set.filter(
+                group__organization_id=instance.organization_id
+            ).exists()
+        ):
             ug = RadiusUserGroup(user=instance.user, group=queryset.first())
             ug.full_clean()
             ug.save()
