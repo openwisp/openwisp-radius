@@ -381,6 +381,17 @@ class TestRadiusGroup(BaseTestCase):
         self.assertEqual(usergroup_set.count(), 1)
         ug = usergroup_set.first()
         self.assertTrue(ug.group.default)
+        return user
+
+    def test_user_multiple_orgs_default_group(self):
+        user = self.test_new_user_default_group()
+        new_org = self._create_org(name='org2', slug='org2')
+        self._create_org_user(user=user, organization=new_org)
+        usergroup_set = user.radiususergroup_set.all()
+        self.assertEqual(usergroup_set.count(), 2)
+        new_ug = usergroup_set.filter(group__organization_id=new_org.pk).first()
+        self.assertIsNotNone(new_ug)
+        self.assertTrue(new_ug.group.default)
 
     def test_groupcheck_auto_name(self):
         g = self._create_radius_group(name='test', description='test')
