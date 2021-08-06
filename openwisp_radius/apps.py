@@ -1,9 +1,10 @@
 import swapper
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
+from swapper import get_model_name
 
+from openwisp_utils.admin_theme.menu import register_menu_group
 from openwisp_utils.api.apps import ApiAppConfig
 from openwisp_utils.utils import default_or_test
 
@@ -42,7 +43,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
     def ready(self, *args, **kwargs):
         super().ready(*args, **kwargs)
         self.connect_signals()
-        self.add_default_menu_items()
+        self.regiser_menu_groups()
 
         if app_settings.SOCIAL_LOGIN_ENABLED:
             register_registration_method('social_login', _('Social login'))
@@ -108,13 +109,59 @@ class OpenwispRadiusConfig(ApiAppConfig):
     def radiusorgsettings_post_delete(self, instance, **kwargs):
         instance.delete_cache()
 
-    def add_default_menu_items(self):
-        menu_setting = 'OPENWISP_DEFAULT_ADMIN_MENU_ITEMS'
-        items = [
-            {'model': f'{self.label}.RadiusAccounting', 'label': _('Radius sessions')}
-        ]
-        if not hasattr(settings, menu_setting):
-            setattr(settings, menu_setting, items)
-        else:
-            current_menu = getattr(settings, menu_setting)
-            current_menu += items
+    def regiser_menu_groups(self):
+        items = {
+            1: {
+                'label': _('Accounting Sessions'),
+                'model': get_model_name(self.label, 'RadiusAccounting'),
+                'name': 'changelist',
+                'icon': 'ow-radius-accounting',
+            },
+            2: {
+                'label': _('Groups'),
+                'model': get_model_name(self.label, 'RadiusGroup'),
+                'name': 'changelist',
+                'icon': 'ow-radius-group',
+            },
+            3: {
+                'label': _('NAS'),
+                'model': get_model_name(self.label, 'Nas'),
+                'name': 'changelist',
+                'icon': 'ow-radius-nas',
+            },
+            4: {
+                'label': _('Checks'),
+                'model': get_model_name(self.label, 'RadiusCheck'),
+                'name': 'changelist',
+                'icon': 'ow-radius-checks',
+            },
+            5: {
+                'label': _('Replies'),
+                'model': get_model_name(self.label, 'RadiusReply'),
+                'name': 'changelist',
+                'icon': 'ow-radius-replies',
+            },
+            6: {
+                'label': _('Batch user Creation'),
+                'model': get_model_name(self.label, 'RadiusBatch'),
+                'name': 'changelist',
+                'icon': 'ow-batch-creation',
+            },
+            7: {
+                'label': _('Post Auth Log'),
+                'model': get_model_name(self.label, 'RadiusPostAuth'),
+                'name': 'changelist',
+                'icon': 'ow-radius-post-log',
+            },
+        }
+        if getattr(app_settings, 'DEBUG', False):
+            items[8] = {
+                'label': _('Radius Token'),
+                'model': get_model_name(self.label, 'RadiusToken'),
+                'name': 'changelist',
+                'icon': 'ow-radius-token',
+            }
+        register_menu_group(
+            position=70,
+            config={'label': _('RADIUS'), 'items': items, 'icon': 'ow-radius'},
+        )
