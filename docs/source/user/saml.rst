@@ -138,5 +138,8 @@ Sets the verbose name of SAML registration method.
 
 **Default**: ``False``
 
-Setting this to ``True`` will mark automatically mark users as ``Verfied``
-on registration.
+Setting this to ``True`` will automatically flag user accounts
+created during SAML sign-in as verified users (``RegisteredUser.is_verified=True``).
+
+This is useful when SAML identity providers can be trusted
+to be legally valid identity verifiers.
