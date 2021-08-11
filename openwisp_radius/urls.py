@@ -7,7 +7,7 @@ from .api.urls import get_api_urls
 from .private_storage.views import rad_batch_csv_download_view
 
 
-def get_urls(api_views=None, social_views=None):
+def get_urls(api_views=None, social_views=None, saml_views=None):
     """
     Returns a list of urlpatterns
     Arguements:
@@ -32,6 +32,10 @@ def get_urls(api_views=None, social_views=None):
                 name='redirect_cp',
             )
         )
+    if app_settings.SAML_LOGIN_ENABLED:
+        from .saml.urls import get_saml_urls
+
+        urls.append(path('radius/saml2/', include(get_saml_urls(saml_views))),)
     return urls
 
 

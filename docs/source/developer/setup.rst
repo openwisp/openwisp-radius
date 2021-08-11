@@ -109,7 +109,7 @@ modules listed ``INSTALLED_APPS``:
     ]
 
 These modules are optional, add them only if you need the
-`social login <../user/social_login.html>`_. feature:
+`social login <../user/social_login.html>`_ feature:
 
 .. code-block:: python
 
@@ -127,12 +127,16 @@ Add media locations in ``settings.py``:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
 
-Also, add ``AUTH_USER_MODEL`` and ``SITE_ID`` to your ``settings.py``:
+Also, add ``AUTH_USER_MODEL``, ``AUTHENTICATION_BACKENDS`` and ``SITE_ID`` to
+your ``settings.py``:
 
 .. code-block:: python
 
     AUTH_USER_MODEL = 'openwisp_users.User'
     SITE_ID = 1
+    AUTHENTICATION_BACKENDS = (
+        'openwisp_users.backends.UsersAuthenticationBackend',
+    )
 
 Add allowed freeradius hosts  in ``settings.py``:
 
@@ -294,7 +298,7 @@ Install your forked repo:
 
     git clone git://github.com/<your_username>/openwisp-radius
     cd openwisp-radius/
-    python setup.py develop
+    pip install -e .[saml]
 
 Install test requirements:
 
@@ -350,6 +354,6 @@ If you encounter any issue during installation, run:
 
 .. code-block:: shell
 
-    pip install -r requirements.txt -r requirements-test.txt
+    pip install -e .[saml] -r requirements-test.txt
 
 instead of ``pip install -r requirements-test.txt``

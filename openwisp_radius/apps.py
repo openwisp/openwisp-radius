@@ -47,6 +47,10 @@ class OpenwispRadiusConfig(ApiAppConfig):
 
         if app_settings.SOCIAL_LOGIN_ENABLED:
             register_registration_method('social_login', _('Social login'))
+        if app_settings.SAML_LOGIN_ENABLED:
+            register_registration_method(
+                'saml', app_settings.SAML_REGISTRATION_METHOD_LABEL
+            )
 
     def connect_signals(self):
         Organization = swapper.load_model('openwisp_users', 'Organization')

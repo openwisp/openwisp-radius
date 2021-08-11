@@ -1,0 +1,14 @@
+{% extends "account/base.html" %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Where are you from?" %}</h1>
+    <p>{% trans "Please select your" %} <strong>{% trans "Identity Provider" %}</strong> {% trans "from the following list" %}</p>
+    <ul>
+        {% for url, name in available_idps %}
+        <li><a
+                href="{% url 'radius:saml2_login' %}?idp={{ url }}{% if came_from %}&next={{ came_from }}{% endif %}">{{ name|default_if_none:url }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

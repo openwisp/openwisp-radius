@@ -1,0 +1,13 @@
+{% extends "account/base.html" %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Logout Error" %}</h1>
+    <p>{% blocktrans %}Your Identity Provider ask this system to do a global logout but your federated session is lost.{% endblocktrans %}</p>
+
+    <p>{% blocktrans %}Even if your local session in this system has been closed, you have probably open sessions in other systems.{% endblocktrans %}</p>
+
+    <p>{% blocktrans %}In order to prevent illicit use of your personal information, please close your browser window and/or remove your cookies from your browser.{% endblocktrans %}</p>
+
+    <p>{% blocktrans %}Sorry for this inconvenience.{% endblocktrans %} </p>
+{% endblock %}

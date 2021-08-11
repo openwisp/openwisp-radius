@@ -71,6 +71,8 @@ ensuring also that ``openwisp_radius`` has been removed:
         # social login
         'allauth.socialaccount.providers.facebook',  # optional, can be removed if social login is not needed
         'allauth.socialaccount.providers.google',  # optional, can be removed if social login is not needed
+        # SAML login
+        'djangosaml2',  # optional, can be removed if SAML login is not needed
         # openwisp
         # 'myradius', <-- replace with your app-name here
         'openwisp_users',
@@ -81,6 +83,11 @@ ensuring also that ``openwisp_radius`` has been removed:
     SITE_ID = 1
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
+
+    AUTHENTICATION_BACKENDS = (
+        'openwisp_users.backends.UsersAuthenticationBackend',
+        'djangosaml2.backends.Saml2Backend', # optional, can be removed if SAML login is not needed
+    )
 
 .. important::
     Remember to include your radius app's name before proceeding.
@@ -96,6 +103,9 @@ Install (and add to the requirement of your project) openwisp-radius::
 
     pip install openwisp-radius
 
+.. note::
+    Use ``pip install openwisp-radius[saml]`` if you intend to use
+    `Single Sign-On (SAML) <../user/saml.html>`_ feature.
 
 3. Add ``EXTENDED_APPS``
 ------------------------
@@ -105,7 +115,6 @@ Add the following to your ``settings.py``:
 .. code-block:: python
 
     EXTENDED_APPS = ('openwisp_radius',)
-
 
 4. Add ``openwisp_utils.staticfiles.DependencyFinder``
 ------------------------------------------------------
@@ -388,8 +397,9 @@ The root ``url.py`` file should have the following paths (please read the commen
 
     from openwisp_radius.urls import get_urls
     # Only imported when views are extended.
-    # from .sample_radius.api.views import views as api_views
-    # from .sample_radius.social.views import views as social_views
+    # from myradius.api.views import views as api_views
+    # from myradius.social.views import views as social_views
+    # from myradius.saml.views import views as saml_views
 
     urlpatterns = [
         # ... other urls in your project ...
@@ -398,7 +408,7 @@ The root ``url.py`` file should have the following paths (please read the commen
         path('accounts/', include('openwisp_users.accounts.urls')),
         path('api/v1/', include('openwisp_utils.api.urls')),
         # Use only when extending views (dicussed below)
-        # path('', include((get_urls(api_views, social_views), 'radius'), namespace='radius')),
+        # path('', include((get_urls(api_views, social_views, saml_views), 'radius'), namespace='radius')),
         path('', include('openwisp_radius.urls', namespace='radius')), # Remove when extending views
     ]
 .. note::
@@ -458,7 +468,20 @@ Create a view file as done in `social views.py <https://github.com/openwisp/open
 
 Remember to use these views in root URL configurations in point 11.
 If you want only extend the API views and not social views, you can use
-``get_urls(None, social_views)`` to get social_views from *openwisp_radius*.
+``get_urls(api_views, None)`` to get social_views from *openwisp_radius*.
+
+3. Extending the SAML Views
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The SAML view classes can be extended into other django applications as well. Note
+that it is not required for extending *openwisp-radius* to your app and this change
+is required only if you plan to make changes to the SAML views.
+
+Create a view file as done in `saml views.py <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/saml/views.py>`_.
+
+Remember to use these views in root URL configurations in point 11.
+If you want only extend the API views and social view but not SAML views, you can use
+``get_urls(api_views, social_views, None)`` to get saml_views from *openwisp_radius*.
 
 .. note::
     For more information about django views, please refer to the

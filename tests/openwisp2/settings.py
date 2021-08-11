@@ -48,9 +48,15 @@ INSTALLED_APPS = [
     'drf_yasg',
     'django_extensions',
     'openwisp2.integrations',
+    'djangosaml2',
 ]
 
 LOGIN_REDIRECT_URL = 'admin:index'
+
+AUTHENTICATION_BACKENDS = (
+    'openwisp_users.backends.UsersAuthenticationBackend',
+    'djangosaml2.backends.Saml2Backend',
+)
 
 AUTH_USER_MODEL = 'openwisp_users.User'
 SITE_ID = 1
@@ -69,7 +75,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'djangosaml2.middleware.SamlSessionMiddleware',
 ]
+
+SESSION_COOKIE_SECURE = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SAML_ALLOWED_HOSTS = []
+SAML_USE_NAME_ID_AS_USERNAME = True
+SAML_CREATE_UNKNOWN_USER = True
+SAML_CONFIG = {}
 
 ROOT_URLCONF = 'openwisp2.urls'
 

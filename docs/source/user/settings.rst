@@ -531,3 +531,8 @@ The default sender email is a common setting from the
 `Django core settings  <https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email>`_
 under ``DEFAULT_FROM_EMAIL``.
 Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
+
+.. note::
+
+    To learn about configuring SAML Login refer to the
+    `"Settings" section of SAML Login documentation <saml.html#settings>`_

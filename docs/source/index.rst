@@ -58,6 +58,7 @@ openwisp-radius
    /user/enforcing_limits
    /user/registration
    /user/social_login
+   /user/saml
    /user/api
    /developer/how_to_extend
    /developer/captive_portal_mock.rst
