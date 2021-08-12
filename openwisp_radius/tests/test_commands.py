@@ -16,6 +16,7 @@ User = get_user_model()
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusPostAuth = load_model('RadiusPostAuth')
+RegisteredUser = load_model('RegisteredUser')
 
 
 class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
@@ -157,3 +158,59 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         )
         with self.assertRaises(SystemExit):
             self._call_command('prefix_add_users', **options)
+
+    @capture_stdout()
+    def test_unverified_users_command(self):
+        def _create_old_users():
+            User.objects.all().delete()
+            RadiusBatch.objects.all().delete()
+            path = self._get_path('static/test_batch.csv')
+            options = dict(organization=self.default_org.slug, file=path, name='test',)
+            self._call_command('batch_add_users', **options)
+            User.objects.update(date_joined=now() - timedelta(days=3))
+            for user in User.objects.all():
+                RegisteredUser.objects.create(
+                    user=user, method='email', is_verified=False
+                )
+
+        with self.subTest('Delete unverified users older than 2 days'):
+            _create_old_users()
+            # This user should not be deleted
+            RegisteredUser.objects.create(
+                user=self._create_user(), method='mobile_phone', is_verified=False
+            )
+
+            self.assertEqual(User.objects.count(), 4)
+            call_command('delete_unverified_users', older_than_days=2)
+            self.assertEqual(User.objects.count(), 1)
+
+        with self.subTest(
+            'Delete unverified users except registered with mobile_phone'
+        ):
+            _create_old_users()
+            # This user should not be deleted
+            RegisteredUser.objects.create(
+                user=self._create_user(date_joined=now() - timedelta(days=3)),
+                method='mobile_phone',
+                is_verified=False,
+            )
+
+            self.assertEqual(User.objects.count(), 4)
+            call_command(
+                'delete_unverified_users',
+                older_than_days=2,
+                exclude_methods='mobile_phone,manual',
+            )
+            self.assertEqual(User.objects.count(), 1)
+
+        with self.subTest('Verified user should not be deleted'):
+            _create_old_users()
+            # This user should not be deleted
+            RegisteredUser.objects.create(
+                user=self._create_user(date_joined=now() - timedelta(days=3)),
+                method='email',
+                is_verified=True,
+            )
+            self.assertEqual(User.objects.count(), 4)
+            call_command('delete_unverified_users',)
+            self.assertEqual(User.objects.count(), 1)
