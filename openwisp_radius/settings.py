@@ -132,3 +132,4 @@ except AssertionError:  # pragma: no cover
 
 # Path of urls that need to be refered in migrations files.
 CSV_URL_PATH = 'radiusbatch/csv/'
+CALLED_STATION_IDS = get_settings_value('CALLED_STATION_IDS', {})

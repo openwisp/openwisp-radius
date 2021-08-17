@@ -34,3 +34,8 @@ def delete_unverified_users(older_than_days=1, exclude_methods=''):
         older_than_days=older_than_days,
         exclude_methods=exclude_methods,
     )
+
+
+@shared_task
+def convert_called_station_id():
+    management.call_command('convert_called_station_id')

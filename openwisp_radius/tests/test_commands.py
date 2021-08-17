@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -8,6 +9,7 @@ from django.utils.timezone import now
 
 from openwisp_utils.tests import capture_any_output, capture_stdout
 
+from .. import settings as app_settings
 from ..utils import load_model
 from . import _RADACCT, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
@@ -214,3 +216,32 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(User.objects.count(), 4)
             call_command('delete_unverified_users',)
             self.assertEqual(User.objects.count(), 1)
+
+    @patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        {
+            'test-org': {
+                'openvpn_config': [
+                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+                ],
+                'captive_portal_macs': ['AA-AA-AA-AA-AA-AA'],
+            }
+        },
+    )
+    def test_convert_called_station_id_command(self):
+        options = _RADACCT.copy()
+        options['calling_station_id'] = 'bb:bb:bb:bb:bb:bb'
+        options['called_station_id'] = 'AA-AA-AA-AA-AA-AA'
+        options['unique_id'] = '117'
+        options['organization'] = self._get_org()
+        radius_acc = self._create_radius_accounting(**options)
+        with open(self._get_path('static/openvpn.status')) as status_file:
+            with patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                return_value=status_file.read(),
+            ):
+                call_command('convert_called_station_id')
+        radius_acc.refresh_from_db()
+        self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-CC')

@@ -49,7 +49,7 @@ jobs:
         run: sudo npm install -g jslint
 
       - name: Install openwisp-radius
-        run: pip install -e .[saml]
+        run: pip install -e .[saml,openvpn_status]
 
       - name: QA checks
         run: |
