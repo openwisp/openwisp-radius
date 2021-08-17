@@ -352,11 +352,15 @@ class RegisterSerializer(
         org = self.context['view'].organization
         if is_sms_verification_enabled(org):
             if not phone_number:
-                raise serializers.ValidationError(_('This field is required'))
+                raise serializers.ValidationError(_('This field is required.'))
             mobile_prefixes = org.radius_settings.allowed_mobile_prefixes_list
             if not self.is_prefix_allowed(phone_number, mobile_prefixes):
                 raise serializers.ValidationError(
                     _('This international mobile prefix is not allowed.')
+                )
+            if User.objects.filter(phone_number=phone_number).exists():
+                raise serializers.ValidationError(
+                    _('A user is already registered with this phone number.')
                 )
         else:
             # Phone number should not be stored if sms verification is disabled

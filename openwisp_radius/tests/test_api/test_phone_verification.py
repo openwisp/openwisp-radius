@@ -40,8 +40,10 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         'method': 'mobile_phone',
     }
 
-    def _register_user(self):
-        return super()._register_user(extra_params=self._extra_registration_params)
+    def _register_user(self, **kwargs):
+        return super()._register_user(
+            extra_params=self._extra_registration_params, **kwargs
+        )
 
     def test_register_201_mobile_phone_verification(self):
         r = self._register_user()
@@ -90,6 +92,14 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('phone_number', r.data)
         self.assertEqual(User.objects.count(), 2)
+
+    def test_register_400_duplicate_user(self):
+        self.test_register_201_mobile_phone_verification()
+        r = self._register_user(expect_201=False, expect_users=None)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('username', r.data)
+        self.assertIn('email', r.data)
+        self.assertIn('phone_number', r.data)
 
     def test_create_phone_token_401(self):
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])

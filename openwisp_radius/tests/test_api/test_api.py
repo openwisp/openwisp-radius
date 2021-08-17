@@ -147,6 +147,13 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.is_active)
         self.assertFalse(user.registered_user.is_verified)
 
+    def test_register_400_duplicate_user(self):
+        self.test_register_201()
+        r = self._register_user(expect_201=False, expect_users=None)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('username', r.data)
+        self.assertIn('email', r.data)
+
     def test_radius_user_serializer(self):
         self._register_user()
         try:

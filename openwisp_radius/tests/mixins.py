@@ -126,9 +126,10 @@ class ApiTokenMixin(BasePostParamsMixin):
         self.auth_header = f'Bearer {org.pk} {rad.token}'
         self.token_querystring = f'?token={rad.token}&uuid={str(org.pk)}'
 
-    def _register_user(self, extra_params=None):
+    def _register_user(self, extra_params=None, expect_201=True, expect_users=1):
         self._superuser_login()
-        self.assertEqual(User.objects.count(), 1)
+        if expect_users is not None:
+            self.assertEqual(User.objects.count(), expect_users)
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         params = {
             'username': self._test_email,
@@ -139,7 +140,8 @@ class ApiTokenMixin(BasePostParamsMixin):
         if extra_params:
             params.update(extra_params)
         response = self.client.post(url, params,)
-        self.assertEqual(response.status_code, 201)
+        if expect_201:
+            self.assertEqual(response.status_code, 201)
         return response
 
     def _radius_batch_csv_data(self, **kwargs):
