@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 from celery import Celery
 from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
+from django.core import management
+from django.utils.timezone import now
 
 from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -13,6 +17,7 @@ User = get_user_model()
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusPostAuth = load_model('RadiusPostAuth')
+RegisteredUser = load_model('RegisteredUser')
 
 
 class TestCelery(FileMixin, BaseTestCase):
@@ -83,3 +88,15 @@ class TestCelery(FileMixin, BaseTestCase):
         result = tasks.delete_old_radacct.delay(3)
         self.assertTrue(result.successful())
         self.assertEqual(RadiusAccounting.objects.filter(unique_id='666').count(), 0)
+
+    @capture_stdout()
+    def test_delete_unverified_users(self):
+        path = self._get_path('static/test_batch.csv')
+        options = dict(organization=self.default_org.slug, file=path, name='test',)
+        management.call_command('batch_add_users', **options)
+        User.objects.update(date_joined=now() - timedelta(days=3))
+        for user in User.objects.all():
+            RegisteredUser.objects.create(user=user, method='email', is_verified=False)
+        self.assertEqual(User.objects.count(), 3)
+        tasks.delete_unverified_users.delay(older_than_days=2)
+        self.assertEqual(User.objects.count(), 0)
