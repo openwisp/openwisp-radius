@@ -130,3 +130,17 @@ by default the data is added to the first found organization, eg::
 
 .. warning::
     It is not possible to export user credential data for radiusbatch created using prefix, please manually preserve the PDF files if you want to access the data in the future.
+
+``convert_called_station_id``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This commands updates the ``called_station_id`` of RADIUS Sessions from MAC Address of captive
+portal to MAC Address of the device using information from OpenVPN. This command requires
+installing ``openvpn_status``, which can be installed using following command
+
+.. code-block:: shell
+
+    pip install openwisp-radius[openvpn_status]
+
+It is required configuring `OPENWISP_RADIUS_CALLED_STATION_ID <./settings.html#openwisp-radius-called-station-id>`_
+setting for functioning of this command.

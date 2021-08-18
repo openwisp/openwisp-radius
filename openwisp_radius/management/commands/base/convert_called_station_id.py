@@ -1,3 +1,4 @@
+import logging
 import re
 import telnetlib
 
@@ -7,11 +8,14 @@ from django.core.management import BaseCommand
 from ....settings import CALLED_STATION_IDS
 from ....utils import load_model
 
-RadiusAccounting = load_model('RadiusAccounting')
+logger = logging.getLogger(__name__)
+
 RE_VIRTUAL_ADDR_MAC = re.compile(
     u'^{0}:{0}:{0}:{0}:{0}:{0}'.format(u'[a-f0-9]{2}'), re.I
 )
 TELNET_CONNECTION_TIMEOUT = 10  # In seconds
+
+RadiusAccounting = load_model('RadiusAccounting')
 
 
 class BaseConvertCalledStationIdCommand(BaseCommand):
@@ -33,24 +37,44 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             )
         return raw_management_info
 
-    def _get_openvpn_management_info(self, host, port=7505, password=None):
+    def _get_openvpn_routing_info(self, host, port=7505, password=None):
         raw_info = self._get_raw_management_info(host, port, password)
-        return openvpn_status.parse_status(raw_info)
+        parsed_info = openvpn_status.parse_status(raw_info)
+        return parsed_info.routing_table
 
     def handle(self, *args, **options):
         for org_slug, config in CALLED_STATION_IDS.items():
             routing_dict = {}
             for openvpn_config in config['openvpn_config']:
-                routing_dict.update(
-                    self._get_openvpn_management_info(
-                        openvpn_config['host'],
-                        openvpn_config['port'],
-                        openvpn_config['password'],
-                    ).routing_table
+                try:
+                    routing_dict.update(
+                        self._get_openvpn_routing_info(
+                            openvpn_config['host'],
+                            openvpn_config.get('port', 7505),
+                            openvpn_config.get('password', None),
+                        )
+                    )
+                except ConnectionRefusedError:
+                    logger.error(
+                        'Unable to establish telnet connection to '
+                        f'{openvpn_config["host"]} on {openvpn_config["port"]}. '
+                        'Skipping!'
+                    )
+                except openvpn_status.ParsingError as error:
+                    logger.error(
+                        'Unable to parse information received from '
+                        f'{openvpn_config["host"]}. ParsingError: {error}. Skipping!',
+                    )
+            if not routing_dict:
+                logger.info(
+                    'Could not fetch any routing information for '
+                    f'organization with "{org_slug}" slug'
                 )
+                continue
+
             qs = RadiusAccounting.objects.filter(
                 organization__slug=org_slug,
-                called_station_id__in=config['captive_portal_macs'],
+                called_station_id__in=config['unconverted_macs'],
             )
             for radius_session in qs.iterator():
                 try:
@@ -59,9 +83,16 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                     ].common_name
                     mac_address = RE_VIRTUAL_ADDR_MAC.search(common_name)[0]
                     radius_session.called_station_id = mac_address.replace(':', '-')
-                except (KeyError, IndexError):
-                    print('error')
-                    continue
+                except KeyError:
+                    logger.warn(
+                        'Failed to find routing information for '
+                        f'{radius_session.session_id}. Skipping!'
+                    )
+                except (TypeError, IndexError):
+                    logger.warn(
+                        f'Failed to find a MAC address in "{common_name}". '
+                        f'Skipping {radius_session.session_id}!'
+                    )
                 else:
                     radius_session.save()
 

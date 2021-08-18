@@ -200,6 +200,38 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
+
+``OPENWISP_RADIUS_CALLED_STATION_ID``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``{}``
+
+This setting should contain information of OpenVPN Management Interface for fetching
+information of client to update ``called_station_id`` of RADIUS sessions using
+`convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
+
+The dictionary should contain configuration in following format:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_CALLED_STATION_IDS = {
+        'organization_slug': {
+            'openvpn_config': [
+                {
+                    # Host address of OpenVPN Management Interface
+                    'host': '<OpenVPN Host>',
+                    # Port of OpenVPN Management Interface. Default is 7505
+                    'port': 7505,
+                    # Password of OpenVPN Management Interface
+                    'password': 'SuperSecretPassword',
+                }
+            ],
+            # List of MAC addresses that will be converted
+            'unconverted_macs': ['AA-AA-AA-AA-AA-AA'],
+        }
+    }
+
+
 API and user token related settings
 ===================================
 
@@ -536,3 +568,4 @@ Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 
     To learn about configuring SAML Login refer to the
     `"Settings" section of SAML Login documentation <saml.html#settings>`_
+
