@@ -25,3 +25,12 @@ def deactivate_expired_users():
 @shared_task
 def delete_old_users(older_than_months=12):
     management.call_command('delete_old_users', older_than_months=older_than_months)
+
+
+@shared_task
+def delete_unverified_users(older_than_days=1, exclude_methods=''):
+    management.call_command(
+        'delete_unverified_users',
+        older_than_days=older_than_days,
+        exclude_methods=exclude_methods,
+    )

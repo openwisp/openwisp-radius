@@ -85,6 +85,25 @@ This command deletes users that have expired (and should have been deactivated b
 
 Note that the default duration is set to 18 months.
 
+``delete_unverified_users``
+---------------------------
+
+This command deletes unverified users that have been registered for
+more than specified duration.
+
+.. code-block:: shell
+
+    ./manage.py delete_unverified_users --older-than-days <duration_in_days>
+
+Note that the default duration is set to 1 day.
+
+It is also possible to exclude users that have registered using specified methods.
+You can specify multiple methods separated by comma(`,`). Following is an example:
+
+.. code-block:: shell
+
+    ./manage.py delete_unverified_users --older-than-days 1 --exclude-methods mobile_phone,email
+
 ``upgrade_from_django_freeradius``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
