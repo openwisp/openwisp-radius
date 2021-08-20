@@ -85,7 +85,6 @@ This command deletes users that have expired (and should have been deactivated b
 
 Note that the default duration is set to 18 months.
 
-
 ``delete_unverified_users``
 ---------------------------
 
