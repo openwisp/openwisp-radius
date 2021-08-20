@@ -5,7 +5,7 @@ import telnetlib
 import openvpn_status
 from django.core.management import BaseCommand
 
-from ....settings import CALLED_STATION_IDS
+from ....settings import CALLED_STATION_IDS, OPENVPN_DATETIME_FORMAT
 from ....utils import load_model
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                     )
             if not routing_dict:
                 logger.info(
-                    'Could not fetch any routing information for '
+                    'No routing information found for '
                     f'organization with "{org_slug}" slug'
                 )
                 continue
@@ -102,7 +102,7 @@ def parse_virtual_address(virtual_address):
     return openvpn_status.utils.parse_vaddr(virtual_address.split('@')[0])
 
 
-openvpn_status.utils.DATETIME_FORMAT_OPENVPN = u'%Y-%m-%d %H:%M:%S'
+openvpn_status.utils.DATETIME_FORMAT_OPENVPN = OPENVPN_DATETIME_FORMAT
 openvpn_status.models.Routing.virtual_address = (
     openvpn_status.descriptors.LabelProperty(
         u'Virtual Address', input_type=parse_virtual_address

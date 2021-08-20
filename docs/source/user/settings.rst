@@ -200,14 +200,13 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
-
 ``OPENWISP_RADIUS_CALLED_STATION_ID``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``{}``
 
-This setting should contain information of OpenVPN Management Interface for fetching
-information of client to update ``called_station_id`` of RADIUS sessions using
+This setting allows to specify the parameters to connect to the different
+OpenVPN management interfaces available for an organization. This setting is used by
 `convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
 
 The dictionary should contain configuration in following format:
@@ -215,21 +214,35 @@ The dictionary should contain configuration in following format:
 .. code-block:: python
 
     OPENWISP_RADIUS_CALLED_STATION_IDS = {
-        'organization_slug': {
+        # Slug of the organization for which settings are being specified
+        # In this example 'default'
+        'default': {
             'openvpn_config': [
                 {
                     # Host address of OpenVPN Management Interface
-                    'host': '<OpenVPN Host>',
-                    # Port of OpenVPN Management Interface. Default is 7505
-                    'port': 7505,
+                    # In this example '127.0.0.1'
+                    'host': '127.0.0.1',
+                    # Port of OpenVPN Management Interface. Default is 7505 (integer)
+                    # In this example '7506'
+                    'port': 7506,
                     # Password of OpenVPN Management Interface
-                    'password': 'SuperSecretPassword',
+                    # In this example 'ManagmentInterfacePassword'
+                    'password': 'ManagmentInterfacePassword',
                 }
             ],
             # List of MAC addresses that will be converted
-            'unconverted_macs': ['AA-AA-AA-AA-AA-AA'],
+            'unconverted_macs': ['AA:AA:AA:AA:AA:AA'],
         }
     }
+
+
+``OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``u'%a %b %d %H:%M:%S %Y'``
+
+Specifies the datetime format of OpenVPN management status parser used by
+`convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
 
 
 API and user token related settings

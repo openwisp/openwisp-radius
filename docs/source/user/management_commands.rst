@@ -134,13 +134,21 @@ by default the data is added to the first found organization, eg::
 ``convert_called_station_id``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This commands updates the ``called_station_id`` of RADIUS Sessions from MAC Address of captive
-portal to MAC Address of the device using information from OpenVPN. This command requires
-installing ``openvpn_status``, which can be installed using following command
+If an installation uses a centralized captive portal, the value of "Called Station ID" of
+RADIUS Session will show the MAC address of the captive portal instead of access points.
+This command will update the "Called Station ID" to reflect the MAC address of the access points
+using information from OpenVPN. It requires installing ``openvpn_status``,
+ which can be installed using the following command
 
 .. code-block:: shell
 
     pip install openwisp-radius[openvpn_status]
 
-It is required configuring `OPENWISP_RADIUS_CALLED_STATION_ID <./settings.html#openwisp-radius-called-station-id>`_
-setting for functioning of this command.
+In order to work, this command requires to be configured via the
+`OPENWISP_RADIUS_CALLED_STATION_ID <./settings.html#openwisp-radius-called-station-id>`_ setting.
+
+.. note::
+
+    If you encounter ``ParseError`` for datetime data, you can set the datetime format
+    of the parser using `OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <./settings.html#openwisp-radius-openvpn-datetime-format>`_
+    setting.

@@ -230,6 +230,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             }
         },
     )
+    @patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     def test_convert_called_station_id_command(self):
         options = _RADACCT.copy()
         options['calling_station_id'] = 'bb:bb:bb:bb:bb:bb'
@@ -269,8 +270,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             ), patch('logging.Logger.info') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'Could not fetch any routing information for organization '
-                    'with "test-org" slug'
+                    'No routing information found for organization with "test-org" slug'
                 )
 
         with self.subTest('Test client common name does not contain a MAC address'):
