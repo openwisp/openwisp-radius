@@ -580,6 +580,9 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             user.registered_user.is_verified = True
             user.registered_user.method = 'mobile_phone'
             user.is_active = True
+            # Update username if phone_number is used as username
+            if user.username == user.phone_number:
+                user.username = phone_token.phone_number
             # now that the phone number is verified
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
