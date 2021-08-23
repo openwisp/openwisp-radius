@@ -1223,9 +1223,9 @@ class TestAdmin(
         ]
         response = self.client.get(reverse('admin:index'))
         for model in models:
-            with self.subTest(f'test_admin_group_for_{model}_model'):
+            with self.subTest(f'test menu group link for {model} model'):
                 url = reverse(f'admin:{self.app_label}_{model}_changelist')
-                self.assertContains(response, f'<a class="mg-link" href="{url}">')
-        with self.subTest('test_free_radius_group_is_registered'):
+                self.assertContains(response, f'class="mg-link" href="{url}"')
+        with self.subTest('test radius group is registered'):
             html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)
