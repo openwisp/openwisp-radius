@@ -37,6 +37,9 @@ setup(
     install_requires=[
         'django>=3.0,<3.2',
         'swapper~=1.1.0',
+        # Needed for the new authentication backend in openwisp-users
+        # TODO: remove when the new version of openwisp-users is released
+        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
         # TODO: change this when next point version of openwisp-utils is released
         (
             'openwisp-utils[rest] @'
@@ -45,9 +48,6 @@ setup(
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
         'weasyprint>=43,<53',
-        # Needed for the new authentication backend in openwisp-users
-        # TODO: remove when the new version of openwisp-users is released
-        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
         'dj-rest-auth~=2.1.6',
         'django-sendsms~=0.4.0',
         'jsonfield~=3.1.0',
