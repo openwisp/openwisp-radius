@@ -126,9 +126,8 @@ class DispatchOrgMixin(object):
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             message = _(
-                f'User {user.username} is not member of '
-                f'organization {self.organization.slug}.'
-            )
+                'The user {username} is not member of organization {organization}.'
+            ).format(username=user.username, organization=self.organization.name)
             logger.warning(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
 
@@ -418,7 +417,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
     @swagger_auto_schema(
         responses={
             200: '`{"detail": "Password reset e-mail has been sent."}`',
-            400: '`{"detail": "email field is required"}`',
+            400: '`{"detail": "The email field is required."}`',
             404: '`{"detail": "Not found."}`',
         }
     )
@@ -457,7 +456,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
             user = get_object_or_404(User, email=email)
             self.validate_membership(user)
             return user
-        raise ParseError(_('email field is required'))
+        raise ParseError(_('The email field is required.'))
 
 
 password_reset = PasswordResetView.as_view()

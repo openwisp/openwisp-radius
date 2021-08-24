@@ -3,10 +3,9 @@
 
 {% block content %}
     <h1>{% trans "Authorization error" %}</h1>
-    <p>{% blocktrans %}You are already logged in and you are trying to go to the login page again.{% endblocktrans %}</p>
-
+    <p>{% blocktrans %}You are already logged in and you are trying to access the login page again.{% endblocktrans %}</p>
     <p>{% blocktrans %}You may have been redirected here when trying to access some content
        that required extra privileges that you do not have.{% endblocktrans %}</p>
-
-    <p>{% trans "Please" %} <a href="{% url 'radius:saml2_logout' %}">{% trans "logout" %}</a> {% trans "and login as a different user" %}</p>
+    <p>{% trans "Please logout and login as a different user" %}.</p>
+    <p><a class="button" href="{% url 'radius:saml2_logout' %}">{% trans "logout" %}</a></p>
 {% endblock %}

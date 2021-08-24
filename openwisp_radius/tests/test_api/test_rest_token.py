@@ -77,7 +77,9 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         url = self._get_url()
         r = self.client.post(url, {'username': 'tester', 'password': 'tester'})
         self.assertEqual(r.status_code, 400)
-        self.assertIn('Unable to log in', r.json()['non_field_errors'][0])
+        self.assertIn(
+            'credentials entered are not valid', r.json()['non_field_errors'][0]
+        )
 
     @capture_any_output()
     def test_user_auth_token_400_organization(self):

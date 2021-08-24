@@ -84,16 +84,16 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                     return (AnonymousUser(), uuid)
             except ValueError:
                 invalid_addr_message = _(
-                    f'Request rejected: ({ip}) in organization settings or '
+                    'Request rejected: ({ip}) in organization settings or '
                     'settings.py is not a valid IP address. '
                     'Please contact administrator.'
-                )
+                ).format(ip=ip)
                 logger.warning(invalid_addr_message)
                 raise AuthenticationFailed(invalid_addr_message)
         message = _(
-            f'Request rejected: Client IP address ({client_ip}) is not in '
+            'Request rejected: Client IP address ({client_ip}) is not in '
             'the list of IP addresses allowed to consume the freeradius API.'
-        )
+        ).format(client_ip=client_ip)
         logger.warning(message)
         raise AuthenticationFailed(message)
 

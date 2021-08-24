@@ -1274,7 +1274,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
             logger.warning(
-                _(f'user {self.user} has reached the maximum daily SMS limit')
+                f'The user {self.user} has reached the maximum daily SMS limit.'
             )
             raise ValidationError(_('Maximum daily limit reached.'))
         # limit generation of tokens per day by ip
@@ -1304,11 +1304,13 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         org_user = OrganizationUser.objects.filter(user=self.user).first()
         if not org_user:
             raise exceptions.NoOrgException(
-                _(f'User {self.user} is not member of any organization.')
+                _('The user {user} is not member of any organization').format(
+                    user=self.user
+                )
             )
         org_radius_settings = org_user.organization.radius_settings
-        message = _(
-            f'{org_radius_settings.organization.name} verification code: {self.token}'
+        message = _('{organization} verification code: {code}').format(
+            organization=org_radius_settings.organization.name, code=self.token
         )
         sms_message = SmsMessage(
             body=str(message),
@@ -1330,7 +1332,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     def _validate_already_verified(self):
         try:
             if self.user.registered_user.is_verified:
-                logger.warning(_(f'User {self.user.pk} is already verified'))
+                logger.warning(f'User {self.user.pk} is already verified')
                 raise exceptions.UserAlreadyVerified(
                     _('This user is already verified.')
                 )
@@ -1341,10 +1343,8 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         self._validate_already_verified()
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
-                _(
-                    f'User {self.user} has reached the max attempt '
-                    f'limit for token {self.pk}.'
-                )
+                f'User {self.user} has reached the max '
+                f'attempt limit for token {self.pk}.'
             )
             raise exceptions.MaxAttemptsException(
                 _(
@@ -1355,10 +1355,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             )
         if timezone.now() > self.valid_until:
             logger.warning(
-                _(
-                    f'User {self.user} has tried to verify '
-                    f'an expired token: {self.pk}.'
-                )
+                f'User {self.user} has tried to verify an expired token: {self.pk}.'
             )
             raise exceptions.ExpiredTokenException(
                 _(

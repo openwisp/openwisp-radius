@@ -68,7 +68,10 @@ class AuthTokenSerializer(BaseAuthTokenSerializer):
                 password=password,
             )
             if not user:
-                msg = _('Unable to log in with provided credentials.')
+                msg = _(
+                    'The credentials entered are not valid. '
+                    'Please double-check and try again.'
+                )
                 raise serializers.ValidationError(msg, code='authorization')
         else:
             msg = _('Must include "username" and "password".')
@@ -189,9 +192,7 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
-                logging.warning(
-                    _(f'No corresponding user found for username: {username}')
-                )
+                logging.warning(f'No corresponding user found for username: {username}')
             else:
                 group = user.radiususergroup_set.order_by('priority').first()
                 groupname = group.groupname if group else None
