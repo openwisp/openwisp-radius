@@ -1,0 +1,136 @@
+# OpenWISP RADIUS
+# Copyright (C) 2021
+# This file is distributed under the same license as the PACKAGE package.
+# Federico Capoano support@openwisp.io, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n"
+"%100==4 ? 2 : 3);\n"
+
+#: openwisp_radius/api/serializers.py:71
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Vnesene poverilnice niso veljavne. Preverite še enkrat in poskusite znova."
+
+#: openwisp_radius/api/serializers.py:74
+msgid "Must include \"username\" and \"password\"."
+msgstr "Mora vključevati \"uporabniško ime\" in \"geslo\"."
+
+#: openwisp_radius/api/serializers.py:332
+msgid ""
+"Required only when the organization has enabled SMS verification in its "
+"\"Organization RADIUS Settings.\""
+msgstr ""
+"Zahtevano samo, če je organizacija omogočila preverjanje SMS v svojem"
+"\"Nastavitve RADIUS organizacije.\""
+
+#: openwisp_radius/api/serializers.py:344
+msgid ""
+"Required only when the organization has mandatory identity verification in "
+"its \"Organization RADIUS Settings.\""
+msgstr ""
+"Potrebno le, če ima organizacija obvezno preverjanje identitete v"
+"its \"Nastavitve RADIUS -a organizacije.\""
+
+#: openwisp_radius/api/serializers.py:355
+#: openwisp_radius/api/serializers.py:383
+msgid "This field is required."
+msgstr "To polje je obvezno."
+
+#: openwisp_radius/api/serializers.py:363
+msgid "A user is already registered with this phone number."
+msgstr "Uporabnik je že registriran s to telefonsko številko."
+
+#: openwisp_radius/api/serializers.py:447
+msgid "The new phone number must be different than the old one."
+msgstr "Nova telefonska številka se mora razlikovati od stare."
+
+#: openwisp_radius/api/views.py:129
+#, python-brace-format
+msgid ""
+"The user {username} is not member of organization {organization}."
+msgstr ""
+"Uporabnik {username} ni član organizacije {organization}."
+
+#: openwisp_radius/api/views.py:459
+msgid "The email field is required."
+msgstr "Polje za e -poštno sporočilo je obvezno."
+
+#: openwisp_radius/api/views.py:570
+msgid "No verification code found in the system for this user."
+msgstr "Za tega uporabnika v sistemu ni najdene verifikacijske kode."
+
+#: openwisp_radius/api/views.py:577
+msgid "Invalid code."
+msgstr "Neveljavna koda."
+
+#: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
+#: openwisp_radius/base/models.py:883
+msgid "This field cannot be blank."
+msgstr "To polje ne more biti prazno."
+
+#: openwisp_radius/base/models.py:1279
+msgid "Maximum daily limit reached."
+msgstr "Največja dnevna meja je dosežena."
+
+#: openwisp_radius/base/models.py:1292
+msgid "Maximum daily limit reached from this ip address."
+msgstr "Največja dnevna omejitev, dosežena s tega naslova IP."
+
+#: openwisp_radius/base/models.py:1307
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "Uporabnik {user} ni član nobene organizacije."
+
+#: openwisp_radius/base/models.py:1311
+#, python-brace-format
+msgid "{organization} verification code: {code}"
+msgstr "{organization} koda za preverjanje: {code}"
+
+#: openwisp_radius/base/models.py:1335
+msgid "This user is already verified."
+msgstr "Ta uporabnik je že preverjen."
+
+#: openwisp_radius/base/models.py:1350
+msgid ""
+"Maximum number of allowed attempts reached for this verification code, "
+"please send a new code and try again."
+msgstr ""
+"Največje dovoljeno število poskusov za to kodo za preverjanje,"
+"pošljite novo kodo in poskusite znova."
+
+#: openwisp_radius/base/models.py:1364
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr ""
+"Ta koda za preverjanje je potekla. Pošljite novo kodo in poskusite znova."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:2
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"To e -poštno sporočilo ste prejeli, ker ste zahtevali ponastavitev gesla za svoj"
+"uporabniški račun na\n"
+"%(site_name)s."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:5
+msgid "Please go to the following page and choose a new password:"
+msgstr "Pojdite na naslednjo stran in izberite novo geslo:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:10
+msgid "Your username, in case you've forgotten:"
+msgstr "Vaše uporabniško ime, če ste pozabili:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:12
+msgid "Best regards"
+msgstr "Lep pozdrav"

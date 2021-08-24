@@ -1,0 +1,131 @@
+# OpenWISP RADIUS
+# Copyright (C) 2021
+# This file is distributed under the same license as the PACKAGE package.
+# Federico Capoano support@openwisp.io, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: openwisp_radius/api/serializers.py:71
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Die eingegebenen Zugangsdaten sind ungültig. Bitte überprüfen Sie es noch einmal und versuchen Sie es erneut."
+
+#: openwisp_radius/api/serializers.py:74
+msgid "Must include \"username\" and \"password\"."
+msgstr "Muss \"Benutzername\" und \"Passwort\" enthalten."
+
+#: openwisp_radius/api/serializers.py:332
+msgid ""
+"Required only when the organization has enabled SMS verification in its "
+"\"Organization RADIUS Settings.\""
+msgstr ""
+
+#: openwisp_radius/api/serializers.py:344
+msgid ""
+"Required only when the organization has mandatory identity verification in "
+"its \"Organization RADIUS Settings.\""
+msgstr ""
+
+#: openwisp_radius/api/serializers.py:355
+#: openwisp_radius/api/serializers.py:383
+msgid "This field is required."
+msgstr "Dieses Feld wird benötigt."
+
+#: openwisp_radius/api/serializers.py:363
+msgid "A user is already registered with this phone number."
+msgstr "Ein Benutzer ist bereits mit dieser Telefonnummer registriert."
+
+#: openwisp_radius/api/serializers.py:447
+msgid "The new phone number must be different than the old one."
+msgstr "Die neue Telefonnummer muss sich von der alten unterscheiden."
+
+#: openwisp_radius/api/views.py:129
+#, python-brace-format
+msgid ""
+"The user {username} is not member of organization {organization}."
+msgstr ""
+"Benutzer {username} ist kein Mitglied der Organisation {organization}."
+
+#: openwisp_radius/api/views.py:459
+msgid "The email field is required."
+msgstr "Das E-Mail-Feld ist erforderlich."
+
+#: openwisp_radius/api/views.py:570
+msgid "No verification code found in the system for this user."
+msgstr "Für diesen Benutzer wurde kein Verifizierungscode im System gefunden."
+
+#: openwisp_radius/api/views.py:577
+msgid "Invalid code."
+msgstr "Ungültiger Code."
+
+#: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
+#: openwisp_radius/base/models.py:883
+msgid "This field cannot be blank."
+msgstr "Dieses Feld darf nicht leer sein."
+
+#: openwisp_radius/base/models.py:1279
+msgid "Maximum daily limit reached."
+msgstr "Maximales Tageslimit erreicht."
+
+#: openwisp_radius/base/models.py:1292
+msgid "Maximum daily limit reached from this ip address."
+msgstr "Maximales Tageslimit von dieser IP-Adresse erreicht."
+
+#: openwisp_radius/base/models.py:1307
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "Der Benutzer {user} ist kein Mitglied einer Organisation."
+
+#: openwisp_radius/base/models.py:1311
+#, python-brace-format
+msgid "{organization} verification code: {code}"
+msgstr ""
+"{organization}-Bestätigungscode: {code}"
+
+#: openwisp_radius/base/models.py:1335
+msgid "This user is already verified."
+msgstr "Dieser Benutzer ist bereits verifiziert."
+
+#: openwisp_radius/base/models.py:1350
+msgid ""
+"Maximum number of allowed attempts reached for this verification code, "
+"please send a new code and try again."
+msgstr ""
+"Maximale Anzahl zulässiger Versuche für diesen Bestätigungscode erreicht"
+"Bitte senden Sie einen neuen Code und versuchen Sie es erneut."
+
+#: openwisp_radius/base/models.py:1364
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr "Dieser Bestätigungscode ist abgelaufen. Bitte senden Sie einen neuen Code und versuchen Sie es erneut."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:2
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"Sie erhalten diese E-Mail, weil Sie eine Passwortzurücksetzung für Ihre "
+"Benutzerkonto bei\n"
+"%(site_name)s."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:5
+msgid "Please go to the following page and choose a new password:"
+msgstr "Bitte gehen Sie auf die folgende Seite und wählen Sie ein neues Passwort:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:10
+msgid "Your username, in case you've forgotten:"
+msgstr "Ihr Benutzername, falls Sie ihn vergessen haben:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:12
+msgid "Best regards"
+msgstr "Mit freundlichen Grüßen"
