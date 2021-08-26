@@ -120,8 +120,8 @@ msgid ""
 "user account at\n"
 "%(site_name)s."
 msgstr ""
-"Hai ricevuto questa email perché hai richiesto la reimpostazione della "
-"password per il tuo account utente su\n"
+"Ha ricevuto questa email perché ha richiesto la reimpostazione della "
+"password per il suo account utente su\n"
 "%(site_name)s."
 
 #: openwisp_radius/templates/custom_password_reset_email.html:5
