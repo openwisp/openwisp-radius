@@ -358,7 +358,7 @@ token sent in the form of a "Bearer Token", example:
 .. code-block:: shell
 
     curl -H "Authorization: Bearer <user-token>" \
-         'http://localhost:8000/api/v1/default/account/session/'
+         'http://localhost:8000/api/v1/radius/organization/default/account/session/'
 
 List of Endpoints
 =================
@@ -374,7 +374,7 @@ User Registration
 
 .. code-block:: text
 
-  /api/v1/<organization-slug>/account/
+  /api/v1/radius/organization/<organization-slug>/account/
 
 Responds only to **POST**.
 
@@ -415,7 +415,7 @@ sends a reset password token to the email of the user.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/password/reset/
+    /api/v1/radius/organization/<organization-slug>/account/password/reset/
 
 Responds only to **POST**.
 
@@ -435,7 +435,7 @@ via the `Reset password <#reset-password>`_ endpoint.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/password/reset/confirm/
+    /api/v1/radius/organization/<organization-slug>/account/password/reset/confirm/
 
 Responds only to **POST**.
 
@@ -460,7 +460,7 @@ Allows users to change their password after using the
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/password/change/
+    /api/v1/radius/organization/<organization-slug>/account/password/change/
 
 Responds only to **POST**.
 
@@ -478,7 +478,7 @@ Login (Obtain User Auth Token)
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/token/
+    /api/v1/radius/organization/<organization-slug>/account/token/
 
 Responds only to **POST**.
 
@@ -528,7 +528,7 @@ Return also the radius user token and username in the response.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/token/validate/
+    /api/v1/radius/organization/<organization-slug>/account/token/validate/
 
 Responds only to **POST**.
 
@@ -557,7 +557,7 @@ in the URL.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/session/
+    /api/v1/radius/organization/<organization-slug>/account/session/
 
 Responds only to **GET**.
 
@@ -570,7 +570,7 @@ Used for SMS verification, sends a code via SMS to the phone number of the user.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/phone/token/
+    /api/v1/radius/organization/<organization-slug>/account/phone/token/
 
 Responds only to **POST**.
 
@@ -585,7 +585,7 @@ Used for SMS verification, allows users to validate the code they receive via SM
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/phone/verify/
+    /api/v1/radius/organization/<organization-slug>/account/phone/verify/
 
 Responds only to **POST**.
 
@@ -609,7 +609,7 @@ has been `validated <#verify-validate-sms-token>`_.
 
 .. code-block:: text
 
-    /api/v1/<organization-slug>/account/phone/change/
+    /api/v1/radius/organization/<organization-slug>/account/phone/change/
 
 Responds only to **POST**.
 
