@@ -621,6 +621,53 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
         self.assertAcctData(ra, data)
 
+    @mock.patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        {
+            'test-org': {
+                'openvpn_config': [
+                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+                ],
+                'unconverted_ids': ['00-27-22-F3-FA-F1:hostname'],
+            }
+        },
+    )
+    @freeze_time(START_DATE)
+    def test_accounting_update_conversion_200(self):
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+
+        with self.subTest('should not overwrite back to unconverted ID'):
+            ra.called_station_id = '00-00-11-11-22-22'
+            ra.save()
+            data = self.acct_post_data
+            data['status_type'] = 'Interim-Update'
+            data = self._get_accounting_params(**data)
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+            self.assertEqual(RadiusAccounting.objects.count(), 1)
+            ra.refresh_from_db()
+            self.assertEqual(ra.called_station_id, '00-00-11-11-22-22')
+
+        with self.subTest('should overwrite if different called station ID'):
+            ra.called_station_id = '00-00-11-11-22-22'
+            ra.save()
+            data = self.acct_post_data
+            data['status_type'] = 'Interim-Update'
+            data = self._get_accounting_params(**data)
+            # this called station ID is not in the unconverted_ids list
+            # and simulates the situation in which the user roams
+            # to a different device and hence the called station ID can change
+            data['called_station_id'] = '00-00-22-22-33-33'
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+            self.assertEqual(RadiusAccounting.objects.count(), 1)
+            ra.refresh_from_db()
+            self.assertEqual(ra.called_station_id, '00-00-22-22-33-33')
+
     @freeze_time(START_DATE)
     @capture_any_output()
     def test_accounting_update_201(self):
