@@ -137,6 +137,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
 
+    @capture_any_output()
     def test_authorize_with_user_auth(self):
         user = self._create_user(
             username='tester2',
@@ -156,6 +157,12 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with self.subTest('Test authorize with phone_number'):
             self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
 
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester', self.auth_header)
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.data, None)
+
+    @capture_any_output()
     def test_authorize_without_user_auth(self):
         user = self._create_user(
             username='tester',
@@ -172,6 +179,17 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest('Test authorize with phone_number'):
             self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
+
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester')
+            self.assertEqual(r.status_code, 403)
+            self.assertEqual(
+                r.data['detail'],
+                (
+                    'Radius token does not exist. Obtain a new radius token or provide '
+                    'the organization UUID and API token.'
+                ),
+            )
 
     def test_authorize_user_with_email_as_username(self):
         user = self._create_user(
