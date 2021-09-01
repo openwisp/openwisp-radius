@@ -106,7 +106,9 @@ class FreeradiusApiAuthentication(BaseAuthentication):
             return self._check_client_ip_and_return(request, cached_orgid)
         else:
             try:
-                radtoken = RadiusToken.objects.get(user__username=username)
+                radtoken = RadiusToken.objects.get(
+                    user=auth_backend.get_users(username).first()
+                )
             except RadiusToken.DoesNotExist:
                 if username:
                     message = _(

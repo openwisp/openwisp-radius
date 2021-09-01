@@ -132,16 +132,45 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
 
+    def _test_authorize_without_auth_helper(self, username, password):
+        r = self._authorize_user(username=username, password=password)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
+
+    @capture_any_output()
     def test_authorize_with_user_auth(self):
+        user = self._create_user(
+            username='tester2',
+            email='tester2@gmail.com',
+            phone_number='+237675679232',
+            password='tester',
+        )
+
+        self._create_org_user(organization=self._get_org(), user=user)
+
+        with self.subTest('Test authorize with username'):
+            self._test_authorize_with_user_auth_helper(user.username, 'tester')
+
+        with self.subTest('Test authorize with email'):
+            self._test_authorize_with_user_auth_helper(user.email, 'tester')
+
+        with self.subTest('Test authorize with phone_number'):
+            self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester', self.auth_header)
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.data, None)
+
+    @capture_any_output()
+    def test_authorize_without_user_auth(self):
         user = self._create_user(
             username='tester',
             email='tester@gmail.com',
             phone_number='+237675679231',
             password='tester',
         )
-
         self._create_org_user(organization=self._get_org(), user=user)
-
         with self.subTest('Test authorize with username'):
             self._test_authorize_with_user_auth_helper('tester', 'tester')
 
@@ -150,6 +179,17 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest('Test authorize with phone_number'):
             self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
+
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester')
+            self.assertEqual(r.status_code, 403)
+            self.assertEqual(
+                r.data['detail'],
+                (
+                    'Radius token does not exist. Obtain a new radius token or provide '
+                    'the organization UUID and API token.'
+                ),
+            )
 
     def test_authorize_user_with_email_as_username(self):
         user = self._create_user(
@@ -1234,7 +1274,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         org = self._get_org()
         self.assertEqual(cache.get(f'ip-{org.pk}'), None)
         with self.subTest('Without Cache'):
-            authorize_and_asset(5, [])
+            authorize_and_asset(6, [])
         with self.subTest('With Cache'):
             authorize_and_asset(3, [])
         with self.subTest('Organization Settings Updated'):
@@ -1244,7 +1284,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
             authorize_and_asset(3, ['127.0.0.1', '192.0.2.0'])
         with self.subTest('Cache Deleted'):
             cache.clear()
-            authorize_and_asset(5, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_asset(6, ['127.0.0.1', '192.0.2.0'])
 
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse('radius:authorize'), self.params)
