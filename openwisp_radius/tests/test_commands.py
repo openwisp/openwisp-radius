@@ -1,13 +1,16 @@
 import os
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import now
+from openvpn_status.models import Routing
 
 from openwisp_utils.tests import capture_any_output, capture_stdout
 
+from .. import settings as app_settings
 from ..utils import load_model
 from . import _RADACCT, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
@@ -214,3 +217,95 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(User.objects.count(), 4)
             call_command('delete_unverified_users',)
             self.assertEqual(User.objects.count(), 1)
+
+    @patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        {
+            'test-org': {
+                'openvpn_config': [
+                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+                ],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-AA'],
+            }
+        },
+    )
+    @patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    def test_convert_called_station_id_command(self):
+        options = _RADACCT.copy()
+        options['calling_station_id'] = 'bb:bb:bb:bb:bb:bb'
+        options['called_station_id'] = 'AA-AA-AA-AA-AA-AA'
+        options['unique_id'] = '117'
+        options['organization'] = self._get_org()
+        radius_acc = self._create_radius_accounting(**options)
+
+        with self.subTest('Test telnet connection error'):
+            with patch('logging.Logger.error') as mocked_logger:
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Unable to establish telnet connection to 127.0.0.1 on 7505. '
+                    'Skipping!'
+                )
+
+        with self.subTest('Test telnet password incorrect'):
+            # In the case of an incorrect password, OpenVPN Management Interface
+            # will ask for password again
+            with patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                return_value='PASSWORD:',
+            ), patch('logging.Logger.error') as mocked_logger:
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Unable to parse information received from 127.0.0.1. '
+                    'ParsingError: expected \'OpenVPN CLIENT LIST\' but got '
+                    '\'PASSWORD:\'. Skipping!'
+                )
+
+        with self.subTest('Test routing information empty'):
+            with patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_openvpn_routing_info',
+                return_value={},
+            ), patch('logging.Logger.info') as mocked_logger:
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'No routing information found for organization with "test-org" slug'
+                )
+
+        with self.subTest('Test client common name does not contain a MAC address'):
+            dummy_routing_obj = Routing()
+            dummy_routing_obj.common_name = 'common name'
+            with patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_openvpn_routing_info',
+                return_value={options['calling_station_id']: dummy_routing_obj},
+            ), patch('logging.Logger.warn') as mocked_logger:
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    f'Failed to find a MAC address in "{dummy_routing_obj.common_name}"'
+                    f'. Skipping {radius_acc.session_id}!'
+                )
+
+        with self.subTest('Test routing information does not contain all addresses'):
+            with patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_openvpn_routing_info',
+                return_value={'dd:dd:dd:dd:dd:dd': Routing()},
+            ), patch('logging.Logger.warn') as mocked_logger:
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    f'Failed to find routing information for {radius_acc.session_id}.'
+                    ' Skipping!'
+                )
+
+        with self.subTest('Test ideal condition'):
+            with open(self._get_path('static/openvpn.status')) as status_file:
+                with patch(
+                    'openwisp_radius.management.commands.base.convert_called_station_id'
+                    '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                    return_value=status_file.read(),
+                ):
+                    call_command('convert_called_station_id')
+            radius_acc.refresh_from_db()
+            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-CC')

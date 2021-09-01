@@ -200,6 +200,49 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
+``OPENWISP_RADIUS_CALLED_STATION_IDS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``{}``
+
+This setting allows to specify the parameters to connect to the different
+OpenVPN management interfaces available for an organization. This setting is used by the
+`convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
+
+It should contain configuration in following format:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_CALLED_STATION_IDS = {
+        # Slug of the organization for which settings are being specified
+        # In this example 'default'
+        '<organization_slug>': {
+            'openvpn_config': [
+                {
+                    # Host address of OpenVPN management
+                    'host': '<host>',
+                    # Port of OpenVPN management interface. Defaults to 7505 (integer)
+                    'port': 7506,
+                    # Password of OpenVPN management interface (optional)
+                    'password': '<management_interface_password>',
+                }
+            ],
+            # List of CALLED STATION IDs that has to be converted,
+            # These look like: 00:27:22:F3:FA:F1:gw1.openwisp.org
+            'unconverted_ids': ['<called_station_id>'],
+        }
+    }
+
+
+``OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``u'%a %b %d %H:%M:%S %Y'``
+
+Specifies the datetime format of OpenVPN management status parser used by the
+`convert_called_station_id <management_commands.html#convert-called-station-id>`_
+command.
+
 API and user token related settings
 ===================================
 

@@ -130,3 +130,25 @@ by default the data is added to the first found organization, eg::
 
 .. warning::
     It is not possible to export user credential data for radiusbatch created using prefix, please manually preserve the PDF files if you want to access the data in the future.
+
+``convert_called_station_id``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If an installation uses a centralized captive portal, the value of "Called Station ID" of
+RADIUS Session will show the MAC address of the captive portal instead of access points.
+This command will update the "Called Station ID" to reflect the MAC address of the access points
+using information from OpenVPN. It requires installing ``openvpn_status``,
+which can be installed using the following command
+
+.. code-block:: shell
+
+    pip install openwisp-radius[openvpn_status]
+
+In order to work, this command requires to be configured via the
+`OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_ setting.
+
+.. note::
+
+    If you encounter ``ParseError`` for datetime data, you can set the datetime format
+    of the parser using `OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <./settings.html#openwisp-radius-openvpn-datetime-format>`_
+    setting.

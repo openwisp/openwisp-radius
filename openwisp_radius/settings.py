@@ -132,3 +132,7 @@ except AssertionError:  # pragma: no cover
 
 # Path of urls that need to be refered in migrations files.
 CSV_URL_PATH = 'radiusbatch/csv/'
+CALLED_STATION_IDS = get_settings_value('CALLED_STATION_IDS', {})
+OPENVPN_DATETIME_FORMAT = get_settings_value(
+    'OPENVPN_DATETIME_FORMAT', u'%a %b %d %H:%M:%S %Y'
+)

@@ -199,6 +199,32 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 validated_data.update(groupname=groupname)
         return super().create(validated_data)
 
+    def update(self, instance, acct_data, *args, **kwargs):
+        acct_data = self._check_called_station_id(instance, acct_data)
+        return super().update(instance, acct_data, *args, **kwargs)
+
+    def _check_called_station_id(self, instance, acct_data):
+        """
+        if called_station_id has been converted by the
+        convert_called_station_id command,
+        do not overwrite it back to unconverted ID during interim updates
+        """
+        ids = app_settings.CALLED_STATION_IDS
+        if not ids or instance.called_station_id == acct_data['called_station_id']:
+            return acct_data
+        try:
+            if (
+                ids
+                and acct_data['organization']
+                and acct_data['organization'].slug in ids
+            ):
+                unconverted_ids = ids[acct_data['organization'].slug]['unconverted_ids']
+                if acct_data['called_station_id'] in unconverted_ids:
+                    acct_data['called_station_id'] = instance.called_station_id
+        except Exception:
+            logger.exception('Got exception in _check_called_station_id')
+        return acct_data
+
     class Meta:
         model = RadiusAccounting
         fields = '__all__'
