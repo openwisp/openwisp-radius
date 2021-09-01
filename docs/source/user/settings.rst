@@ -200,38 +200,36 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
-``OPENWISP_RADIUS_CALLED_STATION_ID``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_CALLED_STATION_IDS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``{}``
 
 This setting allows to specify the parameters to connect to the different
-OpenVPN management interfaces available for an organization. This setting is used by
+OpenVPN management interfaces available for an organization. This setting is used by the
 `convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
 
-The dictionary should contain configuration in following format:
+It should contain configuration in following format:
 
 .. code-block:: python
 
     OPENWISP_RADIUS_CALLED_STATION_IDS = {
         # Slug of the organization for which settings are being specified
         # In this example 'default'
-        'default': {
+        '<organization_slug>': {
             'openvpn_config': [
                 {
-                    # Host address of OpenVPN Management Interface
-                    # In this example '127.0.0.1'
-                    'host': '127.0.0.1',
-                    # Port of OpenVPN Management Interface. Default is 7505 (integer)
-                    # In this example '7506'
+                    # Host address of OpenVPN management
+                    'host': '<host>',
+                    # Port of OpenVPN management interface. Defaults to 7505 (integer)
                     'port': 7506,
-                    # Password of OpenVPN Management Interface
-                    # In this example 'ManagmentInterfacePassword'
-                    'password': 'ManagmentInterfacePassword',
+                    # Password of OpenVPN management interface (optional)
+                    'password': '<management_interface_password>',
                 }
             ],
-            # List of MAC addresses that will be converted
-            'unconverted_macs': ['AA:AA:AA:AA:AA:AA'],
+            # List of CALLED STATION IDs that has to be converted,
+            # These look like: 00:27:22:F3:FA:F1:gw1.openwisp.org
+            'unconverted_ids': ['<called_station_id>'],
         }
     }
 
@@ -241,9 +239,9 @@ The dictionary should contain configuration in following format:
 
 **Default**: ``u'%a %b %d %H:%M:%S %Y'``
 
-Specifies the datetime format of OpenVPN management status parser used by
-`convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
-
+Specifies the datetime format of OpenVPN management status parser used by the
+`convert_called_station_id <management_commands.html#convert-called-station-id>`_
+command.
 
 API and user token related settings
 ===================================
@@ -581,4 +579,3 @@ Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 
     To learn about configuring SAML Login refer to the
     `"Settings" section of SAML Login documentation <saml.html#settings>`_
-

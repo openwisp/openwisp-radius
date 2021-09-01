@@ -226,7 +226,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openvpn_config': [
                     {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
                 ],
-                'unconverted_macs': ['AA-AA-AA-AA-AA-AA'],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-AA'],
             }
         },
     )

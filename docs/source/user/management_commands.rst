@@ -138,14 +138,14 @@ If an installation uses a centralized captive portal, the value of "Called Stati
 RADIUS Session will show the MAC address of the captive portal instead of access points.
 This command will update the "Called Station ID" to reflect the MAC address of the access points
 using information from OpenVPN. It requires installing ``openvpn_status``,
- which can be installed using the following command
+which can be installed using the following command
 
 .. code-block:: shell
 
     pip install openwisp-radius[openvpn_status]
 
 In order to work, this command requires to be configured via the
-`OPENWISP_RADIUS_CALLED_STATION_ID <./settings.html#openwisp-radius-called-station-id>`_ setting.
+`OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_ setting.
 
 .. note::
 
