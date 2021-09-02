@@ -241,6 +241,9 @@ REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer'
 }
 
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = 'email_confirmation_success'
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = 'email_confirmation_success'
+
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # fallback in case the specific org page is not defined
 #     'default': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
