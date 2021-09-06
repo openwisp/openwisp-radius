@@ -3,10 +3,9 @@
 # This file is distributed under the same license as the PACKAGE package.
 # Federico Capoano support@openwisp.io, 2021.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Language: \n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -25,22 +24,21 @@ msgstr "Deve includere \"nome utente\" e \"password\"."
 #: openwisp_radius/api/serializers.py:355
 #: openwisp_radius/api/serializers.py:383
 msgid "This field is required."
-msgstr "Queso campo è obbligatorio."
+msgstr "Il campo è obbligatorio."
 
 #: openwisp_radius/api/serializers.py:363
 msgid "A user is already registered with this phone number."
-msgstr "Un utente è già registrato con questo numero di telefono."
+msgstr "Esiste già un utente registrato con questo numero di telefono."
 
 #: openwisp_radius/api/serializers.py:447
 msgid "The new phone number must be different than the old one."
-msgstr "Il nuovo numero di telefono deve essere diverso da quello vecchio."
+msgstr "Il nuovo numero di telefono deve essere diverso da quello precedente."
 
 #: openwisp_radius/api/views.py:129
 #, python-brace-format
 msgid ""
 "The user {username} is not member of organization {organization}."
-msgstr ""
-"L'utente {username} non è membro dell'organizzazione {organization}."
+msgstr "L'utente {username} non appartiene all'organizzazione {organization}."
 
 #: openwisp_radius/api/views.py:459
 msgid "The email field is required."
@@ -48,7 +46,7 @@ msgstr "Il campo email è obbligatorio."
 
 #: openwisp_radius/api/views.py:570
 msgid "No verification code found in the system for this user."
-msgstr "Nessun codice di verifica trovato nel sistema per questo utente."
+msgstr "Per questo utente non è stato trovato un codice di verifica."
 
 #: openwisp_radius/api/views.py:577
 msgid "Invalid code."
@@ -64,36 +62,33 @@ msgid "Maximum daily limit reached."
 msgstr "Limite giornaliero massimo raggiunto."
 
 #: openwisp_radius/base/models.py:1292
-msgid "Maximum daily limit reached from this ip address."
-msgstr "Limite giornaliero massimo raggiunto da questo indirizzo IP."
+msgid "Maximum daily limit reached from this IP address."
+msgstr "Limite giornaliero massimo raggiunto per questo indirizzo IP."
 
 #: openwisp_radius/base/models.py:1307
 #, python-brace-format
 msgid "The user {user} is not member of any organization"
-msgstr "L'utente {user} non è membro di alcuna organizzazione."
+msgstr "L'utente {user} non appartiene ad alcuna organizzazione"
 
 #: openwisp_radius/base/models.py:1311
 #, python-brace-format
 msgid "{organization} verification code: {code}"
-msgstr ""
-"Codice di verifica {organization}: {code}"
+msgstr "Codice di verifica {organization}: {code}"
 
 #: openwisp_radius/base/models.py:1335
-msgid "This user is already verified."
-msgstr "Questo utente è giá verificato."
+msgid "This user has been already verified."
+msgstr "L'utente è già stato verificato."
 
 #: openwisp_radius/base/models.py:1350
-msgid ""
-"Maximum number of allowed attempts reached for this verification code, "
-"please send a new code and try again."
+msgid "Maximum number of attempts reached, request a new code."
 msgstr ""
-"Numero massimo di tentativi consentiti raggiunto per questo codice di "
-"verifica, invia un nuovo codice e riprova."
+"Numero massimo di tentativi consentiti raggiunto, richiedi l'invio di un nuovo "
+"codice."
 
 #: openwisp_radius/base/models.py:1364
 msgid ""
 "This verification code has expired, Please send a new code and try again."
-msgstr "Questo codice di verifica è scaduto. Invia un nuovo codice e riprova."
+msgstr "Il codice di verifica è scaduto, richiedi l'invio di un nuovo codice."
 
 #: openwisp_radius/templates/custom_password_reset_email.html:2
 #, python-format
@@ -102,13 +97,13 @@ msgid ""
 "user account at\n"
 "%(site_name)s."
 msgstr ""
-"Ha ricevuto questa email perché ha richiesto la reimpostazione della "
-"password per il suo account utente su\n"
+"Hai ricevuto questa email perché hai richiesto la reimpostazione della password "
+"per il tuo account utente su\n"
 "%(site_name)s."
 
 #: openwisp_radius/templates/custom_password_reset_email.html:5
 msgid "Please go to the following page and choose a new password:"
-msgstr "La preghiamo di aprire la pagina seguente per scegliere una nuova password:"
+msgstr "Si prega di aprire la pagina seguente per scegliere una nuova password:"
 
 #: openwisp_radius/templates/custom_password_reset_email.html:10
 msgid "Your username, in case you've forgotten:"

@@ -63,7 +63,7 @@ msgid "Maximum daily limit reached."
 msgstr "Limite giornaliero massimo raggiunto."
 
 #: openwisp_radius/base/models.py:1292
-msgid "Maximum daily limit reached from this ip address."
+msgid "Maximum daily limit reached from this IP address."
 msgstr "Limite giornaliero massimo raggiunto da questo indirizzo IP."
 
 #: openwisp_radius/base/models.py:1307
@@ -78,16 +78,14 @@ msgstr ""
 "Codice di verifica {organization}: {code}"
 
 #: openwisp_radius/base/models.py:1335
-msgid "This user is already verified."
+msgid "This user has been already verified."
 msgstr "Questo utente è giá verificato."
 
 #: openwisp_radius/base/models.py:1350
-msgid ""
-"Maximum number of allowed attempts reached for this verification code, "
-"please send a new code and try again."
+msgid "Maximum number of attempts reached, request a new code."
 msgstr ""
-"Numero massimo di tentativi consentiti raggiunto per questo codice di "
-"verifica, invia un nuovo codice e riprova."
+"Numero massimo di tentativi consentiti raggiunto, richiedi l'invio di un nuovo "
+"codice."
 
 #: openwisp_radius/base/models.py:1364
 msgid ""

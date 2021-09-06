@@ -1289,7 +1289,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
             raise ValidationError(
-                _('Maximum daily limit reached from this ip address.')
+                _('Maximum daily limit reached from this IP address.')
             )
 
     def save(self, *args, **kwargs):
@@ -1334,7 +1334,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             if self.user.registered_user.is_verified:
                 logger.warning(f'User {self.user.pk} is already verified')
                 raise exceptions.UserAlreadyVerified(
-                    _('This user is already verified.')
+                    _('This user has been already verified.')
                 )
         except ObjectDoesNotExist:
             pass
@@ -1347,11 +1347,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 f'attempt limit for token {self.pk}.'
             )
             raise exceptions.MaxAttemptsException(
-                _(
-                    'Maximum number of allowed attempts reached '
-                    'for this verification code, please send a '
-                    'new code and try again.'
-                )
+                _('Maximum number of attempts reached, request a new code.')
             )
         if timezone.now() > self.valid_until:
             logger.warning(

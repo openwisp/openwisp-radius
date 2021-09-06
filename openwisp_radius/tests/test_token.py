@@ -184,7 +184,7 @@ class TestPhoneToken(BaseTestCase):
         try:
             self._create_token(user=user2, phone_number='+393664351802')
         except ValidationError as e:
-            self.assertIn('ip address', str(e.message_dict))
+            self.assertIn('IP address', str(e.message_dict))
         else:
             self.fail('ValidationError not raised')
 
