@@ -22,18 +22,6 @@ msgstr ""
 msgid "Must include \"username\" and \"password\"."
 msgstr "Deve includere \"nome utente\" e \"password\"."
 
-#: openwisp_radius/api/serializers.py:332
-msgid ""
-"Required only when the organization has enabled SMS verification in its "
-"\"Organization RADIUS Settings.\""
-msgstr ""
-
-#: openwisp_radius/api/serializers.py:344
-msgid ""
-"Required only when the organization has mandatory identity verification in "
-"its \"Organization RADIUS Settings.\""
-msgstr ""
-
 #: openwisp_radius/api/serializers.py:355
 #: openwisp_radius/api/serializers.py:383
 msgid "This field is required."
@@ -106,12 +94,6 @@ msgstr ""
 msgid ""
 "This verification code has expired, Please send a new code and try again."
 msgstr "Questo codice di verifica è scaduto. Invia un nuovo codice e riprova."
-
-#: openwisp_radius/base/models.py:1381
-msgid ""
-"users can sign up in different ways, some methods are valid as indirect "
-"identity verification (eg: mobile phone SIM card in most countries)"
-msgstr ""
 
 #: openwisp_radius/templates/custom_password_reset_email.html:2
 #, python-format

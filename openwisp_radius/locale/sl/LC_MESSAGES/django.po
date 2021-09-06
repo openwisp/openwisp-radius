@@ -23,22 +23,6 @@ msgstr ""
 msgid "Must include \"username\" and \"password\"."
 msgstr "Mora vključevati \"uporabniško ime\" in \"geslo\"."
 
-#: openwisp_radius/api/serializers.py:332
-msgid ""
-"Required only when the organization has enabled SMS verification in its "
-"\"Organization RADIUS Settings.\""
-msgstr ""
-"Zahtevano samo, če je organizacija omogočila preverjanje SMS v svojem"
-"\"Nastavitve RADIUS organizacije.\""
-
-#: openwisp_radius/api/serializers.py:344
-msgid ""
-"Required only when the organization has mandatory identity verification in "
-"its \"Organization RADIUS Settings.\""
-msgstr ""
-"Potrebno le, če ima organizacija obvezno preverjanje identitete v"
-"its \"Nastavitve RADIUS -a organizacije.\""
-
 #: openwisp_radius/api/serializers.py:355
 #: openwisp_radius/api/serializers.py:383
 msgid "This field is required."

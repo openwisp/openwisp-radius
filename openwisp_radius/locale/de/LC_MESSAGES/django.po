@@ -22,18 +22,6 @@ msgstr ""
 msgid "Must include \"username\" and \"password\"."
 msgstr "Muss \"Benutzername\" und \"Passwort\" enthalten."
 
-#: openwisp_radius/api/serializers.py:332
-msgid ""
-"Required only when the organization has enabled SMS verification in its "
-"\"Organization RADIUS Settings.\""
-msgstr ""
-
-#: openwisp_radius/api/serializers.py:344
-msgid ""
-"Required only when the organization has mandatory identity verification in "
-"its \"Organization RADIUS Settings.\""
-msgstr ""
-
 #: openwisp_radius/api/serializers.py:355
 #: openwisp_radius/api/serializers.py:383
 msgid "This field is required."
