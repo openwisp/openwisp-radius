@@ -3,7 +3,7 @@ import ipaddress
 import json
 import logging
 import os
-from base64 import encodestring
+from base64 import encodebytes
 from datetime import timedelta
 from hashlib import md5, sha1
 from io import StringIO
@@ -242,7 +242,7 @@ def _encode_secret(attribute, new_value=None):
         salt = urandom(4)
         hash = md5(new_value.encode('utf-8'))
         hash.update(salt)
-        hash_encoded = encodestring(hash.digest() + salt)
+        hash_encoded = encodebytes(hash.digest() + salt)
         attribute_value = hash_encoded.decode('utf-8')[:-1]
     elif attribute == 'SHA-Password':
         attribute_value = sha1(new_value.encode('utf-8')).hexdigest()
@@ -250,7 +250,7 @@ def _encode_secret(attribute, new_value=None):
         salt = urandom(4)
         hash = sha1(new_value.encode('utf-8'))
         hash.update(salt)
-        hash_encoded = encodestring(hash.digest() + salt)
+        hash_encoded = encodebytes(hash.digest() + salt)
         attribute_value = hash_encoded.decode('utf-8')[:-1]
     elif attribute == 'Crypt-Password':
         attribute_value = sha512_crypt.hash(new_value)
