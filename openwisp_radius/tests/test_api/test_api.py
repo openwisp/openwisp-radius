@@ -567,8 +567,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             'radius:rest_password_change', args=['random-valid-slug'],
         )
         new_password_payload = {
-            'new_password1': 'test_new_password',
-            'new_password2': 'test_new_password',
+            'current_password': 'test_password',
+            'new_password': 'test_new_password',
+            'confirm_password': 'test_new_password',
         }
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 404)
@@ -591,31 +592,50 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             'radius:rest_password_change', args=[self.default_org.slug]
         )
         new_password_payload = {
-            'new_password1': 'test_new_password',
-            'new_password2': 'test_new_password_different',
+            'current_password': 'test_password',
+            'new_password': 'test_new_password',
+            'confirm_password': 'test_new_password_different',
         }
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            'The two password fields didn’t match.',
-            str(response.data['new_password2']).replace("'", "’"),
+            'New password and Confirm password do not match.',
+            str(response.data['confirm_password']),
+        )
+
+        # current password is not the actual password
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        password_change_url = reverse(
+            'radius:rest_password_change', args=[self.default_org.slug]
+        )
+        new_password_payload = {
+            'current_password': 'wrong_password',
+            'new_password': 'test_new_password',
+            'confirm_password': 'test_new_password',
+        }
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            'Current password was entered incorrectly. Please enter it again.',
+            str(response.data['current_password']),
         )
 
         # Password successfully changed
         new_password_payload = {
-            'new_password1': 'test_new_password',
-            'new_password2': 'test_new_password',
+            'current_password': 'test_password',
+            'new_password': 'test_new_password',
+            'confirm_password': 'test_new_password',
         }
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('New password has been saved.', str(response.data['detail']))
+        self.assertIn('Password updated successfully', str(response.data['message']))
 
         # user should not be able to login using old password
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 400)
 
         # new password should work
-        login_payload['password'] = new_password_payload['new_password1']
+        login_payload['password'] = new_password_payload['new_password']
         login_response = self.client.post(login_url, data=login_payload)
         token = login_response.json()['key']
         self.assertEqual(login_response.status_code, 200)

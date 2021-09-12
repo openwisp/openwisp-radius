@@ -248,6 +248,7 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = '__all__'
+        ref_name = 'radius_user_group_serializer'
 
 
 class UserSerializer(serializers.ModelSerializer):
