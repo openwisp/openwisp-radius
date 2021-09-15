@@ -128,7 +128,7 @@ class DispatchOrgMixin(object):
             message = _(
                 'The user {username} is not member of organization {organization}.'
             ).format(username=user.username, organization=self.organization.name)
-            logger.warning(message)
+            logger.info(message)
             raise serializers.ValidationError({'non_field_errors': [message]})
 
 
