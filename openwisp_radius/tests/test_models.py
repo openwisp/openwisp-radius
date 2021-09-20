@@ -275,6 +275,24 @@ class TestOrganizationRadiusSettings(BaseTestCase):
         self.assertIsNone(org.radius_settings.location)
         self.assertIsNone(org.radius_settings.birth_date)
 
+    def test_get_registration_enabled(self):
+        rad_setting = self._get_org().radius_settings
+
+        with self.subTest('Test registration enabled set to True'):
+            rad_setting.registration_enabled = True
+            self.assertEqual(rad_setting.get_registration_enabled(), True)
+
+        with self.subTest('Test registration enabled set to False'):
+            rad_setting.registration_enabled = False
+            self.assertEqual(rad_setting.get_registration_enabled(), False)
+
+        with self.subTest('Test registration enabled set to None'):
+            rad_setting.registration_enabled = None
+            self.assertEqual(
+                rad_setting.get_registration_enabled(),
+                app_settings.REGISTRATION_API_ENABLED,
+            )
+
 
 class TestRadiusGroup(BaseTestCase):
     def test_group_str(self):

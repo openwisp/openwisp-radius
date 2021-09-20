@@ -416,62 +416,61 @@ class RegisterSerializer(
             field_value = ''
         return field_value
 
+    def validate_cross_org_registration(self, error, data):
+        error_dict = error.detail
+        if 'username' not in error_dict or 'email' not in error_dict:
+            raise error
+
+        user_lookup = Q()
+        if (
+            'username' in error_dict
+            and 'A user with that username already exists.' in error_dict['username']
+        ):
+            user_lookup |= Q(user__username=data['username'])
+        if (
+            'email' in error_dict
+            and 'A user is already registered with this e-mail address.'
+            in error_dict['email']
+        ):
+            user_lookup |= Q(user__email=data['email'])
+        if (
+            OrganizationUser.objects.filter(
+                organization=self.context['view'].organization
+            )
+            .filter(user_lookup)
+            .exists()
+        ):
+            # User is registering to the organization it is already member of.
+            raise error
+
+        organizations = (
+            OrganizationUser.objects.filter(user_lookup)
+            .select_related('organization')
+            .values('organization__name', 'organization__slug')
+        )
+        organization_list = []
+        for org in organizations:
+            organization_list.append(
+                {'slug': org['organization__slug'], 'name': org['organization__name']}
+            )
+        if organization_list:
+            raise CrossOrgRegistrationException(
+                {
+                    'details': _(
+                        'A user like the one being registered already exists.'
+                    ),
+                    'organizations': organization_list,
+                },
+            )
+        else:
+            # User is not a member of any organization
+            raise error
+
     def run_validation(self, data=empty):
         try:
             return super().run_validation(data=data)
         except serializers.ValidationError as error:
-            error_dict = error.detail
-            if 'username' not in error_dict or 'email' not in error_dict:
-                raise error
-
-            user_lookup = Q()
-            if (
-                'username' in error_dict
-                and 'A user with that username already exists.'
-                in error_dict['username']
-            ):
-                user_lookup |= Q(user__username=data['username'])
-            if (
-                'email' in error_dict
-                and 'A user is already registered with this e-mail address.'
-                in error_dict['email']
-            ):
-                user_lookup |= Q(user__email=data['email'])
-            if (
-                OrganizationUser.objects.filter(
-                    organization=self.context['view'].organization
-                )
-                .filter(user_lookup)
-                .exists()
-            ):
-                # User is registering to the organization it is already member of.
-                raise error
-
-            organizations = (
-                OrganizationUser.objects.filter(user_lookup)
-                .select_related('organization')
-                .values('organization__name', 'organization__slug')
-            )
-            organization_list = []
-            for org in organizations:
-                organization_list.append(
-                    {
-                        'slug': org['organization__slug'],
-                        'name': org['organization__name'],
-                    }
-                )
-            if organization_list:
-                raise CrossOrgRegistrationException(
-                    {
-                        'details': _(
-                            'A user like the one being registered already exists.'
-                        ),
-                        'organizations': organization_list,
-                    },
-                )
-            else:
-                # User is not a member of any organization
-                raise error_dict
+            self.validate_cross_org_registration(error, data)
 
     def save(self, request):
         adapter = get_adapter()

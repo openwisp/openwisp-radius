@@ -1139,6 +1139,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             mobile_prefixes = self.allowed_mobile_prefixes.split(',')
         return mobile_prefixes
 
+    def get_registration_enabled(self):
+        if self.registration_enabled is None:
+            return app_settings.REGISTRATION_API_ENABLED
+        return self.registration_enabled
+
     def clean(self):
         if self.sms_verification and not self.sms_sender:
             raise ValidationError(

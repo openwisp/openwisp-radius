@@ -25,7 +25,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
@@ -75,6 +75,7 @@ PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 
 
 class ThrottledAPIMixin(object):
@@ -294,16 +295,23 @@ class ObtainAuthTokenView(
 
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
-            if OrganizationUser.objects.filter(user=user).exists():
+            try:
+                org_registration_enabled = (
+                    self.organization.radius_settings.get_registration_enabled()
+                )
+            except OrganizationRadiusSettings.DoesNotExist:
+                org_registration_enabled = app_settings.REGISTRATION_API_ENABLED
+            if org_registration_enabled:
                 OrganizationUser.objects.create(
                     user=user, organization=self.organization
                 )
             else:
                 message = _(
-                    'The user {username} is not member of any organization.'
-                ).format(username=user.username)
-                logger.warning(message)
-                raise serializers.ValidationError({'non_field_errors': [message]})
+                    'Registration is disabled for {organization} organization'.format(
+                        organization=self.organization.name
+                    )
+                )
+                raise PermissionDenied(message)
 
 
 obtain_auth_token = ObtainAuthTokenView.as_view()

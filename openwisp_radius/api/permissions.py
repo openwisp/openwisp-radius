@@ -36,11 +36,8 @@ class IsRegistrationEnabled(BasePermission):
         # check for organization's local setting
         try:
             registration_enabled = (
-                view.organization.radius_settings.registration_enabled
+                view.organization.radius_settings.get_registration_enabled()
             )
         except OrganizationRadiusSettings.DoesNotExist:
-            registration_enabled = None
-        # check for global setting if organization setting not set / doesn't exist
-        if registration_enabled is None:
             registration_enabled = app_settings.REGISTRATION_API_ENABLED
         return registration_enabled

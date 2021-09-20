@@ -157,7 +157,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_register_duplicate_same_org(self):
         self.test_register_201()
-        OrganizationUser.objects.all.delete()
+        OrganizationUser.objects.all().delete()
         response = self._register_user(expect_201=False, expect_users=None)
         self.assertIn('username', response.data)
         self.assertIn('email', response.data)
@@ -188,7 +188,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         }
         self.assertDictEqual(response.data, expected_response_data)
         self.assertEqual(User.objects.count(), init_user_count + 1)
-        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 2)
+        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
 
     def test_radius_user_serializer(self):
         self._register_user()
