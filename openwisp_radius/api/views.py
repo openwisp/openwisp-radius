@@ -58,7 +58,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import ErrorDictMixin, IDVerificationHelper
+from .utils import ErrorDictMixin, IDVerificationHelper, is_registration_enabled
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -295,22 +295,15 @@ class ObtainAuthTokenView(
 
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
-            try:
-                org_registration_enabled = (
-                    self.organization.radius_settings.get_registration_enabled()
-                )
-            except OrganizationRadiusSettings.DoesNotExist:
-                org_registration_enabled = app_settings.REGISTRATION_API_ENABLED
-            if org_registration_enabled:
+            if is_registration_enabled(self.organization):
                 OrganizationUser.objects.create(
                     user=user, organization=self.organization
                 )
             else:
                 message = _(
-                    'Registration is disabled for {organization} organization'.format(
-                        organization=self.organization.name
-                    )
-                )
+                    '{organization} does not allow self registration '
+                    'of new accounts.'
+                ).format(organization=self.organization.name)
                 raise PermissionDenied(message)
 
 

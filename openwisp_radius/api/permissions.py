@@ -5,9 +5,8 @@ from ipware import get_client_ip
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from .. import settings as app_settings
 from ..utils import load_model
-from .utils import is_sms_verification_enabled
+from .utils import is_registration_enabled, is_sms_verification_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +32,4 @@ class IsSmsVerificationEnabled(BasePermission):
 
 class IsRegistrationEnabled(BasePermission):
     def has_permission(self, request, view):
-        # check for organization's local setting
-        try:
-            registration_enabled = (
-                view.organization.radius_settings.get_registration_enabled()
-            )
-        except OrganizationRadiusSettings.DoesNotExist:
-            registration_enabled = app_settings.REGISTRATION_API_ENABLED
-        return registration_enabled
+        return is_registration_enabled(view.organization)

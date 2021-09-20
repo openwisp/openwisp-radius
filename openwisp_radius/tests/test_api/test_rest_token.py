@@ -96,6 +96,14 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             response.data['radius_user_token'], RadiusToken.objects.first().key,
         )
 
+        with self.subTest('No OrganizationUser present'):
+            OrganizationUser.objects.all().delete()
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(OrganizationUser.objects.count(), 1)
+
     @capture_any_output()
     def test_user_auth_token_different_organization_registration_disabled(self):
         self._get_org_user()
@@ -111,7 +119,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
             response.data['detail'],
-            f'Registration is disabled for {org2} organization',
+            f'{org2} does not allow self registration of new accounts.',
         )
 
     def test_user_auth_token_404(self):
