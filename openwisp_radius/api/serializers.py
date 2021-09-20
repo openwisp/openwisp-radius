@@ -14,6 +14,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -22,7 +23,9 @@ from rest_framework import serializers
 from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
+from rest_framework.fields import empty
 
+from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
@@ -412,6 +415,63 @@ class RegisterSerializer(
         if field_setting == 'disabled':
             field_value = ''
         return field_value
+
+    def run_validation(self, data=empty):
+        try:
+            return super().run_validation(data=data)
+        except serializers.ValidationError as error:
+            error_dict = error.detail
+            if 'username' not in error_dict or 'email' not in error_dict:
+                raise error
+
+            user_lookup = Q()
+            if (
+                'username' in error_dict
+                and 'A user with that username already exists.'
+                in error_dict['username']
+            ):
+                user_lookup |= Q(user__username=data['username'])
+            if (
+                'email' in error_dict
+                and 'A user is already registered with this e-mail address.'
+                in error_dict['email']
+            ):
+                user_lookup |= Q(user__email=data['email'])
+            if (
+                OrganizationUser.objects.filter(
+                    organization=self.context['view'].organization
+                )
+                .filter(user_lookup)
+                .exists()
+            ):
+                # User is registering to the organization it is already member of.
+                raise error
+
+            organizations = (
+                OrganizationUser.objects.filter(user_lookup)
+                .select_related('organization')
+                .values('organization__name', 'organization__slug')
+            )
+            organization_list = []
+            for org in organizations:
+                organization_list.append(
+                    {
+                        'slug': org['organization__slug'],
+                        'name': org['organization__name'],
+                    }
+                )
+            if organization_list:
+                raise CrossOrgRegistrationException(
+                    {
+                        'details': _(
+                            'A user like the one being registered already exists.'
+                        ),
+                        'organizations': organization_list,
+                    },
+                )
+            else:
+                # User is not a member of any organization
+                raise error_dict
 
     def save(self, request):
         adapter = get_adapter()

@@ -70,6 +70,7 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
@@ -290,6 +291,19 @@ class ObtainAuthTokenView(
         user = serializer.validated_data['user']
         self.validate_membership(user)
         return user
+
+    def validate_membership(self, user):
+        if not (user.is_superuser or user.is_member(self.organization)):
+            if OrganizationUser.objects.filter(user=user).exists():
+                OrganizationUser.objects.create(
+                    user=user, organization=self.organization
+                )
+            else:
+                message = _(
+                    'The user {username} is not member of any organization.'
+                ).format(username=user.username)
+                logger.warning(message)
+                raise serializers.ValidationError({'non_field_errors': [message]})
 
 
 obtain_auth_token = ObtainAuthTokenView.as_view()

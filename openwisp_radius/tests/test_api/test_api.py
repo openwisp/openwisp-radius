@@ -31,6 +31,7 @@ RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
 
@@ -153,6 +154,41 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('username', r.data)
         self.assertIn('email', r.data)
+
+    def test_register_duplicate_same_org(self):
+        self.test_register_201()
+        OrganizationUser.objects.all.delete()
+        response = self._register_user(expect_201=False, expect_users=None)
+        self.assertIn('username', response.data)
+        self.assertIn('email', response.data)
+
+    def test_register_duplicate_different_org(self):
+        init_user_count = User.objects.count()
+        org_user_count = OrganizationUser.objects.count()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'password1': 'password',
+            'password2': 'password',
+        }
+        response = self.client.post(url, data=params)
+        self.assertEqual(User.objects.count(), init_user_count + 1)
+        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        org2 = self._get_org(org_name='org2')
+        url = reverse('radius:rest_register', args=[org2.slug])
+        response = self.client.post(url, data=params)
+        self.assertEqual(response.status_code, 409)
+        expected_response_data = {
+            'details': 'A user like the one being registered already exists.',
+            'organizations': [
+                {'slug': self.default_org.slug, 'name': self.default_org.name}
+            ],
+        }
+        self.assertDictEqual(response.data, expected_response_data)
+        self.assertEqual(User.objects.count(), init_user_count + 1)
+        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 2)
 
     def test_radius_user_serializer(self):
         self._register_user()

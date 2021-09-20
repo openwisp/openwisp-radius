@@ -90,6 +90,20 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('is not member', r.json()['non_field_errors'][0])
 
+    @capture_any_output()
+    def test_user_auth_token_different_organization(self):
+        self._get_org_user()
+        org2 = self._create_org(name='org2')
+        url = reverse('radius:user_auth_token', args=[org2.slug])
+        self.assertEqual(OrganizationUser.objects.count(), 1)
+
+        response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['key'], Token.objects.first().key)
+        self.assertEqual(
+            response.data['radius_user_token'], RadiusToken.objects.first().key,
+        )
+
     def test_user_auth_token_404(self):
         url = reverse(
             'radius:user_auth_token', args=['00000000-0000-0000-0000-000000000000']
