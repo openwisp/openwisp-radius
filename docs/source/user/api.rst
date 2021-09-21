@@ -407,6 +407,67 @@ simple, but can be `enabled through configuration <./settings.html#openwisp-radi
 if identity verification is disabled for a particular org, an empty string
 will be acceptable.
 
+Registering to Multiple Organizations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An **HTTP 409** response will be returned if an existing user tries to register
+on a URL of different organization. The response will contain a list of organizations
+with which the user has already registered to the system. Following is an example
+response:
+
+.. code-block:: shell
+
+    $ curl -X POST \
+    http://127.0.0.1:8000/api/v1/radius/organization/openwisp/account/ \
+    -H 'content-type: application/json' \
+    -d '{
+        "username": "openwisp_user",
+        "email": "user@openwisp.io",
+        "password1": "<your-super-secret-password>",
+        "password2": "<your-super-secret-password>"
+    }'
+
+    HTTP/1.1 409 Conflict
+    Date: Tue, 21 Sep 2021 15:13:38 GMT
+    Server: WSGIServer/0.2 CPython/3.8.10
+    Content-Type: application/json
+    Vary: Accept, Origin
+    Allow: POST, OPTIONS
+    X-Frame-Options: DENY
+    Content-Length: 120
+    X-Content-Type-Options: nosniff
+    Referrer-Policy: same-origin
+
+    {"details":"A user like the one being registered already exists.","organizations":[{"slug":"default","name":"default"}]}
+
+The existing user can register with a new organization using the
+`login <#login-obtain-user-auth-token>`_ endpoint. The user will also get
+membership of the new organization.
+
+.. code-block:: shell
+
+    $ curl -X POST -i \
+    >   http://127.0.0.1:8000/api/v1/radius/organization/openwisp/account/token/ \
+    >   -H 'cache-control: no-cache' \
+    >   -H 'content-type: application/json' \
+    >   -d '{
+    > "username": "openwisp_user",
+    > "password": "password"
+    > }'
+
+    HTTP/1.1 200 OK
+    Date: Tue, 21 Sep 2021 15:25:54 GMT
+    Server: WSGIServer/0.2 CPython/3.8.10
+    Content-Type: application/json
+    Allow: POST, OPTIONS
+    X-Frame-Options: DENY
+    Content-Length: 294
+    Vary: Origin
+    X-Content-Type-Options: nosniff
+    Referrer-Policy: same-origin
+
+    {"username":"openwisp","email":"user@openwisp.io","phone_number":null,"first_name":"","last_name":"","birth_date":null,"location":"","is_active":true,"is_verified":false,"method":"","radius_user_token":"XxbGRU3KV7yQOgLZucj8MVvqX9zdzGb9rAM9LjdO","key":"2f26d26fca112d6081e4c142e66480bf9e6729f7"}
+
 Reset password
 --------------
 
@@ -509,6 +570,11 @@ If the user account is inactive or unverified the endpoint will send the data
 anyway but using the HTTP status code 401, this way consumers can recognize
 these users and trigger the appropriate response needed (eg: reject them
 or initiate account verification).
+
+If an existing user account tries to log in with the URL for a different organization,
+then the user is also added as a member of the new organization.
+Please refer to the `"Registering to Multiple Organizations" <#registering-to-multiple-organizations>`_
+section of this documentation for details.
 
 Parameters:
 
