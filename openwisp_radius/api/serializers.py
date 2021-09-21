@@ -418,21 +418,20 @@ class RegisterSerializer(
 
     def validate_cross_org_registration(self, error, data):
         error_dict = error.detail
-        if 'username' not in error_dict or 'email' not in error_dict:
+        if (
+            'username' not in error_dict
+            and 'email' not in error_dict
+            and 'phone_number' not in error_dict
+        ):
             raise error
 
         user_lookup = Q()
-        if (
-            'username' in error_dict
-            and 'A user with that username already exists.' in error_dict['username']
-        ):
+        if 'username' in error_dict:
             user_lookup |= Q(user__username=data['username'])
-        if (
-            'email' in error_dict
-            and 'A user is already registered with this e-mail address.'
-            in error_dict['email']
-        ):
+        if 'email' in error_dict:
             user_lookup |= Q(user__email=data['email'])
+        if 'phone_number' in error_dict:
+            user_lookup |= Q(user__phone_number=data['phone_number'])
         if (
             OrganizationUser.objects.filter(
                 organization=self.context['view'].organization
@@ -463,7 +462,8 @@ class RegisterSerializer(
                 },
             )
         else:
-            # User is not a member of any organization
+            # The error is related to 'username', 'email' or 'phone_number'
+            # fields but it is not related to cross organization registration
             raise error
 
     def run_validation(self, data=empty):

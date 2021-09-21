@@ -157,38 +157,90 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_register_duplicate_same_org(self):
         self.test_register_201()
-        OrganizationUser.objects.all().delete()
         response = self._register_user(expect_201=False, expect_users=None)
         self.assertIn('username', response.data)
         self.assertIn('email', response.data)
 
+    @mock.patch('openwisp_radius.settings.ALLOWED_MOBILE_PREFIXES', ['+33'])
     def test_register_duplicate_different_org(self):
+        self.default_org.radius_settings.sms_verification = True
+        self.default_org.radius_settings.save()
+
         init_user_count = User.objects.count()
         org_user_count = OrganizationUser.objects.count()
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         params = {
             'username': self._test_email,
             'email': self._test_email,
+            'phone_number': '+33675579231',
             'password1': 'password',
             'password2': 'password',
         }
         response = self.client.post(url, data=params)
+        self.assertEqual(response.status_code, 201)
         self.assertEqual(User.objects.count(), init_user_count + 1)
         self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
 
         org2 = self._get_org(org_name='org2')
         url = reverse('radius:rest_register', args=[org2.slug])
-        response = self.client.post(url, data=params)
-        self.assertEqual(response.status_code, 409)
-        expected_response_data = {
-            'details': 'A user like the one being registered already exists.',
-            'organizations': [
-                {'slug': self.default_org.slug, 'name': self.default_org.name}
-            ],
-        }
-        self.assertDictEqual(response.data, expected_response_data)
-        self.assertEqual(User.objects.count(), init_user_count + 1)
-        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+        radius_settings = org2.radius_settings
+        radius_settings.sms_verification = True
+        radius_settings.save()
+
+        with self.subTest('Test existing email'):
+            options = params.copy()
+            options['phone_number'] = '+33675579231'
+            options['username'] = 'test2'
+
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        with self.subTest('Test existing username'):
+            options = params.copy()
+            options['phone_number'] = '+339876543211'
+            options['email'] = 'test2@example.com'
+
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        with self.subTest('Test existing phone_number'):
+            options = params.copy()
+            options['username'] = options['phone_number']
+            options.pop('email')
+
+            # print(User.objects.get(phone_number=options['phone_number']))
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        self.default_org.radius_settings.sms_verification = False
+        self.default_org.radius_settings.save()
 
     def test_radius_user_serializer(self):
         self._register_user()

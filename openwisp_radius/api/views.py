@@ -296,9 +296,9 @@ class ObtainAuthTokenView(
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             if is_registration_enabled(self.organization):
-                OrganizationUser.objects.create(
-                    user=user, organization=self.organization
-                )
+                org_user = OrganizationUser(user=user, organization=self.organization)
+                org_user.full_clean()
+                org_user.save()
             else:
                 message = _(
                     '{organization} does not allow self registration '

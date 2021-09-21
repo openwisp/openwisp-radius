@@ -84,17 +84,21 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_user_auth_token_different_organization(self):
-        self._get_org_user()
-        org2 = self._create_org(name='org2')
-        url = reverse('radius:user_auth_token', args=[org2.slug])
-        self.assertEqual(OrganizationUser.objects.count(), 1)
-
-        response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['key'], Token.objects.first().key)
-        self.assertEqual(
-            response.data['radius_user_token'], RadiusToken.objects.first().key,
-        )
+        with self.subTest('OrganziationUser present'):
+            self._get_org_user()
+            org2 = self._create_org(name='org2')
+            url = reverse('radius:user_auth_token', args=[org2.slug])
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data['key'], Token.objects.first().key)
+            self.assertEqual(
+                response.data['radius_user_token'], RadiusToken.objects.first().key,
+            )
+            self.assertEqual(OrganizationUser.objects.count(), 2)
+            org_user = OrganizationUser.objects.first()
+            self.assertEqual(org_user.organization, org2)
 
         with self.subTest('No OrganizationUser present'):
             OrganizationUser.objects.all().delete()
@@ -103,6 +107,8 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(OrganizationUser.objects.count(), 1)
+            org_user = OrganizationUser.objects.first()
+            self.assertEqual(org_user.organization, org2)
 
     @capture_any_output()
     def test_user_auth_token_different_organization_registration_disabled(self):
