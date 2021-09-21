@@ -1096,6 +1096,33 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data, None)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
+    def test_accounting_when_nas_using_pfsense_started(self):
+        data = {
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "bc184fc97e3d58a9583d2ca5bc2ee210",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "10.0.0.14",
+            "nas_port_id": "",
+            "nas_port_type": "",
+            "session_time": "",
+            "authentication": "RADIUS",
+            "input_octets": "",
+            "output_octets": "",
+            "called_station_id": "00:00:45:a7:73:e3:owisp_gw1",
+            "calling_station_id": "",
+            "terminate_cause": "",
+            "service_type": "Login-User",
+            "framed_protocol": "",
+            "framed_ip_address": "",
+        }
+        response = self.client.post(
+            self._acct_url, data=json.dumps(data), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
+
     def test_get_authorize_view(self):
         url = f'{reverse("radius:authorize")}{self.token_querystring}'
         r = self.client.get(url, HTTP_ACCEPT='text/html')
