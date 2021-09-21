@@ -427,23 +427,24 @@ class RegisterSerializer(
 
         user_lookup = Q()
         if 'username' in error_dict:
-            user_lookup |= Q(user__username=data['username'])
+            user_lookup |= Q(username=data['username'])
         if 'email' in error_dict:
-            user_lookup |= Q(user__email=data['email'])
+            user_lookup |= Q(email=data['email'])
         if 'phone_number' in error_dict:
-            user_lookup |= Q(user__phone_number=data['phone_number'])
-        if (
-            OrganizationUser.objects.filter(
-                organization=self.context['view'].organization
-            )
-            .filter(user_lookup)
-            .exists()
-        ):
+            user_lookup |= Q(phone_number=data['phone_number'])
+        try:
+            user = User.objects.get(user_lookup)
+        except User.DoesNotExist:
+            # Error is not related to cross organization registration
+            raise error
+        if OrganizationUser.objects.filter(
+            organization=self.context['view'].organization, user=user,
+        ).exists():
             # User is registering to the organization it is already member of.
             raise error
 
         organizations = (
-            OrganizationUser.objects.filter(user_lookup)
+            OrganizationUser.objects.filter(user=user)
             .select_related('organization')
             .values('organization__name', 'organization__slug')
         )
@@ -452,19 +453,12 @@ class RegisterSerializer(
             organization_list.append(
                 {'slug': org['organization__slug'], 'name': org['organization__name']}
             )
-        if organization_list:
-            raise CrossOrgRegistrationException(
-                {
-                    'details': _(
-                        'A user like the one being registered already exists.'
-                    ),
-                    'organizations': organization_list,
-                },
-            )
-        else:
-            # The error is related to 'username', 'email' or 'phone_number'
-            # fields but it is not related to cross organization registration
-            raise error
+        raise CrossOrgRegistrationException(
+            {
+                'details': _('A user like the one being registered already exists.'),
+                'organizations': organization_list,
+            },
+        )
 
     def run_validation(self, data=empty):
         try:
