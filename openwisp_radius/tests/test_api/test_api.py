@@ -148,6 +148,17 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.is_active)
         self.assertFalse(user.registered_user.is_verified)
 
+    def test_register_400_password(self):
+        response = self._register_user(
+            extra_params={'password1': 'password1', 'password2': 'password2'},
+            expect_201=False,
+        )
+        self.assertEqual(response.status_code, 400)
+        expected_response = {
+            'non_field_errors': ["The two password fields didn't match."]
+        }
+        self.assertEqual(response.json(), expected_response)
+
     def test_register_400_duplicate_user(self):
         self.test_register_201()
         r = self._register_user(expect_201=False, expect_users=None)

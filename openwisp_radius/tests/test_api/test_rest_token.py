@@ -1,4 +1,7 @@
+from unittest import mock
+
 import swapper
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -15,6 +18,7 @@ RadiusToken = load_model('RadiusToken')
 PhoneToken = load_model('PhoneToken')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+User = get_user_model()
 
 
 class TestApiUserToken(ApiTokenMixin, BaseTestCase):
@@ -84,10 +88,11 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_user_auth_token_different_organization(self):
+        self._get_org_user()
+        org2 = self._create_org(name='org2')
+        url = reverse('radius:user_auth_token', args=[org2.slug])
+
         with self.subTest('OrganziationUser present'):
-            self._get_org_user()
-            org2 = self._create_org(name='org2')
-            url = reverse('radius:user_auth_token', args=[org2.slug])
             response = self.client.post(
                 url, {'username': 'tester', 'password': 'tester'}
             )
@@ -109,6 +114,20 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(OrganizationUser.objects.count(), 1)
             org_user = OrganizationUser.objects.first()
             self.assertEqual(org_user.organization, org2)
+
+        with self.subTest('New OrganizationUser validation'):
+            with mock.patch.object(User, 'is_member', return_value=False):
+                response = self.client.post(
+                    url, {'username': 'tester', 'password': 'tester'}
+                )
+                self.assertEqual(response.status_code, 400)
+                expected_response = {
+                    'non_field_errors': [
+                        'Organization user with this User and '
+                        'Organization already exists.'
+                    ]
+                }
+                self.assertEqual(response.data, expected_response)
 
     @capture_any_output()
     def test_user_auth_token_different_organization_registration_disabled(self):
