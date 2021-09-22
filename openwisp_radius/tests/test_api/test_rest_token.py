@@ -10,6 +10,7 @@ from rest_framework.authtoken.models import Token
 from openwisp_radius.api import views as api_views
 from openwisp_utils.tests import capture_any_output
 
+from ... import settings as app_settings
 from ...utils import load_model
 from .. import _TEST_DATE
 from ..mixins import ApiTokenMixin, BaseTestCase
@@ -90,6 +91,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
     def test_user_auth_token_different_organization(self):
         self._get_org_user()
         org2 = self._create_org(name='org2')
+        OrganizationRadiusSettings.objects.create(organization=org2)
         url = reverse('radius:user_auth_token', args=[org2.slug])
 
         with self.subTest('OrganziationUser present'):
@@ -130,22 +132,53 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
                 self.assertEqual(response.data, expected_response)
 
     @capture_any_output()
-    def test_user_auth_token_different_organization_registration_disabled(self):
-        self._get_org_user()
+    def test_user_auth_token_different_organization_registration_settings(self):
+        def _assert_registration_disabled():
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                response.data['detail'],
+                f'{org2} does not allow self registration of new accounts.',
+            )
+            self.assertEqual(org2_user_query.count(), 0)
+
+        def _assert_registration_enabled():
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(org2_user_query.count(), 1)
+
+        org1_user = self._get_org_user()
         org2 = self._create_org(name='org2')
-        OrganizationRadiusSettings.objects.create(
-            registration_enabled=False, organization=org2
+        org2_user_query = OrganizationUser.objects.filter(
+            organization=org2, user=org1_user.user
         )
-
+        rad_setting = OrganizationRadiusSettings.objects.create(
+            organization=org2, registration_enabled=None
+        )
         url = reverse('radius:user_auth_token', args=[org2.slug])
-        self.assertEqual(OrganizationUser.objects.count(), 1)
 
-        response = self.client.post(url, {'username': 'tester', 'password': 'tester'})
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.data['detail'],
-            f'{org2} does not allow self registration of new accounts.',
-        )
+        with self.subTest('Global disabled and organization None'):
+            with mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', False):
+                _assert_registration_disabled()
+
+        with self.subTest('Global enabled and organization None'):
+            _assert_registration_enabled()
+
+        org2_user_query.delete()
+
+        with self.subTest('Organization disabled'):
+            rad_setting.registration_enabled = False
+            rad_setting.save()
+            _assert_registration_disabled()
+
+        with self.subTest('Global enabled and organization None'):
+            rad_setting.registration_enabled = True
+            rad_setting.save()
+            _assert_registration_enabled()
 
     def test_user_auth_token_404(self):
         url = reverse(

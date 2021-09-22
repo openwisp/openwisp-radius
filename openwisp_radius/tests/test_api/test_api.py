@@ -834,6 +834,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @capture_stderr()
     def test_organization_registration_enabled(self):
         org = self._get_org()
+        settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
         url = reverse('radius:rest_register', args=[org.slug])
 
         with self.subTest('Test registration endpoint enabled by default'):
@@ -850,7 +851,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertIn('key', r.data)
 
         with self.subTest('Test registration endpoint disabled for org'):
-            settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
             settings_obj.registration_enabled = False
             settings_obj.save()
             r = self.client.post(
@@ -863,3 +863,18 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
             )
             self.assertEqual(r.status_code, 403)
+
+        with self.subTest('Test registration endpoint user global setting'):
+            settings_obj.registration_enabled = None
+            settings_obj.save()
+            r = self.client.post(
+                url,
+                {
+                    'username': 'test3@openwisp.org',
+                    'email': 'test3@openwisp.org',
+                    'password1': 'password',
+                    'password2': 'password',
+                },
+            )
+            self.assertEqual(r.status_code, 201)
+            self.assertIn('key', r.data)
