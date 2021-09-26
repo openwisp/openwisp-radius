@@ -29,6 +29,9 @@ from .serializers import (
 from .utils import IDVerificationHelper
 
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
+# Accounting-On and Accounting-Off are not implemented and
+# hence  ignored right now - may be implemented in the future
+UNSUPPORTED_STATUS_TYPES = ['Accounting-On', 'Accounting-Off']
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model('RadiusToken')
@@ -98,6 +101,8 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         raise AuthenticationFailed(message)
 
     def _radius_token_authenticate(self, request):
+        if request.data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
+            return
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
         username = request.data.get('username') or request.query_params.get('username')
@@ -320,9 +325,7 @@ class AccountingView(ListCreateAPIView):
         processing the response without generating warnings
         """
         data = request.data.copy()
-        # Accounting-On and Accounting-Off are not implemented and
-        # hence  ignored right now - may be implemented in the future
-        if data.get('status_type', None) in ['Accounting-On', 'Accounting-Off']:
+        if data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
             return Response(None)
         # Create or Update
         try:
