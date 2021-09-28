@@ -50,3 +50,15 @@ def is_sms_verification_enabled(org):
         raise APIException(
             _('Could not complete operation because of an internal misconfiguration')
         )
+
+
+def is_registration_enabled(org):
+    try:
+        return org.radius_settings.get_registration_enabled()
+    except ObjectDoesNotExist:
+        logger.exception(
+            f'Got exception while accessing radius_settings for {org.name}'
+        )
+        raise APIException(
+            _('Could not complete operation because of an internal misconfiguration')
+        )

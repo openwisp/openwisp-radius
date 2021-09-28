@@ -29,16 +29,20 @@ class User(AbstractUser):
 
 
 class Organization(BaseOrganization, AbstractOrganization):
-    pass
+    class Meta(AbstractOrganization.Meta):
+        abstract = False
 
 
 class OrganizationUser(BaseOrganizationUser, AbstractOrganizationUser):
-    pass
+    class Meta(AbstractOrganizationUser.Meta):
+        abstract = False
 
 
 class OrganizationOwner(BaseOrganizationOwner, AbstractOrganizationOwner):
-    pass
+    class Meta(AbstractOrganizationOwner.Meta):
+        abstract = False
 
 
 class Group(BaseGroup, AbstractGroup):
-    pass
+    class Meta(BaseGroup.Meta):
+        abstract = False

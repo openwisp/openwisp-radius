@@ -31,6 +31,7 @@ RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
 
@@ -147,12 +148,110 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.is_active)
         self.assertFalse(user.registered_user.is_verified)
 
+    def test_register_400_password(self):
+        response = self._register_user(
+            extra_params={'password1': 'password1', 'password2': 'password2'},
+            expect_201=False,
+        )
+        self.assertEqual(response.status_code, 400)
+        expected_response = {
+            'non_field_errors': ["The two password fields didn't match."]
+        }
+        self.assertEqual(response.json(), expected_response)
+
     def test_register_400_duplicate_user(self):
         self.test_register_201()
         r = self._register_user(expect_201=False, expect_users=None)
         self.assertEqual(r.status_code, 400)
         self.assertIn('username', r.data)
         self.assertIn('email', r.data)
+
+    def test_register_duplicate_same_org(self):
+        self.test_register_201()
+        response = self._register_user(expect_201=False, expect_users=None)
+        self.assertIn('username', response.data)
+        self.assertIn('email', response.data)
+
+    @mock.patch('openwisp_radius.settings.ALLOWED_MOBILE_PREFIXES', ['+33'])
+    def test_register_duplicate_different_org(self):
+        self.default_org.radius_settings.sms_verification = True
+        self.default_org.radius_settings.save()
+
+        init_user_count = User.objects.count()
+        org_user_count = OrganizationUser.objects.count()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        params = {
+            'username': self._test_email,
+            'email': self._test_email,
+            'phone_number': '+33675579231',
+            'password1': 'password',
+            'password2': 'password',
+        }
+        response = self.client.post(url, data=params)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(User.objects.count(), init_user_count + 1)
+        self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        org2 = self._get_org(org_name='org2')
+        url = reverse('radius:rest_register', args=[org2.slug])
+        radius_settings = org2.radius_settings
+        radius_settings.sms_verification = True
+        radius_settings.save()
+
+        with self.subTest('Test existing email'):
+            options = params.copy()
+            options['phone_number'] = '+33675579231'
+            options['username'] = 'test2'
+
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        with self.subTest('Test existing username'):
+            options = params.copy()
+            options['phone_number'] = '+339876543211'
+            options['email'] = 'test2@example.com'
+
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        with self.subTest('Test existing phone_number'):
+            options = params.copy()
+            options['username'] = options['phone_number']
+            options.pop('email')
+
+            # print(User.objects.get(phone_number=options['phone_number']))
+            response = self.client.post(url, data=options)
+            self.assertEqual(response.status_code, 409)
+            expected_response_data = {
+                'details': 'A user like the one being registered already exists.',
+                'organizations': [
+                    {'slug': self.default_org.slug, 'name': self.default_org.name}
+                ],
+            }
+            self.assertDictEqual(response.data, expected_response_data)
+            self.assertEqual(User.objects.count(), init_user_count + 1)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
+
+        self.default_org.radius_settings.sms_verification = False
+        self.default_org.radius_settings.save()
 
     def test_radius_user_serializer(self):
         self._register_user()
@@ -735,6 +834,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @capture_stderr()
     def test_organization_registration_enabled(self):
         org = self._get_org()
+        settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
         url = reverse('radius:rest_register', args=[org.slug])
 
         with self.subTest('Test registration endpoint enabled by default'):
@@ -751,7 +851,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertIn('key', r.data)
 
         with self.subTest('Test registration endpoint disabled for org'):
-            settings_obj = OrganizationRadiusSettings.objects.get(organization=org)
             settings_obj.registration_enabled = False
             settings_obj.save()
             r = self.client.post(
@@ -764,3 +863,18 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
             )
             self.assertEqual(r.status_code, 403)
+
+        with self.subTest('Test registration endpoint user global setting'):
+            settings_obj.registration_enabled = None
+            settings_obj.save()
+            r = self.client.post(
+                url,
+                {
+                    'username': 'test3@openwisp.org',
+                    'email': 'test3@openwisp.org',
+                    'password1': 'password',
+                    'password2': 'password',
+                },
+            )
+            self.assertEqual(r.status_code, 201)
+            self.assertIn('key', r.data)

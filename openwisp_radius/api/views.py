@@ -25,7 +25,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
@@ -58,7 +58,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import ErrorDictMixin, IDVerificationHelper
+from .utils import ErrorDictMixin, IDVerificationHelper, is_registration_enabled
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -70,10 +70,12 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 
 
 class ThrottledAPIMixin(object):
@@ -290,6 +292,26 @@ class ObtainAuthTokenView(
         user = serializer.validated_data['user']
         self.validate_membership(user)
         return user
+
+    def validate_membership(self, user):
+        if not (user.is_superuser or user.is_member(self.organization)):
+            if is_registration_enabled(self.organization):
+                try:
+                    org_user = OrganizationUser(
+                        user=user, organization=self.organization
+                    )
+                    org_user.full_clean()
+                    org_user.save()
+                except ValidationError as error:
+                    raise serializers.ValidationError(
+                        {'non_field_errors': error.message_dict.pop('__all__')}
+                    )
+            else:
+                message = _(
+                    '{organization} does not allow self registration '
+                    'of new accounts.'
+                ).format(organization=self.organization.name)
+                raise PermissionDenied(message)
 
 
 obtain_auth_token = ObtainAuthTokenView.as_view()

@@ -407,6 +407,29 @@ simple, but can be `enabled through configuration <./settings.html#openwisp-radi
 if identity verification is disabled for a particular org, an empty string
 will be acceptable.
 
+Registering to Multiple Organizations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An **HTTP 409** response will be returned if an existing user tries to register
+on a URL of a different organization (because the account already exists).
+The response will contain a list of organizations with which the user has already
+registered to the system which may be shown to the user in the UI. E.g.:
+
+.. code-block:: json
+
+
+    {
+        "details": "A user like the one being registered already exists.",
+        "organizations":[
+            {"slug":"default","name":"default"}
+        ]
+    }
+
+The existing user can register with a new organization using the
+`login <#login-obtain-user-auth-token>`_ endpoint. The user will also get
+membership of the new organization only if the organization has
+`user registration enabled <settings.html#openwisp-radius-registration-api-enabled>`_.
+
 Reset password
 --------------
 
@@ -509,6 +532,11 @@ If the user account is inactive or unverified the endpoint will send the data
 anyway but using the HTTP status code 401, this way consumers can recognize
 these users and trigger the appropriate response needed (eg: reject them
 or initiate account verification).
+
+If an existing user account tries to authenticate to an organization of which
+they're not member of, then they would be automatically added as members
+(if registration is enabled for that org). Please refer to
+`"Registering to Multiple Organizations" <#registering-to-multiple-organizations>`_.
 
 Parameters:
 

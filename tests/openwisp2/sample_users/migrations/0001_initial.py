@@ -356,4 +356,30 @@ class Migration(migrations.Migration):
                 to=settings.AUTH_USER_MODEL,
             ),
         ),
+        migrations.AlterModelOptions(
+            name='organization',
+            options={
+                'ordering': ['name'],
+                'verbose_name': 'organization',
+                'verbose_name_plural': 'organizations',
+            },
+        ),
+        migrations.AlterModelOptions(
+            name='organizationowner',
+            options={
+                'verbose_name': 'organization owner',
+                'verbose_name_plural': 'organization owners',
+            },
+        ),
+        migrations.AlterModelOptions(
+            name='organizationuser',
+            options={
+                'ordering': ['organization', 'user'],
+                'verbose_name': 'organization user',
+                'verbose_name_plural': 'organization users',
+            },
+        ),
+        migrations.AlterUniqueTogether(
+            name='organizationuser', unique_together={('user', 'organization')},
+        ),
     ]

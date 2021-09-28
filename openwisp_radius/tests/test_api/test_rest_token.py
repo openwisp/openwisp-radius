@@ -1,4 +1,7 @@
+from unittest import mock
+
 import swapper
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -7,13 +10,16 @@ from rest_framework.authtoken.models import Token
 from openwisp_radius.api import views as api_views
 from openwisp_utils.tests import capture_any_output
 
+from ... import settings as app_settings
 from ...utils import load_model
 from .. import _TEST_DATE
 from ..mixins import ApiTokenMixin, BaseTestCase
 
 RadiusToken = load_model('RadiusToken')
 PhoneToken = load_model('PhoneToken')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+User = get_user_model()
 
 
 class TestApiUserToken(ApiTokenMixin, BaseTestCase):
@@ -82,13 +88,97 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         )
 
     @capture_any_output()
-    def test_user_auth_token_400_organization(self):
-        url = self._get_url()
+    def test_user_auth_token_different_organization(self):
         self._get_org_user()
-        OrganizationUser.objects.all().delete()
-        r = self.client.post(url, {'username': 'tester', 'password': 'tester'})
-        self.assertEqual(r.status_code, 400)
-        self.assertIn('is not member', r.json()['non_field_errors'][0])
+        org2 = self._create_org(name='org2')
+        OrganizationRadiusSettings.objects.create(organization=org2)
+        url = reverse('radius:user_auth_token', args=[org2.slug])
+
+        with self.subTest('OrganziationUser present'):
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data['key'], Token.objects.first().key)
+            self.assertEqual(
+                response.data['radius_user_token'], RadiusToken.objects.first().key,
+            )
+            self.assertEqual(OrganizationUser.objects.count(), 2)
+            org_user = OrganizationUser.objects.first()
+            self.assertEqual(org_user.organization, org2)
+
+        with self.subTest('No OrganizationUser present'):
+            OrganizationUser.objects.all().delete()
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(OrganizationUser.objects.count(), 1)
+            org_user = OrganizationUser.objects.first()
+            self.assertEqual(org_user.organization, org2)
+
+        with self.subTest('New OrganizationUser validation'):
+            with mock.patch.object(User, 'is_member', return_value=False):
+                response = self.client.post(
+                    url, {'username': 'tester', 'password': 'tester'}
+                )
+                self.assertEqual(response.status_code, 400)
+                expected_response = {
+                    'non_field_errors': [
+                        'Organization user with this User and '
+                        'Organization already exists.'
+                    ]
+                }
+                self.assertEqual(response.data, expected_response)
+
+    @capture_any_output()
+    def test_user_auth_token_different_organization_registration_settings(self):
+        def _assert_registration_disabled():
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                response.data['detail'],
+                f'{org2} does not allow self registration of new accounts.',
+            )
+            self.assertEqual(org2_user_query.count(), 0)
+
+        def _assert_registration_enabled():
+            response = self.client.post(
+                url, {'username': 'tester', 'password': 'tester'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(org2_user_query.count(), 1)
+
+        org1_user = self._get_org_user()
+        org2 = self._create_org(name='org2')
+        org2_user_query = OrganizationUser.objects.filter(
+            organization=org2, user=org1_user.user
+        )
+        rad_setting = OrganizationRadiusSettings.objects.create(
+            organization=org2, registration_enabled=None
+        )
+        url = reverse('radius:user_auth_token', args=[org2.slug])
+
+        with self.subTest('Global disabled and organization None'):
+            with mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', False):
+                _assert_registration_disabled()
+
+        with self.subTest('Global enabled and organization None'):
+            _assert_registration_enabled()
+
+        org2_user_query.delete()
+
+        with self.subTest('Organization disabled'):
+            rad_setting.registration_enabled = False
+            rad_setting.save()
+            _assert_registration_disabled()
+
+        with self.subTest('Global enabled and organization None'):
+            rad_setting.registration_enabled = True
+            rad_setting.save()
+            _assert_registration_enabled()
 
     def test_user_auth_token_404(self):
         url = reverse(
