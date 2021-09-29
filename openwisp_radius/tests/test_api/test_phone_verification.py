@@ -75,6 +75,20 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('phone_number', r.data)
 
+        with self.subTest('phone_number missing entirely'):
+            r = self.client.post(
+                url,
+                {
+                    'username': self._test_email,
+                    'email': self._test_email,
+                    'password1': 'password',
+                    'password2': 'password',
+                    'method': 'mobile_phone',
+                },
+            )
+            self.assertEqual(r.status_code, 400)
+            self.assertIn('phone_number', r.data)
+
     def test_register_400_duplicate_phone_number(self):
         self._register_user()
         url = reverse('radius:rest_register', args=[self.default_org.slug])

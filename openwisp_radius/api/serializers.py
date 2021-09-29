@@ -425,12 +425,15 @@ class RegisterSerializer(
         ):
             raise error
 
+        def has_key(key):
+            return key in error_dict and key in data
+
         user_lookup = Q()
-        if 'username' in error_dict:
+        if has_key('username'):
             user_lookup |= Q(username=data['username'])
-        if 'email' in error_dict:
+        if has_key('email'):
             user_lookup |= Q(email=data['email'])
-        if 'phone_number' in error_dict:
+        if has_key('phone_number'):
             user_lookup |= Q(phone_number=data['phone_number'])
         try:
             user = User.objects.get(user_lookup)
