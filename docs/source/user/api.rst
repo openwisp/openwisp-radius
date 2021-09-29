@@ -657,7 +657,7 @@ This API endpoint allows to use the features described in
 
 .. code-block:: text
 
-    /api/v1/radiusbatch/
+    /api/v1/radius/batch/
 
 .. note::
   This API endpoint allows to use the features described in :doc:`/user/importing_users`

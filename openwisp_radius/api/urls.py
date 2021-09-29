@@ -67,9 +67,9 @@ def get_api_urls(api_views=None):
                 api_views.change_phone_number,
                 name='phone_number_change',
             ),
-            path('radiusbatch/', api_views.batch, name='batch'),
+            path('radius/batch/', api_views.batch, name='batch'),
             path(
-                'radius/organization/<slug:slug>/radiusbatch/<uuid:pk>/pdf/',
+                'radius/organization/<slug:slug>/batch/<uuid:pk>/pdf/',
                 api_views.download_rad_batch_pdf,
                 name='download_rad_batch_pdf',
             ),
