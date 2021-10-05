@@ -52,6 +52,19 @@ If you use PostgreSQL:
 
     apt install freeradius-postgresql
 
+.. warning::
+
+    You have to install and configure an SQL database like
+    PostgreSQL, MySQL (SQLite can also work, but we won't treat it here)
+    and make sure both OpenWISP RADIUS and Freeradius point to it.
+
+    The steps outlined above may not be sufficient to get the DB
+    of your choice to run, please consult the documentation of your
+    database of choice for more information on how to get it to run properly.
+
+    In the rest of this document we will mention PostgreSQL often because
+    that is the database generally preferred by the Django community.
+
 Configuring Freeradius 3
 ------------------------
 
