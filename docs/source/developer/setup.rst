@@ -275,22 +275,28 @@ Install python3-dev and gcc:
 
 .. code-block:: shell
 
-    sudo apt-get install python3-dev gcc
+    sudo apt install python3-dev gcc
 
 Install sqlite:
 
 .. code-block:: shell
 
-    sudo apt-get install sqlite3 libsqlite3-dev libpq-dev
+    sudo apt install sqlite3 libsqlite3-dev libpq-dev
 
 Install mysqlclient:
 
 .. code-block:: shell
 
-    sudo apt-get install libmysqlclient-dev libssl-dev
+    sudo apt install libmysqlclient-dev libssl-dev
 
 .. note::
     If you are on Debian 10 or 9 you may need to install ``default-libmysqlclient-dev`` instead
+
+Install xmlsec1:
+
+.. code-block:: shell
+
+    sudo apt install xmlsec1
 
 Install your forked repo:
 
@@ -298,7 +304,7 @@ Install your forked repo:
 
     git clone git://github.com/<your_username>/openwisp-radius
     cd openwisp-radius/
-    pip install -e .[saml]
+    pip install -e .[saml,openvpn_status]
 
 Install test requirements:
 
