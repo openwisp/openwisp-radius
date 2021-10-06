@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.test import override_settings
 from django.urls import reverse
+from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
@@ -79,7 +80,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 'openvpn_config': [
                     {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
                 ],
-                'unconverted_ids': ['AA-AA-AA-AA-AA-AA'],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
             }
         },
     )
@@ -91,8 +92,8 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 'organization': self.default_org,
                 'nas_ip_address': '192.168.182.3',
                 'framed_ipv6_prefix': '::/64',
-                'calling_station_id': 'bb:bb:bb:bb:bb:bb',
-                'called_station_id': 'AA-AA-AA-AA-AA-AA',
+                'calling_station_id': str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix)),
+                'called_station_id': 'AA-AA-AA-AA-AA-0A',
             }
         )
 
@@ -102,7 +103,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options['organization'] = self._create_org(name='new-org')
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-AA')
+            self.assertEqual(radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-0A')
 
         with self.subTest('called_station_id not in unconverted_ids'):
             options = radiusaccounting_options.copy()
@@ -131,7 +132,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 radiusaccounting = self._create_radius_accounting(**options)
                 radiusaccounting.refresh_from_db()
                 self.assertEqual(
-                    radiusaccounting.called_station_id, 'CC-CC-CC-CC-CC-CC'
+                    radiusaccounting.called_station_id, 'CC-CC-CC-CC-CC-0C'
                 )
 
 

@@ -4,6 +4,7 @@ import telnetlib
 
 import openvpn_status
 from django.core.management import BaseCommand
+from netaddr import EUI, mac_unix
 
 from ....settings import CALLED_STATION_IDS, OPENVPN_DATETIME_FORMAT
 from ....utils import load_model
@@ -124,7 +125,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             for radius_session in qs:
                 try:
                     common_name = routing_dict[
-                        radius_session.calling_station_id
+                        str(EUI(radius_session.calling_station_id, dialect=mac_unix))
                     ].common_name
                     mac_address = RE_VIRTUAL_ADDR_MAC.search(common_name)[0]
                     radius_session.called_station_id = mac_address.replace(':', '-')

@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import now
+from netaddr import EUI, mac_unix
 from openvpn_status.models import Routing
 
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -226,7 +227,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openvpn_config': [
                     {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
                 ],
-                'unconverted_ids': ['AA-AA-AA-AA-AA-AA'],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
             }
         },
     )
@@ -234,8 +235,8 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     @patch('openwisp_radius.tasks.convert_called_station_id')
     def test_convert_called_station_id_command(self, *args):
         options = _RADACCT.copy()
-        options['calling_station_id'] = 'bb:bb:bb:bb:bb:bb'
-        options['called_station_id'] = 'AA-AA-AA-AA-AA-AA'
+        options['calling_station_id'] = str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix))
+        options['called_station_id'] = 'AA-AA-AA-AA-AA-0A'
         options['unique_id'] = '117'
         options['organization'] = self._get_org()
         radius_acc = self._create_radius_accounting(**options)
@@ -304,7 +305,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command('convert_called_station_id')
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-CC')
+            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-0C')
 
         with self.subTest('Test session with unique_id does not exist'):
             with patch('logging.Logger.error') as mocked_logger:
@@ -339,5 +340,5 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 )
             radius_acc1.refresh_from_db()
             radius_acc2.refresh_from_db()
-            self.assertEqual(radius_acc1.called_station_id, 'CC-CC-CC-CC-CC-CC')
-            self.assertNotEqual(radius_acc2.called_station_id, 'CC-CC-CC-CC-CC-CC')
+            self.assertEqual(radius_acc1.called_station_id, 'CC-CC-CC-CC-CC-0C')
+            self.assertNotEqual(radius_acc2.called_station_id, 'CC-CC-CC-CC-CC-0C')
