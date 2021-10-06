@@ -10,6 +10,7 @@ from openwisp_utils.utils import default_or_test
 
 from . import settings as app_settings
 from .receivers import (
+    convert_radius_called_station_id,
     create_default_groups_handler,
     organization_post_save,
     organization_pre_save,
@@ -57,6 +58,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
         OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
         OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
         RadiusToken = load_model('RadiusToken')
+        RadiusAccounting = load_model('RadiusAccounting')
         User = get_user_model()
 
         post_save.connect(
@@ -99,6 +101,12 @@ class OpenwispRadiusConfig(ApiAppConfig):
             sender=OrganizationRadiusSettings,
             dispatch_uid='openwisp_radius_organizationradiussettings_post_delete',
         )
+        if app_settings.CONVERT_CALLED_STATION_ON_CREATE:
+            post_save.connect(
+                convert_radius_called_station_id,
+                sender=RadiusAccounting,
+                dispatch_uid='openwisp_radius_convert_called_station_id',
+            )
 
     def radiustoken_post_delete(self, instance, **kwargs):
         instance.delete_cache()

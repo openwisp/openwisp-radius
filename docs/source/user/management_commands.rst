@@ -147,6 +147,21 @@ which can be installed using the following command
 In order to work, this command requires to be configured via the
 `OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_ setting.
 
+Use the following command if you want to perform this operation for all
+RADIUS sessions that meet criteria of ``OPENWISP_RADIUS_CALLED_STATION_IDS``
+setting.
+
+.. code-block:: shell
+
+    ./manage.py convert_called_station_id
+
+You can also convert the "Called Station ID" of a particular RADIUS session by
+replacing session's ``unique_id`` in the following command:
+
+.. code-block:: shell
+
+    ./manage.py convert_called_station_id --unique_id=<session_unique_id>
+
 .. note::
 
     If you encounter ``ParseError`` for datetime data, you can set the datetime format

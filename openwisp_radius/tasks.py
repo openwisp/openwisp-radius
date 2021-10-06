@@ -37,5 +37,5 @@ def delete_unverified_users(older_than_days=1, exclude_methods=''):
 
 
 @shared_task
-def convert_called_station_id():
-    management.call_command('convert_called_station_id')
+def convert_called_station_id(unique_id=None):
+    management.call_command('convert_called_station_id', unique_id=unique_id)

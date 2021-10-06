@@ -233,6 +233,14 @@ It should contain configuration in following format:
         }
     }
 
+``OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+If set to ``True``, "Called Station ID" of a RADIUS session will be
+converted (as per configuration defined in `OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_)
+just after the RADIUS session is created.
 
 ``OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

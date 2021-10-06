@@ -38,33 +38,75 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
         return raw_management_info
 
     def _get_openvpn_routing_info(self, host, port=7505, password=None):
-        raw_info = self._get_raw_management_info(host, port, password)
-        parsed_info = openvpn_status.parse_status(raw_info)
-        return parsed_info.routing_table
+        try:
+            raw_info = self._get_raw_management_info(host, port, password)
+        except ConnectionRefusedError:
+            logger.error(
+                'Unable to establish telnet connection to '
+                f'{host} on {port}. '
+                'Skipping!'
+            )
+            return {}
+        try:
+            parsed_info = openvpn_status.parse_status(raw_info)
+            return parsed_info.routing_table
+        except openvpn_status.ParsingError as error:
+            logger.error(
+                'Unable to parse information received from '
+                f'{host}. ParsingError: {error}. Skipping!',
+            )
+            return {}
+
+    def _get_radius_session(self, unique_id):
+        try:
+            return RadiusAccounting.objects.select_related('organization').get(
+                unique_id=unique_id
+            )
+        except RadiusAccounting.DoesNotExist:
+            logger.error(
+                f'RadiusAccount object with unique_id "{unique_id}" does not exist.'
+            )
+
+    def _get_called_station_setting(self, radius_session):
+        try:
+            return {
+                radius_session.organization.slug: CALLED_STATION_IDS[
+                    radius_session.organization.slug
+                ]
+            }
+        except KeyError:
+            logger.error(
+                'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting '
+                f'for "{radius_session.organization.name}" organization'
+            )
+
+    def add_arguments(self, parser):
+        parser.add_argument('--unique_id', action='store', type=str, default='')
 
     def handle(self, *args, **options):
-        for org_slug, config in CALLED_STATION_IDS.items():
+        unique_id = options.get('unique_id')
+        if not unique_id:
+            called_station_id_setting = CALLED_STATION_IDS
+        else:
+            input_radius_session = self._get_radius_session(unique_id)
+            if not input_radius_session:
+                return
+            called_station_id_setting = self._get_called_station_setting(
+                input_radius_session
+            )
+            if not called_station_id_setting:
+                return
+
+        for org_slug, config in called_station_id_setting.items():
             routing_dict = {}
             for openvpn_config in config['openvpn_config']:
-                try:
-                    routing_dict.update(
-                        self._get_openvpn_routing_info(
-                            openvpn_config['host'],
-                            openvpn_config.get('port', 7505),
-                            openvpn_config.get('password', None),
-                        )
+                routing_dict.update(
+                    self._get_openvpn_routing_info(
+                        openvpn_config['host'],
+                        openvpn_config.get('port', 7505),
+                        openvpn_config.get('password', None),
                     )
-                except ConnectionRefusedError:
-                    logger.error(
-                        'Unable to establish telnet connection to '
-                        f'{openvpn_config["host"]} on {openvpn_config["port"]}. '
-                        'Skipping!'
-                    )
-                except openvpn_status.ParsingError as error:
-                    logger.error(
-                        'Unable to parse information received from '
-                        f'{openvpn_config["host"]}. ParsingError: {error}. Skipping!',
-                    )
+                )
             if not routing_dict:
                 logger.info(
                     'No routing information found for '
@@ -72,11 +114,14 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 )
                 continue
 
-            qs = RadiusAccounting.objects.filter(
-                organization__slug=org_slug,
-                called_station_id__in=config['unconverted_ids'],
-            )
-            for radius_session in qs.iterator():
+            if unique_id:
+                qs = [input_radius_session]
+            else:
+                qs = RadiusAccounting.objects.filter(
+                    organization__slug=org_slug,
+                    called_station_id__in=config['unconverted_ids'],
+                ).iterator()
+            for radius_session in qs:
                 try:
                     common_name = routing_dict[
                         radius_session.calling_station_id

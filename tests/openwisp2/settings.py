@@ -184,6 +184,7 @@ OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
         'http://localhost:8080/{organization}/password/reset/confirm/{uid}/{token}'
     ),
 }
+OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE = True
 
 if not TESTING:
     CELERY_BROKER_URL = os.getenv('REDIS_URL', f'redis://{redis_host}/1')
