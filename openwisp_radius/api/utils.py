@@ -21,11 +21,12 @@ class ErrorDictMixin(object):
 
 
 class IDVerificationHelper(object):
-    def _needs_identity_verification(self, organization_filter_kwargs):
+    def _needs_identity_verification(self, organization_filter_kwargs={}, org=None):
         try:
-            org = Organization.objects.select_related('radius_settings').get(
-                **organization_filter_kwargs
-            )
+            if not org:
+                org = Organization.objects.select_related('radius_settings').get(
+                    **organization_filter_kwargs
+                )
             id_ver = org.radius_settings.needs_identity_verification
             if id_ver is None:
                 return app_settings.NEEDS_IDENTITY_VERIFICATION
@@ -35,7 +36,7 @@ class IDVerificationHelper(object):
 
     def _is_user_verified(self, user):
         try:
-            return user.registered_user.is_verified
+            return user.registered_user.is_user_verified
         except ObjectDoesNotExist:
             return False
 

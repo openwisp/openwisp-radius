@@ -1395,6 +1395,10 @@ class AbstractRegisteredUser(models.Model):
         default=False,
     )
 
+    @property
+    def is_user_verified(self):
+        return self.is_verified and self.method not in ['', 'email']
+
     class Meta:
         abstract = True
         verbose_name = _('Registration Information')

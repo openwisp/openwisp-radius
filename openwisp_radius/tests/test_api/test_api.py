@@ -237,7 +237,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             options['username'] = options['phone_number']
             options.pop('email')
 
-            # print(User.objects.get(phone_number=options['phone_number']))
             response = self.client.post(url, data=options)
             self.assertEqual(response.status_code, 409)
             expected_response_data = {

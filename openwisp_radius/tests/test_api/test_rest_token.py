@@ -16,6 +16,7 @@ from .. import _TEST_DATE
 from ..mixins import ApiTokenMixin, BaseTestCase
 
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 PhoneToken = load_model('PhoneToken')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
@@ -179,6 +180,52 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             rad_setting.registration_enabled = True
             rad_setting.save()
             _assert_registration_enabled()
+
+    @capture_any_output()
+    def test_unverified_registered_user_different_organization(self):
+        user_cred = {'username': 'tester', 'password': 'tester'}
+        user = self._create_user(**user_cred)
+        self._create_org_user(user=user, organization=self.default_org)
+        org2 = self._create_org(name='org2')
+        rad_settings = OrganizationRadiusSettings.objects.create(
+            organization=org2, needs_identity_verification=True
+        )
+        url = reverse('radius:user_auth_token', args=[org2.slug])
+
+        with self.subTest('Test RegisteredUser object does not exist'):
+            response = self.client.post(url, user_cred)
+            self.assertEqual(response.status_code, 403)
+
+        registered_user = RegisteredUser.objects.create(user=user, method='')
+        with self.subTest('Test unverified user without registration method'):
+            response = self.client.post(url, user_cred)
+            self.assertEqual(response.status_code, 403)
+
+        with self.subTest('Test verified user without registration method'):
+            registered_user.is_verified = True
+            registered_user.save()
+            response = self.client.post(url, user_cred)
+            self.assertEqual(response.status_code, 403)
+
+        with self.subTest('Test verified user with mobile registration method'):
+            registered_user.method = 'mobile_phone'
+            registered_user.save()
+            response = self.client.post(url, user_cred)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('key', response.data)
+
+        OrganizationUser.objects.filter(organization=org2, user=user).delete()
+        with self.subTest(
+            'Test unverified user organization does not need identity verification'
+        ):
+            registered_user.is_verified = False
+            registered_user.save()
+            rad_settings.needs_identity_verification = False
+            rad_settings.save()
+
+            response = self.client.post(url, user_cred)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('key', response.data)
 
     def test_user_auth_token_404(self):
         url = reverse(

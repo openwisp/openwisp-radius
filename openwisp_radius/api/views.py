@@ -76,6 +76,7 @@ RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+RegisteredUser = load_model('RegisteredUser')
 
 
 class ThrottledAPIMixin(object):
@@ -296,6 +297,10 @@ class ObtainAuthTokenView(
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             if is_registration_enabled(self.organization):
+                if not self._is_user_verified(
+                    user
+                ) and self._needs_identity_verification(org=self.organization):
+                    raise PermissionDenied
                 try:
                     org_user = OrganizationUser(
                         user=user, organization=self.organization
