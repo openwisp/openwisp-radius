@@ -1051,7 +1051,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     )
     token = KeyField(max_length=32)
     sms_verification = models.BooleanField(
-        default=app_settings.SMS_DEFAULT_VERIFICATION,
+        null=True,
+        default=app_settings.SMS_VERIFICATION_ENABLED,
         help_text=_(
             'whether users who sign up should '
             'be required to verify their mobile '
@@ -1158,7 +1159,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     def get_sms_verification(self):
         if self.sms_verification is None:
-            return app_settings.SMS_DEFAULT_VERIFICATION
+            return app_settings.SMS_VERIFICATION_ENABLED
         return self.sms_verification
 
     def clean(self):
