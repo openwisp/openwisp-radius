@@ -48,6 +48,11 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 'Skipping!'
             )
             return {}
+        except OSError as error:
+            logger.error(
+                f'Encountered error connection to {host}:{port}: ' f'{error}. Skipping!'
+            )
+            return {}
         try:
             parsed_info = openvpn_status.parse_status(raw_info)
             return parsed_info.routing_table

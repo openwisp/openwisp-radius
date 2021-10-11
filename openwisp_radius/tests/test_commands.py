@@ -249,6 +249,18 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                     'Skipping!'
                 )
 
+        with self.subTest('Test telnet raises OSError'):
+            with patch('logging.Logger.error') as mocked_logger, patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                side_effect=OSError('[Errno 113] No route to host'),
+            ):
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Encountered error connection to 127.0.0.1:7505: '
+                    '[Errno 113] No route to host. Skipping!'
+                )
+
         with self.subTest('Test telnet password incorrect'):
             # In the case of an incorrect password, OpenVPN Management Interface
             # will ask for password again
