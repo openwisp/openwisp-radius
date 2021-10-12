@@ -1245,6 +1245,69 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         self.assertEqual(accounting_created.groupname, 'test-org-group2')
         user.delete()
 
+    def test_multiple_radius_group_with_different_org_and_priority(self):
+        user = User.objects.create_superuser(
+            username='username1', email='admin@admin.com', password='qwertyuiop'
+        )
+        organizations = Organization.objects.all()
+        usergroup1 = self._create_radius_usergroup(
+            groupname='group1',
+            priority=1,
+            username='testgroup1',
+            group=self._create_radius_group(
+                name='group1', organization=organizations.first()
+            ),
+        )
+        usergroup2 = self._create_radius_usergroup(
+            groupname='group2',
+            priority=2,
+            username='testgroup2',
+            group=self._create_radius_group(
+                name='group2', organization=organizations.last()
+            ),
+        )
+        user.radiususergroup_set.set([usergroup1, usergroup2])
+        self.client.post(
+            f'{reverse("radius:accounting")}{self.token_querystring}',
+            {
+                'status_type': 'Start',
+                'session_time': '',
+                'input_octets': '',
+                'output_octets': '',
+                'nas_ip_address': '127.0.0.1',
+                'session_id': '48484',
+                'unique_id': '1515151',
+                'username': 'username1',
+            },
+        )
+        accounting_created = RadiusAccounting.objects.get(username='username1')
+        self.assertEqual(accounting_created.groupname, 'test-org-group2')
+        user.delete()
+
+    @mock.patch('openwisp_radius.api.serializers.logging')
+    def test_mac_authentication_with_no_logging(self, logger):
+        username = '5c:7d:c1:72:a7:3b'
+        self.client.post(
+            f'{reverse("radius:accounting")}{self.token_querystring}',
+            {
+                'status_type': 'Start',
+                'session_time': '',
+                'input_octets': '',
+                'output_octets': '',
+                'nas_ip_address': '127.0.0.1',
+                'session_id': '48484',
+                'unique_id': '1515151',
+                'username': username,
+                'calling_station_id': username,
+            },
+        )
+        with self.assertRaises(AssertionError):
+            logger.warning.assert_called_with(
+                'No corresponding user found for username: 5c:7d:c1:72:a7:3b'
+            )
+        accounting_created = RadiusAccounting.objects.get(username=username)
+        self.assertEqual(accounting_created.groupname, None)
+
 
 class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
     @classmethod
@@ -1462,80 +1525,3 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             self.assertIn('sms_sender', e.message_dict)
         else:
             self.fail('ValidationError not raised')
-
-
-class TestMultiTenancy(ApiTokenMixin, BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        app_settings.API_ACCOUNTING_AUTO_GROUP = True
-
-    def test_multiple_radius_group_with_different_org_and_priority(self):
-        user = User.objects.create_superuser(
-            username='username1', email='admin@admin.com', password='qwertyuiop'
-        )
-        organizations = Organization.objects.all()
-        usergroup1 = self._create_radius_usergroup(
-            groupname='group1',
-            priority=1,
-            username='testgroup1',
-            group=self._create_radius_group(
-                name='group1', organization=organizations.first()
-            ),
-        )
-        usergroup2 = self._create_radius_usergroup(
-            groupname='group2',
-            priority=2,
-            username='testgroup2',
-            group=self._create_radius_group(
-                name='group2', organization=organizations.last()
-            ),
-        )
-        user.radiususergroup_set.set([usergroup1, usergroup2])
-        self.client.post(
-            f'{reverse("radius:accounting")}{self.token_querystring}',
-            {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': 'username1',
-            },
-        )
-        accounting_created = RadiusAccounting.objects.get(username='username1')
-        self.assertEqual(accounting_created.groupname, 'test-org-group2')
-        user.delete()
-
-
-class TestAuthenticationWithMacAddress(ApiTokenMixin, BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        app_settings.API_ACCOUNTING_AUTO_GROUP = True
-
-    @mock.patch('openwisp_radius.api.serializers.logging')
-    def test_mac_authentication_with_no_logging(self, logger):
-        username = '5c:7d:c1:72:a7:3b'
-        self.client.post(
-            f'{reverse("radius:accounting")}{self.token_querystring}',
-            {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': username,
-                'calling_station_id': username,
-            },
-        )
-        with self.assertRaises(AssertionError):
-            logger.warning.assert_called_with(
-                'No corresponding user found for username: 5c:7d:c1:72:a7:3b'
-            )
-        accounting_created = RadiusAccounting.objects.get(username=username)
-        self.assertEqual(accounting_created.groupname, None)
