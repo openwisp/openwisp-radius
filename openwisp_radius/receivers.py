@@ -1,6 +1,8 @@
 """
 Receiver functions for django signals (eg: post_save)
 """
+from . import settings as app_settings
+from . import tasks
 from .utils import create_default_groups, load_model
 
 
@@ -49,3 +51,18 @@ def organization_post_save(instance, **kwargs):
         rg.name = rg.name.replace(instance.__old_slug, instance.slug)
         rg.full_clean()
         rg.save()
+
+
+def convert_radius_called_station_id(instance, created, **kwargs):
+    if not created or not instance.called_station_id:
+        return
+    try:
+        assert (
+            instance.called_station_id
+            in app_settings.CALLED_STATION_IDS[instance.organization.slug][
+                'unconverted_ids'
+            ]
+        )
+    except (AssertionError, KeyError):
+        return
+    tasks.convert_called_station_id.delay(instance.unique_id)

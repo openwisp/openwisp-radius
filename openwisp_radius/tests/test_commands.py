@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import now
+from netaddr import EUI, mac_unix
 from openvpn_status.models import Routing
 
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -226,15 +227,16 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openvpn_config': [
                     {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
                 ],
-                'unconverted_ids': ['AA-AA-AA-AA-AA-AA'],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
             }
         },
     )
     @patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
-    def test_convert_called_station_id_command(self):
+    @patch('openwisp_radius.tasks.convert_called_station_id')
+    def test_convert_called_station_id_command(self, *args):
         options = _RADACCT.copy()
-        options['calling_station_id'] = 'bb:bb:bb:bb:bb:bb'
-        options['called_station_id'] = 'AA-AA-AA-AA-AA-AA'
+        options['calling_station_id'] = str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix))
+        options['called_station_id'] = 'AA-AA-AA-AA-AA-0A'
         options['unique_id'] = '117'
         options['organization'] = self._get_org()
         radius_acc = self._create_radius_accounting(**options)
@@ -245,6 +247,18 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 mocked_logger.assert_called_once_with(
                     'Unable to establish telnet connection to 127.0.0.1 on 7505. '
                     'Skipping!'
+                )
+
+        with self.subTest('Test telnet raises OSError'):
+            with patch('logging.Logger.error') as mocked_logger, patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                side_effect=OSError('[Errno 113] No route to host'),
+            ):
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Encountered error connection to 127.0.0.1:7505: '
+                    '[Errno 113] No route to host. Skipping!'
                 )
 
         with self.subTest('Test telnet password incorrect'):
@@ -300,12 +314,43 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 )
 
         with self.subTest('Test ideal condition'):
-            with open(self._get_path('static/openvpn.status')) as status_file:
-                with patch(
-                    'openwisp_radius.management.commands.base.convert_called_station_id'
-                    '.BaseConvertCalledStationIdCommand._get_raw_management_info',
-                    return_value=status_file.read(),
-                ):
-                    call_command('convert_called_station_id')
+            with self._get_openvpn_status_mock():
+                call_command('convert_called_station_id')
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-CC')
+            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-0C')
+
+        with self.subTest('Test session with unique_id does not exist'):
+            with patch('logging.Logger.error') as mocked_logger:
+                call_command('convert_called_station_id', unique_id='111')
+                mocked_logger.assert_called_once_with(
+                    'RadiusAccount object with unique_id "111" does not exist.'
+                )
+
+        with self.subTest('Test session organization not in CALLED_STATION_IDS'):
+            rad_options = options.copy()
+            rad_options['unique_id'] = '118'
+            rad_options['organization'] = self._create_org(name='new-org')
+            radius_acc = self._create_radius_accounting(**rad_options)
+            with patch('logging.Logger.error') as mocked_logger:
+                call_command(
+                    'convert_called_station_id', unique_id=radius_acc.unique_id
+                )
+                mocked_logger.assert_called_once_with(
+                    'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting for'
+                    f' "{radius_acc.organization.name}" organization'
+                )
+
+        with self.subTest('Test update only session with unique_id'):
+            rad_options = options.copy()
+            rad_options['unique_id'] = '119'
+            radius_acc1 = self._create_radius_accounting(**rad_options)
+            rad_options['unique_id'] = '120'
+            radius_acc2 = self._create_radius_accounting(**rad_options)
+            with self._get_openvpn_status_mock():
+                call_command(
+                    'convert_called_station_id', unique_id=radius_acc1.unique_id
+                )
+            radius_acc1.refresh_from_db()
+            radius_acc2.refresh_from_db()
+            self.assertEqual(radius_acc1.called_station_id, 'CC-CC-CC-CC-CC-0C')
+            self.assertNotEqual(radius_acc2.called_station_id, 'CC-CC-CC-CC-CC-0C')

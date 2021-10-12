@@ -3,11 +3,14 @@ from unittest import mock
 from uuid import UUID
 
 import swapper
+from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.test import override_settings
 from django.urls import reverse
+from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
 
@@ -19,7 +22,7 @@ from ..utils import (
     SESSION_TRAFFIC_ATTRIBUTE,
     load_model,
 )
-from . import FileMixin
+from . import _RADACCT, FileMixin
 from .mixins import BaseTestCase
 
 Nas = load_model('Nas')
@@ -45,7 +48,7 @@ class TestNas(BaseTestCase):
         self.assertIsInstance(nas.pk, UUID)
 
 
-class TestRadiusAccounting(BaseTestCase):
+class TestRadiusAccounting(FileMixin, BaseTestCase):
     def test_string_representation(self):
         radiusaccounting = RadiusAccounting(unique_id='entry acctuniqueid')
         self.assertEqual(str(radiusaccounting), radiusaccounting.unique_id)
@@ -69,6 +72,73 @@ class TestRadiusAccounting(BaseTestCase):
 
         radiusaccounting.framed_ipv6_prefix = 'invalid ipv6_prefix'
         self.assertRaises(ValidationError, radiusaccounting.full_clean)
+
+    @mock.patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        {
+            'test-org': {
+                'openvpn_config': [
+                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+                ],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
+            }
+        },
+    )
+    @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
+    def test_convert_called_station_id(self):
+        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
+        RadiusAppConfig.connect_signals()
+
+        radiusaccounting_options = _RADACCT.copy()
+        radiusaccounting_options.update(
+            {
+                'organization': self.default_org,
+                'nas_ip_address': '192.168.182.3',
+                'framed_ipv6_prefix': '::/64',
+                'calling_station_id': str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix)),
+                'called_station_id': 'AA-AA-AA-AA-AA-0A',
+            }
+        )
+
+        with self.subTest('CALLED_STATAION_ID not defined for organization'):
+            options = radiusaccounting_options.copy()
+            options['unique_id'] = '111'
+            options['organization'] = self._create_org(name='new-org')
+            radiusaccounting = self._create_radius_accounting(**options)
+            radiusaccounting.refresh_from_db()
+            self.assertEqual(radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-0A')
+
+        with self.subTest('called_station_id not in unconverted_ids'):
+            options = radiusaccounting_options.copy()
+            options['called_station_id'] = 'EE-EE-EE-EE-EE-EE'
+            options['unique_id'] = '112'
+            radiusaccounting = self._create_radius_accounting(**options)
+            radiusaccounting.refresh_from_db()
+            self.assertEqual(radiusaccounting.called_station_id, 'EE-EE-EE-EE-EE-EE')
+
+        with self.subTest('Settings disabled'):
+            with override_settings(
+                OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE=False
+            ):
+                options = radiusaccounting_options.copy()
+                options['unique_id'] = '113'
+                radiusaccounting = self._create_radius_accounting(**options)
+                radiusaccounting.refresh_from_db()
+                self.assertEqual(
+                    radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-0A'
+                )
+
+        with self.subTest('Ideal condition'):
+            with self._get_openvpn_status_mock():
+                options = radiusaccounting_options.copy()
+                options['unique_id'] = '114'
+                radiusaccounting = self._create_radius_accounting(**options)
+                radiusaccounting.refresh_from_db()
+                self.assertEqual(
+                    radiusaccounting.called_station_id, 'CC-CC-CC-CC-CC-0C'
+                )
 
 
 class TestRadiusCheck(BaseTestCase):

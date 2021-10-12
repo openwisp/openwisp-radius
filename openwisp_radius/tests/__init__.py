@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+from unittest.mock import patch
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
@@ -179,6 +180,18 @@ class FileMixin(object):
             'test.csv',
             bytes(output.getvalue(), encoding='utf8'),
             content_type='text/csv',
+        )
+
+    def _get_openvpn_status(self):
+        with open(self._get_path('static/openvpn.status')) as file:
+            status = file.read()
+        return status
+
+    def _get_openvpn_status_mock(self):
+        return patch(
+            'openwisp_radius.management.commands.base.convert_called_station_id'
+            '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+            return_value=self._get_openvpn_status(),
         )
 
 
