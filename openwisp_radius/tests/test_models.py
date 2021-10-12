@@ -3,6 +3,7 @@ from unittest import mock
 from uuid import UUID
 
 import swapper
+from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -85,7 +86,11 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         },
     )
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
     def test_convert_called_station_id(self):
+        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
+        RadiusAppConfig.connect_signals()
+
         radiusaccounting_options = _RADACCT.copy()
         radiusaccounting_options.update(
             {
