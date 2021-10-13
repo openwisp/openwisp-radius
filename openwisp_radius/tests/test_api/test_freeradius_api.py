@@ -1301,10 +1301,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
                 'calling_station_id': username,
             },
         )
-        with self.assertRaises(AssertionError):
-            logger.warning.assert_called_with(
-                'No corresponding user found for username: 5c:7d:c1:72:a7:3b'
-            )
+        logger.warning.assert_not_called()
         accounting_created = RadiusAccounting.objects.get(username=username)
         self.assertEqual(accounting_created.groupname, None)
 
