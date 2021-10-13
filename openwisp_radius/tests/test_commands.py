@@ -257,8 +257,19 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             ):
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'Encountered error connection to 127.0.0.1:7505: '
+                    'Error encountered while connecting to 127.0.0.1:7505: '
                     '[Errno 113] No route to host. Skipping!'
+                )
+
+        with self.subTest('Test telnet connection timed out'):
+            with patch('logging.Logger.exception') as mocked_logger, patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                side_effect=EOFError,
+            ):
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Error encountered while connecting to 127.0.0.1:7505. ' 'Skipping!'
                 )
 
         with self.subTest('Test telnet password incorrect'):

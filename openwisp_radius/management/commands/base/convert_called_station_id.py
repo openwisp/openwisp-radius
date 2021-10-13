@@ -44,13 +44,18 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
         except ConnectionRefusedError:
             logger.error(
                 'Unable to establish telnet connection to '
-                f'{host} on {port}. '
+                f'{host} on {port}. Skipping!'
+            )
+            return {}
+        except (OSError, TimeoutError) as error:
+            logger.error(
+                f'Error encountered while connecting to {host}:{port}: {error}. '
                 'Skipping!'
             )
             return {}
-        except OSError as error:
-            logger.error(
-                f'Encountered error connection to {host}:{port}: ' f'{error}. Skipping!'
+        except Exception:
+            logger.exception(
+                f'Error encountered while connecting to {host}:{port}. Skipping!'
             )
             return {}
         try:
