@@ -131,6 +131,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 qs = RadiusAccounting.objects.filter(
                     organization__slug=org_slug,
                     called_station_id__in=config['unconverted_ids'],
+                    stop_time__isnull=True,
                 ).iterator()
             for radius_session in qs:
                 try:
