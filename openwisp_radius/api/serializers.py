@@ -190,14 +190,22 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        if app_settings.API_ACCOUNTING_AUTO_GROUP:
-            username = validated_data.get('username', '')
+        username = validated_data.get('username', '')
+        calling_station_id = validated_data.get('calling_station_id', '')
+        if app_settings.API_ACCOUNTING_AUTO_GROUP and username != calling_station_id:
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
                 logging.warning(f'No corresponding user found for username: {username}')
             else:
-                group = user.radiususergroup_set.order_by('priority').first()
+                organization_uuid = self.context.get('request').auth
+                group = (
+                    user.radiususergroup_set.filter(
+                        group__organization__pk=organization_uuid
+                    )
+                    .order_by('priority')
+                    .first()
+                )
                 groupname = group.groupname if group else None
                 validated_data.update(groupname=groupname)
         return super().create(validated_data)
