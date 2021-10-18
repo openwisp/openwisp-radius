@@ -659,6 +659,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+        data['terminate_cause'] = ''
         self.assertAcctData(ra, data)
 
     @mock.patch.object(
@@ -721,6 +722,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra = RadiusAccounting.objects.first()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+        data['terminate_cause'] = ''
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
