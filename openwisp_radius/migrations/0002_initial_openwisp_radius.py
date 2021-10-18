@@ -9,7 +9,7 @@ import django.utils.timezone
 import model_utils.fields
 from django.conf import settings
 from django.db import migrations, models
-from swapper import get_model_name
+from swapper import get_model_name, is_swapped, split
 
 import openwisp_users.mixins
 import openwisp_utils.base
@@ -27,8 +27,15 @@ class Migration(migrations.Migration):
       relevent records (read comments)
     """
 
+    if is_swapped('openwisp_users', 'organization'):
+        model = get_model_name('openwisp_users', 'organization')
+        model_app_label = split(model)[0]
+        org_dependency = (model_app_label, '0001_initial')
+    else:
+        org_dependency = ('openwisp_users', '0003_default_organization')
+
     dependencies = [
-        ('openwisp_users', '0003_default_organization'),
+        org_dependency,
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('openwisp_radius', '0001_initial_freeradius'),
     ]

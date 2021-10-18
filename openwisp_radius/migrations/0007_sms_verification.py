@@ -11,14 +11,22 @@ from django.db import migrations, models
 import openwisp_radius.utils
 
 from .. import settings as app_settings
+import swapper
 
 
 class Migration(migrations.Migration):
 
+    if swapper.is_swapped('openwisp_users', 'user'):
+        model = swapper.get_model_name('openwisp_users', 'user')
+        model_app_label = swapper.split(model)[0]
+        user_dependency = (model_app_label, '0001_initial')
+    else:
+        user_dependency = ('openwisp_users', '0005_user_phone_number')
+
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('openwisp_radius', '0006_add_radactt_fields'),
-        ('openwisp_users', '0005_user_phone_number'),
+        user_dependency,
     ]
 
     operations = [
