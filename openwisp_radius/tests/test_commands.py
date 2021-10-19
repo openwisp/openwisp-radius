@@ -257,8 +257,19 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             ):
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'Encountered error connection to 127.0.0.1:7505: '
+                    'Error encountered while connecting to 127.0.0.1:7505: '
                     '[Errno 113] No route to host. Skipping!'
+                )
+
+        with self.subTest('Test telnet connection timed out'):
+            with patch('logging.Logger.exception') as mocked_logger, patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                side_effect=EOFError,
+            ):
+                call_command('convert_called_station_id')
+                mocked_logger.assert_called_once_with(
+                    'Error encountered while connecting to 127.0.0.1:7505. ' 'Skipping!'
                 )
 
         with self.subTest('Test telnet password incorrect'):
@@ -354,3 +365,15 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             radius_acc2.refresh_from_db()
             self.assertEqual(radius_acc1.called_station_id, 'CC-CC-CC-CC-CC-0C')
             self.assertNotEqual(radius_acc2.called_station_id, 'CC-CC-CC-CC-CC-0C')
+
+        with self.subTest('Test stop time is None'):
+            rad_options = options.copy()
+            rad_options['unique_id'] = '121'
+            rad_options['stop_time'] = '2017-06-10 11:50:00'
+            radius_acc = self._create_radius_accounting(**rad_options)
+            with self._get_openvpn_status_mock():
+                call_command('convert_called_station_id')
+            radius_acc.refresh_from_db()
+            self.assertEqual(
+                radius_acc.called_station_id, rad_options['called_station_id']
+            )

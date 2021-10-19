@@ -167,3 +167,11 @@ replacing session's ``unique_id`` in the following command:
     If you encounter ``ParseError`` for datetime data, you can set the datetime format
     of the parser using `OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <./settings.html#openwisp-radius-openvpn-datetime-format>`_
     setting.
+
+.. note::
+
+    ``convert_called_station_id`` command will only operate on open RADIUS sessions,
+    i.e. the "stop_time" field is None.
+
+    But if you are converting a single RADIUS session, it will operate on
+    it even if the session is closed.
