@@ -3,6 +3,7 @@ from urllib.parse import parse_qs, urlparse
 
 import swapper
 from django.conf import settings
+from django.contrib.auth import logout
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404, render
 from djangosaml2.views import (
@@ -107,4 +108,8 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
             logger.error(str(error))
             return render(request, 'djangosaml2/login_error.html')
 
+        # Log out the user before initiating the SAML flow
+        # to avoid past sessions to get in the way and break the flow
+        if request.user.is_authenticated:
+            logout(request)
         return super().get(request, *args, **kwargs)

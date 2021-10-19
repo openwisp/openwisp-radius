@@ -112,7 +112,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
-class TestLoginView(TestCase):
+class TestLoginView(TestOrganizationMixin, TestCase):
     login_url = reverse('radius:saml2_login')
 
     def test_organization_absolute_path(self):
@@ -136,3 +136,13 @@ class TestLoginView(TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'Authentication Error')
+
+    def test_authenticated_user(self):
+        user = self._create_user()
+        self.client.force_login(user)
+        redirect_url = 'https://captive-portal.example.com'
+        response = self.client.get(
+            self.login_url, {'RelayState': f'{redirect_url}?org=default'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('idp.example.com', response.url)
