@@ -2,21 +2,13 @@
 
 import django.db.models.deletion
 from django.db import migrations, models
-
+from django.conf import settings
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
-import swapper
 
 
 class Migration(migrations.Migration):
-
-    if swapper.is_swapped('openwisp_users', 'user'):
-        model = swapper.get_model_name('openwisp_users', 'user')
-        model_app_label = swapper.split(model)[0]
-        user_dependency = (model_app_label, '0001_initial')
-    else:
-        user_dependency = ('openwisp_users', '0014_user_notes')
     dependencies = [
-        user_dependency,
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('openwisp_radius', '0022_organizationradiussettings_registration_enabled'),
     ]
 
