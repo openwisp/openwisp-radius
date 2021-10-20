@@ -285,7 +285,7 @@ class ObtainAuthTokenView(
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
             {'slug': kwargs['slug']}
-        ) and not self._is_user_verified(user):
+        ) and not self.is_identity_verified_strong(user):
             status_code = 401
         return Response(response, status=status_code)
 
@@ -297,7 +297,7 @@ class ObtainAuthTokenView(
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             if is_registration_enabled(self.organization):
-                if not self._is_user_verified(
+                if not self.is_identity_verified_strong(
                     user
                 ) and self._needs_identity_verification(org=self.organization):
                     raise PermissionDenied
@@ -353,7 +353,7 @@ class ValidateAuthTokenView(
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)
-                if not self._is_user_verified(user):
+                if not self.is_identity_verified_strong(user):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by('-created')

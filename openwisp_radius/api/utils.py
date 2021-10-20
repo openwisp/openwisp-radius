@@ -34,7 +34,7 @@ class IDVerificationHelper(object):
         except ObjectDoesNotExist:
             return app_settings.NEEDS_IDENTITY_VERIFICATION
 
-    def _is_user_verified(self, user):
+    def is_identity_verified_strong(self, user):
         try:
             return user.registered_user.is_user_verified
         except ObjectDoesNotExist:

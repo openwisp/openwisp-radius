@@ -530,6 +530,9 @@ For example:
     additional registration methods which are supported by multiple
     custom modules).
 
+    Pass ``strong_identity`` as ``True`` to flag users registering
+    using that method as verified.
+
 .. warning::
 
     If you need to implement a registration method that needs to grant limited
