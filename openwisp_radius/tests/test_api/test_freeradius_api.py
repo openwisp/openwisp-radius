@@ -659,6 +659,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+        data['terminate_cause'] = ''
         self.assertAcctData(ra, data)
 
     @mock.patch.object(
@@ -710,18 +711,38 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     @capture_any_output()
-    def test_accounting_update_201(self):
+    def test_accounting_update(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
-        data = self.acct_post_data
-        data['status_type'] = 'Interim-Update'
-        data = self._get_accounting_params(**data)
-        response = self.post_json(data)
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
-        self.assertEqual(RadiusAccounting.objects.count(), 1)
-        ra = RadiusAccounting.objects.first()
-        self.assertEqual(ra.update_time.timetuple(), now().timetuple())
-        self.assertAcctData(ra, data)
+        with self.subTest('test interim update on unexisting radius accounting'):
+            data = self.acct_post_data
+            data['status_type'] = 'Interim-Update'
+            data = self._get_accounting_params(**data)
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.data, None)
+            self.assertEqual(RadiusAccounting.objects.count(), 1)
+            ra = RadiusAccounting.objects.first()
+            self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+            data['terminate_cause'] = ''
+            self.assertAcctData(ra, data)
+        with self.subTest('test interim update on stopped radius accounting'):
+            data = {
+                **self.acct_post_data,
+                'start_time': '2018-03-02T00:43:24.020460+01:00',
+                'stop_time': '2018-03-02T00:43:24.020460+01:00',
+                'terminate_cause': 'User Request',
+                'unique_id': 'd11a8069e261040d8b01b9135bdb8dc9',
+            }
+            ra = self._create_radius_accounting(**data)
+            self.assertEqual(ra.stop_time, parser.parse(data['stop_time']))
+            self.assertEqual(ra.terminate_cause, data['terminate_cause'])
+            data['status_type'] = 'Interim-Update'
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+            ra.refresh_from_db()
+            self.assertEqual(ra.stop_time, None)
+            self.assertEqual(ra.terminate_cause, '')
 
     @freeze_time(START_DATE)
     def test_accounting_stop_200(self):
