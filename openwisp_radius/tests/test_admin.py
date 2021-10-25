@@ -1126,6 +1126,17 @@ class TestAdmin(
             except ImproperlyConfigured:
                 self.fail('Unexpected failure')
 
+        # not strictly an admin test but grouped here for convenience
+        with self.subTest('test strong_identity=True'):
+            register_registration_method('passport', 'Passport', strong_identity=True)
+            self.assertNotIn('passport', RegisteredUser._weak_verification_methods)
+            unregister_registration_method('passport')
+
+        # not strictly an admin test but grouped here for convenience
+        with self.subTest('test strong_identity=False'):
+            register_registration_method('github', 'GitHub', strong_identity=False)
+            self.assertIn('github', RegisteredUser._weak_verification_methods)
+
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
         self.assertIsNotNone(unknown)

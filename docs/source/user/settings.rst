@@ -530,6 +530,10 @@ For example:
     additional registration methods which are supported by multiple
     custom modules).
 
+    Pass ``strong_identity`` as ``True`` to to indicate that users who
+    register using that method have indirectly verified their identity
+    (eg: SMS verification, credit card, national ID card, etc).
+
 .. warning::
 
     If you need to implement a registration method that needs to grant limited

@@ -1394,6 +1394,11 @@ class AbstractRegisteredUser(models.Model):
         ),
         default=False,
     )
+    _weak_verification_methods = {'', 'email'}
+
+    @property
+    def is_user_verified(self):
+        return self.is_verified and self.method not in self._weak_verification_methods
 
     class Meta:
         abstract = True

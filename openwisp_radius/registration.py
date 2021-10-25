@@ -3,6 +3,8 @@ import logging
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
+from .utils import load_model
+
 REGISTRATION_METHOD_CHOICES = [
     ('', 'Unspecified'),
     ('manual', _('Manually created')),
@@ -16,7 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 def register_registration_method(
-    name, verbose_name, authorize_unverified=False, fail_loud=True
+    name,
+    verbose_name,
+    authorize_unverified=False,
+    fail_loud=True,
+    strong_identity=False,
 ):
     # check if it's a duplicate
     duplicate = False
@@ -35,6 +41,9 @@ def register_registration_method(
     # when doing credit/debit card payments
     if authorize_unverified and name not in AUTHORIZE_UNVERIFIED:
         AUTHORIZE_UNVERIFIED.append(name)
+    if not strong_identity:
+        RegisteredUser = load_model('RegisteredUser')
+        RegisteredUser._weak_verification_methods.add(name)
 
 
 def unregister_registration_method(name, fail_loud=True):
