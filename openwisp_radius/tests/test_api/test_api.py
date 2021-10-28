@@ -620,6 +620,23 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             str(response.data['current_password']),
         )
 
+        # new password is same as the current password
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        password_change_url = reverse(
+            'radius:rest_password_change', args=[self.default_org.slug]
+        )
+        new_password_payload = {
+            'current_password': 'test_password',
+            'new_password': 'test_password',
+            'confirm_password': 'test_password',
+        }
+        response = client.post(password_change_url, data=new_password_payload)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            'New Password and Current Password cannot be same.',
+            str(response.data['new_password']),
+        )
+
         # Password successfully changed
         new_password_payload = {
             'current_password': 'test_password',
