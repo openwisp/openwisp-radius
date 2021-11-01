@@ -5,7 +5,6 @@ from allauth.account.forms import default_token_generator
 from allauth.account.utils import url_str_to_user_pk, user_pk_to_url_str
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
-from dj_rest_auth.views import PasswordChangeView as BasePasswordChangeView
 from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
 from django.contrib.auth import get_user_model
@@ -43,6 +42,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
+from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException, UserAlreadyVerified
@@ -424,6 +424,12 @@ user_accounting = UserAccountingView.as_view()
 class PasswordChangeView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordChangeView):
     authentication_classes = (BearerAuthentication,)
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
+    def get_object(self):
+        return self.request.user
+
     @swagger_auto_schema(responses={200: '`{"detail":"New password has been saved."}`'})
     def post(self, request, *args, **kwargs):
         """
@@ -432,7 +438,7 @@ class PasswordChangeView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordChange
         the `Reset password` endpoint.
         """
         self.validate_membership(request.user)
-        return super().post(request, *args, **kwargs)
+        return super().update(request, *args, **kwargs)
 
 
 password_change = PasswordChangeView.as_view()
