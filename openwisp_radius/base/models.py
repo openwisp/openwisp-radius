@@ -1397,7 +1397,7 @@ class AbstractRegisteredUser(models.Model):
     _weak_verification_methods = {'', 'email'}
 
     @property
-    def is_user_verified(self):
+    def is_identity_verified_strong(self):
         return self.is_verified and self.method not in self._weak_verification_methods
 
     class Meta:

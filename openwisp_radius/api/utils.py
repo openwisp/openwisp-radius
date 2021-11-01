@@ -36,7 +36,7 @@ class IDVerificationHelper(object):
 
     def is_identity_verified_strong(self, user):
         try:
-            return user.registered_user.is_user_verified
+            return user.registered_user.is_identity_verified_strong
         except ObjectDoesNotExist:
             return False
 

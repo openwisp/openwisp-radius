@@ -297,9 +297,9 @@ class ObtainAuthTokenView(
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             if is_registration_enabled(self.organization):
-                if not self.is_identity_verified_strong(
-                    user
-                ) and self._needs_identity_verification(org=self.organization):
+                if self._needs_identity_verification(
+                    org=self.organization
+                ) and not self.is_identity_verified_strong(user):
                     raise PermissionDenied
                 try:
                     org_user = OrganizationUser(
