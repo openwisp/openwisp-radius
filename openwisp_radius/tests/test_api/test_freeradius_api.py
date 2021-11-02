@@ -23,6 +23,7 @@ User = get_user_model()
 RadiusToken = load_model('RadiusToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusPostAuth = load_model('RadiusPostAuth')
+RadiusGroupReply = load_model('RadiusGroupReply')
 RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
@@ -340,7 +341,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         org_settings.needs_identity_verification = True
         org_settings.save()
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(6):
             response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
@@ -357,6 +358,33 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data={'username': 'tester', 'password': 'tester'},
         )
         self.assertEqual(response.status_code, 401)
+
+    def test_authorize_200_with_replies(self):
+        user = self._get_org_user().user
+        rug = user.radiususergroup_set.first()
+        reply1 = RadiusGroupReply(
+            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+        )
+        reply1.full_clean()
+        reply1.save()
+        reply2 = RadiusGroupReply(
+            group=rug.group, attribute='Idle-Timeout', op='=', value='500'
+        )
+        reply2.full_clean()
+        reply2.save()
+        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        response = self.client.post(
+            post_url, {'username': 'tester', 'password': 'tester'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                'control:Auth-Type': 'Accept',
+                'Session-Timeout': {'op': '=', 'value': '3600'},
+                'Idle-Timeout': {'op': '=', 'value': '500'},
+            },
+        )
 
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -1388,17 +1416,17 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         org = self._get_org()
         self.assertEqual(cache.get(f'ip-{org.pk}'), None)
         with self.subTest('Without Cache'):
-            authorize_and_asset(6, [])
+            authorize_and_asset(8, [])
         with self.subTest('With Cache'):
-            authorize_and_asset(3, [])
+            authorize_and_asset(5, [])
         with self.subTest('Organization Settings Updated'):
             radsetting = OrganizationRadiusSettings.objects.get(organization=org)
             radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
             radsetting.save()
-            authorize_and_asset(3, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_asset(5, ['127.0.0.1', '192.0.2.0'])
         with self.subTest('Cache Deleted'):
             cache.clear()
-            authorize_and_asset(6, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_asset(8, ['127.0.0.1', '192.0.2.0'])
 
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse('radius:authorize'), self.params)

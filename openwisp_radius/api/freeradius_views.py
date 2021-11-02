@@ -200,7 +200,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         password = serializer.validated_data.get('password')
         user = self.get_user(request, username)
         if user and self.authenticate_user(request, user, password):
-            return Response(self.accept_attributes, status=self.accept_status)
+            data = self.get_replies(user, organization_id=request.auth)
+            return Response(data, status=self.accept_status)
         if app_settings.API_AUTHORIZE_REJECT:
             return Response(self.reject_attributes, status=self.reject_status)
         else:
@@ -224,6 +225,25 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         ):
             return user
         return None
+
+    def get_replies(self, user, organization_id):
+        data = self.accept_attributes.copy()
+        user_group = self.get_user_group(user, organization_id)
+        if user_group:
+            for reply in self.get_group_replies(user_group.group):
+                data.update({reply.attribute: {'op': reply.op, 'value': reply.value}})
+        return data
+
+    def get_user_group(self, user, organization_id):
+        return (
+            user.radiususergroup_set.filter(group__organization_id=organization_id)
+            .select_related('group')
+            .order_by('priority')
+            .first()
+        )
+
+    def get_group_replies(self, group):
+        return group.radiusgroupreply_set.all()
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
