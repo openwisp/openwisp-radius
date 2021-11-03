@@ -11,9 +11,9 @@ def get_social_urls(social_views=None):
     if app_settings.SOCIAL_LOGIN_ENABLED:
         url_patterns = [
             path(
-                'radius/social-login/<slug:slug>/',
+                '<slug:slug>/',
                 social_views.redirect_cp,
                 name='redirect_cp',
             )
         ]
-    return (url_patterns, 'radius_social')
+    return url_patterns

@@ -686,7 +686,7 @@ class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def _download_csv_file_status(self, status_code):
         response = self.client.get(
             reverse(
-                'radius_privstore:serve_private_file',
+                'radius:serve_private_file',
                 args=[self.csvfile],
             )
         )
