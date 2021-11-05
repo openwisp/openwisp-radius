@@ -5,6 +5,7 @@ from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
 from django.utils.translation import gettext_lazy as _
 
 # 'pre_django_setup' is supposed to be a logger
@@ -68,13 +69,11 @@ RADCHECK_SECRET_VALIDATORS = get_settings_value(
                           {\}\:\,\.\?\<\>\(\)\;]+',
     },
 )
-
 PASSWORD_RESET_URLS = {
     # fallback in case the specific org page is not defined
     'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
     # use the uuid because the slug can change
 }
-
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
 SMS_DEFAULT_VERIFICATION = get_settings_value('SMS_DEFAULT_VERIFICATION', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
@@ -139,3 +138,48 @@ CONVERT_CALLED_STATION_ON_CREATE = get_settings_value(
 OPENVPN_DATETIME_FORMAT = get_settings_value(
     'OPENVPN_DATETIME_FORMAT', u'%a %b %d %H:%M:%S %Y'
 )
+
+TRAFFIC_COUNTER_CHECK_NAME = get_settings_value(
+    'TRAFFIC_COUNTER_CHECK_NAME', 'Max-Daily-Session-Traffic'
+)
+TRAFFIC_COUNTER_REPLY_NAME = get_settings_value(
+    'TRAFFIC_COUNTER_REPLY_NAME', 'ChilliSpot-Max-Total-Octets'
+)
+
+# counters
+COUNTERS_POSTGRESQL = (
+    'openwisp_radius.counters.postgresql.daily_counter.DailyCounter',
+    'openwisp_radius.counters.postgresql.daily_traffic_counter.DailyTrafficCounter',
+)
+COUNTERS_MYSQL = (
+    'openwisp_radius.counters.mysql.daily_counter.DailyCounter',
+    'openwisp_radius.counters.mysql.daily_traffic_counter.DailyTrafficCounter',
+)
+COUNTERS_SQLITE = (
+    'openwisp_radius.counters.sqlite.daily_counter.DailyCounter',
+    'openwisp_radius.counters.sqlite.daily_traffic_counter.DailyTrafficCounter',
+)
+DEFAULT_COUNTERS = {
+    'django.db.backends.postgresql': COUNTERS_POSTGRESQL,
+    'django.db.backends.mysql': COUNTERS_MYSQL,
+    'django.db.backends.sqlite3': COUNTERS_SQLITE,
+    # GIS backends
+    'django.contrib.gis.db.backends.postgis': COUNTERS_POSTGRESQL,
+    'django.contrib.gis.db.backends.mysql': COUNTERS_MYSQL,
+    'django.contrib.gis.db.backends.spatialite': COUNTERS_SQLITE,
+}
+
+try:
+    _counters = get_settings_value(
+        'COUNTERS', DEFAULT_COUNTERS[settings.DATABASES['default']['ENGINE']]
+    )
+except KeyError as e:  # pragma: no cover
+    raise ImproperlyConfigured(str(e))
+
+COUNTERS = []
+for counter_path in _counters:
+    try:
+        counter_class = import_string(counter_path)
+    except ImportError as e:  # pragma: no cover
+        raise ImproperlyConfigured(str(e))
+    COUNTERS.append(counter_class)

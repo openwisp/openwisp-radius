@@ -83,114 +83,13 @@ for the available configuration values.
 Enable the configured modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First of all enable the ``sql``, ``rest`` and ``sqlcounter`` modules:
+First of all enable the ``rest`` and optionally the ``sql`` module:
 
 .. code-block:: shell
 
-    ln -s /etc/freeradius/mods-available/sql /etc/freeradius/mods-enabled/sql
     ln -s /etc/freeradius/mods-available/rest /etc/freeradius/mods-enabled/rest
-    ln -s /etc/freeradius/mods-available/sqlcounter /etc/freeradius/mods-enabled/sqlcounter
-
-Configure the SQL module
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Once you have configured properly an SQL server, e.g. PostgreSQL:, and you can
-connect with a username and password edit the file ``/etc/freeradius/mods-available/sql``
-to configure Freeradius to use the relational database.
-
-Change the configuration for ``driver``, ``dialect``, ``server``, ``port``, ``login``, ``password``, ``radius_db`` as you need to fit your SQL server configuration.
-
-Refer to the `sql module documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/sql.html>`_ for the available configuration values.
-
-Example configuration using the PostgreSQL database:
-
-.. code-block:: ini
-
-    # /etc/freeradius/mods-available/sql
-
-    driver = "rlm_sql_postgresql"
-    dialect = "postgresql"
-
-    # Connection info:
-    server = "localhost"
-    port = 5432
-    login = "<user>"
-    password = "<password>"
-    radius_db = "radius"
-
-.. _configure-sqlcounters:
-
-Configure the SQL counters
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``sqlcounter`` module is used to `enforce session limits <../user/enforcing_limits.html>`_.
-
-The ``mods-available/sqlcounter`` should look like the following:
-
-.. code-block:: ini
-
-    # /etc/freeradius/mods-available/sqlcounter
-
-    # The dailycounter is included by default in the freeradius conf
-    sqlcounter dailycounter {
-        sql_module_instance = sql
-        dialect = ${modules.sql.dialect}
-
-        counter_name = Daily-Session-Time
-        check_name = Max-Daily-Session
-        reply_name = Session-Timeout
-
-        key = User-Name
-        reset = daily
-
-        $INCLUDE ${modconfdir}/sql/counter/${dialect}/${.:instance}.conf
-    }
-
-    # The noresetcounter is included by default in the freeradius conf
-    sqlcounter noresetcounter {
-        sql_module_instance = sql
-        dialect = ${modules.sql.dialect}
-
-        counter_name = Max-All-Session-Time
-        check_name = Max-All-Session
-        key = User-Name
-        reset = never
-
-        $INCLUDE ${modconfdir}/sql/counter/${dialect}/${.:instance}.conf
-    }
-
-    # The dailybandwidthcounter is added for openwisp-radius
-    sqlcounter dailybandwidthcounter {
-       counter_name = Max-Daily-Session-Traffic
-       check_name = Max-Daily-Session-Traffic
-       sql_module_instance = sql
-       key = 'User-Name'
-       reset = daily
-       query = "SELECT SUM(acctinputoctets + acctoutputoctets) \
-                FROM radacct \
-                WHERE UserName='%{${key}}' \
-                AND UNIX_TIMESTAMP(acctstarttime) + acctsessiontime > '%%b'"
-    }
-
-.. note::
-  If your freeradius installation fails to start with an error similar to:
-
-  ``/etc/raddb/sites-enabled/default[440]: Failed to find "dailycounter" as a module or policy.``
-
-  We need enable the ``sqlcounter`` in a special way. The ``modules`` section
-  of ``radiusd.conf`` should look as shown below.  This is because of a `bug in freeradius
-  <http://lists.freeradius.org/pipermail/freeradius-users/2015-February/075870.html>`_.
-  This should be solved in a future release of freeradius.
-
-.. code-block:: ini
-
-    # /etc/freeradius/radiusd.conf
-    modules {
-        # ..
-        $INCLUDE mods-enabled
-        $INCLUDE mods-available/sqlcounter
-        # ..
-    }
+    # optional
+    ln -s /etc/freeradius/mods-available/sql /etc/freeradius/mods-enabled/sql
 
 .. _configure-rest-module:
 
@@ -244,6 +143,43 @@ for the available configuration values.
         tls = ${..tls}
     }
 
+Configure the SQL module
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+    The ``sql`` module is not extremely needed but we treat it here since
+    it can be useful to implement custom behavior, moreover we treat it
+    in this document also to show that OpenWISP RADIUS can integrate itself
+    with other widely used FreeRADIUS modules.
+
+Once you have configured properly an SQL server, e.g. PostgreSQL:, and you can
+connect with a username and password edit the file ``/etc/freeradius/mods-available/sql``
+to configure Freeradius to use the relational database.
+
+Change the configuration for ``driver``, ``dialect``, ``server``, ``port``,
+``login``, ``password``, ``radius_db`` as you need to fit your SQL server configuration.
+
+Refer to the
+`sql module documentation <https://networkradius.com/doc/3.0.10/raddb/mods-available/sql.html>`_
+for the available configuration values.
+
+Example configuration using the PostgreSQL database:
+
+.. code-block:: ini
+
+    # /etc/freeradius/mods-available/sql
+
+    driver = "rlm_sql_postgresql"
+    dialect = "postgresql"
+
+    # Connection info:
+    server = "localhost"
+    port = 5432
+    login = "<user>"
+    password = "<password>"
+    radius_db = "radius"
+
 Configure the site
 ^^^^^^^^^^^^^^^^^^
 
@@ -267,10 +203,6 @@ the value of `your organization's UUID & api_token values <../user/api.html#bear
             # if you are not using Radius Token authentication method, please uncomment the following
             # update control { &REST-HTTP-Header += "${...api_token_header}" }
             rest
-            sql
-            dailycounter
-            noresetcounter
-            dailybandwidthcounter
         }
 
         # this section can be left empty

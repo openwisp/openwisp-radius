@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from unittest import mock
 
@@ -16,6 +17,8 @@ from openwisp_utils.tests import capture_any_output
 
 from ... import registration
 from ... import settings as app_settings
+from ...api.freeradius_views import logger as freeradius_api_logger
+from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase
 
@@ -29,6 +32,13 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
+_AUTH_TYPE_ACCEPT_RESPONSE = {
+    'control:Auth-Type': 'Accept',
+    'ChilliSpot-Max-Total-Octets': 3000000000,
+    'Session-Timeout': 10800,
+}
+_AUTH_TYPE_REJECT_RESPONSE = {'control:Auth-Type': 'Reject'}
+_BASE_COUNTER_CHECK = 'openwisp_radius.counters.base.BaseCounter.check'
 
 
 class AcctMixin(object):
@@ -97,7 +107,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             username='barbar', password='molly', auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     @capture_any_output()
     def test_authorize_no_token_403(self):
@@ -124,19 +134,19 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._get_org_user()
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def _test_authorize_with_user_auth_helper(self, username, password):
         r = self._authorize_user(
             username=username, password=password, auth_header=self.auth_header
         )
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def _test_authorize_without_auth_helper(self, username, password):
         r = self._authorize_user(username=username, password=password)
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @capture_any_output()
     def test_authorize_with_user_auth(self):
@@ -235,14 +245,14 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             post_url, {'username': 'tester', 'password': 'tester'}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_authorize_failed(self):
         response = self._authorize_user(
             username='baldo', password='ugo', auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_authorize_fail_auth_details_incomplete(self):
         for querystring in [
@@ -260,21 +270,21 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._get_org_user()
         response = self._authorize_user(password='wrong', auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_authorize_radius_token_200(self):
         self._get_org_user()
         rad_token = self._login_and_obtain_auth_token()
         response = self._authorize_user(password=rad_token)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_authorize_with_password_after_radius_token_expires(self):
         self.test_authorize_radius_token_200()
         self.assertFalse(RadiusToken.objects.get(user__username='tester').can_auth)
         response = self._authorize_user()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_user_auth_token_disposed_after_auth(self):
         self._get_org_user()
@@ -282,15 +292,15 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # Success but disable radius_token for authorization
         response = self._authorize_user(password=rad_token)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         # Ensure cannot authorize with radius_token
         response = self._authorize_user(password=rad_token)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'')
+        self.assertIsNone(response.data)
         # Ensure can authorize with password
         response = self._authorize_user()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_user_auth_token_obtain_auth_token_renew(self):
         self._get_org_user()
@@ -298,11 +308,11 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # Authorization works
         response = self._authorize_user(password=rad_token)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         # Renew and authorize again
         second_rad_token = self._login_and_obtain_auth_token()
         response = self._authorize_user(password=second_rad_token)
-        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(rad_token, second_rad_token)
 
@@ -314,7 +324,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # authorize authenticating as org2
         auth_header = f'Bearer {org2.pk} {rad_settings.token}'
         response = self._authorize_user(auth_header=auth_header)
-        self.assertNotEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertIsNone(response.data)
         self.assertEqual(response.status_code, 200)
 
     def test_authorize_unverified_user(self):
@@ -326,7 +336,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         org_settings.save()
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     @mock.patch.object(registration, 'AUTHORIZE_UNVERIFIED', ['mobile_phone'])
     def test_authorize_unverified_user_with_special_method(self):
@@ -341,10 +351,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         org_settings.needs_identity_verification = True
         org_settings.save()
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(9):
             response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'{"control:Auth-Type":"Accept"}')
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_authorize_radius_token_unverified_user(self):
         user = self._get_org_user()
@@ -377,14 +387,111 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             post_url, {'username': 'tester', 'password': 'tester'}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.data,
+        expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+        expected.update(
             {
-                'control:Auth-Type': 'Accept',
                 'Session-Timeout': {'op': '=', 'value': '3600'},
                 'Idle-Timeout': {'op': '=', 'value': '500'},
-            },
+            }
         )
+        self.assertEqual(
+            response.data, expected,
+        )
+
+    @capture_any_output()
+    def test_authorize_counters_exception_handling(self):
+        self._get_org_user()
+        truncated_accept_response = {'control:Auth-Type': 'Accept'}
+
+        with self.subTest('SkipCheck'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = SkipCheck(
+                    message='Skip test', level='error', logger=logging,
+                )
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, truncated_accept_response)
+
+        with self.subTest('MaxQuotaReached'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = MaxQuotaReached(
+                    message='MaxQuotaReached',
+                    level='info',
+                    logger=logging,
+                    reply_message='reply MaxQuotaReached',
+                )
+                response = self._authorize_user(auth_header=self.auth_header)
+                mocked_check.assert_called_once()
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_REJECT_RESPONSE.copy()
+                expected['Reply-Message'] = 'reply MaxQuotaReached'
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('Unexpected exception'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = ValueError('Unexpected error')
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, truncated_accept_response)
+
+    def test_authorize_counters_reply_interaction(self):
+        user = self._get_org_user().user
+        rug = user.radiususergroup_set.first()
+        reply = RadiusGroupReply(
+            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+        )
+        reply.full_clean()
+        reply.save()
+
+        with self.subTest('remaining lower than reply'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = 1200
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = 1200
+                expected['ChilliSpot-Max-Total-Octets'] = 1200
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('remaining higher than reply'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = 3000000000
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('Counters disabled'):
+            with mock.patch.object(app_settings, 'COUNTERS', []):
+                with self.assertNumQueries(6):
+                    response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(response.status_code, 200)
+                expected = {
+                    'control:Auth-Type': 'Accept',
+                    'Session-Timeout': {'op': '=', 'value': '3600'},
+                }
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('incorrect reply value'):
+            reply.value = 'broken'
+            reply.save()
+            mocked_check.return_value = 1200
+            with mock.patch.object(freeradius_api_logger, 'warning') as mocked_warning:
+                response = self._authorize_user(auth_header=self.auth_header)
+                mocked_warning.assert_called_once_with(
+                    'Session-Timeout value ("broken") cannot be converted to integer.'
+                )
+            self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+            self.assertEqual(response.status_code, 200)
+            expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+            expected['Session-Timeout'] = 10800
+            expected['ChilliSpot-Max-Total-Octets'] = 3000000000
+            self.assertEqual(response.data, expected)
 
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -395,7 +502,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_postauth_radius_token_expired_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -407,7 +514,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusToken.objects.all().count(), 1)
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_postauth_radius_token_accept_201(self):
         self._get_org_user()
@@ -420,7 +527,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_postauth_accept_201_querystring(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -430,7 +537,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         params['password'] = ''
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_postauth_reject_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -440,7 +547,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(
             RadiusPostAuth.objects.filter(username='molly', password='barba').count(),
             1,
@@ -458,7 +565,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_postauth_400(self):
         response = self.client.post(
@@ -488,7 +595,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusPostAuth.objects.count(), 1)
         pa = RadiusPostAuth.objects.first()
         with self.subTest('Ensure validation does not fail'):
@@ -507,7 +614,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusPostAuth.objects.count(), 1)
         pa = RadiusPostAuth.objects.first()
         with self.subTest('Ensure validation does not fail'):
@@ -573,7 +680,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._prep_start_acct_data()
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
@@ -588,7 +695,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self._acct_url, data=json.dumps(data), content_type='application/json',
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
 
     def test_accounting_start_radius_token_expired_200(self):
@@ -613,7 +720,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             post_url, json.dumps(data), content_type='application/json'
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
@@ -649,7 +756,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra = RadiusAccounting.objects.last()
         ra.refresh_from_db()
@@ -670,7 +777,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         self.assertAcctData(RadiusAccounting.objects.first(), data)
 
@@ -683,7 +790,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
@@ -715,7 +822,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data = self._get_accounting_params(**data)
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, None)
+            self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
             self.assertEqual(ra.called_station_id, '00-00-11-11-22-22')
@@ -732,7 +839,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data['called_station_id'] = '00-00-22-22-33-33'
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, None)
+            self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
             self.assertEqual(ra.called_station_id, '00-00-22-22-33-33')
@@ -747,7 +854,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data = self._get_accounting_params(**data)
             response = self.post_json(data)
             self.assertEqual(response.status_code, 201)
-            self.assertEqual(response.data, None)
+            self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra = RadiusAccounting.objects.first()
             self.assertEqual(ra.update_time.timetuple(), now().timetuple())
@@ -767,7 +874,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data['status_type'] = 'Interim-Update'
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, None)
+            self.assertIsNone(response.data)
             ra.refresh_from_db()
             self.assertEqual(ra.stop_time, None)
             self.assertEqual(ra.terminate_cause, '')
@@ -784,7 +891,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
@@ -801,7 +908,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra = RadiusAccounting.objects.first()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
@@ -1110,7 +1217,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
@@ -1142,7 +1249,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         }
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     def test_accounting_when_nas_using_pfsense_started(self):
@@ -1170,7 +1277,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self._acct_url, data=json.dumps(data), content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, None)
+        self.assertIsNone(response.data)
 
     def test_get_authorize_view(self):
         url = f'{reverse("radius:authorize")}{self.token_querystring}'
@@ -1242,7 +1349,7 @@ class TestApiReject(ApiTokenMixin, BaseTestCase):
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Reject'})
+        self.assertEqual(response.data, _AUTH_TYPE_REJECT_RESPONSE)
 
     def test_authorize_401(self):
         response = self.client.post(
@@ -1251,7 +1358,7 @@ class TestApiReject(ApiTokenMixin, BaseTestCase):
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Reject'})
+        self.assertEqual(response.data, _AUTH_TYPE_REJECT_RESPONSE)
 
 
 class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
@@ -1405,33 +1512,33 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         )
 
     def test_cache(self):
-        def authorize_and_asset(numOfQueries, ip_list):
+        def authorize_and_assert(numOfQueries, ip_list):
             with self.assertNumQueries(numOfQueries):
                 response = self.client.post(reverse('radius:authorize'), self.params)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+            self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
             self.assertEqual(cache.get(f'ip-{org.pk}'), ip_list)
 
         cache.clear()
         org = self._get_org()
         self.assertEqual(cache.get(f'ip-{org.pk}'), None)
         with self.subTest('Without Cache'):
-            authorize_and_asset(8, [])
+            authorize_and_assert(11, [])
         with self.subTest('With Cache'):
-            authorize_and_asset(5, [])
+            authorize_and_assert(8, [])
         with self.subTest('Organization Settings Updated'):
             radsetting = OrganizationRadiusSettings.objects.get(organization=org)
             radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
             radsetting.save()
-            authorize_and_asset(5, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_assert(8, ['127.0.0.1', '192.0.2.0'])
         with self.subTest('Cache Deleted'):
             cache.clear()
-            authorize_and_asset(8, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_assert(11, ['127.0.0.1', '192.0.2.0'])
 
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse('radius:authorize'), self.params)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @capture_any_output()
     def test_ip_from_setting_invalid(self):
@@ -1453,7 +1560,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         radsetting.save()
         response = self.client.post(reverse('radius:authorize'), self.params)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @capture_any_output()
     def test_ip_from_radsetting_invalid(self):
@@ -1479,7 +1586,7 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         with self.subTest('FREERADIUS_ALLOWED_HOSTS is 127.0.0.1'):
             response = self.client.post(reverse('radius:authorize'), self.params)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+            self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         with self.subTest('Empty Settings'), mock.patch(self.freeradius_hosts_path, []):
             response = self.client.post(reverse('radius:authorize'), self.params)
             self.assertEqual(response.status_code, 403)

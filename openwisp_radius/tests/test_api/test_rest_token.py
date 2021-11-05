@@ -77,7 +77,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
                     reverse('radius:authorize'),
                     {'username': 'tester', 'password': 'tester'},
                 )
-                self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+                self.assertEqual(response.status_code, 200)
         api_views.renew_required = True
 
     def test_user_auth_token_400_credentials(self):

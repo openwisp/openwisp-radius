@@ -36,7 +36,7 @@ a SSO.
 Setup
 -----
 
-Install required system dependencies:
+Install required system dependencies::
 
     sudo apt install xmlsec1
 

@@ -591,3 +591,66 @@ Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 
     To learn about configuring SAML Login refer to the
     `"Settings" section of SAML Login documentation <saml.html#settings>`_
+
+.. _counter_related_settings:
+
+Counter related settings
+========================
+
+.. _counters_setting:
+
+``OPENWISP_RADIUS_COUNTERS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: depends on the database backend in use,
+see :ref:`counters` to find out what are the default counters enabled.
+
+It's a list of strings, each representing the python path to a counter class.
+
+It may be set to an empty list or tuple to disable the counter feature, eg:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_COUNTERS = []
+
+If custom counters have been implemented, this setting should be changed
+to include the new classes, eg:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_COUNTERS = [
+        # default counters for PostgreSQL, may be removed if not needed
+        'openwisp_radius.counters.postgresql.daily_counter.DailyCounter',
+        'openwisp_radius.counters.postgresql.daily_traffic_counter.DailyTrafficCounter',
+        # custom counters
+        'myproject.counters.CustomCounter1',
+        'myproject.counters.CustomCounter2',
+    ]
+
+.. _traffic_counter_check_name:
+
+``OPENWISP_RADIUS_TRAFFIC_COUNTER_CHECK_NAME``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``Max-Daily-Session-Traffic``
+
+Used by :ref:`daily_traffic_counter`,
+it indicates the check attribute which is looked for
+in the database to find the maximum amount of daily traffic
+which users having the default ``users`` radius group assigned can consume.
+
+.. _traffic_counter_reply_name:
+
+``OPENWISP_RADIUS_TRAFFIC_COUNTER_REPLY_NAME``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``ChilliSpot-Max-Total-Octets``
+
+Used by :ref:`daily_traffic_counter`,
+it indicates the reply attribute which is returned to the NAS
+to indicate how much remaining traffic users
+which users having the default ``users`` radius group assigned
+can consume.
+
+It should be changed according to the NAS software in use, for example,
+if using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.

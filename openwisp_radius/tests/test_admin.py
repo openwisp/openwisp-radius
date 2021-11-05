@@ -997,7 +997,7 @@ class TestAdmin(
         response = self.client.post(
             reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'},
         )
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(cache.get('rt-tester'), str(self.default_org.pk))
         # Delete radius token
         response = self.client.post(

@@ -1,5 +1,6 @@
 import ipaddress
 import logging
+import math
 
 import drf_link_header_pagination
 import swapper
@@ -20,6 +21,8 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import registration
 from .. import settings as app_settings
+from ..counters.base import BaseCounter
+from ..counters.exceptions import MaxQuotaReached, SkipCheck
 from ..utils import load_model
 from .serializers import (
     AuthorizeSerializer,
@@ -177,12 +180,21 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
     accept_status = 200
     reject_attributes = {'control:Auth-Type': 'Reject'}
     reject_status = 401
+    # we need to use 200 status code or we risk some NAS to
+    # interpret other status codes (eg: 403) as invalid credentials
+    # (this happens on PfSense)
+    max_quota_status = 200
+    max_quota_attributes = {
+        'control:Auth-Type': 'Reject',
+        'Reply-Message': BaseCounter.reply_message,
+    }
     serializer_class = AuthorizeSerializer
 
     @swagger_auto_schema(
         responses={
             accept_status: f'`{accept_attributes}`',
             reject_status: f'`{reject_attributes}`',
+            max_quota_status: f'`{max_quota_attributes}`',
         }
     )
     def post(self, request, *args, **kwargs):
@@ -200,8 +212,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         password = serializer.validated_data.get('password')
         user = self.get_user(request, username)
         if user and self.authenticate_user(request, user, password):
-            data = self.get_replies(user, organization_id=request.auth)
-            return Response(data, status=self.accept_status)
+            data, status = self.get_replies(user, organization_id=request.auth)
+            return Response(data, status=status)
         if app_settings.API_AUTHORIZE_REJECT:
             return Response(self.reject_attributes, status=self.reject_status)
         else:
@@ -227,12 +239,57 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         return None
 
     def get_replies(self, user, organization_id):
+        """
+        Returns user group replies and executes counter checks
+        """
         data = self.accept_attributes.copy()
         user_group = self.get_user_group(user, organization_id)
+
         if user_group:
             for reply in self.get_group_replies(user_group.group):
                 data.update({reply.attribute: {'op': reply.op, 'value': reply.value}})
-        return data
+
+            group_checks = self.get_group_checks(user_group.group)
+
+            for counter in app_settings.COUNTERS:
+                group_check = group_checks.get(counter.check_name)
+                try:
+                    remaining = counter(
+                        user=user, group=user_group.group, group_check=group_check
+                    ).check()
+                except SkipCheck:
+                    continue
+                # if max is reached send access rejected + reply message
+                except MaxQuotaReached as max_quota:
+                    data = self.reject_attributes.copy()
+                    data['Reply-Message'] = max_quota.reply_message
+                    return data, self.max_quota_status
+                # avoid crashing on unexpected runtime errors
+                except Exception as e:
+                    logger.exception(f'Got exception "{e}" while executing {counter}')
+                    continue
+                # send remaining value in RADIUS reply, if needed.
+                # This emulates the implementation of sqlcounter in freeradius
+                # which sends the reply message only if the value is smaller
+                # than what was defined to a previous reply message
+                if counter.reply_name not in data or remaining < self._get_reply_value(
+                    data, counter
+                ):
+                    data[counter.reply_name] = remaining
+
+        return data, self.accept_status
+
+    @staticmethod
+    def _get_reply_value(data, counter):
+        value = data[counter.reply_name]['value']
+        try:
+            return int(value)
+        except ValueError:
+            logger.warning(
+                f'{counter.reply_name} value ("{value}") '
+                'cannot be converted to integer.'
+            )
+            return math.inf
 
     def get_user_group(self, user, organization_id):
         return (
@@ -244,6 +301,24 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     def get_group_replies(self, group):
         return group.radiusgroupreply_set.all()
+
+    def get_group_checks(self, group):
+        """
+        Used to query the DB for group checks only once
+        instead of once per each counter in use.
+        """
+        if not app_settings.COUNTERS:
+            return
+
+        check_attributes = []
+        for counter in app_settings.COUNTERS:
+            check_attributes.append(counter.check_name)
+
+        group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
+        result = {}
+        for group_check in group_checks:
+            result[group_check.attribute] = group_check
+        return result
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
