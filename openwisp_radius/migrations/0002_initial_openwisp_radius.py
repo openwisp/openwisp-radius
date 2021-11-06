@@ -14,8 +14,10 @@ from swapper import get_model_name
 import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
-from openwisp_radius.migrations import add_default_organization
-from openwisp_users.migrations import set_default_organization_uuid
+from openwisp_radius.migrations import (
+    add_default_organization,
+    swappable_dependency_latest,
+)
 
 
 class Migration(migrations.Migration):
@@ -29,14 +31,11 @@ class Migration(migrations.Migration):
     """
 
     dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        swappable_dependency_latest(settings.AUTH_USER_MODEL),
         ('openwisp_radius', '0001_initial_freeradius'),
     ]
 
     operations = [
-        migrations.RunPython(
-            set_default_organization_uuid, reverse_code=migrations.RunPython.noop
-        ),
         migrations.CreateModel(
             name='RadiusBatch',
             fields=[
