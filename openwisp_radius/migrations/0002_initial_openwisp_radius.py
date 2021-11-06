@@ -15,6 +15,7 @@ import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
 from openwisp_radius.migrations import add_default_organization
+from openwisp_users.migrations import set_default_organization_uuid
 
 
 class Migration(migrations.Migration):
@@ -33,6 +34,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(
+            set_default_organization_uuid, reverse_code=migrations.RunPython.noop
+        ),
         migrations.CreateModel(
             name='RadiusBatch',
             fields=[
