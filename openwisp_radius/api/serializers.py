@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.template import loader
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -27,6 +28,7 @@ from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.backends import UsersAuthenticationBackend
+from openwisp_utils.admin_theme.email import send_email
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -350,6 +352,22 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
 class PasswordResetSerializer(BasePasswordResetSerializer):
     password_reset_form_class = PasswordResetForm
 
+    def send_mail(
+        self,
+        subject_template_name,
+        email_template_name,
+        context,
+        to_email,
+        html_email_template_name=None,
+    ):
+        subject = loader.render_to_string(subject_template_name, context)
+        # Email subject *must not* contain newlines
+        subject = ''.join(subject.splitlines())
+        body = loader.render_to_string(email_template_name, context)
+        if html_email_template_name is not None:
+            body_html = loader.render_to_string(html_email_template_name, context)
+        send_email(subject, body, body_html, [to_email], context)
+
     def save(self):
         request = self.context.get('request')
         password_reset_url = self.context.get('password_reset_url')
@@ -358,14 +376,10 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'use_https': request.is_secure(),
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
             'email_template_name': ('custom_password_reset_email.html'),
+            'html_email_template_name': ('html_password_reset_email.html'),
             'request': request,
-            'extra_email_context': {
-                'password_reset_url': password_reset_url,
-                'logo_url': app_settings.OPENWISP_EMAIL_LOGO,
-            },
+            'extra_email_context': {'password_reset_url': password_reset_url},
         }
-        if app_settings.OPENWISP_HTML_EMAIL:
-            opts['html_email_template_name'] = (('html_password_reset_email.html'),)
         opts.update(self.get_email_options())
         self.reset_form.save(**opts)
 
