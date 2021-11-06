@@ -183,3 +183,12 @@ for counter_path in _counters:
     except ImportError as e:  # pragma: no cover
         raise ImproperlyConfigured(str(e))
     COUNTERS.append(counter_class)
+
+OPENWISP_EMAIL_LOGO = getattr(
+    settings,
+    'OPENWISP_EMAIL_LOGO',
+    'https://raw.githubusercontent.com/openwisp/openwisp-utils/master/openwisp_utils/'
+    'static/openwisp-utils/images/openwisp-logo.png',
+)
+
+OPENWISP_HTML_EMAIL = getattr(settings, 'OPENWISP_HTML_EMAIL', True)
