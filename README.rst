@@ -9,9 +9,9 @@ openwisp-radius
    :target: https://coveralls.io/github/openwisp/openwisp-radius?branch=master
    :alt: Test Coverage
 
-.. image:: https://requires.io/github/openwisp/openwisp-radius/requirements.svg?branch=master
-   :target: https://requires.io/github/openwisp/openwisp-radius/requirements/?branch=master
-   :alt: Requirements Status
+.. image:: https://img.shields.io/librariesio/release/github/openwisp/openwisp-radius
+   :target: https://libraries.io/github/openwisp/openwisp-radius#repository_dependencies
+   :alt: Dependency monitoring
 
 .. image:: https://img.shields.io/gitter/room/nwjs/nw.js.svg
    :target: https://gitter.im/openwisp/general
