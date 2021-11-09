@@ -3,6 +3,7 @@ from datetime import timedelta
 from unittest import mock
 
 import swapper
+from dateutil import parser
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from freezegun import freeze_time
@@ -181,10 +182,12 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
             else:
                 self.assertEqual(r.status_code, 201)
 
+    @freeze_time(_TEST_DATE)
     @capture_any_output()
     def test_validate_phone_token_200(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
+        self.assertNotEqual(user.registered_user.modified, _TEST_DATE)
         user_token = Token.objects.filter(user=user).last()
         phone_token = PhoneToken.objects.filter(user=user).last()
         # generate entropy to ensure correct token is used
@@ -208,6 +211,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
         self.assertTrue(user.registered_user.is_verified)
+        self.assertEqual(user.registered_user.modified, parser.parse(_TEST_DATE))
         self.assertEqual(user.registered_user.method, 'mobile_phone')
 
     @capture_any_output()

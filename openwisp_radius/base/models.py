@@ -24,6 +24,7 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
+from model_utils.fields import AutoLastModifiedField
 from passlib.hash import lmhash, nthash, sha512_crypt
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
@@ -1394,6 +1395,7 @@ class AbstractRegisteredUser(models.Model):
         ),
         default=False,
     )
+    modified = AutoLastModifiedField(_('Last verification change'), editable=True)
     _weak_verification_methods = {'', 'email'}
 
     @property
