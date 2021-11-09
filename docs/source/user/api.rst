@@ -190,8 +190,13 @@ username    Username for the given user
 password    Password for the given user
 ========    ===========================
 
-See also `OPENWISP_RADIUS_API_AUTHORIZE_REJECT
-<settings.html#openwisp-radius-api-authorize-reject>`_.
+If the authorization is successful, the API will return all group replies
+related to the group with highest priority assigned to the user.
+
+If the authorization is unsuccessful, the response body can either be empty
+or it can contain an explicit rejection, depending on how the
+`OPENWISP_RADIUS_API_AUTHORIZE_REJECT <settings.html#openwisp-radius-api-authorize-reject>`_
+setting is configured.
 
 Post Auth
 ---------

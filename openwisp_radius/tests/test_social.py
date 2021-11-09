@@ -81,7 +81,6 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {'control:Auth-Type': 'Accept'})
 
     def test_authorize_using_user_token_403(self):
         self.test_redirect_cp_301()

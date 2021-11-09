@@ -117,36 +117,60 @@ DATABASES = {
 
 LOGGING = {
     'version': 1,
+    'disable_existing_loggers': TESTING,
     'filters': {'require_debug_true': {'()': 'django.utils.log.RequireDebugTrue'}},
+    'formatters': {
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '[{server_time}] {message}',
+            'style': '{',
+        }
+    },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
-        }
+        },
     },
 }
 
-if not TESTING and SHELL:
-    LOGGING.update(
+if not TESTING:
+    LOGGING['handlers'].update(
         {
-            'loggers': {
-                '': {
-                    # this sets root level logger to log debug and higher level
-                    # logs to console. All other loggers inherit settings from
-                    # root level logger.
-                    'handlers': ['console'],
-                    'level': 'DEBUG',
-                    'propagate': False,
-                },
-                'django.db': {
-                    'level': 'DEBUG',
-                    'handlers': ['console'],
-                    'propagate': False,
-                },
-            }
+            'django.server': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'django.server',
+            },
         }
     )
+    LOGGING['loggers'] = {
+        'django': {'handlers': ['console'], 'level': 'INFO'},
+        'django.server': {
+            'handlers': ['django.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'openwisp_radius': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    }
+
+if not TESTING and SHELL:
+    LOGGING['loggers'] = {
+        'django.db': {'level': 'DEBUG', 'handlers': ['console'], 'propagate': False,},
+        '': {
+            # this sets root level logger to log debug and higher level
+            # logs to console. All other loggers inherit settings from
+            # root level logger.
+            'handlers': ['console', 'django.server'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    }
 
 # WARNING: for development only!
 AUTH_PASSWORD_VALIDATORS = []

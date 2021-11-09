@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from openwisp_utils.tests import AssertNumQueriesSubTestMixin
+
 from ..utils import load_model
 from . import CallCommandMixin as BaseCallCommandMixin
 from . import CreateRadiusObjectsMixin
@@ -186,7 +188,7 @@ class ApiTokenMixin(BasePostParamsMixin):
         return login_response.json()['radius_user_token']
 
 
-class BaseTestCase(DefaultOrgMixin, TestCase):
+class BaseTestCase(AssertNumQueriesSubTestMixin, DefaultOrgMixin, TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
