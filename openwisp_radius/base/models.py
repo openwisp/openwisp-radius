@@ -1395,7 +1395,7 @@ class AbstractRegisteredUser(models.Model):
         ),
         default=False,
     )
-    modified = AutoLastModifiedField(_('Last verification changed at'), editable=True)
+    modified = AutoLastModifiedField(_('Last verification change'), editable=True)
     _weak_verification_methods = {'', 'email'}
 
     @property

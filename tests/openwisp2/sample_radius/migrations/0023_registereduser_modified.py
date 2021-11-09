@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             field=model_utils.fields.AutoLastModifiedField(
                 default=django.utils.timezone.now,
                 editable=False,
-                verbose_name='Last verification changed at',
+                verbose_name='Last verification change',
             ),
         ),
     ]
