@@ -13,6 +13,7 @@ from dj_rest_auth.serializers import (
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.template import loader
@@ -353,20 +354,11 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
     password_reset_form_class = PasswordResetForm
 
     def send_mail(
-        self,
-        subject_template_name,
-        email_template_name,
-        context,
-        to_email,
-        html_email_template_name=None,
+        self, subject_template_name, email_template_name, context, to_email,
     ):
         subject = loader.render_to_string(subject_template_name, context)
-        # Email subject *must not* contain newlines
-        subject = ''.join(subject.splitlines())
-        body = loader.render_to_string(email_template_name, context)
-        if html_email_template_name is not None:
-            body_html = loader.render_to_string(html_email_template_name, context)
-        send_email(subject, body, body_html, [to_email], context)
+        body_html = loader.render_to_string(email_template_name, context)
+        send_email(subject, body_html, body_html, [to_email], context)
 
     def save(self):
         request = self.context.get('request')
@@ -376,9 +368,13 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'use_https': request.is_secure(),
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
             'email_template_name': ('custom_password_reset_email.html'),
-            'html_email_template_name': ('html_password_reset_email.html'),
+            'html_email_template_name': ('custom_password_reset_email.html'),
             'request': request,
-            'extra_email_context': {'password_reset_url': password_reset_url},
+            'extra_email_context': {
+                'subject': _(f'Password reset on {get_current_site(request).name}'),
+                'call_to_action_url': password_reset_url,
+                'call_to_action_text': _('Reset password'),
+            },
         }
         opts.update(self.get_email_options())
         self.reset_form.save(**opts)

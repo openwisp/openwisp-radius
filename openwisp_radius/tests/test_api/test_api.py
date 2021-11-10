@@ -708,7 +708,15 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         reset_payload = {'email': 'test@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(len(mail.outbox), mail_count + 1)
-
+        email = mail.outbox.pop()
+        self.assertIn(
+            "<p> Please click on the button below to open a page where you can",
+            ' '.join(email.alternatives[0][0].split()),
+        )
+        self.assertIn(
+            "class=\"btn\"> Reset password </a>",
+            ' '.join(email.alternatives[0][0].split()),
+        )
         url_kwargs = {
             'uid': user_pk_to_url_str(test_user),
             'token': default_token_generator.make_token(test_user),
