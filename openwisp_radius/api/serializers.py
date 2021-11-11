@@ -29,7 +29,6 @@ from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.backends import UsersAuthenticationBackend
-from openwisp_utils.admin_theme.email import send_email
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -352,13 +351,6 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
 
 class PasswordResetSerializer(BasePasswordResetSerializer):
     password_reset_form_class = PasswordResetForm
-
-    def send_mail(
-        self, subject_template_name, email_template_name, context, to_email,
-    ):
-        subject = loader.render_to_string(subject_template_name, context)
-        body_html = loader.render_to_string(email_template_name, context)
-        send_email(subject, body_html, body_html, [to_email], context)
 
     def save(self):
         request = self.context.get('request')

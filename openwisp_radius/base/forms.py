@@ -5,7 +5,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm as BasePasswordResetForm
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.template import loader
 from django.utils.translation import gettext_lazy as _
+
+from openwisp_utils.admin_theme.email import send_email
 
 from .. import settings as app_settings
 from .models import RADCHECK_PASSWD_TYPE, AbstractNas, AbstractRadiusCheck
@@ -100,3 +103,22 @@ class PasswordResetForm(BasePasswordResetForm):
         """
         user = User.objects.get(email=email)
         return [user] if user.has_usable_password() else []
+
+    def send_mail(
+        self,
+        subject_template_name,
+        email_template_name,
+        context,
+        from_email,
+        to_email,
+        html_email_template_name=None,
+    ):
+        subject = loader.render_to_string(subject_template_name, context)
+        # Email subject *must not* contain newlines
+        subject = ''.join(subject.splitlines())
+        body_text = loader.render_to_string(email_template_name, context)
+
+        if html_email_template_name is not None:
+            body_html = loader.render_to_string(html_email_template_name, context)
+
+        send_email(subject, body_text, body_html, [to_email], context)
