@@ -39,25 +39,43 @@ to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
     been added to the `freeradius allowed hosts list
     <./settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
 
-Request Authentication
-======================
+.. _freeradius_api_authentication:
 
-There are three methods for request authorization:
+FreeRADIUS API Authentication
+=============================
 
-1. Radius User token (recommended)
-----------------------------------
+There are 3 different methods with which the FreeRADIUS API endpoints
+can authenticate incoming requests and understand to which organization
+these requests belong.
 
-To use Radius User token authentication method, the
-following workflow can be used:
+.. _radius_user_token:
 
-1. User enters credentials and sends request to login in the Captive portal.
-2. The captive login page `performs authentication <#login-obtain-user-auth-token>`_ which returns **radius user token** on success.
-3. The captive login must initiate the ``POST`` request to the captive portal, using the radius user token as password, example:
+Radius User Token
+-----------------
+
+This method relies on the presence of a special token which was obtained
+by the user when authenticating via the
+`Obtain Auth Token View <#login-obtain-user-auth-token>`_, this means
+the user would have to log in through something like a web form first.
+
+The flow works as follows:
+
+1. the user enters credentials in a login form belonging to a specific organization
+   and submits, the credentials are then sent to the `Obtain Auth Token View <#login-obtain-user-auth-token>`_;
+2. if credentials are correct, a **radius user token** associated to the user
+   and organization is created and returned in the response;
+3. the login page or app must then initiate the HTTP request to the web server
+   of the captive portal,
+   (the URL of the form action of the default captive login page)
+   using the radius user token as password, example:
 
 .. code-block:: text
 
-    curl -X POST http://localhost:8000/api/v1/freeradius/authorize/ \
-         -d "username=<username>&password=<radius_token>"
+    curl -X POST http://captive.projcect.com:8005/index.php?zone=myorg \
+         -d "auth_user=<username>&auth_pass=<radius_token>"
+
+This method is recommended if you are using multiple organizations
+in the same OpenWISP instance.
 
 .. note::
     By default, ``<radius_token>`` is valid for authentication for one
@@ -70,17 +88,24 @@ following workflow can be used:
     or the token is not deleted.
 
 .. warning::
-    If you are using Radius User token method, remember that one
+    If you are using Radius User token method, keep in mind that one
     user account can only authenticate with one organization
     at a time, i.e a single user account cannot consume
     services from multiple organizations simultaneously.
 
-2. Bearer token
----------------
+Bearer token
+------------
 
-The Authorization information (`<org-uuid> and <token>
-<#organization-uuid-token>`_) is required to be sent in the form
-of bearer token in an authorization header.
+This other method allows to use the system without the need for a user
+to obtain a token first, the drawback is that one FreeRADIUS site has to
+be configured for each organization, the authorization credentials for
+the specific organization is sent in each request,
+see :ref:`freeradius_site` for more information on
+the FreeRADIUS site configuration.
+
+The (`Organization UUID and Organization RADIUS token
+<#organization-uuid-token>`_) are sent in the authorization header of
+the HTTP request in the form of a Bearer token, eg:
 
 .. code-block:: text
 
@@ -88,23 +113,31 @@ of bearer token in an authorization header.
            -H "Authorization: Bearer <org-uuid> <token>" \
            -d "username=<username>&password=<password>"
 
-3. Querystring
---------------
+This method is recommended if you are using only one organization
+and you have no need nor intention of adding more organizations in the future.
 
-The Authorization information (`<org-uuid> and <token>
-<#organization-uuid-token>`_) is required to be sent in the form
-of querystring in the request URL.
+Querystring
+-----------
+
+This method is identical to the previous one, but the credentials
+are sent in querystring parameters, eg:
 
 .. code-block:: text
 
       curl -X POST http://localhost:8000/api/v1/freeradius/authorize/?uuid=<org-uuid>&token=<token> \
            -d "username=<username>&password=<password>"
 
-Organization UUID & Token
--------------------------
+This method is not recommended for production usage, it should be
+used for testing and debugging only
+(because webservers can include the querystring parameters in their logs).
 
-You can get (and set) the value of the api token in the organization
-configuration page on the OpenWISP dashboard
+.. _organization_uuid_token:
+
+Organization UUID & RADIUS API Token
+------------------------------------
+
+You can get (and set) the value of the OpenWISP RADIUS API token in the
+organization configuration page on the OpenWISP dashboard
 (select your organization in ``/admin/openwisp_users/organization/``):
 
 .. image:: /images/token.png
@@ -126,7 +159,7 @@ Requests authorizing with `bearer-token <#bearer-token>`_ or `querystring
 tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
-`Configure the REST module <../developer/freeradius.html#configure-the-rest-module>`_.
+:ref:`freeradius_site`.
 
 API Throttling
 ==============

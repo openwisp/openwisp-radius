@@ -180,14 +180,30 @@ Example configuration using the PostgreSQL database:
     password = "<password>"
     radius_db = "radius"
 
+.. _freeradius_site:
+
 Configure the site
 ^^^^^^^^^^^^^^^^^^
 
-Configuration of the ``authorize``, ``authenticate`` and ``postauth`` section as follows,
-there are three ways to `authenticate your freeradius instance with openwisp-radius <../user/api.html#request-authentication>`_,
-if you are **not** using `the Radius Token method <../user/api.html#radius-user-token-recommended>`_, please
-substitute the occurrences of ``<api_token>`` & ``<org-uuid>`` with
-the value of `your organization's UUID & api_token values <../user/api.html#bearer-token>`_:
+This section explains how to configure the FreeRADIUS site.
+
+Please refer to :ref:`freeradius_api_authentication` to understand the
+different possibilities with which FreeRADIUS can authenticate requests
+going to OpenWISP RADIUS so that OpenWISP RADIUS knows to which
+organization each request belongs.
+
+If you are **not** using the method described in :ref:`radius_user_token`,
+you have to do the following:
+
+- create one FreeRADIUS site for each organization
+- uncomment the line which starts with ``# api_token_header``
+- substitute the occurrences of ``<api_token>`` & ``<org-uuid>`` with
+  each the UUID & api_token of each organization, refer to the section
+  :ref:`organization_uuid_token` for finding these values.
+
+If you are using the RADIUS User Token method, you can get away with having
+only one freeradius site for all the organizations and can simply copy
+the configuration shown below.
 
 .. code-block:: ini
 
