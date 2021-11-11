@@ -717,6 +717,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "class=\"btn\"> Reset password </a>",
             ' '.join(email.alternatives[0][0].split()),
         )
+        self.assertNotIn('<img src=""', email.alternatives[0][0])
         url_kwargs = {
             'uid': user_pk_to_url_str(test_user),
             'token': default_token_generator.make_token(test_user),

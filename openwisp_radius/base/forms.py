@@ -113,12 +113,6 @@ class PasswordResetForm(BasePasswordResetForm):
         to_email,
         html_email_template_name=None,
     ):
-        subject = loader.render_to_string(subject_template_name, context)
-        # Email subject *must not* contain newlines
-        subject = ''.join(subject.splitlines())
-        body_text = loader.render_to_string(email_template_name, context)
-
-        if html_email_template_name is not None:
-            body_html = loader.render_to_string(html_email_template_name, context)
-
-        send_email(subject, body_text, body_html, [to_email], context)
+        subject = context.get('subject')
+        body_html = loader.render_to_string(email_template_name, context)
+        send_email(subject, body_html, body_html, [to_email], context)

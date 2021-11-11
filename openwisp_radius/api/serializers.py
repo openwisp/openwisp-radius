@@ -360,7 +360,6 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'use_https': request.is_secure(),
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
             'email_template_name': ('custom_password_reset_email.html'),
-            'html_email_template_name': ('custom_password_reset_email.html'),
             'request': request,
             'extra_email_context': {
                 'subject': _(f'Password reset on {get_current_site(request).name}'),
