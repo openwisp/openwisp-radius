@@ -1,4 +1,4 @@
-.form-row:not(.field-mode){ display: none }
+.form-row:not(.field-mode){ display: none; }
 .form-row.field-group label,
 .form-row.field-groupname label,
 .form-row.field-user label,
