@@ -142,7 +142,8 @@ class TestLoginView(TestOrganizationMixin, TestCase):
         self.client.force_login(user)
         redirect_url = 'https://captive-portal.example.com'
         response = self.client.get(
-            self.login_url, {'RelayState': f'{redirect_url}?org=default'},
+            self.login_url,
+            {'RelayState': f'{redirect_url}?org=default'},
         )
         self.assertEqual(response.status_code, 302)
         self.assertIn('idp.example.com', response.url)

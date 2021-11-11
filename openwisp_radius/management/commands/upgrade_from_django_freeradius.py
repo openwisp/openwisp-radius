@@ -127,7 +127,9 @@ class BaseUpdateFromDjangoFreeradius(BaseCommand):
                         )
             data['fields']['groups'] = group_list
             data['fields']['user_permissions'] = self._get_updated_permission_list(
-                permission_data, data['fields']['user_permissions'], contenttype_data,
+                permission_data,
+                data['fields']['user_permissions'],
+                contenttype_data,
             )
             if not User.objects.filter(email=data['fields']['email']):
                 load_users_data.append(data)

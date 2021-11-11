@@ -161,7 +161,11 @@ if not TESTING:
 
 if not TESTING and SHELL:
     LOGGING['loggers'] = {
-        'django.db': {'level': 'DEBUG', 'handlers': ['console'], 'propagate': False,},
+        'django.db': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
         '': {
             # this sets root level logger to log debug and higher level
             # logs to console. All other loggers inherit settings from

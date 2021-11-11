@@ -329,7 +329,9 @@ class TestOrganizationRadiusSettings(BaseTestCase):
     }
 
     @mock.patch.object(
-        app_settings, 'OPTIONAL_REGISTRATION_FIELDS', optional_settings_params,
+        app_settings,
+        'OPTIONAL_REGISTRATION_FIELDS',
+        optional_settings_params,
     )
     def test_org_settings_same_globally(self):
         org = self._get_org()
@@ -687,7 +689,10 @@ class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
 
     def _download_csv_file_status(self, status_code):
         response = self.client.get(
-            reverse('radius:serve_private_file', args=[self.csvfile],)
+            reverse(
+                'radius:serve_private_file',
+                args=[self.csvfile],
+            )
         )
         self.assertEqual(response.status_code, status_code)
 

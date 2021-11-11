@@ -169,7 +169,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             User.objects.all().delete()
             RadiusBatch.objects.all().delete()
             path = self._get_path('static/test_batch.csv')
-            options = dict(organization=self.default_org.slug, file=path, name='test',)
+            options = dict(
+                organization=self.default_org.slug,
+                file=path,
+                name='test',
+            )
             self._call_command('batch_add_users', **options)
             User.objects.update(date_joined=now() - timedelta(days=3))
             for user in User.objects.all():
@@ -216,7 +220,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 is_verified=True,
             )
             self.assertEqual(User.objects.count(), 4)
-            call_command('delete_unverified_users',)
+            call_command(
+                'delete_unverified_users',
+            )
             self.assertEqual(User.objects.count(), 1)
 
     @patch.object(

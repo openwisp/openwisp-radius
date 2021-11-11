@@ -121,7 +121,7 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         obj.save()
 
     def get_fields(self, request, obj=None):
-        """ do not show raw value (readonly) when adding a new item """
+        """do not show raw value (readonly) when adding a new item"""
         fields = self.fields[:]
         if not obj:
             fields.remove('value')
@@ -295,7 +295,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     actions = ['delete_selected_groups']
 
     def get_default_queryset(self, request, queryset):
-        """ overridable """
+        """overridable"""
         return queryset.filter(default=True)
 
 
@@ -452,7 +452,10 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 args=[radbatch.organization.slug, object_id],
             )
         return super().change_view(
-            request, object_id, form_url, extra_context=extra_context,
+            request,
+            object_id,
+            form_url,
+            extra_context=extra_context,
         )
 
     def get_actions(self, request):

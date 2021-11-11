@@ -31,7 +31,8 @@ class OrganizationSamlMixin(object):
         try:
             parsed_url = urlparse(
                 self.request.POST.get(
-                    'RelayState', self.request.GET.get('RelayState', None),
+                    'RelayState',
+                    self.request.GET.get('RelayState', None),
                 )
             )
 
@@ -50,8 +51,7 @@ class AssertionConsumerServiceView(
     OrganizationSamlMixin, RadiusTokenMixin, BaseAssertionConsumerServiceView
 ):
     def post_login_hook(self, request, user, session_info):
-        """ If desired, a hook to add logic after a user has successfully logged in.
-        """
+        """If desired, a hook to add logic after a user has successfully logged in."""
         org = self.get_organization_from_relay_state()
         is_member = user.is_member(org)
         # add user to organization
@@ -69,15 +69,17 @@ class AssertionConsumerServiceView(
             registered_user.save()
 
     def customize_relay_state(self, relay_state):
-        """ Subclasses may override this method to implement custom logic for relay state.
+        """
+        Subclasses may override this method to
+        implement custom logic for relay state.
         """
         return get_url_or_path(relay_state)
 
     def custom_redirect(self, user, relay_state, session_info):
-        """ Subclasses may override this method to implement custom logic for redirect.
+        """Subclasses may override this method to implement custom logic for redirect.
 
-            For example, some sites may require user registration if the user has not
-            yet been provisioned.
+        For example, some sites may require user registration if the user has not
+        yet been provisioned.
         """
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)

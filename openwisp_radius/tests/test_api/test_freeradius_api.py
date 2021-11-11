@@ -74,7 +74,7 @@ class AcctMixin(object):
 
     @property
     def acct_post_data(self):
-        """ returns a copy of self._acct_data """
+        """returns a copy of self._acct_data"""
         data = self._acct_initial_data.copy()
         data.update(self._acct_post_data.copy())
         return data
@@ -395,7 +395,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             }
         )
         self.assertEqual(
-            response.data, expected,
+            response.data,
+            expected,
         )
 
     @capture_any_output()
@@ -406,7 +407,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with self.subTest('SkipCheck'):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.side_effect = SkipCheck(
-                    message='Skip test', level='error', logger=logging,
+                    message='Skip test',
+                    level='error',
+                    logger=logging,
                 )
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
@@ -692,7 +695,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data.update(username='tester')
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         response = self.client.post(
-            self._acct_url, data=json.dumps(data), content_type='application/json',
+            self._acct_url,
+            data=json.dumps(data),
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
@@ -705,7 +710,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._prep_start_acct_data()
         data.update(username='tester')
         response = self.client.post(
-            self._acct_url, data=json.dumps(data), content_type='application/json',
+            self._acct_url,
+            data=json.dumps(data),
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'')
@@ -1037,7 +1044,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self._create_radius_accounting(**data3)
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=1', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=1',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1047,7 +1055,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item['nas_ip_address'], '172.16.64.91')
         self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=2', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=2',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1057,7 +1066,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item['input_octets'], data2['input_octets'])
         self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=3', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?page_size=1&page=3',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1075,7 +1085,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data2.update(dict(username='admin', unique_id='99144d60'))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?username=test_user', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?username=test_user',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1173,14 +1184,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?is_open=true', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?is_open=true',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
         self.assertEqual(item['stop_time'], None)
         response = self.client.get(
-            f'{self._acct_url}?is_open=false', HTTP_AUTHORIZATION=self.auth_header,
+            f'{self._acct_url}?is_open=false',
+            HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -1274,7 +1287,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "framed_ip_address": "",
         }
         response = self.client.post(
-            self._acct_url, data=json.dumps(data), content_type='application/json',
+            self._acct_url,
+            data=json.dumps(data),
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)

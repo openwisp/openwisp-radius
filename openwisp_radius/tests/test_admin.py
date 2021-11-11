@@ -121,7 +121,10 @@ class TestAdmin(
         )
         obj = self._create_radius_groupreply(**options)
         response = self.client.get(
-            reverse(f'admin:{self.app_label}_radiusgroupreply_change', args=[obj.pk],)
+            reverse(
+                f'admin:{self.app_label}_radiusgroupreply_change',
+                args=[obj.pk],
+            )
         )
 
         self.assertContains(response, 'ok')
@@ -133,7 +136,10 @@ class TestAdmin(
         )
         obj = self._create_radius_groupcheck(**options)
         response = self.client.get(
-            reverse(f'admin:{self.app_label}_radiusgroupcheck_change', args=[obj.pk],)
+            reverse(
+                f'admin:{self.app_label}_radiusgroupcheck_change',
+                args=[obj.pk],
+            )
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -166,7 +172,10 @@ class TestAdmin(
         )
         obj = self._create_radius_accounting(**options)
         response = self.client.get(
-            reverse(f'admin:{self.app_label}_radiusaccounting_change', args=[obj.pk],)
+            reverse(
+                f'admin:{self.app_label}_radiusaccounting_change',
+                args=[obj.pk],
+            )
         )
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
@@ -235,7 +244,8 @@ class TestAdmin(
         url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
         response = self.client.get(url)
         pdf_url = reverse(
-            'radius:download_rad_batch_pdf', args=[obj.organization.slug, obj.pk],
+            'radius:download_rad_batch_pdf',
+            args=[obj.organization.slug, obj.pk],
         )
         self.assertContains(response, pdf_url)
 
@@ -250,7 +260,8 @@ class TestAdmin(
         url = reverse(f'admin:{self.app_label}_radiusbatch_change', args=[obj.pk])
         response = self.client.get(url)
         pdf_url = reverse(
-            'radius:download_rad_batch_pdf', args=[obj.organization.pk, obj.pk],
+            'radius:download_rad_batch_pdf',
+            args=[obj.organization.pk, obj.pk],
         )
         self.assertNotContains(response, pdf_url)
 
@@ -258,7 +269,9 @@ class TestAdmin(
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         _RADCHECK['new_value'] = ''
         resp = self.client.post(
-            reverse(f'admin:{self.app_label}_radiuscheck_add'), _RADCHECK, follow=True,
+            reverse(f'admin:{self.app_label}_radiuscheck_add'),
+            _RADCHECK,
+            follow=True,
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'errors')
@@ -511,7 +524,8 @@ class TestAdmin(
     def test_organization_radsettings_freeradius_allowed_hosts(self):
         org = self._get_org()
         url = reverse(
-            f'admin:{self.app_label_users}_organization_change', args=[org.pk],
+            f'admin:{self.app_label_users}_organization_change',
+            args=[org.pk],
         )
         radsetting = OrganizationRadiusSettings.objects.get(organization=org)
         form_data = org.__dict__
@@ -934,7 +948,8 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiususergroup_add'), group=True,
+                reverse(f'admin:{self.app_label}_radiususergroup_add'),
+                group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -945,7 +960,8 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiususergroup_add'), user=True,
+                reverse(f'admin:{self.app_label}_radiususergroup_add'),
+                user=True,
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -963,7 +979,8 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(groupcheck=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiusgroupcheck_add'), group=True,
+                reverse(f'admin:{self.app_label}_radiusgroupcheck_add'),
+                group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -981,7 +998,8 @@ class TestAdmin(
         data = self._create_multitenancy_test_env(groupreply=True)
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiusgroupreply_add'), group=True,
+                reverse(f'admin:{self.app_label}_radiusgroupreply_add'),
+                group=True,
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -995,7 +1013,8 @@ class TestAdmin(
             user=self._get_user(), organization=self._get_org(), can_auth=True
         )
         response = self.client.post(
-            reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'},
+            reverse('radius:authorize'),
+            {'username': 'tester', 'password': 'tester'},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(cache.get('rt-tester'), str(self.default_org.pk))
@@ -1012,7 +1031,8 @@ class TestAdmin(
         self.assertEqual(response.status_code, 200)
         # Test delete queryset deleted cache
         response = self.client.post(
-            reverse('radius:authorize'), {'username': 'tester', 'password': 'tester'},
+            reverse('radius:authorize'),
+            {'username': 'tester', 'password': 'tester'},
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(cache.get('rt-tester'), None)
@@ -1020,7 +1040,8 @@ class TestAdmin(
     def test_organization_radsettings_allowed_mobile_prefixes(self):
         org = self._get_org()
         url = reverse(
-            f'admin:{self.app_label_users}_organization_change', args=[org.pk],
+            f'admin:{self.app_label_users}_organization_change',
+            args=[org.pk],
         )
         radsetting = OrganizationRadiusSettings.objects.get(organization=org)
         form_data = org.__dict__

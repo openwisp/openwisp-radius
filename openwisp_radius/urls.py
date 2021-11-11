@@ -35,7 +35,9 @@ def get_urls(api_views=None, social_views=None, saml_views=None):
     if app_settings.SAML_LOGIN_ENABLED:
         from .saml.urls import get_saml_urls
 
-        urls.append(path('radius/saml2/', include(get_saml_urls(saml_views))),)
+        urls.append(
+            path('radius/saml2/', include(get_saml_urls(saml_views))),
+        )
     return urls
 
 

@@ -380,6 +380,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.AlterUniqueTogether(
-            name='organizationuser', unique_together={('user', 'organization')},
+            name='organizationuser',
+            unique_together={('user', 'organization')},
         ),
     ]

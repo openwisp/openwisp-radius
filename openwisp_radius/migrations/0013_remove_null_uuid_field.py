@@ -12,14 +12,38 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(model_name='nas', name='id',),
-        migrations.RemoveField(model_name='radiusaccounting', name='id',),
-        migrations.RemoveField(model_name='radiuscheck', name='id',),
-        migrations.RemoveField(model_name='radiusgroupcheck', name='id',),
-        migrations.RemoveField(model_name='radiusgroupreply', name='id',),
-        migrations.RemoveField(model_name='radiuspostauth', name='id',),
-        migrations.RemoveField(model_name='radiusreply', name='id',),
-        migrations.RemoveField(model_name='radiususergroup', name='id',),
+        migrations.RemoveField(
+            model_name='nas',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiusaccounting',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiuscheck',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiusgroupcheck',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiusgroupreply',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiuspostauth',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiusreply',
+            name='id',
+        ),
+        migrations.RemoveField(
+            model_name='radiususergroup',
+            name='id',
+        ),
         migrations.AlterField(
             model_name='nas',
             name='uuid',
@@ -81,23 +105,39 @@ class Migration(migrations.Migration):
                 verbose_name='accounting unique ID',
             ),
         ),
-        migrations.RenameField(model_name='nas', old_name='uuid', new_name='id',),
         migrations.RenameField(
-            model_name='radiuscheck', old_name='uuid', new_name='id',
+            model_name='nas',
+            old_name='uuid',
+            new_name='id',
         ),
         migrations.RenameField(
-            model_name='radiusgroupcheck', old_name='uuid', new_name='id',
+            model_name='radiuscheck',
+            old_name='uuid',
+            new_name='id',
         ),
         migrations.RenameField(
-            model_name='radiusgroupreply', old_name='uuid', new_name='id',
+            model_name='radiusgroupcheck',
+            old_name='uuid',
+            new_name='id',
         ),
         migrations.RenameField(
-            model_name='radiuspostauth', old_name='uuid', new_name='id',
+            model_name='radiusgroupreply',
+            old_name='uuid',
+            new_name='id',
         ),
         migrations.RenameField(
-            model_name='radiusreply', old_name='uuid', new_name='id',
+            model_name='radiuspostauth',
+            old_name='uuid',
+            new_name='id',
         ),
         migrations.RenameField(
-            model_name='radiususergroup', old_name='uuid', new_name='id',
+            model_name='radiusreply',
+            old_name='uuid',
+            new_name='id',
+        ),
+        migrations.RenameField(
+            model_name='radiususergroup',
+            old_name='uuid',
+            new_name='id',
         ),
     ]

@@ -92,7 +92,11 @@ class TestCelery(FileMixin, BaseTestCase):
     @capture_stdout()
     def test_delete_unverified_users(self):
         path = self._get_path('static/test_batch.csv')
-        options = dict(organization=self.default_org.slug, file=path, name='test',)
+        options = dict(
+            organization=self.default_org.slug,
+            file=path,
+            name='test',
+        )
         management.call_command('batch_add_users', **options)
         User.objects.update(date_joined=now() - timedelta(days=3))
         for user in User.objects.all():

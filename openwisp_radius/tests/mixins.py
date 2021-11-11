@@ -141,7 +141,10 @@ class ApiTokenMixin(BasePostParamsMixin):
         }
         if extra_params:
             params.update(extra_params)
-        response = self.client.post(url, params,)
+        response = self.client.post(
+            url,
+            params,
+        )
         if expect_201:
             self.assertEqual(response.status_code, 201)
         return response
@@ -178,7 +181,8 @@ class ApiTokenMixin(BasePostParamsMixin):
                 HTTP_AUTHORIZATION=auth_header,
             )
         return self.client.post(
-            reverse('radius:authorize'), {'username': username, 'password': password},
+            reverse('radius:authorize'),
+            {'username': username, 'password': password},
         )
 
     def _login_and_obtain_auth_token(self, username='tester', password='tester'):

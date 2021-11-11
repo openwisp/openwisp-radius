@@ -53,8 +53,10 @@ class RegisterResponse(serializers.Serializer):
         ),
     )
     token = serializers.CharField(
-        read_only=True, help_text=('Only send when `REST_USE_JWT` is `True`.'),
+        read_only=True,
+        help_text=('Only send when `REST_USE_JWT` is `True`.'),
     )
     user = serializers.CharField(
-        read_only=True, help_text=('Only send when `REST_USE_JWT` is `True`.'),
+        read_only=True,
+        help_text=('Only send when `REST_USE_JWT` is `True`.'),
     )

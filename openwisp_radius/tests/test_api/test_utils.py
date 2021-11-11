@@ -24,7 +24,8 @@ class TestUtils(BaseTestCase):
         with self.subTest('Test registration enabled set to None'):
             org.radius_settings.registration_enabled = None
             self.assertEqual(
-                is_registration_enabled(org), app_settings.REGISTRATION_API_ENABLED,
+                is_registration_enabled(org),
+                app_settings.REGISTRATION_API_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):

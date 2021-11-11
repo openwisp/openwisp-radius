@@ -16,7 +16,9 @@ class Migration(migrations.Migration):
             model_name='organizationradiussettings',
             name='allowed_mobile_prefixes',
             field=models.TextField(
-                blank=True, help_text=str(_GET_MOBILE_PREFIX_HELP_TEXT), null=True,
+                blank=True,
+                help_text=str(_GET_MOBILE_PREFIX_HELP_TEXT),
+                null=True,
             ),
         ),
     ]

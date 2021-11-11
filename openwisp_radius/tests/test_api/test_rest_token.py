@@ -38,7 +38,8 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['key'], Token.objects.first().key)
         self.assertEqual(
-            response.data['radius_user_token'], RadiusToken.objects.first().key,
+            response.data['radius_user_token'],
+            RadiusToken.objects.first().key,
         )
         self.assertTrue(response.data['is_active'])
         self.assertIn('is_verified', response.data)
@@ -102,7 +103,8 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data['key'], Token.objects.first().key)
             self.assertEqual(
-                response.data['radius_user_token'], RadiusToken.objects.first().key,
+                response.data['radius_user_token'],
+                RadiusToken.objects.first().key,
             )
             self.assertEqual(OrganizationUser.objects.count(), 2)
             org_user = OrganizationUser.objects.first()
@@ -282,15 +284,18 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(response.data['auth_token'], token.key)
         self.assertEqual(
-            response.data['radius_user_token'], RadiusToken.objects.first().key,
+            response.data['radius_user_token'],
+            RadiusToken.objects.first().key,
         )
         user = token.user
         self.assertEqual(user, RadiusToken.objects.first().user)
         self.assertEqual(
-            response.data['username'], user.username,
+            response.data['username'],
+            user.username,
         )
         self.assertEqual(
-            response.data['is_active'], user.is_active,
+            response.data['is_active'],
+            user.is_active,
         )
         if user.is_active:
             phone_number = user.phone_number
@@ -301,10 +306,12 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
             phone_number = str(phone_number)
 
         self.assertEqual(
-            response.data['phone_number'], phone_number,
+            response.data['phone_number'],
+            phone_number,
         )
         self.assertEqual(
-            response.data['email'], user.email,
+            response.data['email'],
+            user.email,
         )
         self.assertIn('is_verified', response.data)
         self.assertIn('method', response.data)

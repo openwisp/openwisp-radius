@@ -197,7 +197,8 @@ class TestPhoneToken(BaseTestCase):
             self._create_token(user=user, phone_number=None)
         except ValidationError as e:
             self.assertIn(
-                'This field cannot be null.', str(e.message_dict['phone_number']),
+                'This field cannot be null.',
+                str(e.message_dict['phone_number']),
             )
         else:
             self.fail('ValidationError not raised')

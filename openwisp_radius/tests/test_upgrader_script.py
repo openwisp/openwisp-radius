@@ -20,7 +20,9 @@ class TestUpgradeFromDjangoFreeradius(TestCase):
             os.path.dirname(__file__), 'static', 'upgrader_script'
         )
         call_command(
-            'upgrade_from_django_freeradius', backup=static_path, stdout=commandOutput,
+            'upgrade_from_django_freeradius',
+            backup=static_path,
+            stdout=commandOutput,
         )
         self.assertIn('Migration Process Complete!', commandOutput.getvalue())
         self.assertEqual(RadiusBatch.objects.count(), 1)

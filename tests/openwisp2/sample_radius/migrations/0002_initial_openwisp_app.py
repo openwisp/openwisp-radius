@@ -35,7 +35,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(model_name='radiusaccounting', name='id',),
+        migrations.RemoveField(
+            model_name='radiusaccounting',
+            name='id',
+        ),
         migrations.AddField(
             model_name='nas',
             name='details',
@@ -612,7 +615,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterUniqueTogether(
-            name='radiususergroup', unique_together={('user', 'group')},
+            name='radiususergroup',
+            unique_together={('user', 'group')},
         ),
         migrations.CreateModel(
             name='RadiusBatch',

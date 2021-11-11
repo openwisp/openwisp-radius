@@ -507,7 +507,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response_json = json.loads(response.content)
         org = Organization.objects.get(pk=response_json['organization'])
         pdf_url = reverse(
-            'radius:download_rad_batch_pdf', args=[org.slug, response_json['id']],
+            'radius:download_rad_batch_pdf',
+            args=[org.slug, response_json['id']],
         )
         self._superuser_login()
         self.assertEqual(response_json['pdf_link'], None)
@@ -528,7 +529,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             name='test', strategy='prefix', prefix='test-prefix5'
         )
         url = reverse(
-            'radius:download_rad_batch_pdf', args=['non-existent-org', radbatch.pk],
+            'radius:download_rad_batch_pdf',
+            args=['non-existent-org', radbatch.pk],
         )
         self._superuser_login()
         response = self.client.get(url)
@@ -540,7 +542,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             name='test', strategy='prefix', prefix='test-prefix5', organization=org2
         )
         url = reverse(
-            'radius:download_rad_batch_pdf', args=[self.default_org.slug, radbatch.pk],
+            'radius:download_rad_batch_pdf',
+            args=[self.default_org.slug, radbatch.pk],
         )
         operator = self._get_operator()
         self._create_org_user(user=operator)
@@ -551,7 +554,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     def test_api_password_change(self):
         test_user = User.objects.create_user(
-            username='test_name', password='test_password',
+            username='test_name',
+            password='test_password',
         )
         self._create_org_user(organization=self.default_org, user=test_user)
         login_payload = {'username': 'test_name', 'password': 'test_password'}
@@ -564,7 +568,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         # invalid organization
         password_change_url = reverse(
-            'radius:rest_password_change', args=['random-valid-slug'],
+            'radius:rest_password_change',
+            args=['random-valid-slug'],
         )
         new_password_payload = {
             'current_password': 'test_password',
@@ -818,7 +823,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_radius_accounting(**data3)
         url = reverse('radius:user_accounting', args=[self.default_org.slug])
         response = self.client.get(
-            f'{url}?page_size=1&page=1', HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=1',
+            HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -829,7 +835,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
         self.assertIsNone(item['stop_time'])
         response = self.client.get(
-            f'{url}?page_size=1&page=2', HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=2',
+            HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
@@ -840,7 +847,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
         self.assertIsNotNone(item['stop_time'])
         response = self.client.get(
-            f'{url}?page_size=1&page=3', HTTP_AUTHORIZATION=authorization,
+            f'{url}?page_size=1&page=3',
+            HTTP_AUTHORIZATION=authorization,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 404)

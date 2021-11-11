@@ -556,7 +556,9 @@ class CreatePhoneTokenView(
         self.validate_membership(request.user)
         phone_number = request.data.get('phone_number', request.user.phone_number)
         phone_token = PhoneToken(
-            user=request.user, ip=self.get_ident(request), phone_number=phone_number,
+            user=request.user,
+            ip=self.get_ident(request),
+            phone_number=phone_number,
         )
         try:
             phone_token.full_clean()

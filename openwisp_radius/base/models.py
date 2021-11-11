@@ -856,7 +856,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         help_text=_('Usernames generated will be of the format [prefix][number]'),
     )
     # List of usernames and passwords used to create PDF
-    user_credentials = JSONField(null=True, blank=True, verbose_name='PDF',)
+    user_credentials = JSONField(
+        null=True,
+        blank=True,
+        verbose_name='PDF',
+    )
     expiration_date = models.DateField(
         verbose_name=_('expiration date'),
         null=True,
@@ -1077,10 +1081,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         ),
     )
     freeradius_allowed_hosts = models.TextField(
-        null=True, blank=True, help_text=_GET_IP_LIST_HELP_TEXT,
+        null=True,
+        blank=True,
+        help_text=_GET_IP_LIST_HELP_TEXT,
     )
     allowed_mobile_prefixes = models.TextField(
-        null=True, blank=True, help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
+        null=True,
+        blank=True,
+        help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
     )
     first_name = models.CharField(
         verbose_name=_('first name'),
@@ -1115,7 +1123,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
     )
     registration_enabled = models.BooleanField(
-        null=True, blank=True, default=True, help_text=_REGISTRATION_ENABLED_HELP_TEXT,
+        null=True,
+        blank=True,
+        default=True,
+        help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
 
     class Meta:

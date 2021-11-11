@@ -280,7 +280,10 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         slug_field='slug',
         write_only=True,
     )
-    users = UserSerializer(many=True, read_only=True,)
+    users = UserSerializer(
+        many=True,
+        read_only=True,
+    )
     prefix = serializers.CharField(
         help_text=(
             'Prefix for creating usernames. '
@@ -452,7 +455,8 @@ class RegisterSerializer(
             # Error is not related to cross organization registration
             raise error
         if OrganizationUser.objects.filter(
-            organization=self.context['view'].organization, user=user,
+            organization=self.context['view'].organization,
+            user=user,
         ).exists():
             # User is registering to the organization it is already member of.
             raise error
@@ -490,7 +494,8 @@ class RegisterSerializer(
         self.custom_signup(request, user)
         # create a RegisteredUser object for every user that registers through API
         RegisteredUser.objects.create(
-            user=user, method=self.validated_data['method'],
+            user=user,
+            method=self.validated_data['method'],
         )
         setup_user_email(request, user, [])
         return user
@@ -563,7 +568,10 @@ class RadiusUserSerializer(serializers.ModelSerializer):
     """
 
     is_verified = serializers.BooleanField(source='registered_user.is_verified')
-    method = serializers.CharField(source='registered_user.method', allow_null=True,)
+    method = serializers.CharField(
+        source='registered_user.method',
+        allow_null=True,
+    )
     radius_user_token = serializers.CharField(source='radius_token.key', default=None)
 
     class Meta:

@@ -11,12 +11,17 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(model_name='radiusbatch', name='pdf',),
+        migrations.RemoveField(
+            model_name='radiusbatch',
+            name='pdf',
+        ),
         migrations.AddField(
             model_name='radiusbatch',
             name='user_credentials',
             field=jsonfield.fields.JSONField(
-                blank=True, null=True, verbose_name='PDF',
+                blank=True,
+                null=True,
+                verbose_name='PDF',
             ),
         ),
     ]

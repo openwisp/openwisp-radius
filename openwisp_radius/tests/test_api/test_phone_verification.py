@@ -192,7 +192,9 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         phone_token = PhoneToken.objects.filter(user=user).last()
         # generate entropy to ensure correct token is used
         PhoneToken.objects.create(
-            user=user, ip=phone_token.ip, phone_number=phone_token.phone_number,
+            user=user,
+            ip=phone_token.ip,
+            phone_number=phone_token.phone_number,
         )
         phone_token = PhoneToken.objects.create(
             user=user, ip=phone_token.ip, phone_number=phone_token.phone_number
@@ -233,7 +235,9 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(phone_token.attempts, 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
-            url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            url,
+            {'code': '123456'},
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         user.refresh_from_db()
@@ -278,7 +282,9 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         max_value = app_settings.SMS_TOKEN_MAX_ATTEMPTS + 1
         for n in range(1, max_value + 2):
             r = self.client.post(
-                url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+                url,
+                {'code': '123456'},
+                HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
             )
             self.assertEqual(r.status_code, 400)
             phone_token.refresh_from_db()
@@ -324,7 +330,9 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(PhoneToken.objects.count(), 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
-            url, {'code': '123456'}, HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
+            url,
+            {'code': '123456'},
+            HTTP_AUTHORIZATION=f'Bearer {user_token.key}',
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn('non_field_errors', r.data)
