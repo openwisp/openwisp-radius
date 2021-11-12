@@ -105,7 +105,7 @@ msgstr ""
 
 #: openwisp_radius/templates/custom_password_reset_email.html:10
 msgid "Your username, in case you've forgotten:"
-msgstr "Il suo nome utente, nel caso l'avesse dimenticato:"
+msgstr "Il tuo nome utente, in caso l'avessi dimenticato:"
 
 #: openwisp_radius/templates/custom_password_reset_email.html:12
 msgid "Best regards"
