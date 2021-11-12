@@ -4,6 +4,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
+from django.db.migrations import swappable_dependency
 
 from ..utils import create_default_groups
 
@@ -145,3 +146,7 @@ def populate_phonetoken_phone_number(apps, schema_editor):
     for phone_token in PhoneToken.objects.all():
         phone_token.phone_number = phone_token.user.phone_number
         phone_token.save(update_fields=['phone_number'])
+
+
+def swappable_dependency_latest(value):
+    return (swappable_dependency(value)[0], '__latest__')

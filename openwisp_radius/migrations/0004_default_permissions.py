@@ -5,7 +5,6 @@ from . import assign_permissions_to_groups
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_users', '0004_default_groups'),
         ('openwisp_radius', '0003_default_radius_groups'),
     ]
     operations = [
