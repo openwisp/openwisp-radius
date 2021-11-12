@@ -527,12 +527,13 @@ Responds only to **POST**.
 
 Parameters:
 
-===============    ===============================
+================   ===============================
 Param              Description
-===============    ===============================
-new_password1      string
-new_password2      string
-===============    ===============================
+================   ===============================
+current_password   string
+new_password       string
+confirm_password   string
+================   ===============================
 
 Login (Obtain User Auth Token)
 ------------------------------
