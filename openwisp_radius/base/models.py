@@ -158,6 +158,10 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
 _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
+_SMS_VERIFICATION_HELP_TEXT = _(
+    'Whether users who sign up should be required to verify their mobile '
+    'phone number via SMS'
+)
 _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
@@ -1054,11 +1058,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         default=None,
-        help_text=_(
-            'whether users who sign up should '
-            'be required to verify their mobile '
-            'phone number via SMS'
-        ),
+        help_text=_SMS_VERIFICATION_HELP_TEXT,
     )
     needs_identity_verification = models.BooleanField(
         null=True,

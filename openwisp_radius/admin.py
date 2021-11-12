@@ -32,6 +32,7 @@ from .base.models import (
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
     _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
     _REGISTRATION_ENABLED_HELP_TEXT,
+    _SMS_VERIFICATION_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
@@ -621,6 +622,22 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
         fallback='',
     )
+    sms_verification = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("SMS_VERIFICATION_ENABLED")})',
+                ),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_SMS_VERIFICATION_HELP_TEXT,
+        fallback='',
+    )
     first_name = FallbackChoiceField(
         required=False,
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
@@ -659,11 +676,11 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'freeradius_allowed_hosts',
                     'registration_enabled',
                     'needs_identity_verification',
+                    'sms_verification',
                     'first_name',
                     'last_name',
                     'birth_date',
                     'location',
-                    'sms_verification',
                     'sms_sender',
                     'allowed_mobile_prefixes',
                 )
