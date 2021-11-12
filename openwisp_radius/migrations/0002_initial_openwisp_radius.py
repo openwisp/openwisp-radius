@@ -14,7 +14,10 @@ from swapper import get_model_name
 import openwisp_users.mixins
 import openwisp_utils.base
 import openwisp_utils.utils
-from openwisp_radius.migrations import add_default_organization
+from openwisp_radius.migrations import (
+    add_default_organization,
+    swappable_dependency_latest,
+)
 
 
 class Migration(migrations.Migration):
@@ -28,8 +31,7 @@ class Migration(migrations.Migration):
     """
 
     dependencies = [
-        ('openwisp_users', '0003_default_organization'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        swappable_dependency_latest(settings.AUTH_USER_MODEL),
         ('openwisp_radius', '0001_initial_freeradius'),
     ]
 
