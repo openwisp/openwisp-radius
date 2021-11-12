@@ -361,7 +361,7 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'email_template_name': ('custom_password_reset_email.html'),
             'request': request,
             'extra_email_context': {
-                'subject': _(f'Password reset on {get_current_site(request).name}'),
+                'subject': _('Password reset on %s') % (get_current_site(request).name),
                 'call_to_action_url': password_reset_url,
                 'call_to_action_text': _('Reset password'),
             },

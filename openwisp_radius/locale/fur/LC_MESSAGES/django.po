@@ -122,3 +122,8 @@ msgstr ""
 #: openwisp_radius/api/serializers.py:378
 msgid "Reset password"
 msgstr "Resetta la password"
+
+#: openwisp_radius/api/serializers.py:364
+#, python-format
+msgid "Password reset on %s"
+msgstr "Reimposta password su %s"

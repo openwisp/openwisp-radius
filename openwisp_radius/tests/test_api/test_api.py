@@ -713,9 +713,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "<p> Please click on the button below to open a page where you can",
             ' '.join(email.alternatives[0][0].split()),
         )
-        self.assertIn(
-            "class=\"btn\"> Reset password </a>",
-            ' '.join(email.alternatives[0][0].split()),
+        self.assertRegex(
+            ''.join(email.alternatives[0][0].splitlines()),
+            '<a href=".*">.*Reset password.*<\/a>',
         )
         self.assertNotIn('<img src=""', email.alternatives[0][0])
         url_kwargs = {
