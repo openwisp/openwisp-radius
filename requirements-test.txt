@@ -7,5 +7,5 @@ sphinx
 sphinx_rtd_theme
 freezegun
 django-extensions
-openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/issues/259-email-template
+openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master/
 pylinkvalidator

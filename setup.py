@@ -43,8 +43,7 @@ setup(
         # TODO: change this when next point version of openwisp-utils is released
         (
             'openwisp-utils[rest] @'
-            'https://github.com/openwisp/openwisp-utils/'
-            'tarball/issues/259-email-template'
+            'https://github.com/openwisp/openwisp-utils/tarball/master'
         ),
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
