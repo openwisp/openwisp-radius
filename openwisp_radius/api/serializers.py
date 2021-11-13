@@ -13,6 +13,7 @@ from dj_rest_auth.serializers import (
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.urls import reverse
@@ -359,7 +360,11 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
             'email_template_name': ('custom_password_reset_email.html'),
             'request': request,
-            'extra_email_context': {'password_reset_url': password_reset_url},
+            'extra_email_context': {
+                'subject': _('Password reset on %s') % (get_current_site(request).name),
+                'call_to_action_url': password_reset_url,
+                'call_to_action_text': _('Reset password'),
+            },
         }
         opts.update(self.get_email_options())
         self.reset_form.save(**opts)

@@ -604,7 +604,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            'New password and Confirm password do not match.',
+            'The two password fields didn’t match.',
             str(response.data['confirm_password']),
         )
 
@@ -621,7 +621,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            'Current password was entered incorrectly. Please enter it again.',
+            'Your old password was entered incorrectly. Please enter it again.',
             str(response.data['current_password']),
         )
 
@@ -638,7 +638,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = client.post(password_change_url, data=new_password_payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            'New Password and Current Password cannot be same.',
+            'New password cannot be the same as your old password.',
             str(response.data['new_password']),
         )
 
@@ -708,7 +708,16 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         reset_payload = {'email': 'test@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(len(mail.outbox), mail_count + 1)
-
+        email = mail.outbox.pop()
+        self.assertIn(
+            "<p> Please click on the button below to open a page where you can",
+            ' '.join(email.alternatives[0][0].split()),
+        )
+        self.assertRegex(
+            ''.join(email.alternatives[0][0].splitlines()),
+            '<a href=".*">.*Reset password.*<\/a>',
+        )
+        self.assertNotIn('<img src=""', email.alternatives[0][0])
         url_kwargs = {
             'uid': user_pk_to_url_str(test_user),
             'token': default_token_generator.make_token(test_user),

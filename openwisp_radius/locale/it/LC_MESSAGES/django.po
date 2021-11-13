@@ -101,14 +101,27 @@ msgstr ""
 "per il tuo account utente su\n"
 "%(site_name)s."
 
-#: openwisp_radius/templates/custom_password_reset_email.html:5
-msgid "Please go to the following page and choose a new password:"
-msgstr "Si prega di aprire la pagina seguente per scegliere una nuova password:"
-
 #: openwisp_radius/templates/custom_password_reset_email.html:10
 msgid "Your username, in case you've forgotten:"
-msgstr "Il suo nome utente, nel caso l'avesse dimenticato:"
+msgstr "Il tuo nome utente, in caso l'avessi dimenticato:"
 
 #: openwisp_radius/templates/custom_password_reset_email.html:12
 msgid "Best regards"
 msgstr "Distinti saluti"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:14
+msgid ""
+"Please click on the button below to open a page where you can choose a new "
+"password:"
+msgstr ""
+"Fare clic sul pulsante in basso per aprire una pagina in cui è possibile scegliere un nuovo "
+"parola d'ordine:"
+
+#: openwisp_radius/api/serializers.py:378
+msgid "Reset password"
+msgstr "Resetta la password"
+
+#: openwisp_radius/api/serializers.py:364
+#, python-format
+msgid "Password reset on %s"
+msgstr "Reimposta password su %s"
