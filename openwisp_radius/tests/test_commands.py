@@ -163,7 +163,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         with self.assertRaises(SystemExit):
             self._call_command('prefix_add_users', **options)
 
-    # @capture_stdout()
+    @capture_stdout()
     def test_unverified_users_command(self):
         def _create_old_users():
             User.objects.all().delete()
@@ -233,12 +233,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 method='email',
                 is_verified=False,
             )
-            opts = dict(
-                username=user.username,
-                unique_id='2',
-                nas_ip_address='127.0.0.1',
-                session_id='1',
-            )
+            opts = _RADACCT.copy()
+            opts['unique_id'] = 1
+            opts['username'] = user.username
             self._create_radius_accounting(**opts)
             self.assertEqual(User.objects.count(), 4)
             call_command(
