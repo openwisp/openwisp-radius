@@ -89,7 +89,8 @@ Note that the default duration is set to 18 months.
 ---------------------------
 
 This command deletes unverified users that have been registered for
-more than specified duration.
+more than specified duration. This feature is needed to automatically
+delete users who register and never verify their accounts.
 
 .. code-block:: shell
 
