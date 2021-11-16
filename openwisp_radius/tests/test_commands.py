@@ -242,6 +242,12 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'delete_unverified_users',
             )
             self.assertEqual(User.objects.count(), 1)
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=User.objects.first().username
+                ).exists(),
+                True,
+            )
 
     @patch.object(
         app_settings,

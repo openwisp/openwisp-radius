@@ -30,11 +30,15 @@ class BaseDeleteUnverifiedUsersCommand(BaseCommand):
     def handle(self, *args, **options):
         days = now() - timedelta(days=int(options['older_than_days']))
         exclude_methods = str(options['exclude_methods']).split(',')
-        for user in User.objects.filter(
-            date_joined__lt=days,
-            registered_user__isnull=False,
-            registered_user__is_verified=False,
-        ).exclude(registered_user__method__in=exclude_methods):
+        for user in (
+            User.objects.filter(
+                date_joined__lt=days,
+                registered_user__isnull=False,
+                registered_user__is_verified=False,
+            )
+            .exclude(registered_user__method__in=exclude_methods)
+            .iterator()
+        ):
             if not RadiusAccounting.objects.filter(username=user.username).exists():
                 user.delete()
 
