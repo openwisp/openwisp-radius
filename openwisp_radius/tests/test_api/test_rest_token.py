@@ -60,6 +60,17 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             org_user.save()
             self._user_auth_token_helper(org_user.user.phone_number)
 
+    def test_user_language_preference_stored(self):
+        test_user = self._get_user()
+        self.assertEqual(test_user.language, 'en-gb')
+        self.client.post(
+            self._get_url(),
+            {'username': 'tester', 'password': 'tester'},
+            HTTP_ACCEPT_LANGUAGE='it',
+        )
+        test_user.refresh_from_db()
+        self.assertEqual(test_user.language, 'it')
+
     def test_user_auth_token_with_second_organization(self):
         api_views.renew_required = False
         self._get_org_user()
@@ -320,6 +331,18 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def test_validate_auth_token_with_active_user(self):
         user = self._get_user_with_org()
         self._test_validate_auth_token_helper(user)
+
+    def test_user_language_preference_stored(self):
+        user = self._get_user()
+        token = Token.objects.create(user=user)
+        self.assertEqual(user.language, 'en-gb')
+        self.client.post(
+            self._get_url(),
+            dict(token=token.key),
+            HTTP_ACCEPT_LANGUAGE='ru',
+        )
+        user.refresh_from_db()
+        self.assertEqual(user.language, 'ru')
 
     def test_validate_auth_token_phone_number_null(self):
         user = self._get_user_with_org()
