@@ -378,6 +378,20 @@ stop_time           Stop time (less or equal to)
 is_open             If stop_time is null
 ==================  ====================================
 
+Signals
++++++++
+
+``radius_accounting_success``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Path**: ``openwisp_radius.signals.radius_accounting_success``
+
+**Arguments**:
+
+- ``accounting_data``: accounting information
+
+This signal is emitted every time accounting information is added or updated.
+
 User API Endpoints
 ******************
 
