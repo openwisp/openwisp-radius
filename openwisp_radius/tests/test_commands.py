@@ -225,6 +225,28 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self.assertEqual(User.objects.count(), 1)
 
+        with self.subTest('Users which have accounting sessions should not be deleted'):
+            _create_old_users()
+            user = self._create_user(date_joined=now() - timedelta(days=3))
+            RegisteredUser.objects.create(
+                user=user,
+                method='email',
+                is_verified=False,
+            )
+            opts = _RADACCT.copy()
+            opts['unique_id'] = 1
+            opts['username'] = user.username
+            self._create_radius_accounting(**opts)
+            self.assertEqual(User.objects.count(), 4)
+            call_command(
+                'delete_unverified_users',
+            )
+            self.assertEqual(User.objects.count(), 1)
+            self.assertEqual(
+                RadiusAccounting.objects.filter(username=opts['username']).exists(),
+                True,
+            )
+
     @patch.object(
         app_settings,
         'CALLED_STATION_IDS',
