@@ -243,9 +243,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self.assertEqual(User.objects.count(), 1)
             self.assertEqual(
-                RadiusAccounting.objects.filter(
-                    username=User.objects.first().username
-                ).exists(),
+                RadiusAccounting.objects.filter(username=opts['username']).exists(),
                 True,
             )
 
