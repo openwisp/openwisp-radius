@@ -7,7 +7,6 @@ from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
 from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
 from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
@@ -18,6 +17,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
@@ -162,19 +162,10 @@ download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 class UserLanguageMixin(object):
     def save_language(self, user):
-        languages = self._parse_language_header(self.request)
-        settings_languages = list(zip(*settings.LANGUAGES))[0]
-        for language in languages:
-            if language == user.language:
-                break
-            elif language in settings_languages:
-                user.language = language
-                user.save()
-                break
-
-    def _parse_language_header(self, request):
-        lang_header = request.headers.get('Accept-Language', settings.LANGUAGE_CODE)
-        return [language.split(';')[0] for language in lang_header.split(',')]
+        language = get_language_from_request(self.request)
+        if user.language != language:
+            user.language = language
+            user.save(update_fields=['language'])
 
 
 class RadiusTokenMixin(object):
