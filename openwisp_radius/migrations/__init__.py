@@ -1,12 +1,14 @@
 import uuid
 
 import swapper
+from swapper import dependency
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
 from django.db.migrations import swappable_dependency
 
 from ..utils import create_default_groups
+_prefixes = {}
 
 
 def get_swapped_model(apps, app_name, model_name):
@@ -147,6 +149,43 @@ def populate_phonetoken_phone_number(apps, schema_editor):
         phone_token.phone_number = phone_token.user.phone_number
         phone_token.save(update_fields=['phone_number'])
 
+def swappable_setting(app_label, model):
+    """
+    Returns the setting name to use for the given model (i.e. AUTH_USER_MODEL)
+    """
+    prefix = _prefixes.get(app_label, app_label)
+    setting = "{prefix}_{model}_MODEL".format(
+        prefix=prefix.upper(), model=model.upper()
+    )
+    if not hasattr(settings, setting):
+        setattr(settings, setting, join(app_label, model))
 
-def swappable_dependency_latest(value):
-    return (swappable_dependency(value)[0], '__latest__')
+    return setting
+
+def is_swapped(app_label, model):
+    """
+    Returns the value of the swapped setting, or False if the model hasn't
+    been swapped.
+    """
+    default_model = join(app_label, model)
+    setting = swappable_setting(app_label, model)
+    value = getattr(settings, setting, default_model)
+    if value != default_model:
+        return value
+    else:
+        return False
+
+def join(app_label, model):
+    return "{app_label}.{model}".format(
+        app_label=app_label,
+        model=model,
+    )
+
+def get_model_name(app_label, model):
+    return is_swapped(app_label, model) or join(app_label, model)
+
+def dependency(app_label, model, latest=True):
+    dependencies = swappable_dependency(get_model_name(app_label, model))
+    if not latest:
+        return dependencies
+    return dependencies[0], '__latest__'
