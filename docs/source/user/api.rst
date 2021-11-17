@@ -577,8 +577,8 @@ they're not member of, then they would be automatically added as members
 (if registration is enabled for that org). Please refer to
 `"Registering to Multiple Organizations" <#registering-to-multiple-organizations>`_.
 
-This endpoint updates the user language preference from the `Accept-Language` HTTP
-header.
+This endpoint updates the user language preference field according
+to the ``Accept-Language`` HTTP header.
 
 Parameters:
 
@@ -617,8 +617,8 @@ along with the following additional parameter:
 - ``response_code``: string indicating whether the result is successful or not,
   to be used for translation.
 
-This endpoint updates the user language preference from the `Accept-Language` HTTP
-header.
+This endpoint updates the user language preference field according
+to the ``Accept-Language`` HTTP header.
 
 User Radius Sessions
 --------------------
