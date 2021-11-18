@@ -247,6 +247,26 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 True,
             )
 
+        with self.subTest('Staff users should not be deleted'):
+            _create_old_users()
+            user = self._create_user(date_joined=now() - timedelta(days=3))
+            RegisteredUser.objects.create(
+                user=user,
+                method='email',
+                is_verified=False,
+            )
+            user.is_staff = True
+            user.save()
+            self.assertEqual(User.objects.count(), 4)
+            call_command(
+                'delete_unverified_users',
+            )
+            self.assertEqual(User.objects.count(), 1)
+            self.assertEqual(
+                RadiusAccounting.objects.filter(username=opts['username']).exists(),
+                True,
+            )
+
     @patch.object(
         app_settings,
         'CALLED_STATION_IDS',

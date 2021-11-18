@@ -92,6 +92,7 @@ This command deletes unverified users that have been registered for
 more than specified duration and have no associated radius session.
 This feature is needed to delete users who have registered but never
 completed the verification process.
+Staff users will be excluded from the deletion process.
 
 .. code-block:: shell
 
