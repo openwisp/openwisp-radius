@@ -432,14 +432,14 @@ class AccountingView(ListCreateAPIView):
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.create(acct_data)
             headers = self.get_success_headers(serializer.data)
-            self.send_radius_accounting_signal(acct_data)
+            self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None, status=201, headers=headers)
         else:
             serializer = self.get_serializer(instance, data=data, partial=False)
             serializer.is_valid(raise_exception=True)
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.update(instance, acct_data)
-            self.send_radius_accounting_signal(acct_data)
+            self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None)
 
     def _data_to_acct_model(self, valid_data):
