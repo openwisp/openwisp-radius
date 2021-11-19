@@ -9,7 +9,7 @@ Signals
 
 **Arguments**:
 
-- ``sender`` (``str``): the view that sends the signal
+- ``sender`` : instance of ``AccountingView``
 - ``accounting_data`` (``dict``): accounting information
 
 This signal is emitted every time the accounting REST API endpoint
