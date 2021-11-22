@@ -249,21 +249,21 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
         with self.subTest('Staff users should not be deleted'):
             _create_old_users()
-            user = self._create_user(date_joined=now() - timedelta(days=3))
+            user = self._create_user(
+                date_joined=now() - timedelta(days=3), is_staff=True
+            )
             RegisteredUser.objects.create(
                 user=user,
                 method='email',
                 is_verified=False,
             )
-            user.is_staff = True
-            user.save()
             self.assertEqual(User.objects.count(), 4)
             call_command(
                 'delete_unverified_users',
             )
             self.assertEqual(User.objects.count(), 1)
             self.assertEqual(
-                RadiusAccounting.objects.filter(username=user.username).exists(),
+                User.objects.filter(username=user.username, is_staff=True).exists(),
                 True,
             )
 
