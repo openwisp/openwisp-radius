@@ -8,11 +8,11 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
+from openwisp_utils.tests import capture_any_output
 
 from .. import settings as app_settings
 from ..utils import (
@@ -73,6 +73,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         radiusaccounting.framed_ipv6_prefix = 'invalid ipv6_prefix'
         self.assertRaises(ValidationError, radiusaccounting.full_clean)
 
+    @capture_any_output()
     @mock.patch.object(
         app_settings,
         'CALLED_STATION_IDS',
@@ -88,9 +89,6 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
     def test_convert_called_station_id(self):
-        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
-        RadiusAppConfig.connect_signals()
-
         radiusaccounting_options = _RADACCT.copy()
         radiusaccounting_options.update(
             {
@@ -101,6 +99,16 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 'called_station_id': 'AA-AA-AA-AA-AA-0A',
             }
         )
+
+        with self.subTest('Settings disabled'):
+            options = radiusaccounting_options.copy()
+            options['unique_id'] = '113'
+            radiusaccounting = self._create_radius_accounting(**options)
+            radiusaccounting.refresh_from_db()
+            self.assertEqual(radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-0A')
+
+        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
+        RadiusAppConfig.connect_signals()
 
         with self.subTest('CALLED_STATAION_ID not defined for organization'):
             options = radiusaccounting_options.copy()
@@ -117,18 +125,6 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
             self.assertEqual(radiusaccounting.called_station_id, 'EE-EE-EE-EE-EE-EE')
-
-        with self.subTest('Settings disabled'):
-            with override_settings(
-                OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE=False
-            ):
-                options = radiusaccounting_options.copy()
-                options['unique_id'] = '113'
-                radiusaccounting = self._create_radius_accounting(**options)
-                radiusaccounting.refresh_from_db()
-                self.assertEqual(
-                    radiusaccounting.called_station_id, 'AA-AA-AA-AA-AA-0A'
-                )
 
         with self.subTest('Ideal condition'):
             with self._get_openvpn_status_mock():

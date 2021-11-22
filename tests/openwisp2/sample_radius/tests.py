@@ -221,3 +221,4 @@ del BaseTestUtils
 del BaseTestUpgradeFromDjangoFreeradius
 del BaseTestOrganizationRadiusSettings
 del BaseTestAssertionConsumerServiceView
+del BaseTestLoginView
