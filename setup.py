@@ -53,7 +53,7 @@ setup(
         'dj-rest-auth~=2.1.6',
         'django-sendsms~=0.4.0',
         'jsonfield~=3.1.0',
-        'django-private-storage~=2.2',
+        'django-private-storage~=3.0',
         'celery~=5.2.3',
         'django-ipware~=3.0.0',
     ],

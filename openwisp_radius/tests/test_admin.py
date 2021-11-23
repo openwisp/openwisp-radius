@@ -635,14 +635,22 @@ class TestAdmin(
     def _login(self, username='admin', password='tester'):
         self.client.force_login(User.objects.get(username=username))
 
-    def _get_url(self, url, user=False, group=False):
+    def _get_url(self, url, user=False, group=False, model_name=None):
         response = self.client.get(url)
+        autocomplete_url = f'/admin/autocomplete/?app_label={self.app_label}'
         user_url = f'/admin/{self.app_label_users}/user/autocomplete/'
         group_url = f'/admin/{self.app_label}/radiusgroup/autocomplete/'
+        if model_name:
+            autocomplete_url += f'&model_name={model_name}'
+        if user:
+            autocomplete_url += '&field_name=user'
+        if group:
+            autocomplete_url += '&field_name=group'
         if user_url in str(response.content) and user:
             return user_url
         if group_url in str(response.content) and group:
             return group_url
+        return autocomplete_url
 
     def test_radiusbatch_org_user(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
@@ -843,7 +851,9 @@ class TestAdmin(
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiuscheck_add'), user=True
+                reverse(f'admin:{self.app_label}_radiuscheck_add'),
+                user=True,
+                model_name='radiuscheck',
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -871,7 +881,9 @@ class TestAdmin(
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
             url=self._get_url(
-                reverse(f'admin:{self.app_label}_radiusreply_add'), user=True
+                reverse(f'admin:{self.app_label}_radiusreply_add'),
+                user=True,
+                model_name='radiusreply',
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -950,6 +962,7 @@ class TestAdmin(
             url=self._get_url(
                 reverse(f'admin:{self.app_label}_radiususergroup_add'),
                 group=True,
+                model_name='radiususergroup',
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -962,6 +975,7 @@ class TestAdmin(
             url=self._get_url(
                 reverse(f'admin:{self.app_label}_radiususergroup_add'),
                 user=True,
+                model_name='radiususergroup',
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
@@ -981,6 +995,7 @@ class TestAdmin(
             url=self._get_url(
                 reverse(f'admin:{self.app_label}_radiusgroupcheck_add'),
                 group=True,
+                model_name='radiusgroupcheck',
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
@@ -1000,6 +1015,7 @@ class TestAdmin(
             url=self._get_url(
                 reverse(f'admin:{self.app_label}_radiusgroupreply_add'),
                 group=True,
+                model_name='radiusgroupreply',
             ),
             visible=[data['rg1']],
             hidden=[data['rg2']],
