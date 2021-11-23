@@ -146,6 +146,3 @@ def populate_phonetoken_phone_number(apps, schema_editor):
     for phone_token in PhoneToken.objects.all():
         phone_token.phone_number = phone_token.user.phone_number
         phone_token.save(update_fields=['phone_number'])
-
-def swappable_dependency_latest(value):
-    return dependency(*value.split('.'), latest=True)
