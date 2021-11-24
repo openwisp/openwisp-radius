@@ -1,13 +1,12 @@
 import uuid
 
 import swapper
-from swapper import dependency
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
-from django.db.migrations import swappable_dependency
 
 from ..utils import create_default_groups
+
 
 def get_swapped_model(apps, app_name, model_name):
     model_path = swapper.get_model_name(app_name, model_name)
