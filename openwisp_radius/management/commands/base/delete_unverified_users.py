@@ -35,6 +35,7 @@ class BaseDeleteUnverifiedUsersCommand(BaseCommand):
                 date_joined__lt=days,
                 registered_user__isnull=False,
                 registered_user__is_verified=False,
+                is_staff=False,
             )
             .exclude(registered_user__method__in=exclude_methods)
             .iterator()
