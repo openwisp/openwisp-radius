@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from openwisp_radius.utils import load_model
 from openwisp_users.tests.utils import TestOrganizationMixin
+from openwisp_utils.tests import capture_any_output
 
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
@@ -41,6 +42,7 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
 
         return radius_token, ra
 
+    @capture_any_output()
     def test_captive_portal_logout_mock(self):
         url = reverse('captive_portal_logout_mock')
 

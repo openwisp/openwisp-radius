@@ -1,5 +1,7 @@
 from rest_framework.exceptions import APIException
 
+from openwisp_utils.tests import capture_any_output
+
 from ... import settings as app_settings
 from ...api.utils import is_registration_enabled
 from ...utils import load_model
@@ -9,6 +11,7 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 
 
 class TestUtils(BaseTestCase):
+    @capture_any_output()
     def test_is_registration_enabled(self):
         org = self._create_org()
         OrganizationRadiusSettings.objects.create(organization=org)
