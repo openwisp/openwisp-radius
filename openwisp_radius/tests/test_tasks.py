@@ -78,7 +78,7 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertTrue(result.successful())
         self.assertEqual(RadiusPostAuth.objects.filter(username='steve').count(), 0)
 
-    @capture_stdout()
+    @capture_any_output()
     def test_delete_old_radacct(self):
         options = _RADACCT.copy()
         options['stop_time'] = '2017-06-10 11:50:00'

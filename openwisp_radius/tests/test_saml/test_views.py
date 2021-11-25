@@ -12,6 +12,7 @@ from rest_framework.authtoken.models import Token
 
 from openwisp_radius.saml.utils import get_url_or_path
 from openwisp_users.tests.utils import TestOrganizationMixin
+from openwisp_utils.tests import capture_any_output
 
 from .utils import TestSamlMixins
 
@@ -64,6 +65,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
         }
         self.assertDictEqual(query_params, expected_query_params)
 
+    @capture_any_output()
     def test_organization_slug_present(self):
         expected_redirect_url = 'https://captive-portal.example.com'
         org_slug = 'default'
@@ -83,6 +85,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
 
+    @capture_any_output()
     def test_relay_state_relative_path(self):
         expected_redirect_path = '/captive/portal/page'
         org_slug = 'default'
@@ -137,6 +140,7 @@ class TestLoginView(TestOrganizationMixin, TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'Authentication Error')
 
+    @capture_any_output()
     def test_authenticated_user(self):
         user = self._create_user()
         self.client.force_login(user)
