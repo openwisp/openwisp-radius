@@ -267,7 +267,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 True,
             )
 
-
     @capture_any_output()
     @patch.object(
         app_settings,
