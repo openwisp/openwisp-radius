@@ -55,7 +55,8 @@ class TestUtils(BaseTestCase):
         with self.subTest('Test sms verification enabled set to None'):
             org.radius_settings.sms_verification = None
             self.assertEqual(
-                is_sms_verification_enabled(org), app_settings.SMS_VERIFICATION_ENABLED,
+                is_sms_verification_enabled(org),
+                app_settings.SMS_VERIFICATION_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):
