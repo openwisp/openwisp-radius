@@ -29,7 +29,9 @@ class Migration(migrations.Migration):
     """
 
     dependencies = [
-        swapper.dependency(*swapper.split(settings.AUTH_USER_MODEL), latest=True),
+        swapper.dependency(
+            *swapper.split(settings.AUTH_USER_MODEL), version='0004_default_groups'
+        ),
         ('openwisp_radius', '0001_initial_freeradius'),
     ]
 

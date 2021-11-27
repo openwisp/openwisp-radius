@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
     dependencies = [
         swapper.dependency('openwisp_radius', 'RadiusToken'),
         (model_app_label, '0002_initial_openwisp_app'),
-        (users_model_app_label, '0002_default_groups_and_permissions'),
+        (users_model_app_label, '0004_default_groups'),
     ]
 
     operations = [
