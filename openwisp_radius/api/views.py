@@ -160,12 +160,15 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 
-class UserLanguageMixin(object):
-    def save_language(self, user):
+class UserDetailsUpdaterMixin(object):
+    def update_user_details(self, user):
         language = get_language_from_request(self.request)
+        update_fields = ['last_login']
         if user.language != language:
             user.language = language
-            user.save(update_fields=['language'])
+            update_fields.append('language')
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login', 'language'])
 
 
 class RadiusTokenMixin(object):
@@ -227,10 +230,6 @@ class RadiusTokenMixin(object):
             cache.set(f'rt-{user.username}', str(organization.pk), 86400)
         return radius_token
 
-    def update_user_last_login(self, user):
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
-
 
 @method_decorator(
     name='post',
@@ -264,7 +263,7 @@ class ObtainAuthTokenView(
     RadiusTokenMixin,
     BaseObtainAuthToken,
     IDVerificationHelper,
-    UserLanguageMixin,
+    UserDetailsUpdaterMixin,
 ):
     throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
@@ -289,12 +288,11 @@ class ObtainAuthTokenView(
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
         self.get_or_create_radius_token(user, self.organization, renew=renew_required)
-        self.update_user_last_login(user)
+        self.update_user_details(user)
         context = {'view': self, 'request': request}
         serializer = self.serializer_class(instance=token, context=context)
         response = RadiusUserSerializer(user).data
         response.update(serializer.data)
-        self.save_language(user)
         status_code = 200 if user.is_active else 401
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
@@ -345,7 +343,7 @@ class ValidateAuthTokenView(
     RadiusTokenMixin,
     CreateAPIView,
     IDVerificationHelper,
-    UserLanguageMixin,
+    UserDetailsUpdaterMixin,
 ):
     throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
@@ -388,8 +386,7 @@ class ValidateAuthTokenView(
                 token_data['auth_token'] = token_data.pop('key')
                 token_data['response_code'] = 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
                 response.update(token_data)
-                self.update_user_last_login(token.user)
-                self.save_language(token.user)
+                self.update_user_details(token.user)
                 return Response(response, 200)
         return Response(response, 401)
 

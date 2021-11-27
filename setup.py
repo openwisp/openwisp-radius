@@ -39,10 +39,7 @@ setup(
         'swapper @ git+git://github.com/openwisp/django-swappable-models.git@master',
         # Needed for the new authentication backend in openwisp-users
         # TODO: remove when the new version of openwisp-users is released
-        (
-            'openwisp-users @ https://github.com/openwisp/openwisp-users/'
-            'tarball/issue/261-user-preferred-lang'
-        ),
+        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
         # TODO: change this when next point version of openwisp-utils is released
         (
             'openwisp-utils[rest] @'
