@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
@@ -159,6 +160,17 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 
+class UserDetailsUpdaterMixin(object):
+    def update_user_details(self, user):
+        language = get_language_from_request(self.request)
+        update_fields = ['last_login']
+        if user.language != language:
+            user.language = language
+            update_fields.append('language')
+        user.last_login = timezone.now()
+        user.save(update_fields=update_fields)
+
+
 class RadiusTokenMixin(object):
     def _radius_accounting_nas_stop(self, user, organization):
         """
@@ -218,10 +230,6 @@ class RadiusTokenMixin(object):
             cache.set(f'rt-{user.username}', str(organization.pk), 86400)
         return radius_token
 
-    def update_user_last_login(self, user):
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
-
 
 @method_decorator(
     name='post',
@@ -251,7 +259,11 @@ register = RegisterView.as_view()
 
 
 class ObtainAuthTokenView(
-    DispatchOrgMixin, RadiusTokenMixin, BaseObtainAuthToken, IDVerificationHelper
+    DispatchOrgMixin,
+    RadiusTokenMixin,
+    BaseObtainAuthToken,
+    IDVerificationHelper,
+    UserDetailsUpdaterMixin,
 ):
     throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
@@ -276,7 +288,7 @@ class ObtainAuthTokenView(
         user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
         self.get_or_create_radius_token(user, self.organization, renew=renew_required)
-        self.update_user_last_login(user)
+        self.update_user_details(user)
         context = {'view': self, 'request': request}
         serializer = self.serializer_class(instance=token, context=context)
         response = RadiusUserSerializer(user).data
@@ -327,7 +339,11 @@ class ValidateTokenSerializer(serializers.Serializer):
 
 
 class ValidateAuthTokenView(
-    DispatchOrgMixin, RadiusTokenMixin, CreateAPIView, IDVerificationHelper
+    DispatchOrgMixin,
+    RadiusTokenMixin,
+    CreateAPIView,
+    IDVerificationHelper,
+    UserDetailsUpdaterMixin,
 ):
     throttle_scope = 'validate_auth_token'
     serializer_class = ValidateTokenSerializer
@@ -370,7 +386,7 @@ class ValidateAuthTokenView(
                 token_data['auth_token'] = token_data.pop('key')
                 token_data['response_code'] = 'AUTH_TOKEN_VALIDATION_SUCCESSFUL'
                 response.update(token_data)
-                self.update_user_last_login(token.user)
+                self.update_user_details(token.user)
                 return Response(response, 200)
         return Response(response, 401)
 

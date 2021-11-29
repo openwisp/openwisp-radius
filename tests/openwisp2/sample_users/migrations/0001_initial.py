@@ -473,4 +473,13 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+        migrations.AddField(
+            model_name='user',
+            name='language',
+            field=models.CharField(
+                choices=settings.LANGUAGES,
+                default=settings.LANGUAGE_CODE,
+                max_length=8,
+            ),
+        ),
     ]
