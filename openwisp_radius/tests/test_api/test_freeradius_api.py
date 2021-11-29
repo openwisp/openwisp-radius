@@ -4,6 +4,7 @@ import uuid
 from unittest import mock
 
 import swapper
+from celery.exceptions import OperationalError
 from dateutil import parser
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -13,6 +14,7 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from freezegun import freeze_time
 
+from openwisp_radius.api.freeradius_views import AccountingView
 from openwisp_utils.tests import capture_any_output, catch_signal
 
 from ... import registration
@@ -678,7 +680,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
 
     @freeze_time(START_DATE)
-    def test_accounting_start_200(self):
+    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    def test_accounting_start_200(self, send_login_email):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
         data = self._prep_start_acct_data()
@@ -693,7 +696,17 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
 
-    def test_accounting_start_radius_token_201(self):
+    @mock.patch(
+        'openwisp_radius.receivers.send_login_email.delay', side_effect=OperationalError
+    )
+    @mock.patch('openwisp_radius.receivers.logger')
+    def test_celery_broker_unreachable(self, logger, *args):
+        data = self._prep_start_acct_data()
+        radius_accounting_success.send(sender=AccountingView, accounting_data=data)
+        logger.warn.assert_called_with('Celery broker is unreachable')
+
+    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    def test_accounting_start_radius_token_201(self, send_login_email):
         self._get_org_user()
         self._login_and_obtain_auth_token()
         data = self._prep_start_acct_data()
@@ -706,6 +719,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 content_type='application/json',
             )
         handler.assert_called_once()
+        send_login_email.assert_called_once()
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)

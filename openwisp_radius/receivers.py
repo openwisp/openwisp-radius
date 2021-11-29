@@ -1,9 +1,27 @@
 """
 Receiver functions for django signals (eg: post_save)
 """
+import logging
+
+from celery.exceptions import OperationalError
+
+from openwisp_radius.tasks import send_login_email
+
 from . import settings as app_settings
 from . import tasks
 from .utils import create_default_groups, load_model
+
+logger = logging.getLogger(__name__)
+
+
+def send_email_on_new_accounting_handler(sender, accounting_data, **kwargs):
+    stop_time = accounting_data.get('stop_time', None)
+    update_time = accounting_data.get('update_time', None)
+    if stop_time is None and update_time is None:
+        try:
+            send_login_email.delay(accounting_data)
+        except OperationalError:
+            logger.warn('Celery broker is unreachable')
 
 
 def set_default_group_handler(sender, instance, created, **kwargs):

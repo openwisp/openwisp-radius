@@ -128,3 +128,15 @@ msgstr "Passwort zurücksetzen"
 #, python-format
 msgid "Password reset on %s"
 msgstr "Passwort zurückgesetzt auf %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "New session has been started for your account with username:"
+msgstr "Eine neue Sitzung wurde für Ihr Konto mit dem Benutzernamen gestartet:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can manage your account or terminate this session any time by clicking on the button below."
+msgstr "Sie können Ihr Konto verwalten oder diese Sitzung jederzeit beenden, indem Sie auf die Schaltfläche unten klicken."
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Sitzung verwalten"

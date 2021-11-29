@@ -14,9 +14,11 @@ from .receivers import (
     create_default_groups_handler,
     organization_post_save,
     organization_pre_save,
+    send_email_on_new_accounting_handler,
     set_default_group_handler,
 )
 from .registration import register_registration_method
+from .signals import radius_accounting_success
 from .utils import load_model, update_user_related_records
 
 
@@ -62,6 +64,13 @@ class OpenwispRadiusConfig(ApiAppConfig):
         RadiusToken = load_model('RadiusToken')
         RadiusAccounting = load_model('RadiusAccounting')
         User = get_user_model()
+        from openwisp_radius.api.freeradius_views import AccountingView
+
+        radius_accounting_success.connect(
+            send_email_on_new_accounting_handler,
+            sender=AccountingView,
+            dispatch_uid='send_email_on_new_accounting',
+        )
 
         post_save.connect(
             create_default_groups_handler,

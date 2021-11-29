@@ -38,7 +38,10 @@ setup(
         'django>=3.0,<3.2',
         # Needed for the new authentication backend in openwisp-users
         # TODO: remove when the new version of openwisp-users is released
-        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
+        (
+            'openwisp-users @ https://github.com/openwisp/openwisp-users/'
+            'tarball/added-one-time-token'
+        ),
         # TODO: change this when next point version of openwisp-utils is released
         (
             'openwisp-utils[rest] @'

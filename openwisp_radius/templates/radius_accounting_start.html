@@ -1,0 +1,5 @@
+{% load i18n %}{% load l10n %}
+<div class="msg">
+<p>{% trans "New session has been started for your account with username:" %} {{ user.get_username }}</p>
+<p>{% trans "You can manage your account or terminate this session any time by clicking on the button below." %}</p>
+</div>

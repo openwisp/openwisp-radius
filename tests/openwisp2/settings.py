@@ -56,6 +56,7 @@ LOGIN_REDIRECT_URL = 'admin:index'
 AUTHENTICATION_BACKENDS = (
     'openwisp_users.backends.UsersAuthenticationBackend',
     'djangosaml2.backends.Saml2Backend',
+    'sesame.backends.ModelBackend',
 )
 
 AUTH_USER_MODEL = 'openwisp_users.User'
@@ -73,6 +74,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'sesame.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'djangosaml2.middleware.SamlSessionMiddleware',

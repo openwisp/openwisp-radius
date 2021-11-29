@@ -126,3 +126,15 @@ msgstr "Resetta la password"
 #, python-format
 msgid "Password reset on %s"
 msgstr "Reimposta password su %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "New session has been started for your account with username:"
+msgstr "È stata avviata una nuova sessione per il tuo account con nome utente:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can manage your account or terminate this session any time by clicking on the button below."
+msgstr "Puoi gestire il tuo account o terminare questa sessione in qualsiasi momento facendo clic sul pulsante in basso."
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Gestisci sessione"

@@ -166,6 +166,8 @@ _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
 )
+_LOGIN_URL_HELP_TEXT = _('Enter the url where users can log in to the wifi service')
+_STATUS_URL_HELP_TEXT = _('Enter the url where users can log out from the wifi service')
 
 
 class AutoUsernameMixin(object):
@@ -1130,6 +1132,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         default=True,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
+    login_url = models.URLField(null=True, blank=True, help_text=_LOGIN_URL_HELP_TEXT)
+    status_url = models.URLField(null=True, blank=True, help_text=_STATUS_URL_HELP_TEXT)
 
     class Meta:
         verbose_name = _('Organization radius settings')
