@@ -9,9 +9,9 @@ Signals
 
 **Arguments**:
 
-- ``sender`` : instance of ``AccountingView``
+- ``sender`` : class of ``AccountingView`` instance.
 - ``accounting_data`` (``dict``): accounting information
-- ``view``: view object which calls the signal
+- ``view``: instance of ``AccountingView``
 
 This signal is emitted every time the accounting REST API endpoint
 completes successfully, just before the response is returned.
