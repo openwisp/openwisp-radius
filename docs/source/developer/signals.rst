@@ -9,7 +9,7 @@ Signals
 
 **Arguments**:
 
-- ``sender`` : class of ``AccountingView`` instance.
+- ``sender`` : ``AccountingView``
 - ``accounting_data`` (``dict``): accounting information
 - ``view``: instance of ``AccountingView``
 
