@@ -685,6 +685,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with catch_signal(radius_accounting_success) as handler:
             response = self.post_json(data)
         handler.assert_called_once()
+        view = handler.mock_calls[0].kwargs.get('view')
+        self.assertTrue(hasattr(view, 'request'))
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)

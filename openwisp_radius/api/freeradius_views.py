@@ -449,7 +449,11 @@ class AccountingView(ListCreateAPIView):
         return valid_data
 
     def send_radius_accounting_signal(self, accounting_data):
-        radius_accounting_success.send(sender=self, accounting_data=accounting_data)
+        radius_accounting_success.send(
+            sender=self.__class__,
+            accounting_data=accounting_data,
+            view=self,
+        )
 
 
 accounting = AccountingView.as_view()
