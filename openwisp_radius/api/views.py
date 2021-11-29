@@ -168,7 +168,7 @@ class UserDetailsUpdaterMixin(object):
             user.language = language
             update_fields.append('language')
         user.last_login = timezone.now()
-        user.save(update_fields=['last_login', 'language'])
+        user.save(update_fields=update_fields)
 
 
 class RadiusTokenMixin(object):
