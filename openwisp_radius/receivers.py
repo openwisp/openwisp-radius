@@ -14,10 +14,11 @@ from .utils import create_default_groups, load_model
 logger = logging.getLogger(__name__)
 
 
-def send_email_on_new_accounting_handler(sender, accounting_data, **kwargs):
-    stop_time = accounting_data.get('stop_time', None)
-    update_time = accounting_data.get('update_time', None)
-    if stop_time is None and update_time is None:
+def send_email_on_new_accounting_handler(sender, accounting_data, view, **kwargs):
+    request = view.request
+    accounting_data['organization'] = request.auth
+    status_type = request.data.get('status_type')
+    if status_type == 'Start':
         try:
             send_login_email.delay(accounting_data)
         except OperationalError:
