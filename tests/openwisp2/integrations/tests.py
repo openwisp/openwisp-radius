@@ -1,3 +1,4 @@
+import uuid
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -73,14 +74,20 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             self.assertEqual(response.status_code, 200)
 
         radius_token = self._create_rad_token()
-        response = self.client.post(
-            reverse('captive_portal_login_mock'), {'auth_pass': radius_token.key}
+        id_ = uuid.uuid4().hex
+        ra = RadiusAccounting(
+            username=radius_token.user.username,
+            organization_id=radius_token.organization_id,
+            unique_id=id_,
+            session_id=id_,
+            nas_ip_address='127.0.0.1',
         )
-        ra = RadiusAccounting.objects.first()
+        ra.full_clean()
+        ra.save()
         with self.subTest('logout_id matches, RadiusAccounting closed'):
             assert radius_token
             assert ra
-            response = self.client.post(url, {'logout_id': ra.session_id})
+            response = self.client.post(url, {'logout_id': id_})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(RadiusToken.objects.count(), 1)
             self.assertEqual(RadiusAccounting.objects.count(), 1)

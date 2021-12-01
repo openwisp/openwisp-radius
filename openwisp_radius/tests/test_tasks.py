@@ -117,7 +117,7 @@ class TestCelery(FileMixin, BaseTestCase):
         with self.subTest('do not send email if username is invalid'):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.warn.assert_called_with(
+            logger.warning.assert_called_with(
                 'user with {} does not exists'.format(accounting_data.get('username'))
             )
 
@@ -130,7 +130,7 @@ class TestCelery(FileMixin, BaseTestCase):
         with self.subTest('do not send mail if user is not a member of organization'):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.warn.assert_called_with(
+            logger.warning.assert_called_with(
                 f'{user.username} is not the member of {organization.name}'
             )
             translation_activate.assert_not_called()
@@ -163,13 +163,12 @@ class TestCelery(FileMixin, BaseTestCase):
                 '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
             )
             self.assertIn(
-                'New session has been started for your account with username:'
-                f' {user.username}',
+                'A new session has been started for your account:' f' {user.username}',
                 ' '.join(email.alternatives[0][0].split()),
             )
             self.assertIn(
-                'You can manage your account or terminate this'
-                ' session any time by clicking on the button below.',
+                'You can review your session to find out how much time'
+                ' and/or traffic has been used or you can terminate the session',
                 ' '.join(email.alternatives[0][0].split()),
             )
             translation_activate.assert_called_with(user.language)

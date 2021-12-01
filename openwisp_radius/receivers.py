@@ -22,7 +22,7 @@ def send_email_on_new_accounting_handler(sender, accounting_data, view, **kwargs
         try:
             send_login_email.delay(accounting_data)
         except OperationalError:
-            logger.warn('Celery broker is unreachable')
+            logger.warning('Celery broker is unreachable')
 
 
 def set_default_group_handler(sender, instance, created, **kwargs):

@@ -14,7 +14,6 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from freezegun import freeze_time
 
-from openwisp_radius.api.freeradius_views import AccountingView
 from openwisp_utils.tests import capture_any_output, catch_signal
 
 from ... import registration
@@ -702,8 +701,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @mock.patch('openwisp_radius.receivers.logger')
     def test_celery_broker_unreachable(self, logger, *args):
         data = self._prep_start_acct_data()
-        radius_accounting_success.send(sender=AccountingView, accounting_data=data)
-        logger.warn.assert_called_with('Celery broker is unreachable')
+        self.post_json(data)
+        logger.warning.assert_called_with('Celery broker is unreachable')
 
     @mock.patch('openwisp_radius.receivers.send_login_email.delay')
     def test_accounting_start_radius_token_201(self, send_login_email):

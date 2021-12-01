@@ -79,8 +79,8 @@ def captive_portal_logout(request):
                 session_id=session_id,
                 username=ra.username,
                 terminate_cause='User-Request',
-                unique_id=session_id,
                 nas_ip_address='127.0.0.1',
+                unique_id=session_id,
             )
             post_accounting_data(request, data)
             logger.info(
