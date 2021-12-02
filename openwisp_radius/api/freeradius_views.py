@@ -23,6 +23,7 @@ from .. import registration
 from .. import settings as app_settings
 from ..counters.base import BaseCounter
 from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..signals import radius_accounting_success
 from ..utils import load_model
 from .serializers import (
     AuthorizeSerializer,
@@ -431,12 +432,14 @@ class AccountingView(ListCreateAPIView):
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.create(acct_data)
             headers = self.get_success_headers(serializer.data)
+            self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None, status=201, headers=headers)
         else:
             serializer = self.get_serializer(instance, data=data, partial=False)
             serializer.is_valid(raise_exception=True)
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.update(instance, acct_data)
+            self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None)
 
     def _data_to_acct_model(self, valid_data):
@@ -444,6 +447,13 @@ class AccountingView(ListCreateAPIView):
         valid_data.pop('status_type', None)
         valid_data['organization'] = acct_org
         return valid_data
+
+    def send_radius_accounting_signal(self, accounting_data):
+        radius_accounting_success.send(
+            sender=self.__class__,
+            accounting_data=accounting_data,
+            view=self,
+        )
 
 
 accounting = AccountingView.as_view()

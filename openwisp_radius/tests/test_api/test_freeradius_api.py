@@ -13,12 +13,13 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from freezegun import freeze_time
 
-from openwisp_utils.tests import capture_any_output
+from openwisp_utils.tests import capture_any_output, catch_signal
 
 from ... import registration
 from ... import settings as app_settings
 from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
+from ...signals import radius_accounting_success
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase
 
@@ -681,7 +682,11 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
         data = self._prep_start_acct_data()
-        response = self.post_json(data)
+        with catch_signal(radius_accounting_success) as handler:
+            response = self.post_json(data)
+        handler.assert_called_once()
+        view = handler.mock_calls[0].kwargs.get('view')
+        self.assertTrue(hasattr(view, 'request'))
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
@@ -694,11 +699,13 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._prep_start_acct_data()
         data.update(username='tester')
         self.assertEqual(RadiusAccounting.objects.count(), 0)
-        response = self.client.post(
-            self._acct_url,
-            data=json.dumps(data),
-            content_type='application/json',
-        )
+        with catch_signal(radius_accounting_success) as handler:
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(data),
+                content_type='application/json',
+            )
+        handler.assert_called_once()
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)

@@ -299,6 +299,7 @@ if os.environ.get('SAMPLE_APP', False):
     OPENWISP_USERS_ORGANIZATION_MODEL = 'sample_users.Organization'
     OPENWISP_USERS_ORGANIZATIONUSER_MODEL = 'sample_users.OrganizationUser'
     OPENWISP_USERS_ORGANIZATIONOWNER_MODEL = 'sample_users.OrganizationOwner'
+    OPENWISP_USERS_ORGANIZATIONINVITATION_MODEL = 'sample_users.OrganizationInvitation'
     OPENWISP_RADIUS_RADIUSREPLY_MODEL = 'sample_radius.RadiusReply'
     OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = 'sample_radius.RadiusGroupReply'
     OPENWISP_RADIUS_RADIUSCHECK_MODEL = 'sample_radius.RadiusCheck'

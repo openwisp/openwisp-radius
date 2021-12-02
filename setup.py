@@ -36,7 +36,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'django>=3.0,<3.2',
-        'swapper~=1.2.0',
         # Needed for the new authentication backend in openwisp-users
         # TODO: remove when the new version of openwisp-users is released
         'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
