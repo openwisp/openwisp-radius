@@ -463,6 +463,14 @@ then edit a specific organization and scroll down to
     if all the organization use the same configuration, we recommend
     changing the global setting.
 
+``OPENWISP_RADIUS_SMS_VERIFICATION_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Indicates whether users who sign up should be required to verify their mobile phone number via SMS. 
+This can be overridden for each organization separately via the admin interface.
+
 ``OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

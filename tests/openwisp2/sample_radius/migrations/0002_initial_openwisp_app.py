@@ -524,12 +524,14 @@ class Migration(migrations.Migration):
                 (
                     'sms_verification',
                     models.BooleanField(
-                        default=False,
+                        blank=True,
+                        default=None,
                         help_text=(
                             'whether users who sign up should be '
                             'required to verify their mobile '
                             'phone number via SMS'
                         ),
+                        null=True,
                     ),
                 ),
                 (

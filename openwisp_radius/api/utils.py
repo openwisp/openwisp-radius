@@ -43,7 +43,7 @@ class IDVerificationHelper(object):
 
 def is_sms_verification_enabled(org):
     try:
-        return org.radius_settings.sms_verification
+        return org.radius_settings.get_sms_verification()
     except ObjectDoesNotExist:
         logger.exception(
             f'Got exception while accessing radius_settings for {org.name}'

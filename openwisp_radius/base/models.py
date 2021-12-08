@@ -158,6 +158,10 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
 _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
+_SMS_VERIFICATION_HELP_TEXT = _(
+    'Whether users who sign up should be required to verify their mobile '
+    'phone number via SMS'
+)
 _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
@@ -1051,12 +1055,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     )
     token = KeyField(max_length=32)
     sms_verification = models.BooleanField(
-        default=app_settings.SMS_DEFAULT_VERIFICATION,
-        help_text=_(
-            'whether users who sign up should '
-            'be required to verify their mobile '
-            'phone number via SMS'
-        ),
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_SMS_VERIFICATION_HELP_TEXT,
     )
     needs_identity_verification = models.BooleanField(
         null=True,
@@ -1156,8 +1158,13 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             return app_settings.REGISTRATION_API_ENABLED
         return self.registration_enabled
 
+    def get_sms_verification(self):
+        if self.sms_verification is None:
+            return app_settings.SMS_VERIFICATION_ENABLED
+        return self.sms_verification
+
     def clean(self):
-        if self.sms_verification and not self.sms_sender:
+        if self.get_sms_verification() and not self.sms_sender:
             raise ValidationError(
                 {
                     'sms_sender': _(

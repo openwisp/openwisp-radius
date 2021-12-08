@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
             model_name='organizationradiussettings',
             name='sms_verification',
             field=models.BooleanField(
-                default=app_settings.SMS_DEFAULT_VERIFICATION,
+                default=app_settings.SMS_VERIFICATION_ENABLED,
                 help_text=(
                     'whether users who sign up should be required to '
                     'verify their mobile phone number via SMS'
