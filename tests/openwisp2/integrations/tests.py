@@ -3,6 +3,7 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -60,7 +61,7 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             self.assertIsNone(ra.stop_time)
             self.assertEqual(ra.username, user.username)
 
-        return radius_token, ra
+        cache.delete(f'rt-{radius_token.user.username}')
 
     @capture_any_output()
     @mock.patch('openwisp2.views.requests.post', mock_post_request)
@@ -74,6 +75,9 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             self.assertEqual(response.status_code, 200)
 
         radius_token = self._create_rad_token()
+        user = radius_token.user
+        user.username = 'tester1'
+        user.save()
         id_ = uuid.uuid4().hex
         ra = RadiusAccounting(
             username=radius_token.user.username,
@@ -94,3 +98,4 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             ra.refresh_from_db()
             self.assertIsNotNone(ra.stop_time)
             self.assertEqual(ra.terminate_cause, 'User-Request')
+        cache.delete(f'rt-{radius_token.user.username}')

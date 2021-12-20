@@ -3,6 +3,7 @@ from unittest import mock
 
 from celery import Celery
 from celery.contrib.testing.worker import start_worker
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail, management
 from django.utils.timezone import now
@@ -107,12 +108,10 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 0)
 
     @mock.patch('openwisp_radius.tasks.logger')
-    @mock.patch('openwisp_radius.tasks.activate')
+    @mock.patch('django.utils.translation.activate')
     @capture_stdout()
     def test_send_login_email(self, translation_activate, logger):
-
         accounting_data = _RADACCT.copy()
-
         total_mails = len(mail.outbox)
         with self.subTest('do not send email if username is invalid'):
             tasks.send_login_email.delay(accounting_data)
@@ -173,6 +172,8 @@ class TestCelery(FileMixin, BaseTestCase):
             )
             translation_activate.assert_called_with(user.language)
 
+        translation_activate.reset_mock()
+
         with self.subTest('it should send mail in user language preference'):
             user.language = 'it'
             user.save(update_fields=['language'])
@@ -181,4 +182,8 @@ class TestCelery(FileMixin, BaseTestCase):
                 ''.join(email.alternatives[0][0].splitlines()),
                 '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
             )
-            translation_activate.assert_called_with(user.language)
+            self.assertEqual(translation_activate.call_args_list[0][0][0], 'it')
+            self.assertEqual(
+                translation_activate.call_args_list[1][0][0],
+                getattr(settings, 'LANGUAGE_CODE'),
+            )
