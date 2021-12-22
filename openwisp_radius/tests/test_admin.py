@@ -297,16 +297,6 @@ class TestAdmin(
         self.assertContains(response, 'errors')
         self.assertContains(response, 'The secret must contain')
 
-    def test_radiuscheck_enable_disable_action(self):
-        self._create_radius_check(**self._RADCHECK_ENTRY)
-        checks = RadiusCheck.objects.all().values_list('pk', flat=True)
-        change_url = reverse(f'admin:{self.app_label}_radiuscheck_changelist')
-        data = {'action': 'enable_action', '_selected_action': checks}
-        self.client.post(change_url, data, follow=True)
-        data = {'action': 'disable_action', '_selected_action': checks}
-        self.client.post(change_url, data, follow=True)
-        self.assertEqual(RadiusCheck.objects.filter(is_active=True).count(), 0)
-
     def test_radiuscheck_filter_duplicates_username(self):
         self._create_radius_check(**self._RADCHECK_ENTRY)
         self._create_radius_check(**self._RADCHECK_ENTRY)
@@ -323,22 +313,6 @@ class TestAdmin(
         url = (
             reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?duplicates=value'
-        )
-        resp = self.client.get(url, follow=True)
-        self.assertEqual(resp.status_code, 200)
-
-    def test_radiuscheck_filter_expired(self):
-        url = (
-            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
-            + '?expired=expired'
-        )
-        resp = self.client.get(url, follow=True)
-        self.assertEqual(resp.status_code, 200)
-
-    def test_radiuscheck_filter_not_expired(self):
-        url = (
-            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
-            + '?expired=not_expired'
         )
         resp = self.client.get(url, follow=True)
         self.assertEqual(resp.status_code, 200)

@@ -305,24 +305,6 @@ and add the following code to configure the database:
 Make sure the database by the name ``<db_name>`` is created and also the
 role ``<db_user>`` with ``<db_password>`` as password.
 
-Radius Checks: ``is_active`` & ``valid_until``
-----------------------------------------------
-
-openwisp-radius provides the possibility to extend the freeradius
-query in order to introduce ``is_active`` and ``valid_until`` checks.
-
-An example using MySQL is:
-
-.. code-block:: ini
-
-    # /etc/freeradius/mods-config/sql/main/mysql/queries.conf
-    authorize_check_query = "SELECT id, username, attribute, value, op \
-                             FROM ${authcheck_table} \
-                             WHERE username = '%{SQL-User-Name}' \
-                             AND is_active = TRUE \
-                             AND valid_until >= CURDATE() \
-                             ORDER BY id"
-
 Using Radius Checks for Authorization Information
 -------------------------------------------------
 

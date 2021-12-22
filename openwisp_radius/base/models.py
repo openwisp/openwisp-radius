@@ -240,12 +240,6 @@ class AbstractRadiusCheckQueryset(models.query.QuerySet):
             pks.extend([accounts.pk for accounts in self.filter(value=i['value'])])
         return self.filter(pk__in=pks)
 
-    def filter_expired(self):
-        return self.filter(valid_until__lt=now())
-
-    def filter_not_expired(self):
-        return self.filter(valid_until__gte=now())
-
 
 def _encode_secret(attribute, new_value=None):
     if attribute == 'NT-Password':
@@ -306,20 +300,11 @@ class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel)
     attribute = models.CharField(
         verbose_name=_('attribute'),
         max_length=64,
-        choices=[
-            (i, i)
-            for i in RADCHECK_ATTRIBUTE_TYPES
-            if i not in app_settings.DISABLED_SECRET_FORMATS
-        ],
-        default=app_settings.DEFAULT_SECRET_FORMAT,
     )
     # the foreign key is not part of the standard freeradius schema
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
-    # additional fields to enable more granular checks
-    is_active = models.BooleanField(default=True)
-    valid_until = models.DateTimeField(null=True, blank=True)
     # internal notes
     notes = models.TextField(null=True, blank=True)
     # custom manager
