@@ -24,7 +24,6 @@ from . import settings as app_settings
 from .base.admin_actions import disable_action, enable_action
 from .base.admin_filters import (
     DuplicateListFilter,
-    ExpiredListFilter,
     RegisteredUserFilter,
 )
 from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
@@ -86,8 +85,6 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'attribute',
         'op',
         'value',
-        'is_active',
-        'valid_until',
         'created',
         'modified',
     ]
@@ -95,10 +92,8 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     list_filter = [
         DuplicateListFilter,
         ('organization', MultitenantOrgFilter),
-        ExpiredListFilter,
         'created',
         'modified',
-        'valid_until',
     ]
     readonly_fields = ['value']
     form = RadiusCheckForm
@@ -111,8 +106,6 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'attribute',
         'value',
         'new_value',
-        'is_active',
-        'valid_until',
         'notes',
         'created',
         'modified',
