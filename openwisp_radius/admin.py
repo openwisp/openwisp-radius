@@ -22,10 +22,7 @@ from openwisp_utils.admin import (
 
 from . import settings as app_settings
 from .base.admin_actions import disable_action, enable_action
-from .base.admin_filters import (
-    DuplicateListFilter,
-    RegisteredUserFilter,
-)
+from .base.admin_filters import DuplicateListFilter, RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
 from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
