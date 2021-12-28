@@ -405,6 +405,33 @@ class Migration(migrations.Migration):
             },
             bases=(organizations.base.UnicodeMixin, models.Model),
         ),
+        migrations.AddField(
+            model_name='user',
+            name='language',
+            field=models.CharField(
+                choices=settings.LANGUAGES,
+                default=settings.LANGUAGE_CODE,
+                max_length=8,
+            ),
+        ),
+        migrations.AlterField(
+            model_name='organization',
+            name='users',
+            field=models.ManyToManyField(
+                related_name='%(app_label)s_%(class)s',
+                through='sample_users.OrganizationUser',
+                to=settings.AUTH_USER_MODEL,
+            ),
+        ),
+        migrations.AlterField(
+            model_name='organizationuser',
+            name='user',
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='%(app_label)s_%(class)s',
+                to='sample_users.user',
+            ),
+        ),
         migrations.CreateModel(
             name='OrganizationInvitation',
             fields=[
@@ -422,8 +449,8 @@ class Migration(migrations.Migration):
                     'invitee_identifier',
                     models.CharField(
                         help_text=(
-                            'The contact identifier for the invitee, email,'
-                            ' phone number, social media handle, etc.'
+                            'The contact identifier for the invitee,'
+                            ' email, phone number, social media handle, etc.'
                         ),
                         max_length=1000,
                     ),
@@ -444,10 +471,8 @@ class Migration(migrations.Migration):
                     'invited_by',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name=(
-                            'sample_users_organizationinvitation_sent_invitations'
-                        ),
-                        to=settings.AUTH_USER_MODEL,
+                        related_name='%(app_label)s_%(class)s_sent_invitations',
+                        to='sample_users.user',
                     ),
                 ),
                 (
@@ -456,8 +481,8 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='sample_users_organizationinvitation_invitations',
-                        to=settings.AUTH_USER_MODEL,
+                        related_name='%(app_label)s_%(class)s_invitations',
+                        to='sample_users.user',
                     ),
                 ),
                 (
@@ -472,14 +497,5 @@ class Migration(migrations.Migration):
             options={
                 'abstract': False,
             },
-        ),
-        migrations.AddField(
-            model_name='user',
-            name='language',
-            field=models.CharField(
-                choices=settings.LANGUAGES,
-                default=settings.LANGUAGE_CODE,
-                max_length=8,
-            ),
         ),
     ]
