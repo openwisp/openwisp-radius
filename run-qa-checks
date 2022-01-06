@@ -24,6 +24,12 @@ echo 'Check JavaScript Linting'
 jslint ./openwisp_radius/static/openwisp-radius/js/*.js
 
 echo ''
+echo 'Compiling translations'
+cd openwisp_radius
+django-admin compilemessages
+cd ..
+
+echo ''
 echo 'Running checks for openwisp-radius'
 openwisp-qa-check \
         --migration-path "./openwisp_radius/migrations"
