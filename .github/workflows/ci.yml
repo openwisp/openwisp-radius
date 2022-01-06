@@ -33,7 +33,7 @@ jobs:
       - name: Install system libraries
         run: |
           sudo apt update
-          sudo apt-get -qq -y install xmlsec1
+          sudo apt-get -qq -y install xmlsec1 gettext
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
