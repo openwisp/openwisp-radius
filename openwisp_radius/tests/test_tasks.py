@@ -1,9 +1,11 @@
 from datetime import timedelta
+from unittest import mock
 
 from celery import Celery
 from celery.contrib.testing.worker import start_worker
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core import management
+from django.core import mail, management
 from django.utils.timezone import now
 
 from openwisp_radius import tasks
@@ -104,3 +106,84 @@ class TestCelery(FileMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 3)
         tasks.delete_unverified_users.delay(older_than_days=2)
         self.assertEqual(User.objects.count(), 0)
+
+    @mock.patch('openwisp_radius.tasks.logger')
+    @mock.patch('django.utils.translation.activate')
+    @capture_stdout()
+    def test_send_login_email(self, translation_activate, logger):
+        accounting_data = _RADACCT.copy()
+        total_mails = len(mail.outbox)
+        with self.subTest('do not send email if username is invalid'):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            logger.warning.assert_called_with(
+                'user with {} does not exists'.format(accounting_data.get('username'))
+            )
+
+        logger.reset_mock()
+        user = self._get_user()
+        accounting_data['username'] = user.username
+        organization = self._get_org()
+        accounting_data['organization'] = organization.id
+
+        with self.subTest('do not send mail if user is not a member of organization'):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            logger.warning.assert_called_with(
+                f'{user.username} is not the member of {organization.name}'
+            )
+            translation_activate.assert_not_called()
+
+        logger.reset_mock()
+        self._create_org_user()
+
+        with self.subTest(
+            'do not send mail if login_url does not exists for the organization'
+        ):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            logger.error.assert_called_with(
+                f'login_url is not defined for {organization.name} organization'
+            )
+            translation_activate.assert_not_called()
+
+        radius_settings = organization.radius_settings
+        radius_settings.login_url = 'https://wifi.openwisp.org/default/login/'
+        radius_settings.save(update_fields=['login_url'])
+
+        with self.subTest(
+            'it should send mail if login_url exists for the organization'
+        ):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails + 1)
+            email = mail.outbox.pop()
+            self.assertRegex(
+                ''.join(email.alternatives[0][0].splitlines()),
+                '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
+            )
+            self.assertIn(
+                'A new session has been started for your account:' f' {user.username}',
+                ' '.join(email.alternatives[0][0].split()),
+            )
+            self.assertIn(
+                'You can review your session to find out how much time'
+                ' and/or traffic has been used or you can terminate the session',
+                ' '.join(email.alternatives[0][0].split()),
+            )
+            translation_activate.assert_called_with(user.language)
+
+        translation_activate.reset_mock()
+
+        with self.subTest('it should send mail in user language preference'):
+            user.language = 'it'
+            user.save(update_fields=['language'])
+            tasks.send_login_email.delay(accounting_data)
+            self.assertRegex(
+                ''.join(email.alternatives[0][0].splitlines()),
+                '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
+            )
+            self.assertEqual(translation_activate.call_args_list[0][0][0], 'it')
+            self.assertEqual(
+                translation_activate.call_args_list[1][0][0],
+                getattr(settings, 'LANGUAGE_CODE'),
+            )

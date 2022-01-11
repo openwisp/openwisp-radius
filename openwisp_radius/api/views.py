@@ -41,7 +41,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
-from openwisp_users.api.authentication import BearerAuthentication
+from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 
@@ -268,7 +268,7 @@ class ObtainAuthTokenView(
     throttle_scope = 'obtain_auth_token'
     serializer_class = rest_auth_settings.TokenSerializer
     auth_serializer_class = AuthTokenSerializer
-    authentication_classes = []
+    authentication_classes = [SesameAuthentication]
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -281,11 +281,13 @@ class ObtainAuthTokenView(
         """
         Obtain the user radius token required for authentication in APIs.
         """
-        serializer = self.auth_serializer_class(
-            data=request.data, context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        user = self.get_user(serializer, *args, **kwargs)
+        user = request.user
+        if user.is_anonymous:
+            serializer = self.auth_serializer_class(
+                data=request.data, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            user = self.get_user(serializer, *args, **kwargs)
         token, _ = UserToken.objects.get_or_create(user=user)
         self.get_or_create_radius_token(user, self.organization, renew=renew_required)
         self.update_user_details(user)

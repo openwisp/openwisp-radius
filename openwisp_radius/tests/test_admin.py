@@ -1006,7 +1006,7 @@ class TestAdmin(
         )
 
     @capture_any_output()
-    def test_radiustoken_delete_queryset(self):
+    def test_radiustoken_delete_queryset(self, *args, **kwargs):
         # Create & check radius token works
         self._get_org_user()
         radtoken, _ = RadiusToken.objects.get_or_create(

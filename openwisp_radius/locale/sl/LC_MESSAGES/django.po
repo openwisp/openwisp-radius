@@ -125,3 +125,19 @@ msgstr "Ponastavitev gesla"
 #, python-format
 msgid "Password reset on %s"
 msgstr "Ponastavitev gesla na %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "A new session has been started for your account:"
+msgstr "Za vaš račun se je začela nova seja:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
+msgstr "Svojo sejo lahko pregledate in ugotovite, koliko časa in/ali prometa je bilo porabljenega, ali pa lahko kadar koli prekinete sejo s klikom na spodnji gumb."
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Upravljanje seje"
+
+#: openwisp_radius/tasks.py: 80
+msgid "New WiFi session started"
+msgstr "Začela se je nova seja WiFi"
