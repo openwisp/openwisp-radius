@@ -40,7 +40,7 @@ setup(
         # TODO: remove when the new version of openwisp-users is released
         (
             'openwisp-users @ https://github.com/openwisp/openwisp-users/'
-            'tarball/added-one-time-token'
+            'tarball/master'
         ),
         # TODO: change this when next point version of openwisp-utils is released
         (
