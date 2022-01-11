@@ -183,8 +183,8 @@ AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'America/Asuncion'  # used to replicate timezone related bug, do not change!
-USE_I18N = False
-USE_L10N = False
+USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
