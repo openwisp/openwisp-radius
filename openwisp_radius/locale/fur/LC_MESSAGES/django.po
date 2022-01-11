@@ -128,12 +128,12 @@ msgid "Password reset on %s"
 msgstr "Reimposta password su %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
-msgid "A new session has been started for your account: "
-msgstr "È stata avviata una nuova sessione per il tuo account:"
+msgid "A new session has been started for your account:"
+msgstr "È iniziata una nuova sessione per il tuo account:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
-msgstr "Puoi rivedere la tua sessione per scoprire quanto tempo e/o traffico è stato utilizzato oppure puoi terminare la sessione in qualsiasi momento facendo clic sul pulsante in basso."
+msgstr "Puoi monitorare il consumo di tempo e traffico della tua sessione o terminare la sessione in qualsiasi momento cliccando sul collegamento seguente."
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"

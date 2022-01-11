@@ -123,7 +123,7 @@ msgid "Password reset on %s"
 msgstr "Сброс пароля %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
-msgid "A new session has been started for your account: "
+msgid "A new session has been started for your account:"
 msgstr "Для вашей учетной записи запущен новый сеанс:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
