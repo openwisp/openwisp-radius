@@ -545,20 +545,6 @@ class PasswordResetConfirmView(
 password_reset_confirm = PasswordResetConfirmView.as_view()
 
 
-@method_decorator(
-    name='post',
-    decorator=swagger_auto_schema(
-        operation_description=(
-            """
-            **Requires the user auth token (Bearer Token).**
-            Used for SMS verification, sends a code via SMS to the
-            phone number of the user.
-            """
-        ),
-        request_body=no_body,
-        responses={201: ''},
-    ),
-)
 class CreatePhoneTokenView(
     ErrorDictMixin, BaseThrottle, DispatchOrgMixin, CreateAPIView
 ):
@@ -568,6 +554,21 @@ class CreatePhoneTokenView(
         IsSmsVerificationEnabled,
         IsAuthenticated,
     )
+
+    @swagger_auto_schema(
+        operation_description=(
+            """
+            **Requires the user auth token (Bearer Token).**
+            Used for SMS verification, sends a code via SMS to the
+            phone number of the user.
+            """
+        ),
+        request_body=no_body,
+        responses={201: ''},
+    )
+    def post(self, request, *args, **kwargs):
+        # Required for drf-yasg
+        return super().post(request, *args, **kwargs)
 
     def create(self, *args, **kwargs):
         request = self.request
@@ -646,9 +647,15 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
 validate_phone_token = ValidatePhoneTokenView.as_view()
 
 
-@method_decorator(
-    name='post',
-    decorator=swagger_auto_schema(
+class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
+    authentication_classes = (BearerAuthentication,)
+    permission_classes = (
+        IsSmsVerificationEnabled,
+        IsAuthenticated,
+    )
+    serializer_class = ChangePhoneNumberSerializer
+
+    @swagger_auto_schema(
         operation_description=(
             """
             **Requires the user auth token (Bearer Token).**
@@ -657,15 +664,10 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
             """
         ),
         responses={200: ''},
-    ),
-)
-class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
-    authentication_classes = (BearerAuthentication,)
-    permission_classes = (
-        IsSmsVerificationEnabled,
-        IsAuthenticated,
     )
-    serializer_class = ChangePhoneNumberSerializer
+    def post(self, request, *args, **kwargs):
+        # Required for drf-yasg
+        return super().post(request, *args, **kwargs)
 
     def create(self, *args, **kwargs):
         serializer = self.get_serializer(

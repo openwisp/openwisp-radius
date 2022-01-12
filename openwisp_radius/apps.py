@@ -1,4 +1,6 @@
 import swapper
+from allauth.account.apps import AccountConfig
+from allauth.socialaccount.apps import SocialAccountConfig
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
@@ -42,6 +44,8 @@ class OpenwispRadiusConfig(ApiAppConfig):
             'others': default_or_test('400/hour', None),
         },
     }
+    AccountConfig.default_auto_field = 'django.db.models.AutoField'
+    SocialAccountConfig.default_auto_field = 'django.db.models.AutoField'
 
     def ready(self, *args, **kwargs):
         super().ready(*args, **kwargs)
