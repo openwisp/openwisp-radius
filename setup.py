@@ -56,6 +56,7 @@ setup(
         'django-private-storage~=3.0',
         'celery~=5.2.3',
         'django-ipware~=3.0.0',
+        'setuptools~=59.1.1',
     ],
     extras_require={
         # TODO: change this when next point version of djangosaml2 is released
