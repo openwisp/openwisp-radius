@@ -261,7 +261,7 @@ These settings control details related to the API and the radius user token.
 
 **Default**: ``None``
 
-Changes the urlconf option of django urls to point the monitoring API
+Changes the urlconf option of django urls to point the RADIUS API
 urls to another installed module, example, ``myapp.urls``.
 (Useful when you have a seperate API instance.)
 
@@ -477,7 +477,7 @@ then edit a specific organization and scroll down to
 
 **Default**: ``False``
 
-Indicates whether users who sign up should be required to verify their mobile phone number via SMS. 
+Indicates whether users who sign up should be required to verify their mobile phone number via SMS.
 This can be overridden for each organization separately via the admin interface.
 
 ``OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION``
