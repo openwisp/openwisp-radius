@@ -10,8 +10,6 @@
             "op": ":=",
             "attribute": "Max-Daily-Session",
             "user": null,
-            "is_active": true,
-            "valid_until": "2020-06-15T10:33:08Z",
             "notes": ""
         }
     },
@@ -206,11 +204,7 @@
             "prefix": "prefix_users",
             "pdf": "prefix_users_6o1tF3K.pdf",
             "expiration_date": "2020-06-15",
-            "users": [
-                3,
-                4,
-                5
-            ]
+            "users": [3, 4, 5]
         }
     },
     {

@@ -43,6 +43,7 @@ class RadiusCheckForm(ModeSwitcherForm):
         label=_('Value'),
         required=False,
         max_length=radcheck_value_field.max_length,
+        widget=forms.PasswordInput(),
     )
 
     def clean_attribute(self):

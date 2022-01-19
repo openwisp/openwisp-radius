@@ -16,20 +16,6 @@ class DuplicateListFilter(SimpleListFilter):
             return queryset.filter_duplicate_username()
 
 
-class ExpiredListFilter(SimpleListFilter):
-    title = _('find expired')
-    parameter_name = 'expired'
-
-    def lookups(self, request, model_admin):
-        return (('expired', _('expired')), ('not_expired', _('not expired')))
-
-    def queryset(self, request, queryset):
-        if self.value() == 'expired':
-            return queryset.filter_expired()
-        elif self.value() == 'not_expired':
-            return queryset.filter_not_expired()
-
-
 class RegisteredUserFilter(SimpleListFilter):
     title = _('Verified')
     parameter_name = 'is_verified'
