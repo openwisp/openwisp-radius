@@ -37,17 +37,19 @@ def captive_portal_login(request):
     radius_token = (
         RadiusToken.objects.filter(key=password).select_related('user').first()
     )
+    username = request.POST.get('auth_user') or request.POST.get('username')
+    if radius_token and not username:
+        username = radius_token.user.username
     if (
         radius_token
         and not RadiusAccounting.objects.filter(
-            username=radius_token.user.username, stop_time=None
+            username=username, stop_time=None
         ).exists()
     ):
         id_ = uuid.uuid4().hex
-        username = radius_token.user.username
         data = dict(
             status_type='Start',
-            username=radius_token.user.username,
+            username=username,
             organization_id=radius_token.organization_id,
             unique_id=id_,
             session_id=id_,
