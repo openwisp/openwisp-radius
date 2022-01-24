@@ -641,6 +641,8 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             user.phone_number = phone_token.phone_number
             user.save()
             user.registered_user.save()
+            # delete any radius token cache key if present
+            cache.delete(f'rt-{phone_token.phone_number}')
             return Response(None, status=200)
 
 

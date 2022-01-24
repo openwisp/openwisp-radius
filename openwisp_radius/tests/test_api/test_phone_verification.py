@@ -5,6 +5,7 @@ from unittest import mock
 import swapper
 from dateutil import parser
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
@@ -199,6 +200,8 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         phone_token = PhoneToken.objects.create(
             user=user, ip=phone_token.ip, phone_number=phone_token.phone_number
         )
+        cache_key = f'rt-{phone_token.phone_number}'
+        cache.set(cache_key, 'test')
         self.assertEqual(phone_token.attempts, 0)
         url = reverse('radius:phone_token_validate', args=[self.default_org.slug])
         r = self.client.post(
@@ -215,6 +218,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertTrue(user.registered_user.is_verified)
         self.assertEqual(user.registered_user.modified, parser.parse(_TEST_DATE))
         self.assertEqual(user.registered_user.method, 'mobile_phone')
+        self.assertIsNone(cache.get(cache_key))
 
     @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
