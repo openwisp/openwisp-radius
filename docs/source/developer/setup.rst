@@ -5,7 +5,7 @@ Setup
 Deploy it in production
 -----------------------
 
-An automated installer is available at `ansible-openwisp2 <https://github.com/openwisp/ansible-openwisp2>`_.
+An automated installer is available at `ansible-openwisp2 <https://github.com/openwisp/ansible-openwisp2#enabling-the-radius-module>`_.
 
 Create a virtual environment
 ----------------------------
