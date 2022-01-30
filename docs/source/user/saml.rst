@@ -1,3 +1,5 @@
+.. _saml_:
+
 =====================
 Single Sign-On (SAML)
 =====================
@@ -18,7 +20,7 @@ while ``token`` should be used for the password field.
 
 The third parameter, ``login_method=saml``, is needed because it allows
 the captive page to remember that the user logged in via SAML,
-because it will need to perform the `SAML logout <#logout>`_ later on.
+because it will need to perform the :ref:`SAML logout <logout>` later on.
 
 The internal REST API of openwisp-radius will recognize the token and authorize
 the user.
@@ -112,6 +114,8 @@ Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Single Sign-On (SAML) by default.
 
+.. _logout:
+
 Logout
 ------
 
@@ -122,6 +126,8 @@ The `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-
 app supports this with minimal configuration, refer to the
 `"Configuring SAML Login & Logout" <https://github.com/openwisp/openwisp-wifi-login-pages##configuring-saml-login--logout>`_
 section.
+
+.. _setting:
 
 Settings
 --------

@@ -8,7 +8,7 @@ API Documentation
 
 .. important::
     The REST API of openwisp-radius is enabled by default and may be turned off by
-    setting `OPENWISP_RADIUS_API <./settings.html#openwisp-radius-api>`_ to ``False``.
+    setting :ref:`OPENWISP_RADIUS_API <openwisp_radius_api>` to ``False``.
 
 Live documentation
 ******************
@@ -23,7 +23,7 @@ Browsable web interface
 .. image:: /images/drf_api_interface.png
    :alt: API Interface
 
-Additionally, opening any of the endpoints `listed below <#list-of-endpoints>`_
+Additionally, opening any of the endpoints :ref:`listed below <list_of_endpoints>`
 directly in the browser will show the `browsable API interface of Django-REST-Framework
 <https://www.django-rest-framework.org/topics/browsable-api/>`_,
 which makes it even easier to find out the details of each endpoint.
@@ -32,12 +32,12 @@ FreeRADIUS API Endpoints
 ************************
 
 The following section is dedicated to API endpoints that are designed
-to be consumed by FreeRADIUS (`Authorize`_, `Post Auth`_, `Accounting`_).
+to be consumed by FreeRADIUS (:ref:`Authorize <authorize>`, :ref:`Post Auth <post_auth>`, :ref:`Accounting <accounting>`).
 
 .. important::
     These endpoints can be consumed only by hosts which have
-    been added to the `freeradius allowed hosts list
-    <./settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    been added to the :ref:`freeradius allowed hosts list
+    <openwisp_radius_freeradius_allowed_hosts>`.
 
 .. _freeradius_api_authentication:
 
@@ -55,13 +55,13 @@ Radius User Token
 
 This method relies on the presence of a special token which was obtained
 by the user when authenticating via the
-`Obtain Auth Token View <#login-obtain-user-auth-token>`_, this means
+:ref:`Obtain Auth Token View <login_obtain_user_auth_token>`, this means
 the user would have to log in through something like a web form first.
 
 The flow works as follows:
 
 1. the user enters credentials in a login form belonging to a specific organization
-   and submits, the credentials are then sent to the `Obtain Auth Token View <#login-obtain-user-auth-token>`_;
+   and submits, the credentials are then sent to the :ref:`Obtain Auth Token View <login_obtain_user_auth_token>`;
 2. if credentials are correct, a **radius user token** associated to the user
    and organization is created and returned in the response;
 3. the login page or app must then initiate the HTTP request to the web server
@@ -93,6 +93,8 @@ in the same OpenWISP instance.
     at a time, i.e a single user account cannot consume
     services from multiple organizations simultaneously.
 
+.. _bearer_token:
+
 Bearer token
 ------------
 
@@ -103,8 +105,8 @@ the specific organization is sent in each request,
 see :ref:`freeradius_site` for more information on
 the FreeRADIUS site configuration.
 
-The (`Organization UUID and Organization RADIUS token
-<#organization-uuid-token>`_) are sent in the authorization header of
+The (:ref:`Organization UUID and Organization RADIUS token
+<organization_uuid_token>`) are sent in the authorization header of
 the HTTP request in the form of a Bearer token, eg:
 
 .. code-block:: text
@@ -115,6 +117,8 @@ the HTTP request in the form of a Bearer token, eg:
 
 This method is recommended if you are using only one organization
 and you have no need nor intention of adding more organizations in the future.
+
+.. _querystring:
 
 Querystring
 -----------
@@ -154,8 +158,8 @@ You will also need the UUID of your organization from the organization change pa
 .. image:: /images/org_uuid.png
    :alt: Organization UUID
 
-Requests authorizing with `bearer-token <#bearer-token>`_ or `querystring
-<#querystring>`_ method **must** contain organization UUID & token. If the
+Requests authorizing with :ref:`bearer-token <bearer_token>` or :ref:`querystring
+<querystring>` method **must** contain organization UUID & token. If the
 tokens are missing or invalid, the request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens, see
@@ -189,8 +193,12 @@ To override the default API throttling settings, add the following to your ``set
 The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
 ``second``, ``minute``, ``hour`` or ``day`` as the throttle period, setting it to ``None`` will result in no throttling.
 
+.. _list_of_endpoints:
+
 List of Endpoints
 =================
+
+.. _authorize:
 
 Authorize
 ---------
@@ -228,8 +236,10 @@ related to the group with highest priority assigned to the user.
 
 If the authorization is unsuccessful, the response body can either be empty
 or it can contain an explicit rejection, depending on how the
-`OPENWISP_RADIUS_API_AUTHORIZE_REJECT <settings.html#openwisp-radius-api-authorize-reject>`_
+:ref:`OPENWISP_RADIUS_API_AUTHORIZE_REJECT <openwisp_radius_api_authorize_reject>`
 setting is configured.
+
+.. _post_auth:
 
 Post Auth
 ---------
@@ -256,6 +266,8 @@ calling_station_id   Calling Station ID
 
 Returns an empty response body in order to instruct
 FreeRADIUS to avoid processing the response body.
+
+.. _accounting:
 
 Accounting
 ----------
@@ -387,7 +399,7 @@ obtaining access tokens, validating their phone number, etc.).
 
 .. note::
   The API endpoints described below do not require the
-  `Organization API Token <#organization-api-token>`_
+  :ref:`Organization API Token <organization_uuid_token>`
   described in the beginning of this document.
 
 Some endpoints require the sending of the user API access
@@ -401,14 +413,16 @@ token sent in the form of a "Bearer Token", example:
 List of Endpoints
 =================
 
+.. _user_registration:
+
 User Registration
 -----------------
 
 .. important::
 
     This endpoint is enabled by default but can be disabled either
-    via a `global setting or from the admin interface
-    <settings.html#openwisp-radius-registration-api-enabled>`_.
+    via a :ref:`global setting or from the admin interface
+    <openwisp_radius_registration_api_enabled>`.
 
 .. code-block:: text
 
@@ -438,12 +452,14 @@ SMS verification in its "Organization RADIUS Settings".
 
 (\*\*) ``first_name``, ``last_name``, ``birth_date`` and ``location``
 are optional fields which are disabled by default to make the registration
-simple, but can be `enabled through configuration <./settings.html#openwisp-radius-optional-registration-fields>`_.
+simple, but can be :ref:`enabled through configuration <openwisp_radius_optional_registration_fields>`.
 
 (\*\*) ``method`` must be one of the available
-`registration/verification methods <./settings.html#openwisp-radius-needs-identity-verification>`_;
+:ref:`registration/verification methods <openwisp_radius_needs_identity_verification>`;
 if identity verification is disabled for a particular org, an empty string
 will be acceptable.
+
+.. _registering_to_multiple_organizations:
 
 Registering to Multiple Organizations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -464,9 +480,11 @@ registered to the system which may be shown to the user in the UI. E.g.:
     }
 
 The existing user can register with a new organization using the
-`login <#login-obtain-user-auth-token>`_ endpoint. The user will also get
+:ref:`login endpoint <login_obtain_user_auth_token>`. The user will also get
 membership of the new organization only if the organization has
-`user registration enabled <settings.html#openwisp-radius-registration-api-enabled>`_.
+:ref:`user registration enabled <openwisp_radius_registration_api_enabled>`.
+
+.. _reset_password:
 
 Reset password
 --------------
@@ -492,7 +510,7 @@ Confirm reset password
 ----------------------
 
 Allows users to confirm their reset password after having it requested
-via the `Reset password <#reset-password>`_ endpoint.
+via the :ref:`Reset password <reset_password>` endpoint.
 
 .. code-block:: text
 
@@ -517,7 +535,7 @@ Change password
 **Requires the user auth token (Bearer Token)**.
 
 Allows users to change their password after using the
-`Reset password <#reset-password>`_ endpoint.
+:ref:`Reset password <reset_password>` endpoint.
 
 .. code-block:: text
 
@@ -535,6 +553,8 @@ new_password       string
 confirm_password   string
 ================   ===============================
 
+.. _login_obtain_user_auth_token:
+
 Login (Obtain User Auth Token)
 ------------------------------
 
@@ -549,7 +569,7 @@ Returns:
 - ``radius_user_token``: the user radius token, which can be used to authenticate
   the user in the captive portal by sending it in place of the user password
   (it will be passed to freeradius which in turn will send it to the
-  `authorize API endpoint <#authorize>`_ which will recognize the token as
+  :ref:`authorize API endpoint <authorize>` which will recognize the token as
   the user passsword)
 - ``key``: the user API access token, which will be needed to authenticate the user to
   eventual subsequent API requests (eg: change password)
@@ -575,7 +595,7 @@ or initiate account verification).
 If an existing user account tries to authenticate to an organization of which
 they're not member of, then they would be automatically added as members
 (if registration is enabled for that org). Please refer to
-`"Registering to Multiple Organizations" <#registering-to-multiple-organizations>`_.
+:ref:`"Registering to Multiple Organizations" <registering_to_multiple_organizations>`.
 
 This endpoint updates the user language preference field according
 to the ``Accept-Language`` HTTP header.
@@ -611,7 +631,7 @@ token              the rest auth token to validate
 =================  ===============================
 
 The user information is returned in the response (similarly to
-`Obtain User Auth Token <#login-obtain-user-auth-token>`__),
+:ref:`Obtain User Auth Token <login_obtain_user_auth_token>`),
 along with the following additional parameter:
 
 - ``response_code``: string indicating whether the result is successful or not,
@@ -649,6 +669,8 @@ Responds only to **POST**.
 
 No parameters required.
 
+.. _verify_validate_sms_token:
+
 Verify/Validate SMS token
 -------------------------
 
@@ -678,7 +700,7 @@ Change phone number
 Allows users to change their phone number,
 will flag the user as inactive and send them a verification code via SMS.
 The phone number of the user is updated only after this verification code
-has been `validated <#verify-validate-sms-token>`_.
+has been :ref:`validated <verify_validate_sms_token>`.
 
 .. code-block:: text
 
@@ -693,6 +715,8 @@ Param              Description
 ===============    ===============================
 phone_number       string
 ===============    ===============================
+
+.. _batch_user_creation:
 
 Batch user creation
 -------------------
