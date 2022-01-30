@@ -240,12 +240,6 @@ class AbstractRadiusCheckQueryset(models.query.QuerySet):
             pks.extend([accounts.pk for accounts in self.filter(value=i['value'])])
         return self.filter(pk__in=pks)
 
-    def filter_expired(self):
-        return self.filter(valid_until__lt=now())
-
-    def filter_not_expired(self):
-        return self.filter(valid_until__gte=now())
-
 
 def _encode_secret(attribute, new_value=None):
     if attribute == 'NT-Password':
