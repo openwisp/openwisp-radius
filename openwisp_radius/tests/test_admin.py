@@ -660,6 +660,14 @@ class TestAdmin(
         self.assertEqual(OrganizationUser.objects.all().count(), 3)
         for u in OrganizationUser.objects.all():
             self.assertEqual(u.organization, RadiusBatch.objects.first().organization)
+        # Test CSV URL in change form
+        rad_batch = RadiusBatch.objects.first()
+        response = self.client.get(
+            reverse(f'admin:{self.app_label}_radiusbatch_change', args=[rad_batch.id])
+        )
+        self.assertContains(
+            response, reverse('radius:serve_private_file', args=[rad_batch.csvfile])
+        )
 
     def _create_multitenancy_test_env(
         self, usergroup=False, groupcheck=False, groupreply=False

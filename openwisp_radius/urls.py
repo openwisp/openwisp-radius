@@ -16,7 +16,7 @@ def get_urls(api_views=None, social_views=None, saml_views=None):
     """
     return [
         path('api/v1/', include(get_api_urls(api_views))),
-        path('api/v1/', include(get_private_store_urls())),
+        path('', include(get_private_store_urls())),
         path('radius/social-login/', include(get_social_urls(social_views))),
         path('radius/saml2/', include(get_saml_urls(saml_views))),
     ]
