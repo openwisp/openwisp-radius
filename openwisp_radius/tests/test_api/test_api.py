@@ -670,7 +670,10 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     def test_api_password_reset(self):
         test_user = User.objects.create_user(
-            username='test_name', password='test_password', email='test@email.com'
+            username='test_name',
+            password='test_password',
+            email='test@email.com',
+            phone_number='+33675579231',
         )
         self._create_org_user(organization=self.default_org, user=test_user)
         mail_count = len(mail.outbox)
@@ -692,7 +695,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
 
         # email does not exist in database
-        reset_payload = {'email': 'wrong@email.com'}
+        reset_payload = {'input': 'wrong@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(response.status_code, 404)
 
@@ -700,12 +703,12 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         User.objects.create_user(
             username='test_name1', password='test_password', email='test1@email.com'
         )
-        reset_payload = {'email': 'test1@email.com'}
+        reset_payload = {'input': 'test1@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(response.status_code, 400)
 
         # valid payload
-        reset_payload = {'email': 'test@email.com'}
+        reset_payload = {'input': 'test@email.com'}
         response = self.client.post(password_reset_url, data=reset_payload)
         self.assertEqual(len(mail.outbox), mail_count + 1)
         email = mail.outbox.pop()
@@ -779,6 +782,21 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         login_payload = {'username': 'test_name', 'password': 'test_new_password'}
         login_response = self.client.post(login_url, data=login_payload)
         self.assertEqual(login_response.status_code, 200)
+
+        with self.subTest('Test reset password with username'):
+            reset_payload = {'input': test_user.username}
+            response = self.client.post(password_reset_url, data=reset_payload)
+            print(response.json())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(mail.outbox), mail_count + 1)
+            mail.outbox.pop()
+
+        with self.subTest('Test reset password with phone_number'):
+            reset_payload = {'input': test_user.phone_number}
+            response = self.client.post(password_reset_url, data=reset_payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(mail.outbox), mail_count + 1)
+            mail.outbox.pop()
 
     def test_api_password_reset_405(self):
         password_reset_url = reverse(
@@ -873,7 +891,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         org = self._get_org()
         self._create_org_user(user=user, organization=org)
         path = reverse('radius:rest_password_reset', args=[org.slug])
-        r = self.client.post(path, {'email': user.email})
+        r = self.client.post(path, {'input': user.email})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data['detail'], 'Password reset e-mail has been sent.')
         mocked_send.assert_called_once()

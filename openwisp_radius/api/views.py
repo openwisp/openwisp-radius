@@ -11,9 +11,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
@@ -502,9 +502,13 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         return context
 
     def get_user(self, request):
-        if request.data.get('email', None):
-            email = request.data['email']
-            user = get_object_or_404(User, email=email)
+        if request.data.get('input', None):
+            input = request.data['input']
+            user = User.objects.filter(
+                Q(phone_number=input) | Q(email=input) | Q(username=input)
+            ).first()
+            if user is None:
+                raise Http404('No user was found with given details.')
             self.validate_membership(user)
             return user
         raise ParseError(_('The email field is required.'))
