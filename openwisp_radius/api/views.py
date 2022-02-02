@@ -76,8 +76,6 @@ PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
-RegisteredUser = load_model('RegisteredUser')
 
 
 class ThrottledAPIMixin(object):
