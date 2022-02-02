@@ -61,23 +61,35 @@ def send_login_email(accounting_data):
     Organization = swapper.load_model('openwisp_users', 'Organization')
     username = accounting_data.get('username', None)
     org_uuid = accounting_data.get('organization')
+    organization = Organization.objects.select_related('radius_settings').get(
+        id=org_uuid
+    )
+
     try:
-        user = User.objects.get(username=username)
-        organization = Organization.objects.select_related('radius_settings').get(
-            id=org_uuid
-        )
+        org_radius_settings = organization.radius_settings
     except ObjectDoesNotExist:
-        logger.warning(f'user with {username} does not exists')
-        return
-    if not organization.is_member(user):
-        logger.warning(f'{username} is not the member of {organization.name}')
+        logger.warning(
+            f'Organization "{organization.name}" does not '
+            'have any OpenWISP RADIUS settings configured'
+        )
         return
 
-    org_radius_settings = organization.radius_settings
     login_url = org_radius_settings.login_url
     if not login_url:
-        logger.error(f'login_url is not defined for {organization.name} organization')
+        logger.debug(f'login_url is not defined for {organization.name} organization')
         return
+
+    try:
+        user = User.objects.get(username=username)
+    except ObjectDoesNotExist:
+        logger.warning(f'user with username "{username}" does not exists')
+        return
+    if not organization.is_member(user):
+        logger.warning(
+            f'user with username "{username}" is not member of "{organization.name}"'
+        )
+        return
+
     with translation.override(user.language):
         one_time_login_url = login_url + get_query_string(user)
         subject = _('New WiFi session started')

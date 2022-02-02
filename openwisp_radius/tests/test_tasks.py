@@ -22,7 +22,7 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RegisteredUser = load_model('RegisteredUser')
 
 
-class TestCelery(FileMixin, BaseTestCase):
+class TestTasks(FileMixin, BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -112,37 +112,16 @@ class TestCelery(FileMixin, BaseTestCase):
     @capture_stdout()
     def test_send_login_email(self, translation_activate, logger):
         accounting_data = _RADACCT.copy()
-        total_mails = len(mail.outbox)
-        with self.subTest('do not send email if username is invalid'):
-            tasks.send_login_email.delay(accounting_data)
-            self.assertEqual(len(mail.outbox), total_mails)
-            logger.warning.assert_called_with(
-                'user with {} does not exists'.format(accounting_data.get('username'))
-            )
-
-        logger.reset_mock()
-        user = self._get_user()
-        accounting_data['username'] = user.username
         organization = self._get_org()
         accounting_data['organization'] = organization.id
-
-        with self.subTest('do not send mail if user is not a member of organization'):
-            tasks.send_login_email.delay(accounting_data)
-            self.assertEqual(len(mail.outbox), total_mails)
-            logger.warning.assert_called_with(
-                f'{user.username} is not the member of {organization.name}'
-            )
-            translation_activate.assert_not_called()
-
-        logger.reset_mock()
-        self._create_org_user()
+        total_mails = len(mail.outbox)
 
         with self.subTest(
             'do not send mail if login_url does not exists for the organization'
         ):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.error.assert_called_with(
+            logger.debug.assert_called_with(
                 f'login_url is not defined for {organization.name} organization'
             )
             translation_activate.assert_not_called()
@@ -150,6 +129,30 @@ class TestCelery(FileMixin, BaseTestCase):
         radius_settings = organization.radius_settings
         radius_settings.login_url = 'https://wifi.openwisp.org/default/login/'
         radius_settings.save(update_fields=['login_url'])
+        total_mails = len(mail.outbox)
+
+        with self.subTest('do not send email if username is invalid'):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            username = accounting_data.get('username')
+            logger.warning.assert_called_with(
+                f'user with username "{username}" does not exists'
+            )
+
+        logger.reset_mock()
+        user = self._get_user()
+        accounting_data['username'] = user.username
+
+        with self.subTest('do not send mail if user is not a member of organization'):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            logger.warning.assert_called_with(
+                f'user with username "{user.username}" is '
+                f'not member of "{organization.name}"'
+            )
+            translation_activate.assert_not_called()
+
+        self._create_org_user()
 
         with self.subTest(
             'it should send mail if login_url exists for the organization'
@@ -187,3 +190,16 @@ class TestCelery(FileMixin, BaseTestCase):
                 translation_activate.call_args_list[1][0][0],
                 getattr(settings, 'LANGUAGE_CODE'),
             )
+
+        translation_activate.reset_mock()
+        total_mails = len(mail.outbox)
+
+        with self.subTest('do not fail if radius_settings missing'):
+            organization.radius_settings.delete()
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            logger.warning.assert_called_with(
+                f'Organization "{organization.name}" does not '
+                'have any OpenWISP RADIUS settings configured'
+            )
+            translation_activate.assert_not_called()
