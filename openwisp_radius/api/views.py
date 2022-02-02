@@ -468,7 +468,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
     @swagger_auto_schema(
         responses={
             200: '`{"detail": "Password reset e-mail has been sent."}`',
-            400: '`{"detail": "The email field is required."}`',
+            400: '`{"detail": "The input field is required."}`',
             404: '`{"detail": "Not found."}`',
         }
     )
@@ -476,6 +476,8 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         """
         This is the classic "password forgotten recovery feature" which
         sends a reset password token to the email of the user.
+        The input field can be an email, an username or
+        a phone number (if mobile phone verification is in use).
         """
         request.user = self.get_user(request)
         return super().post(request, *args, **kwargs)
