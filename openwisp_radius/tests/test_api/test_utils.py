@@ -40,6 +40,7 @@ class TestUtils(BaseTestCase):
                 'Could not complete operation because of an internal misconfiguration',
             )
 
+    @capture_any_output()
     def test_is_sms_verification_enabled(self):
         org = self._create_org()
         OrganizationRadiusSettings.objects.create(organization=org)
