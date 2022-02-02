@@ -11,7 +11,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
@@ -44,6 +43,7 @@ from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
+from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException, UserAlreadyVerified
@@ -78,6 +78,7 @@ RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 RegisteredUser = load_model('RegisteredUser')
+auth_backend = UsersAuthenticationBackend()
 
 
 class ThrottledAPIMixin(object):
@@ -506,9 +507,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
     def get_user(self, request):
         if request.data.get('input', None):
             input = request.data['input']
-            user = User.objects.filter(
-                Q(phone_number=input) | Q(email=input) | Q(username=input)
-            ).first()
+            user = auth_backend.get_users(input).first()
             if user is None:
                 raise Http404('No user was found with given details.')
             self.validate_membership(user)

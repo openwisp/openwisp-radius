@@ -668,6 +668,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 401)
 
     @capture_any_output()
+    @mock.patch('openwisp_users.settings.AUTH_BACKEND_AUTO_PREFIXES', ['+33'])
     def test_api_password_reset(self):
         test_user = User.objects.create_user(
             username='test_name',
@@ -786,13 +787,21 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with self.subTest('Test reset password with username'):
             reset_payload = {'input': test_user.username}
             response = self.client.post(password_reset_url, data=reset_payload)
-            print(response.json())
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(mail.outbox), mail_count + 1)
             mail.outbox.pop()
 
         with self.subTest('Test reset password with phone_number'):
             reset_payload = {'input': test_user.phone_number}
+            response = self.client.post(password_reset_url, data=reset_payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(mail.outbox), mail_count + 1)
+            mail.outbox.pop()
+
+        with self.subTest(
+            'Test reset password with phone_number without country prefix'
+        ):
+            reset_payload = {'input': test_user.phone_number.national_number}
             response = self.client.post(password_reset_url, data=reset_payload)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(mail.outbox), mail_count + 1)
