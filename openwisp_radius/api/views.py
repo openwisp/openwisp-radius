@@ -13,7 +13,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
@@ -44,6 +43,7 @@ from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
+from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException, UserAlreadyVerified
@@ -76,6 +76,7 @@ PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+auth_backend = UsersAuthenticationBackend()
 
 
 class ThrottledAPIMixin(object):
@@ -466,7 +467,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
     @swagger_auto_schema(
         responses={
             200: '`{"detail": "Password reset e-mail has been sent."}`',
-            400: '`{"detail": "The email field is required."}`',
+            400: '`{"detail": "The input field is required."}`',
             404: '`{"detail": "Not found."}`',
         }
     )
@@ -474,6 +475,8 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         """
         This is the classic "password forgotten recovery feature" which
         sends a reset password token to the email of the user.
+        The input field can be an email, an username or
+        a phone number (if mobile phone verification is in use).
         """
         request.user = self.get_user(request)
         return super().post(request, *args, **kwargs)
@@ -500,9 +503,11 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         return context
 
     def get_user(self, request):
-        if request.data.get('email', None):
-            email = request.data['email']
-            user = get_object_or_404(User, email=email)
+        if request.data.get('input', None):
+            input = request.data['input']
+            user = auth_backend.get_users(input).first()
+            if user is None:
+                raise Http404('No user was found with given details.')
             self.validate_membership(user)
             return user
         raise ParseError(_('The email field is required.'))

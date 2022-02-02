@@ -349,7 +349,17 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):
+    input = serializers.CharField()
+    email = None
     password_reset_form_class = PasswordResetForm
+
+    def validate_input(self, value):
+        # Create PasswordResetForm with the serializer.
+        # Check BasePasswordResetSerializer.validate_email for details.
+        user = self.context.get('request').user
+        self.reset_form = self.password_reset_form_class(data={'email': user.email})
+        self.reset_form.is_valid()
+        return value
 
     def save(self):
         request = self.context.get('request')
