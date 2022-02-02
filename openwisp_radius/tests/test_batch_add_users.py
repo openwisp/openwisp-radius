@@ -1,3 +1,5 @@
+from django.core.exceptions import ValidationError
+
 from ..utils import load_model
 from . import FileMixin
 from .mixins import BaseTestCase
@@ -79,3 +81,30 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         self.assertEqual(batch.users.all().count(), 1)
         user = batch.users.first()
         self.assertEqual(hashed_password, user.password)
+
+
+class TestPrefixUpload(FileMixin, BaseTestCase):
+    def test_invalid_username(self):
+        self.assertRaises(
+            ValidationError,
+            self._create_radius_batch,
+            name='test',
+            strategy='prefix',
+            prefix="Test#1",
+        )
+
+    def test_valid_username(self):
+        batch = self._create_radius_batch(
+            name='test', strategy='prefix', prefix='Test1'
+        )
+        batch.prefix_add('test-prefix16', 5)
+        self.assertEqual(RadiusBatch.objects.all().count(), 1)
+        self.assertEqual(batch.users.all().count(), 5)
+
+    def test_valid_username_special_char(self):
+        batch = self._create_radius_batch(
+            name='test', strategy='prefix', prefix='Test_@+-.'
+        )
+        batch.prefix_add('test-prefix16', 5)
+        self.assertEqual(RadiusBatch.objects.all().count(), 1)
+        self.assertEqual(batch.users.all().count(), 5)

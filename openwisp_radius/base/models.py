@@ -901,7 +901,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                     raise ValidationError(
                         {
                             'prefix': _(
-                                'This value may contain only letters, numbers, and @/./+/-/_ characters.'
+                                'This value may contain only \
+                        letters, numbers, and @/./+/-/_ characters.'
                             )
                         },
                         code='invalid',
