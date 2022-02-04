@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sample_radius', '0024_sms_verification'),
+        ('sample_radius', '0025_login_status_url_org_settings'),
     ]
 
     operations = [
