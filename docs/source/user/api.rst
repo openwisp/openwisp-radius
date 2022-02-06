@@ -694,6 +694,25 @@ Param              Description
 phone_number       string
 ===============    ===============================
 
+
+Batch CSV Download
+-------------------
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>
+
+Responds only to **GET**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+slug               string
+id                 string
+filename           string
+===============    ===============================
+
 Batch user creation
 -------------------
 
