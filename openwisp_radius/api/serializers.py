@@ -458,15 +458,15 @@ class RegisterSerializer(
             return key in error_dict and key in data
 
         user_lookup = Q()
-        if has_key('username'):
-            user_lookup |= Q(username=data['username'])
-        if has_key('email'):
-            user_lookup |= Q(email=data['email'])
+        # Phone number is given preference over email and username.
         if has_key('phone_number'):
             user_lookup |= Q(phone_number=data['phone_number'])
-        try:
-            user = User.objects.get(user_lookup)
-        except User.DoesNotExist:
+        if has_key('email'):
+            user_lookup |= Q(email=data['email'])
+        if has_key('username'):
+            user_lookup |= Q(username=data['username'])
+        user = User.objects.filter(user_lookup).first()
+        if not user:
             # Error is not related to cross organization registration
             raise error
         if OrganizationUser.objects.filter(

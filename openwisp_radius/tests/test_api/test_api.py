@@ -249,6 +249,29 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(User.objects.count(), init_user_count + 1)
             self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
 
+        with self.subTest('Test multiple existing accounts'):
+            # Create a second user that has different email and username
+            test_user2 = self._create_user(
+                username='test_user2@example.com',
+                email='test_user2@example.com',
+            )
+            OrganizationUser.objects.create(
+                user=test_user2, organization=self.default_org
+            )
+            # User combination of username, email and phone number
+            # of both users that were previously created.
+            params = {
+                'username': test_user2.username,
+                'email': test_user2.email,
+                'phone_number': '+33675579231',
+                'password1': 'password',
+                'password2': 'password',
+            }
+            response = self.client.post(url, data=params)
+            self.assertEqual(response.status_code, 409)
+            self.assertEqual(User.objects.count(), init_user_count + 2)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 2)
+
         self.default_org.radius_settings.sms_verification = False
         self.default_org.radius_settings.save()
 
