@@ -250,6 +250,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(OrganizationUser.objects.count(), org_user_count + 1)
 
         with self.subTest('Test multiple existing accounts'):
+            # Tests if user provide registration information that
+            # belongs to two different accounts.
             # Create a second user that has different email and username
             test_user2 = self._create_user(
                 username='test_user2@example.com',
@@ -271,6 +273,28 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 409)
             self.assertEqual(User.objects.count(), init_user_count + 2)
             self.assertEqual(OrganizationUser.objects.count(), org_user_count + 2)
+
+        with self.subTest('Test user already registered with organization'):
+            # Make test_user2 organization user for org2.
+            # The query will give preference to phone_number which
+            # will return HTTP 409 response. But since the other
+            # information belongs to user which already has account
+            # with this organization, it should return HTTP 400.
+            OrganizationUser.objects.create(user=test_user2, organization=org2)
+            # User combination of username, email and phone number
+            # of both users that were previously created.
+            params = {
+                'username': test_user2.username,
+                'email': test_user2.email,
+                'phone_number': '+33675579231',
+                'password1': 'password',
+                'password2': 'password',
+            }
+            response = self.client.post(url, data=params)
+            print(response.data)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(User.objects.count(), init_user_count + 2)
+            self.assertEqual(OrganizationUser.objects.count(), org_user_count + 3)
 
         self.default_org.radius_settings.sms_verification = False
         self.default_org.radius_settings.save()
