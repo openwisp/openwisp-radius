@@ -3,6 +3,7 @@ import ipaddress
 import json
 import logging
 import os
+import string
 from base64 import encodebytes
 from datetime import timedelta
 from hashlib import md5, sha1
@@ -893,6 +894,19 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             raise ValidationError(
                 {'prefix': _('This field cannot be blank.')}, code='invalid'
             )
+        if self.strategy == 'prefix' and self.prefix:
+            valid_chars = string.ascii_letters + string.digits + "@.+-_"
+            for char in self.prefix:
+                if char not in valid_chars:
+                    raise ValidationError(
+                        {
+                            'prefix': _(
+                                'This value may contain only \
+                        letters, numbers, and @/./+/-/_ characters.'
+                            )
+                        },
+                        code='invalid',
+                    )
         if (
             self.strategy == 'csv'
             and self.prefix
