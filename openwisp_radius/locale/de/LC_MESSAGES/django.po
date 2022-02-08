@@ -137,6 +137,10 @@ msgstr "Für Ihr Konto wurde eine neue Sitzung gestartet:"
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
 msgstr "Sie können Ihre Sitzung überprüfen, um herauszufinden, wie viel Zeit und/oder Verkehr verbraucht wurde, oder Sie können die Sitzung jederzeit beenden, indem Sie auf die Schaltfläche unten klicken."
 
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "NOTE: This link is valid only for"
+msgstr "HINWEIS: Dieser Link gilt nur für"
+
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
 msgstr "Sitzung verwalten"

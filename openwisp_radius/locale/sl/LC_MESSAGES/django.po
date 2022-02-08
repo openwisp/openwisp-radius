@@ -134,6 +134,10 @@ msgstr "Za vaš račun se je začela nova seja:"
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
 msgstr "Svojo sejo lahko pregledate in ugotovite, koliko časa in/ali prometa je bilo porabljenega, ali pa lahko kadar koli prekinete sejo s klikom na spodnji gumb."
 
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "NOTE: This link is valid only for"
+msgstr "OPOMBA: Ta povezava velja samo za"
+
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
 msgstr "Upravljanje seje"
