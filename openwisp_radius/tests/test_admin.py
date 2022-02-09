@@ -544,6 +544,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': app_settings.PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Return FREERADIUS_ALLOWED_HOSTS back'):
@@ -1084,6 +1085,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': app_settings.PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Valid mobile prefix list'):

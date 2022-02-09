@@ -42,6 +42,7 @@ from ..settings import (
     BATCH_MAIL_MESSAGE,
     BATCH_MAIL_SENDER,
     BATCH_MAIL_SUBJECT,
+    PASSWORD_RESET_URL,
 )
 from ..utils import (
     SmsMessage,
@@ -1194,28 +1195,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
-        self._clean_password_reset_url()
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
         self._clean_optional_fields()
-
-    def _clean_password_reset_url(self):
-        if self.password_reset_url:
-            try:
-                assert all(
-                    [
-                        '{token}' in self.password_reset_url,
-                        '{uid}' in self.password_reset_url,
-                    ]
-                )
-            except AssertionError:
-                raise ValidationError(
-                    {
-                        'password_reset_url': _(
-                            'Password reset URL must contain {uid} and {token}'
-                        )
-                    }
-                )
+        self._clean_password_reset_url()
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
@@ -1269,6 +1252,20 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         for field in ['first_name', 'last_name', 'location', 'birth_date']:
             if getattr(self, field) == global_settings.get(field):
                 setattr(self, field, None)
+
+    def _clean_password_reset_url(self):
+        if self.password_reset_url and (
+            '{uid}' not in self.password_reset_url
+            or '{token}' not in self.password_reset_url
+        ):
+            raise ValidationError(
+                {
+                    'password_reset_url': _(
+                        'The URL must contain the token and uid'
+                        f' placeholders ({PASSWORD_RESET_URL}).'
+                    )
+                }
+            )
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)

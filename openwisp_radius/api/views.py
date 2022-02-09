@@ -59,12 +59,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import (
-    ErrorDictMixin,
-    IDVerificationHelper,
-    get_password_reset_url,
-    is_registration_enabled,
-)
+from .utils import ErrorDictMixin, IDVerificationHelper, is_registration_enabled
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -492,19 +487,18 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
             return
         uid = user_pk_to_url_str(user)
         token = default_token_generator.make_token(user)
+        password_reset_url = app_settings.PASSWORD_RESET_URL
         domain = get_current_site(self.request).domain
         if getattr(self, 'swagger_fake_view', False):
             organization_slug = None  # pragma: no cover
         else:
             organization_slug = self.organization.slug
-        password_reset_url = get_password_reset_url(self.organization)
-        if password_reset_url is None:
-            password_reset_url = app_settings.PASSWORD_RESET_DEFAULT_URL
-            password_reset_url.format(
-                organization=organization_slug, site=domain, uid=uid, token=token
-            )
-        else:
-            password_reset_url = password_reset_url.format(uid=uid, token=token)
+            org_radius_settings = self.organization.radius_settings
+            if org_radius_settings.password_reset_url:
+                password_reset_url = org_radius_settings.password_reset_url
+        password_reset_url = password_reset_url.format(
+            organization=organization_slug, uid=uid, token=token, site=domain
+        )
         context = {'request': self.request, 'password_reset_url': password_reset_url}
         return context
 

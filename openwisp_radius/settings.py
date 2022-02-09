@@ -69,8 +69,8 @@ RADCHECK_SECRET_VALIDATORS = get_settings_value(
                           {\}\:\,\.\?\<\>\(\)\;]+',
     },
 )
-PASSWORD_RESET_DEFAULT_URL = get_settings_value(
-    'PASSWORD_RESET_DEFAULT_URL',
+PASSWORD_RESET_URL = get_settings_value(
+    'PASSWORD_RESET_URL',
     'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
 )
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
