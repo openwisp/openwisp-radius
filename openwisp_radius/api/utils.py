@@ -63,15 +63,3 @@ def is_registration_enabled(org):
         raise APIException(
             _('Could not complete operation because of an internal misconfiguration')
         )
-
-
-def get_password_reset_url(org):
-    try:
-        return org.radius_settings.password_reset_url
-    except ObjectDoesNotExist:
-        logger.exception(
-            f'Got exception while accessing radius_settings for {org.name}'
-        )
-        raise APIException(
-            _('Could not complete operation because of an internal misconfiguration')
-        )

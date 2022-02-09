@@ -3,11 +3,7 @@ from rest_framework.exceptions import APIException
 from openwisp_utils.tests import capture_any_output
 
 from ... import settings as app_settings
-from ...api.utils import (
-    get_password_reset_url,
-    is_registration_enabled,
-    is_sms_verification_enabled,
-)
+from ...api.utils import is_registration_enabled, is_sms_verification_enabled
 from ...utils import load_model
 from ..mixins import BaseTestCase
 
@@ -68,36 +64,6 @@ class TestUtils(BaseTestCase):
             org.radius_settings = None
             with self.assertRaises(APIException) as context_manager:
                 is_sms_verification_enabled(org)
-            self.assertEqual(
-                str(context_manager.exception),
-                'Could not complete operation because of an internal misconfiguration',
-            )
-
-    @capture_any_output()
-    def test_get_password_reset_url(self):
-        org = self._create_org()
-        OrganizationRadiusSettings.objects.create(organization=org)
-        org.radius_settings.password_reset_url = (
-            'https://example.com/default/{uid}/{token}'
-        )
-
-        with self.subTest(
-            'Get password reset url of the organization if it is defined'
-        ):
-            self.assertEqual(
-                get_password_reset_url(org), 'https://example.com/default/{uid}/{token}'
-            )
-
-        with self.subTest(
-            'Get password reset url of the organization if it is not defined'
-        ):
-            org.radius_settings.password_reset_url = None
-            self.assertEqual(get_password_reset_url(org), None)
-
-        with self.subTest('Test related radius setting does not exist'):
-            org.radius_settings = None
-            with self.assertRaises(APIException) as context_manager:
-                get_password_reset_url(org)
             self.assertEqual(
                 str(context_manager.exception),
                 'Could not complete operation because of an internal misconfiguration',
