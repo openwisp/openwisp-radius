@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
