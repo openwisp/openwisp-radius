@@ -164,6 +164,19 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             radius_token.can_auth = False
             radius_token.save()
 
+    def is_valid(self, raise_exception=False):
+        try:
+            return super().is_valid(raise_exception)
+        except serializers.ValidationError as error:
+            request = self.context.get('request', None)
+            if request:
+                logger.warn(
+                    'Freeradius accounting request failed.\n'
+                    f'Error: {error}\n'
+                    f'Request payload: {request.data}'
+                )
+            raise error
+
     def run_validation(self, data):
         for field in ['session_time', 'input_octets', 'output_octets']:
             if data.get('status_type', None) == 'Start' and data[field] == '':
