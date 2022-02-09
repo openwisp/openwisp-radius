@@ -42,7 +42,7 @@ from ..settings import (
     BATCH_MAIL_MESSAGE,
     BATCH_MAIL_SENDER,
     BATCH_MAIL_SUBJECT,
-    PASSWORD_RESET_URL,
+    PASSWORD_RESET_URLS,
 )
 from ..utils import (
     SmsMessage,
@@ -1261,8 +1261,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             raise ValidationError(
                 {
                     'password_reset_url': _(
-                        'The URL must contain the token and uid'
-                        f' placeholders ({PASSWORD_RESET_URL}).'
+                        'The URL must contain the token and uid placeholders'
+                        ' ({}).'.format(PASSWORD_RESET_URLS.get('default'))
                     )
                 }
             )

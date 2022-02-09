@@ -408,16 +408,25 @@ By default the fields at organization level hold a ``NULL`` value,
 which means that the global setting specified in ``settings.py`` will
 be used.
 
-``OPENWISP_RADIUS_PASSWORD_RESET_URL``
+``OPENWISP_RADIUS_PASSWORD_RESET_URLS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``https://{site}/{organization}/password/reset/confirm/{uid}/{token}``
+**Default**:
 
-A fallback url representing the format of frontend password reset url through which
-end users can complete the password reset operation.
+.. code-block:: python
+
+    {
+        'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}'
+    }
+
+A dictionary representing the frontend URLs through which end users can complete
+the password reset operation.
 
 The frontend could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
 or another in-house captive page solution.
+
+Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
+that will be used in case there's no customized URL for a specific organization.
 
 The password reset url must contain the token and uid placeholders.
 
@@ -438,7 +447,9 @@ the configuration should be simply changed to:
 
 .. code-block:: python
 
-        'OPENWISP_RADIUS_PASSWORD_RESET_URL' = 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
+    {
+        'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
+    }
 
 ``OPENWISP_RADIUS_REGISTRATION_API_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

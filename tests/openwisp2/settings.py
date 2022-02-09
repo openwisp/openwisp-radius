@@ -209,9 +209,11 @@ SOCIALACCOUNT_PROVIDERS = {
 
 redis_host = os.getenv('REDIS_HOST', 'localhost')
 
-OPENWISP_RADIUS_PASSWORD_RESET_URL = (
-    'http://localhost:8080/{organization}/password/reset/confirm/{uid}/{token}'
-)
+OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
+    'default': (
+        'http://localhost:8080/{organization}/password/reset/confirm/{uid}/{token}'
+    ),
+}
 
 if not TESTING:
     CELERY_BROKER_URL = os.getenv('REDIS_URL', f'redis://{redis_host}/1')
@@ -271,6 +273,13 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = 'email_confirmation_success'
 ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = 'email_confirmation_success'
+
+# OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
+#     # fallback in case the specific org page is not defined
+#     'default': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
+#     # use the uuid because the slug can change
+#     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://org.com/{organization}/password/reset/confirm/{uid}/{token}',
+# }
 
 if TESTING:
     OPENWISP_RADIUS_SMS_TOKEN_MAX_USER_DAILY = 3

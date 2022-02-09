@@ -487,15 +487,21 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
             return
         uid = user_pk_to_url_str(user)
         token = default_token_generator.make_token(user)
-        password_reset_url = app_settings.PASSWORD_RESET_URL
+        password_reset_urls = app_settings.PASSWORD_RESET_URLS
+        password_reset_url = password_reset_urls.get('default')
         domain = get_current_site(self.request).domain
         if getattr(self, 'swagger_fake_view', False):
-            organization_slug = None  # pragma: no cover
+            organization_pk, organization_slug = None, None  # pragma: no cover
         else:
+            organization_pk = self.organization.pk
             organization_slug = self.organization.slug
             org_radius_settings = self.organization.radius_settings
             if org_radius_settings.password_reset_url:
                 password_reset_url = org_radius_settings.password_reset_url
+            else:
+                password_reset_url = password_reset_urls.get(
+                    str(organization_pk), password_reset_url
+                )
         password_reset_url = password_reset_url.format(
             organization=organization_slug, uid=uid, token=token, site=domain
         )

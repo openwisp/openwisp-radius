@@ -39,7 +39,7 @@ from .base.models import (
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
-from .settings import PASSWORD_RESET_URL, RADIUS_API_BASEURL, RADIUS_API_URLCONF
+from .settings import PASSWORD_RESET_URLS, RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -674,7 +674,7 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         required=False,
         widget=forms.URLInput(attrs={'size': 60}),
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
-        fallback=PASSWORD_RESET_URL,
+        fallback=PASSWORD_RESET_URLS.get('default'),
     )
 
 

@@ -41,6 +41,7 @@ _RADCHECK_ENTRY_PW_UPDATE = {
     'new_value': 'Cam0_liX',
     'attribute': 'NT-Password',
 }
+PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get('default')
 
 
 class TestAdmin(
@@ -544,7 +545,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
-                'radius_settings-0-password_reset_url': app_settings.PASSWORD_RESET_URL,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Return FREERADIUS_ALLOWED_HOSTS back'):
@@ -617,7 +618,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
-                'radius_settings-0-password_reset_url': app_settings.PASSWORD_RESET_URL,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
 
@@ -634,19 +635,18 @@ class TestAdmin(
                 response,
                 _(
                     'The URL must contain the token and uid'
-                    ' placeholders ({}).'.format(app_settings.PASSWORD_RESET_URL)
+                    ' placeholders ({}).'.format(PASSWORD_RESET_URL)
                 ),
             )
 
         with self.subTest('password_reset_url must be equal to fallback value'):
-            pwd_reset_url = app_settings.PASSWORD_RESET_URL
-            form_data.update({'radius_settings-0-password_reset_url': pwd_reset_url})
+            form_data.update(
+                {'radius_settings-0-password_reset_url': PASSWORD_RESET_URL}
+            )
             response = self.client.post(url, form_data)
             self.assertEqual(response.status_code, 302)
             radsetting.refresh_from_db()
-            self.assertEqual(
-                radsetting.password_reset_url, app_settings.PASSWORD_RESET_URL
-            )
+            self.assertEqual(radsetting.password_reset_url, PASSWORD_RESET_URL)
 
     def test_radsettings_freeradius_allowed_hosts_help_text(self):
         url = reverse(f'admin:{self.app_label_users}_organization_add')
@@ -1139,7 +1139,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
-                'radius_settings-0-password_reset_url': app_settings.PASSWORD_RESET_URL,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Valid mobile prefix list'):

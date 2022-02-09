@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -69,10 +70,12 @@ RADCHECK_SECRET_VALIDATORS = get_settings_value(
                           {\}\:\,\.\?\<\>\(\)\;]+',
     },
 )
-PASSWORD_RESET_URL = get_settings_value(
-    'PASSWORD_RESET_URL',
-    'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
-)
+PASSWORD_RESET_URLS = {
+    # fallback in case the specific org page is not defined
+    'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
+    # use the uuid because the slug can change
+}
+PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
 SMS_TOKEN_DEFAULT_VALIDITY = get_settings_value('SMS_TOKEN_DEFAULT_VALIDITY', 30)
@@ -94,6 +97,22 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
         'location': 'disabled',
     },
 )
+
+try:  # pragma: no cover
+    assert PASSWORD_RESET_URLS
+    for key, value in PASSWORD_RESET_URLS.items():
+        if key != 'default':
+            try:
+                UUID(key)
+            except ValueError:
+                raise AssertionError(f'{key} is not a valid UUID')
+        assert all(['{organization}' in value, '{uid}' in value, '{token}' in value]), (
+            f'{value} must contain ' + '{organization}, {uid} and {token}'  # noqa
+        )
+except AssertionError as error:  # pragma: no cover
+    raise ImproperlyConfigured(
+        f'OPENWISP_RADIUS_PASSWORD_RESET_URLS is invalid: {error}'
+    )
 
 try:
     SMS_TOKEN_HASH_ALGORITHM = getattr(hashlib, SMS_TOKEN_HASH_ALGORITHM)
