@@ -692,6 +692,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'allowed_mobile_prefixes',
                     'login_url',
                     'status_url',
+                    'password_reset_url',
                 )
             },
         ),

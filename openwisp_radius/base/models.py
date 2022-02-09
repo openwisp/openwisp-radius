@@ -169,6 +169,7 @@ _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
 )
 _LOGIN_URL_HELP_TEXT = _('Enter the url where users can log in to the wifi service')
 _STATUS_URL_HELP_TEXT = _('Enter the url where users can log out from the wifi service')
+_PASSWORD_RESET_URL_HELP_TEXT = _('Enter the url where users can reset their password')
 
 
 class AutoUsernameMixin(object):
@@ -1148,6 +1149,9 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     )
     login_url = models.URLField(null=True, blank=True, help_text=_LOGIN_URL_HELP_TEXT)
     status_url = models.URLField(null=True, blank=True, help_text=_STATUS_URL_HELP_TEXT)
+    password_reset_url = models.URLField(
+        null=True, blank=True, help_text=_PASSWORD_RESET_URL_HELP_TEXT
+    )
 
     class Meta:
         verbose_name = _('Organization radius settings')
@@ -1190,9 +1194,28 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
+        self._clean_password_reset_url()
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
         self._clean_optional_fields()
+
+    def _clean_password_reset_url(self):
+        if self.password_reset_url:
+            try:
+                assert all(
+                    [
+                        '{token}' in self.password_reset_url,
+                        '{uid}' in self.password_reset_url,
+                    ]
+                )
+            except AssertionError:
+                raise ValidationError(
+                    {
+                        'password_reset_url': _(
+                            'Password reset URL must contain {uid} and {token}'
+                        )
+                    }
+                )
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
