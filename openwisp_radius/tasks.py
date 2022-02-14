@@ -104,7 +104,7 @@ def send_login_email(accounting_data):
         if hasattr(settings, 'SESAME_MAX_AGE'):
             context.update(
                 {
-                    'sesame_max_age': timezone.localtime()
+                    'sesame_max_age': timezone.now()
                     - timedelta(seconds=settings.SESAME_MAX_AGE)
                 }
             )
