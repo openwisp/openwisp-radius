@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import swapper
 from celery import shared_task
@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core import management
 from django.core.exceptions import ObjectDoesNotExist
 from django.template import loader
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_utils.admin_theme.email import send_email
@@ -104,7 +104,7 @@ def send_login_email(accounting_data):
         if hasattr(settings, 'SESAME_MAX_AGE'):
             context.update(
                 {
-                    'sesame_max_age': datetime.utcnow()
+                    'sesame_max_age': timezone.localtime()
                     - timedelta(seconds=settings.SESAME_MAX_AGE)
                 }
             )
