@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import swapper
 from celery import shared_task
@@ -103,7 +103,10 @@ def send_login_email(accounting_data):
         }
         if hasattr(settings, 'SESAME_MAX_AGE'):
             context.update(
-                {'sesame_max_age': str(timedelta(seconds=settings.SESAME_MAX_AGE))}
+                {
+                    'sesame_max_age': datetime.utcnow()
+                    - timedelta(seconds=settings.SESAME_MAX_AGE)
+                }
             )
         body_html = loader.render_to_string('radius_accounting_start.html', context)
         send_email(subject, body_html, body_html, [user.email], context)

@@ -138,8 +138,8 @@ msgid "You can review your session to find out how much time and/or traffic has 
 msgstr "Sie können Ihre Sitzung überprüfen, um herauszufinden, wie viel Zeit und/oder Verkehr verbraucht wurde, oder Sie können die Sitzung jederzeit beenden, indem Sie auf die Schaltfläche unten klicken."
 
 #: openwisp_radius/templates/radius_accounting_start.html:5
-msgid "NOTE: This link is valid only for"
-msgstr "HINWEIS: Dieser Link gilt nur für"
+msgid "NOTE: This link is valid only for %(sesame_max_age)s"
+msgstr "HINWEIS: Dieser Link ist nur %(sesame_max_age)s gültig"
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"

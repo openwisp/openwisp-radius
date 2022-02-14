@@ -135,8 +135,8 @@ msgid "You can review your session to find out how much time and/or traffic has 
 msgstr "Puoi monitorare il consumo di tempo e traffico della tua sessione o terminare la sessione in qualsiasi momento cliccando sul collegamento seguente."
 
 #: openwisp_radius/templates/radius_accounting_start.html:5
-msgid "NOTE: This link is valid only for"
-msgstr "NOTA: Questo link è valido solo per"
+msgid "NOTE: This link is valid only for %(sesame_max_age)s"
+msgstr "NOTA: Questo link è valido solo per %(sesame_max_age)s"
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"

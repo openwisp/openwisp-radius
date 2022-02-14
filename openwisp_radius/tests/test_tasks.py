@@ -116,7 +116,6 @@ class TestTasks(FileMixin, BaseTestCase):
         accounting_data['organization'] = organization.id
         total_mails = len(mail.outbox)
         setattr(settings, 'SESAME_MAX_AGE', 60 * 60)
-        sesame_max_age = timedelta(seconds=getattr(settings, 'SESAME_MAX_AGE'))
 
         with self.subTest(
             'do not send mail if login_url does not exists for the organization'
@@ -176,7 +175,7 @@ class TestTasks(FileMixin, BaseTestCase):
                 ' '.join(email.alternatives[0][0].split()),
             )
             self.assertIn(
-                f'NOTE: This link is valid only for {sesame_max_age} hrs',
+                'NOTE: This link is valid only for',
                 ' '.join(email.alternatives[0][0].split()),
             )
             translation_activate.assert_called_with(user.language)
