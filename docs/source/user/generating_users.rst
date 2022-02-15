@@ -71,4 +71,4 @@ This command generates users whose usernames start with a particular prefix. Usa
 REST API: Batch user creation
 -----------------------------
 
-See `API documentation: :ref:`Batch user creation <batch_user_creation>`.
+See API documentation: :ref:`Batch user creation <batch_user_creation>`.

@@ -631,7 +631,7 @@ Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 .. note::
 
     To learn about configuring SAML Login refer to the
-    :ref:`"Settings" section of SAML Login documentation <setting>`
+    :ref:`SAML related Settings <saml_settings>`
 
 .. _counter_related_settings:
 
@@ -695,3 +695,28 @@ can consume.
 
 It should be changed according to the NAS software in use, for example,
 if using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
+
+.. _saml_settings:
+
+SAML related settings
+=====================
+
+The following settings are related to the :ref:`SAML feature <saml_>`.
+
+``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``'Single Sign-On (SAML)'``
+
+Sets the verbose name of SAML registration method.
+
+``OPENWISP_RADIUS_SAML_IS_VERIFIED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Setting this to ``True`` will automatically flag user accounts
+created during SAML sign-in as verified users (``RegisteredUser.is_verified=True``).
+
+This is useful when SAML identity providers can be trusted
+to be legally valid identity verifiers.

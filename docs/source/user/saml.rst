@@ -127,25 +127,7 @@ app supports this with minimal configuration, refer to the
 `"Configuring SAML Login & Logout" <https://github.com/openwisp/openwisp-wifi-login-pages##configuring-saml-login--logout>`_
 section.
 
-.. _setting:
-
 Settings
 --------
 
-``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``'Single Sign-On (SAML)'``
-
-Sets the verbose name of SAML registration method.
-
-``OPENWISP_RADIUS_SAML_IS_VERIFIED``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``False``
-
-Setting this to ``True`` will automatically flag user accounts
-created during SAML sign-in as verified users (``RegisteredUser.is_verified=True``).
-
-This is useful when SAML identity providers can be trusted
-to be legally valid identity verifiers.
+See :ref:`SAML related settings <saml_settings>`.
