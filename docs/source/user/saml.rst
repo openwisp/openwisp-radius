@@ -83,8 +83,8 @@ Ensure your main ``urls.py`` contains the ``openwisp_users.accounts.urls``:
         path('accounts/', include('openwisp_users.accounts.urls')),
     ]
 
-Configure the SAML Settings
----------------------------
+Configure the djangosaml2 settings
+----------------------------------
 
 Refer to the djangosaml2 documentation to find out `how to configure
 required settings for SAML

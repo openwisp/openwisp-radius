@@ -628,11 +628,6 @@ The default sender email is a common setting from the
 under ``DEFAULT_FROM_EMAIL``.
 Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
 
-.. note::
-
-    To learn about configuring SAML Login refer to the
-    :ref:`SAML related Settings <saml_settings>`
-
 .. _counter_related_settings:
 
 Counter related settings
