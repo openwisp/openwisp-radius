@@ -271,7 +271,7 @@ In case of errors you can run `freeradius in debug mode
 **A common problem, especially during development and testing, is that the
 openwisp-radius application may not be running**, in that case you can find
 out how to run the django development server in the
-`Install for development <./setup.html#installing-for-development>`_ section.
+:ref:`Install for development <installing_for_development>` section.
 
 Also make sure that this server runs on the port specified in
 ``/etc/freeradius/mods-enabled/rest``.

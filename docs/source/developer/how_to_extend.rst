@@ -105,7 +105,7 @@ Install (and add to the requirement of your project) openwisp-radius::
 
 .. note::
     Use ``pip install openwisp-radius[saml]`` if you intend to use
-    `Single Sign-On (SAML) <../user/saml.html>`_ feature.
+    :ref:`Single Sign-On (SAML) <saml_>` feature.
 
 3. Add ``EXTENDED_APPS``
 ------------------------
@@ -226,7 +226,7 @@ If you are starting with a fresh database, you can apply the migrations::
 
     ./manage.py migrate
 
-However, if you want `migrate an existing freeradius database please read the guide in the setup <./setup.html#migratinga-an-existing-freeradius-database>`_.
+However, if you want :ref:`migrate an existing freeradius database please read the guide in the setup <migrate_existing_freeradius_db>`.
 
 .. note::
     For more information, refer to the
@@ -363,8 +363,8 @@ Add allowed freeradius hosts  in ``settings.py``:
     OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
 
 .. note::
-    Read more about `freeradius allowed hosts in settings page
-    <../user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    Read more about :ref:`freeradius allowed hosts in settings page
+    <openwisp_radius_freeradius_allowed_hosts>`.
 
 12. Setup Periodic tasks
 ------------------------
@@ -377,7 +377,7 @@ features and facilitate database cleanup:
 2. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
 ``365`` is given here for ``delete_old_radacct`` in the example settings.
 These arguments are passed to their respective management commands. More information about these parameters can be
-found at the `management commands page <../user/management_commands.html>`_.
+found at the :ref:`management commands page <management_commands>`.
 
 3. Add the following in your settings.py file::
 
@@ -385,8 +385,8 @@ found at the `management commands page <../user/management_commands.html>`_.
 
 .. note::
     Celery tasks do not start with django server and need to be
-    started seperately, please read about running `celery and
-    celery-beat <./setup.html#celery-usage>`_ tasks.
+    started seperately, please read about running :ref:`celery and
+    celery-beat <celery_usage>` tasks.
 
 13. Create root URL configuration
 ---------------------------------

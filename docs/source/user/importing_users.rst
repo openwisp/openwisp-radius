@@ -18,6 +18,8 @@ This feature can be used for importing users from a csv file. There are many fea
 This operation can be performed via the admin interface,
 with a management command or via the REST API.
 
+.. _csv_format:
+
 CSV Format
 ----------
 
@@ -58,15 +60,15 @@ auto-generated and contents of these emails can be customized too.
 
 Here are some defined settings for doing that:
 
-    * `OPENWISP_RADIUS_BATCH_MAIL_SUBJECT <settings.html#openwisp-radius-batch-mail-subject>`_
-    * `OPENWISP_RADIUS_BATCH_MAIL_MESSAGE <settings.html#openwisp-radius-batch-mail-message>`_
-    * `OPENWISP_RADIUS_BATCH_MAIL_SENDER <settings.html#openwisp-radius-batch-mail-sender>`_
+    * :ref:`OPENWISP_RADIUS_BATCH_MAIL_SUBJECT <openwisp_radius_batch_mail_subject>`
+    * :ref:`OPENWISP_RADIUS_BATCH_MAIL_MESSAGE <openwisp_radius_batch_mail_message>`
+    * :ref:`OPENWISP_RADIUS_BATCH_MAIL_SENDER <openwisp_radius_batch_mail_sender>`
 
 Using the admin interface
 -------------------------
 
 .. note::
-   The CSV uploaded must follow the `CSV format described above <#csv-format>`_.
+   The CSV uploaded must follow the :ref:`CSV format described above <csv_format>`.
 
 To generate users from the admin interface, go to
 ``Home > Batch user creation operations > Add``
@@ -95,4 +97,4 @@ This command imports users from a csv file. Usage is as shown below.
 REST API: Batch user creation
 -----------------------------
 
-See `API documentation: Batch user creation <./api.html#batch-user-creation>`_.
+See :ref:`API documentation: Batch user creation <batch_user_creation>`.
