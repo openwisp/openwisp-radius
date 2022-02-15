@@ -1,0 +1,13 @@
+version: 2
+
+# Build all formats
+formats: all
+
+python:
+  version: 3.8
+  install:
+    - requirements: requirements-test.txt
+    - method: pip
+      path: .[saml,openvpn_status]
+  system_packages: true
+
