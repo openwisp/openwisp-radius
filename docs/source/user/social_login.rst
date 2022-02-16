@@ -1,3 +1,5 @@
+.. _social_login:
+
 ============
 Social Login
 ============

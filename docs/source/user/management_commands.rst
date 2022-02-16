@@ -1,3 +1,5 @@
+.. _management_commands:
+
 ===================
 Management commands
 ===================
@@ -64,7 +66,7 @@ For example:
 ----------------------------
 
 .. note::
-  `Find out more about this feature in its dedicated page <./generating_users.html>`_
+  :ref:`Find out more about this feature in its dedicated page <generating_users>`
 
 This command deactivates expired user accounts which were created temporarily
 (eg: for en event) and have an expiration date set.
@@ -134,6 +136,8 @@ by default the data is added to the first found organization, eg::
 .. warning::
     It is not possible to export user credential data for radiusbatch created using prefix, please manually preserve the PDF files if you want to access the data in the future.
 
+.. _convert_called_station_id:
+
 ``convert_called_station_id``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -148,7 +152,7 @@ which can be installed using the following command
     pip install openwisp-radius[openvpn_status]
 
 In order to work, this command requires to be configured via the
-`OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_ setting.
+:ref:`OPENWISP_RADIUS_CALLED_STATION_IDS <openwisp_radius_called_station_ids>` setting.
 
 Use the following command if you want to perform this operation for all
 RADIUS sessions that meet criteria of ``OPENWISP_RADIUS_CALLED_STATION_IDS``
@@ -168,7 +172,7 @@ replacing session's ``unique_id`` in the following command:
 .. note::
 
     If you encounter ``ParseError`` for datetime data, you can set the datetime format
-    of the parser using `OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <./settings.html#openwisp-radius-openvpn-datetime-format>`_
+    of the parser using :ref:`OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <openwisp_radius_openvpn_datetime_format>`
     setting.
 
 .. note::

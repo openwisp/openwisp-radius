@@ -1022,7 +1022,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
-    def test_accounting_400_validation_error(self):
+    @mock.patch('logging.Logger.warn')
+    def test_accounting_400_validation_error(self, mocked_logger):
         data = self.acct_post_data
         data['status_type'] = 'Start'
         del data['nas_ip_address']
@@ -1031,6 +1032,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('nas_ip_address', response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
+        expected_error_string = (
+            '{\'nas_ip_address\': '
+            '[ErrorDetail(string=\'This field is required.\', '
+            'code=\'required\')]}'
+        )
+        mocked_logger.assert_called_with(
+            'Freeradius accounting request failed.\n'
+            f'Error: {expected_error_string}\n'
+            f'Request payload: {data}'
+        )
 
     def test_accounting_list_200(self):
         data1 = self.acct_post_data

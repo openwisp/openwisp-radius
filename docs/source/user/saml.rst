@@ -1,3 +1,5 @@
+.. _saml_:
+
 =====================
 Single Sign-On (SAML)
 =====================
@@ -18,7 +20,7 @@ while ``token`` should be used for the password field.
 
 The third parameter, ``login_method=saml``, is needed because it allows
 the captive page to remember that the user logged in via SAML,
-because it will need to perform the `SAML logout <#logout>`_ later on.
+because it will need to perform the :ref:`SAML logout <logout>` later on.
 
 The internal REST API of openwisp-radius will recognize the token and authorize
 the user.
@@ -81,8 +83,8 @@ Ensure your main ``urls.py`` contains the ``openwisp_users.accounts.urls``:
         path('accounts/', include('openwisp_users.accounts.urls')),
     ]
 
-Configure the SAML Settings
----------------------------
+Configure the djangosaml2 settings
+----------------------------------
 
 Refer to the djangosaml2 documentation to find out `how to configure
 required settings for SAML
@@ -112,6 +114,8 @@ Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Single Sign-On (SAML) by default.
 
+.. _logout:
+
 Logout
 ------
 
@@ -126,20 +130,4 @@ section.
 Settings
 --------
 
-``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``'Single Sign-On (SAML)'``
-
-Sets the verbose name of SAML registration method.
-
-``OPENWISP_RADIUS_SAML_IS_VERIFIED``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``False``
-
-Setting this to ``True`` will automatically flag user accounts
-created during SAML sign-in as verified users (``RegisteredUser.is_verified=True``).
-
-This is useful when SAML identity providers can be trusted
-to be legally valid identity verifiers.
+See :ref:`SAML related settings <saml_settings>`.

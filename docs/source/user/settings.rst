@@ -145,6 +145,8 @@ the following to your project ``settings.py``:
         ('cisco', 'Cisco Router'),
     )
 
+.. _openwisp_radius_freeradius_allowed_hosts:
+
 ``OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -200,6 +202,8 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
+.. _openwisp_radius_called_station_ids:
+
 ``OPENWISP_RADIUS_CALLED_STATION_IDS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -207,7 +211,7 @@ This setting can be used to set the maximum size limit for firmware images, eg:
 
 This setting allows to specify the parameters to connect to the different
 OpenVPN management interfaces available for an organization. This setting is used by the
-`convert_called_station_id <management_commands.html#convert-called-station-id>`_ command.
+:ref:`convert_called_station_id <convert_called_station_id>` command.
 
 It should contain configuration in following format:
 
@@ -239,8 +243,10 @@ It should contain configuration in following format:
 **Default**: ``False``
 
 If set to ``True``, "Called Station ID" of a RADIUS session will be
-converted (as per configuration defined in `OPENWISP_RADIUS_CALLED_STATION_IDS <./settings.html#openwisp-radius-called-station-ids>`_)
+converted (as per configuration defined in :ref:`OPENWISP_RADIUS_CALLED_STATION_IDS <openwisp_radius_called_station_ids>`)
 just after the RADIUS session is created.
+
+.. _openwisp_radius_openvpn_datetime_format:
 
 ``OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -248,7 +254,7 @@ just after the RADIUS session is created.
 **Default**: ``u'%a %b %d %H:%M:%S %Y'``
 
 Specifies the datetime format of OpenVPN management status parser used by the
-`convert_called_station_id <management_commands.html#convert-called-station-id>`_
+:ref:`convert_called_station_id <convert_called_station_id>`
 command.
 
 API and user token related settings
@@ -275,6 +281,8 @@ different domain, you can use this option to change the base of the image
 download url, this will enable you to point to your API server's domain,
 example value: ``https://myradius.myapp.com``.
 
+.. _openwisp_radius_api:
+
 ``OPENWISP_RADIUS_API``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -293,12 +301,14 @@ When this setting is ``True`` radius user tokens are deleted right after a succe
 authorization is performed. This reduces the possibility of attackers reusing
 the access tokens and posing as other users if they manage to intercept it somehow.
 
+.. _openwisp_radius_api_authorize_reject:
+
 ``OPENWISP_RADIUS_API_AUTHORIZE_REJECT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 
-Indicates wether the `Authorize API view <api.html#Authorize>`_ will return
+Indicates wether the :ref:`Authorize API view <authorize>` will return
 ``{"control:Auth-Type": "Reject"}`` or not.
 
 Rejecting an authorization request explicitly will prevent freeradius from
@@ -324,13 +334,15 @@ In the event there is no user in the database corresponding to the ``username`` 
 accounting instance, the failure will be logged with ``warning`` level but the accounting
 will be saved as usual.
 
+.. _openwisp_radius_allowed_mobile_prefixes:
+
 ``OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``[]``
 
 This setting is used to specify a list of international mobile prefixes which should
-be allowed to register into the system via the `user registration API <api.html#user-registration>`_.
+be allowed to register into the system via the :ref:`user registration API <user_registration>`.
 
 That is, only users with phone numbers using the specified international prefixes will
 be allowed to register.
@@ -351,6 +363,8 @@ or Cameroon (``+237``).
 
     This setting is applicable only for organizations which have enabled SMS verification.
 
+.. _openwisp_radius_optional_registration_fields:
+
 ``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -368,7 +382,7 @@ or Cameroon (``+237``).
 This global setting is used to specify if the optional user fields
 (``first_name``, ``last_name``, ``location`` and ``birth_date``)
 shall be disabled (hence ignored), allowed or required in the
-`User Registration API <api.html#user-registration>`_.
+:ref:`User Registration API <user_registration>`.
 
 The allowed values are:
 
@@ -451,6 +465,8 @@ the configuration should be simply changed to:
         'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
+.. _openwisp_radius_registration_api_enabled:
+
 ``OPENWISP_RADIUS_REGISTRATION_API_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -482,6 +498,8 @@ then edit a specific organization and scroll down to
 Indicates whether users who sign up should be required to verify their mobile phone number via SMS.
 This can be overridden for each organization separately via the admin interface.
 
+.. _openwisp_radius_needs_identity_verification:
+
 ``OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -511,7 +529,7 @@ The following choices are available by default:
     Organizations which are required by law to identify their users
     before allowing them to access the network (eg: ISPs) can restrict
     users to register only through this method and can configure the system
-    to only `allow international mobile prefixes <#openwisp-radius-allowed-mobile-prefixes>`_
+    to only :ref:`allow international mobile prefixes <openwisp_radius_allowed_mobile_prefixes>`
     of countries which require a valid ID document to buy a SIM card.
 
     **Disclaimer:** these are just suggestions on possible configurations
@@ -570,7 +588,7 @@ For example:
     Payment flows and credit/debit card verification are fully implemented
     in **OpenWISP Subscriptions**, a premium module available only to
     customers of the
-    `commercial support offering of OpenWISP <../general/support.html>`_.
+    :ref:`commercial support offering of OpenWISP <support>`.
 
 Email related settings
 ======================
@@ -578,12 +596,16 @@ Email related settings
 Emails can be sent to users whose usernames or passwords have been auto-generated.
 The content of these emails can be customized with the settings explained below.
 
+.. _openwisp_radius_batch_mail_subject:
+
 ``OPENWISP_RADIUS_BATCH_MAIL_SUBJECT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``Credentials``
 
 It is the subject of the mail to be sent to the users. Eg: ``Login Credentials``.
+
+.. _openwisp_radius_batch_mail_message:
 
 ``OPENWISP_RADIUS_BATCH_MAIL_MESSAGE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -595,6 +617,8 @@ The message should be a string in the format ``Your username is {} and password 
 The text could be anything but should have the format string operator ``{}`` for
 ``.format`` operations to work.
 
+.. _openwisp_radius_batch_mail_sender:
+
 ``OPENWISP_RADIUS_BATCH_MAIL_SENDER``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -605,11 +629,6 @@ The default sender email is a common setting from the
 `Django core settings  <https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email>`_
 under ``DEFAULT_FROM_EMAIL``.
 Currently, ``DEFAULT_FROM_EMAIL`` is set to to ``webmaster@localhost``.
-
-.. note::
-
-    To learn about configuring SAML Login refer to the
-    `"Settings" section of SAML Login documentation <saml.html#settings>`_
 
 .. _counter_related_settings:
 
@@ -673,3 +692,28 @@ can consume.
 
 It should be changed according to the NAS software in use, for example,
 if using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
+
+.. _saml_settings:
+
+SAML related settings
+=====================
+
+The following settings are related to the :ref:`SAML feature <saml_>`.
+
+``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``'Single Sign-On (SAML)'``
+
+Sets the verbose name of SAML registration method.
+
+``OPENWISP_RADIUS_SAML_IS_VERIFIED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Setting this to ``True`` will automatically flag user accounts
+created during SAML sign-in as verified users (``RegisteredUser.is_verified=True``).
+
+This is useful when SAML identity providers can be trusted
+to be legally valid identity verifiers.

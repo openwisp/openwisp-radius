@@ -114,7 +114,7 @@ modules listed ``INSTALLED_APPS``:
     ]
 
 These modules are optional, add them only if you need the
-`social login <../user/social_login.html>`_ feature:
+:ref:`social login <social_login>` feature:
 
 .. code-block:: python
 
@@ -150,8 +150,7 @@ Add allowed freeradius hosts  in ``settings.py``:
     OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
 
 .. note::
-    Read more about `freeradius allowed hosts in settings page
-    <../user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_.
+    Read more about :ref:`freeradius allowed hosts in settings page <openwisp_radius_freeradius_allowed_hosts>`.
 
 Add the URLs to your main ``urls.py``:
 
@@ -176,6 +175,8 @@ Then run:
 .. code-block:: shell
 
     ./manage.py migrate
+
+.. _migrate_existing_freeradius_db:
 
 Migrating an existing freeradius database
 -----------------------------------------
@@ -271,7 +272,9 @@ the cloned fork. Then, run:
 
 .. note::
     More information can be found at the
-    `management commands page <../user/management_commands.html>`_.
+    :ref:`management commands page <management_commands>`.
+
+.. _installing_for_development:
 
 Installing for development
 --------------------------
@@ -338,6 +341,8 @@ Run tests with:
 .. code-block:: shell
 
     ./runtests.py
+
+.. _celery_usage:
 
 Celery Usage
 ------------
