@@ -168,9 +168,9 @@ _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
 )
-_LOGIN_URL_HELP_TEXT = _('Enter the url where users can log in to the wifi service')
-_STATUS_URL_HELP_TEXT = _('Enter the url where users can log out from the wifi service')
-_PASSWORD_RESET_URL_HELP_TEXT = _('Enter the url where users can reset their password')
+_LOGIN_URL_HELP_TEXT = _('Enter the URL where users can log in to the wifi service')
+_STATUS_URL_HELP_TEXT = _('Enter the URL where users can log out from the wifi service')
+_PASSWORD_RESET_URL_HELP_TEXT = _('Enter the URL where users can reset their password')
 
 
 class AutoUsernameMixin(object):
@@ -1148,8 +1148,18 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         default=True,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
-    login_url = models.URLField(null=True, blank=True, help_text=_LOGIN_URL_HELP_TEXT)
-    status_url = models.URLField(null=True, blank=True, help_text=_STATUS_URL_HELP_TEXT)
+    login_url = models.URLField(
+        verbose_name=_('Login URL'),
+        null=True,
+        blank=True,
+        help_text=_LOGIN_URL_HELP_TEXT,
+    )
+    status_url = models.URLField(
+        verbose_name=_('Status URL'),
+        null=True,
+        blank=True,
+        help_text=_STATUS_URL_HELP_TEXT,
+    )
     password_reset_url = models.URLField(
         verbose_name=_('Password reset URL'),
         null=True,

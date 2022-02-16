@@ -14,8 +14,9 @@ class Migration(migrations.Migration):
             model_name='organizationradiussettings',
             name='login_url',
             field=models.URLField(
+                verbose_name='Login URL',
                 blank=True,
-                help_text='Enter the url where users can log in to the wifi service',
+                help_text='Enter the URL where users can log in to the wifi service',
                 null=True,
             ),
         ),
@@ -23,8 +24,9 @@ class Migration(migrations.Migration):
             model_name='organizationradiussettings',
             name='status_url',
             field=models.URLField(
+                verbose_name='Status URL',
                 blank=True,
-                help_text='Enter the url where users can log out from the wifi service',
+                help_text='Enter the URL where users can log out from the wifi service',
                 null=True,
             ),
         ),

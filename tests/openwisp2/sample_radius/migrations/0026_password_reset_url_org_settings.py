@@ -15,8 +15,9 @@ class Migration(migrations.Migration):
             name='password_reset_url',
             field=models.URLField(
                 blank=True,
-                help_text='Enter the url where users can reset their password',
+                help_text='Enter the URL where users can reset their password',
                 null=True,
+                verbose_name='Password reset URL',
             ),
         ),
     ]

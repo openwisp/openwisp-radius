@@ -278,7 +278,7 @@ urls to another installed module, example, ``myapp.urls``
 
 If you have a seperate instance of openwisp-radius API on a
 different domain, you can use this option to change the base of the image
-download url, this will enable you to point to your API server's domain,
+download URL, this will enable you to point to your API server's domain,
 example value: ``https://myradius.myapp.com``.
 
 .. _openwisp_radius_api:
