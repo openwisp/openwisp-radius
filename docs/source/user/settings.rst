@@ -278,7 +278,7 @@ urls to another installed module, example, ``myapp.urls``
 
 If you have a seperate instance of openwisp-radius API on a
 different domain, you can use this option to change the base of the image
-download url, this will enable you to point to your API server's domain,
+download URL, this will enable you to point to your API server's domain,
 example value: ``https://myradius.myapp.com``.
 
 .. _openwisp_radius_api:
@@ -441,6 +441,8 @@ or another in-house captive page solution.
 
 Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
 that will be used in case there's no customized URL for a specific organization.
+
+The password reset URL must contain the "{token}" and "{uid}" placeholders.
 
 The meaning of the variables in the string is the following:
 
