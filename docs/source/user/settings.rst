@@ -442,7 +442,7 @@ or another in-house captive page solution.
 Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
 that will be used in case there's no customized URL for a specific organization.
 
-The password reset url must contain the token and uid placeholders.
+The password reset URL must contain the "{token}" and "{uid}" placeholders.
 
 The meaning of the variables in the string is the following:
 

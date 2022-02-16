@@ -1151,7 +1151,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     login_url = models.URLField(null=True, blank=True, help_text=_LOGIN_URL_HELP_TEXT)
     status_url = models.URLField(null=True, blank=True, help_text=_STATUS_URL_HELP_TEXT)
     password_reset_url = models.URLField(
-        null=True, blank=True, help_text=_PASSWORD_RESET_URL_HELP_TEXT
+        verbose_name=_('Password reset URL'),
+        null=True,
+        blank=True,
+        help_text=_PASSWORD_RESET_URL_HELP_TEXT,
     )
 
     class Meta:
@@ -1261,8 +1264,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             raise ValidationError(
                 {
                     'password_reset_url': _(
-                        'The URL must contain the token and uid placeholders'
-                        ' ({}).'.format(PASSWORD_RESET_URLS.get('default'))
+                        'The URL must contain the "{{token}}" and '
+                        '"{{uid}}" placeholders, eg: {}.'.format(
+                            PASSWORD_RESET_URLS.get('default')
+                        )
                     )
                 }
             )

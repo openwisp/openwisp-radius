@@ -631,13 +631,8 @@ class TestAdmin(
             self.assertEqual(response.status_code, 200)
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.password_reset_url, None)
-            self.assertContains(
-                response,
-                _(
-                    'The URL must contain the token and uid'
-                    ' placeholders ({}).'.format(PASSWORD_RESET_URL)
-                ),
-            )
+            self.assertContains(response, 'The URL must contain the ')
+            self.assertContains(response, 'errors field-password_reset_url')
 
         with self.subTest('password_reset_url must be equal to fallback value'):
             form_data.update(

@@ -675,6 +675,9 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         widget=forms.URLInput(attrs={'size': 60}),
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
         fallback=PASSWORD_RESET_URLS.get('default'),
+        label=OrganizationRadiusSettings._meta.get_field(
+            'password_reset_url'
+        ).verbose_name,
     )
 
 
