@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, urlparse
 import swapper
 from django.conf import settings
 from django.contrib.auth import logout
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.shortcuts import get_object_or_404, render
 from djangosaml2.views import (
     AssertionConsumerServiceView as BaseAssertionConsumerServiceView,
@@ -16,7 +16,7 @@ from rest_framework.authtoken.models import Token
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import load_model
-from .utils import get_url_or_path
+from .utils import get_url_or_path, is_saml_authentication_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +103,18 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
         # Check correct organization slug is present in the request
         try:
             org_slug = self.get_org_slug_from_relay_state()
-            assert Organization.objects.filter(
+            organization = Organization.objects.only('id', 'radius_settings').get(
                 slug=org_slug
-            ).exists(), 'Organization with the provided slug does not exist'
-        except (ValueError, AssertionError) as error:
-            logger.error(str(error))
+            )
+        except (ValueError, ObjectDoesNotExist) as error:
+            if isinstance(error, ObjectDoesNotExist):
+                logger.error('Organization with the provided slug does not exist')
+            else:
+                logger.error(str(error))
             return render(request, 'djangosaml2/login_error.html')
+        else:
+            if not is_saml_authentication_enabled(organization):
+                raise PermissionDenied()
 
         # Log out the user before initiating the SAML flow
         # to avoid past sessions to get in the way and break the flow

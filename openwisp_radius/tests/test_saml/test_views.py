@@ -17,7 +17,11 @@ from openwisp_utils.tests import capture_any_output
 from .utils import TestSamlMixins
 
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = swapper.load_model('openwisp_radius', 'RadiusToken')
+OrganizationRadiusSettings = swapper.load_model(
+    'openwisp_radius', 'OrganizationRadiusSettings'
+)
 User = get_user_model()
 
 
@@ -151,3 +155,25 @@ class TestLoginView(TestOrganizationMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertIn('idp.example.com', response.url)
+
+    def test_saml_login_disabled(self):
+        redirect_url = 'https://captive-portal.example.com'
+        with self.subTest('SAML authentication is disabled site-wide'):
+            with patch('openwisp_radius.settings.SAML_LOGIN_ENABLED', False):
+                response = self.client.get(
+                    self.login_url,
+                    {'RelayState': f'{redirect_url}?org=default'},
+                )
+                self.assertEqual(response.status_code, 403)
+
+        with self.subTest('SAML registration is disabled for organization'):
+            org = self._get_org('default')
+            org.radius_settings.saml_registration_enabled = False
+            org.radius_settings.save()
+            response = self.client.get(
+                self.login_url,
+                {'RelayState': f'{redirect_url}?org=default'},
+            )
+            self.assertEqual(response.status_code, 403)
+            org.radius_settings.saml_registration_enabled = None
+            org.radius_settings.save()

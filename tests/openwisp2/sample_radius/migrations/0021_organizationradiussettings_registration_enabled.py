@@ -21,4 +21,24 @@ class Migration(migrations.Migration):
                 null=True,
             ),
         ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='saml_registration_enabled',
+            field=models.BooleanField(
+                blank=True,
+                default=None,
+                help_text='Whether the registration using SAML should be enabled or not',
+                null=True,
+            ),
+        ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='social_registration_enabled',
+            field=models.BooleanField(
+                blank=True,
+                default=None,
+                help_text='Whether the registration using social applications should be enabled or not',
+                null=True,
+            ),
+        ),
     ]
