@@ -1084,6 +1084,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
 
     def test_accounting_list_200(self):
         data1 = self.acct_post_data

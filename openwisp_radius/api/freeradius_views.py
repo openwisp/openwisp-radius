@@ -436,22 +436,8 @@ class AccountingView(ListCreateAPIView):
             try:
                 serializer.is_valid(raise_exception=True)
             except ValidationError as error:
-                # Handles "Interim-Updates" for RadiusAccounting sessions
-                # that are closed by OpenWISP when user logs into
-                # another organization.
-                unique_id_errors = error.detail.get('unique_id', [])
-                if len(unique_id_errors) == 1:
-                    error_detail = unique_id_errors.pop()
-                    if (
-                        str(error_detail)
-                        == 'accounting with this accounting unique ID already exists.'
-                        and error_detail.code == 'unique'
-                    ):
-                        rad = RadiusAccounting.objects.only(
-                            'unique_id', 'organization_id'
-                        ).get(unique_id=data.get('unique_id'))
-                        if rad.organization_id != request.auth:
-                            return Response(None)
+                if self._is_interim_update_corner_case(error, data):
+                    return Response(None)
                 raise error
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.create(acct_data)
@@ -465,6 +451,25 @@ class AccountingView(ListCreateAPIView):
             serializer.update(instance, acct_data)
             self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None)
+
+    def _is_interim_update_corner_case(self, error, data):
+        # Handles "Interim-Updates" for RadiusAccounting sessions
+        # that are closed by OpenWISP when user logs into
+        # another organization.
+        unique_id_errors = error.detail.get('unique_id', [])
+        if len(unique_id_errors) == 1:
+            error_detail = unique_id_errors.pop()
+            if (
+                str(error_detail)
+                == 'accounting with this accounting unique ID already exists.'
+                and error_detail.code == 'unique'
+            ):
+                rad = RadiusAccounting.objects.only('organization_id').get(
+                    unique_id=data.get('unique_id')
+                )
+                if rad.organization_id != self.request.auth:
+                    return True
+        return False
 
     def _data_to_acct_model(self, valid_data):
         acct_org = Organization.objects.get(pk=self.request.auth)
