@@ -5,7 +5,7 @@ from . import views
 
 
 def get_social_urls(social_views=None):
-    if not app_settings.SOCIAL_LOGIN_ENABLED:
+    if not app_settings.SOCIAL_REGISTRATION_CONFIGURED:
         return []
 
     if not social_views:

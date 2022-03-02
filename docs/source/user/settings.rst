@@ -693,12 +693,71 @@ can consume.
 It should be changed according to the NAS software in use, for example,
 if using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
 
+.. _social_login_settings:
+
+Social Login related settings
+=============================
+
+The following settings are related to the :ref:`social login feature <social_login>`.
+
+.. _openwisp_radius_social_registration_enabled:
+
+``OPENWISP_RADIUS_SOCIAL_REGISTRATION_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Indicates whether the registration using social applications
+is enabled or not. When this setting is enabled (i.e. ``True``),
+authentication using social applications is enabled for all organizations.
+
+**This setting can be overridden in individual organizations
+via the admin interface**, by going to *Organizations*
+then edit a specific organization and scroll down to
+*"Organization RADIUS settings"*, as shown in the screenshot below.
+
+.. image:: /images/organization_social_login_setting.png
+   :alt: Organization social login settings
+
+.. note::
+
+    We recommend using the override via the admin interface only when there
+    are special organizations which need a different configuration, otherwise,
+    if all the organization use the same configuration, we recommend
+    changing the global setting.
+
 .. _saml_settings:
 
 SAML related settings
 =====================
 
 The following settings are related to the :ref:`SAML feature <saml_>`.
+
+.. _openwisp_radius_saml_registration_enabled:
+
+``OPENWISP_RADIUS_SAML_REGISTRATION_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Indicates whether registration using SAML is enabled or not.
+When this setting is enabled (i.e. ``True``),
+authentication using SAML is enabled for all organizations.
+
+**This setting can be overridden in individual organizations
+via the admin interface**, by going to *Organizations*
+then edit a specific organization and scroll down to
+*"Organization RADIUS settings"*, as shown in the screenshot below.
+
+.. image:: /images/organization_saml_setting.png
+   :alt: Organization SAML settings
+
+.. note::
+
+    We recommend using the override via the admin interface only when there
+    are special organizations which need a different configuration, otherwise,
+    if all the organization use the same configuration, we recommend
+    changing the global setting.
 
 ``OPENWISP_RADIUS_SAML_REGISTRATION_METHOD_LABEL``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
