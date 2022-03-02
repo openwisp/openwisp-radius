@@ -40,7 +40,7 @@ setup(
         # TODO: remove when the new version of openwisp-users is released
         (
             'openwisp-users @ https://github.com/openwisp/openwisp-users/'
-            'tarball/master'
+            'tarball/issues/106-update-test-multitenant-admin-mixin'
         ),
         # TODO: change this when next point version of openwisp-utils is released
         (
