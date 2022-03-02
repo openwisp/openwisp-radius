@@ -87,6 +87,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def setUp(self):
         cache.clear()
+        logging.disable(logging.WARNING)
         super().setUp()
 
     def test_invalid_token(self):
@@ -1004,6 +1005,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.test_user_auth_token_org_accounting_stop()
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_400_missing_status_type(self):
         data = self._get_accounting_params(**self.acct_post_data)
         response = self.post_json(data)
@@ -1012,6 +1014,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_400_invalid_status_type(self):
         data = self.acct_post_data
         data['status_type'] = 'INVALID'
@@ -1045,6 +1048,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     @mock.patch('logging.Logger.warn')
+    @capture_any_output()
     def test_accounting_interim_update_openwisp_closed_session(self, mocked_logger):
         org2 = self._create_org(name='org2', slug='org2')
         org2.radius_settings = OrganizationRadiusSettings.objects.create(
