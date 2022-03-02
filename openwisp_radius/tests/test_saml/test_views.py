@@ -41,6 +41,7 @@ KEY_PATH = os.path.join(BASE_PATH, 'mycert.key')
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
+@patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', True)
 class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, TestCase):
     login_url = reverse('radius:saml2_login')
 
@@ -119,6 +120,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
+@patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', True)
 class TestLoginView(TestOrganizationMixin, TestCase):
     login_url = reverse('radius:saml2_login')
 
@@ -159,7 +161,7 @@ class TestLoginView(TestOrganizationMixin, TestCase):
     def test_saml_login_disabled(self):
         redirect_url = 'https://captive-portal.example.com'
         with self.subTest('SAML authentication is disabled site-wide'):
-            with patch('openwisp_radius.settings.SAML_LOGIN_ENABLED', False):
+            with patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', False):
                 response = self.client.get(
                     self.login_url,
                     {'RelayState': f'{redirect_url}?org=default'},

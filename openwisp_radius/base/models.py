@@ -1159,6 +1159,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         default=None,
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
+        verbose_name=_('SAML registration enabled'),
     )
     social_registration_enabled = models.BooleanField(
         null=True,
@@ -1219,17 +1220,17 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     def get_saml_registration_enabled(self):
         if self.saml_registration_enabled is None:
-            return app_settings.SAML_LOGIN_ENABLED
+            return app_settings.SAML_REGISTRATION_ENABLED
         return self.saml_registration_enabled
 
     def get_social_registration_enabled(self):
         print(
             'social',
             self.social_registration_enabled,
-            app_settings.SOCIAL_LOGIN_ENABLED,
+            app_settings.SOCIAL_REGISTRATION_ENABLED,
         )
         if self.social_registration_enabled is None:
-            return app_settings.SOCIAL_LOGIN_ENABLED
+            return app_settings.SOCIAL_REGISTRATION_ENABLED
         return self.social_registration_enabled
 
     def clean(self):

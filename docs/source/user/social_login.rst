@@ -112,3 +112,8 @@ page and the organization slug respectively.
 Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Facebook, Google and Twitter by default.
+
+Settings
+--------
+
+See :ref:`social login related settings <social_login_settings>`.

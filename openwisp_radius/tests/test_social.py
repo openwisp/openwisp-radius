@@ -8,6 +8,7 @@ from rest_framework.authtoken.models import Token
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.social.utils import is_social_authentication_enabled
+from openwisp_utils.tests import capture_stderr
 
 from ..utils import load_model
 from .mixins import ApiTokenMixin, BaseTestCase
@@ -17,6 +18,7 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 User = get_user_model()
 
 
+@patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', True)
 class TestSocial(ApiTokenMixin, BaseTestCase):
     view_name = 'radius:redirect_cp'
 
@@ -54,7 +56,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         url = self.get_url()
 
         with self.subTest('Test social login disabled site-wide'):
-            with patch('openwisp_radius.settings.SOCIAL_LOGIN_ENABLED', False):
+            with patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', False):
                 response = self.client.get(url, {'cp': 'http://wifi.openwisp.org/cp'})
                 self.assertEqual(response.status_code, 403)
 
@@ -119,6 +121,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
 
 
 class TestUtils(BaseTestCase):
+    @capture_stderr()
     def test_is_social_authentication_enabled(self):
         org = self._create_org()
         OrganizationRadiusSettings.objects.create(organization=org)
@@ -135,7 +138,7 @@ class TestUtils(BaseTestCase):
             org.radius_settings.social_registration_enabled = None
             self.assertEqual(
                 is_social_authentication_enabled(org),
-                app_settings.SOCIAL_LOGIN_ENABLED,
+                app_settings.SOCIAL_REGISTRATION_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):

@@ -24,7 +24,7 @@ class TestUtils(BaseTestCase):
             org.radius_settings.saml_registration_enabled = None
             self.assertEqual(
                 is_saml_authentication_enabled(org),
-                app_settings.SAML_LOGIN_ENABLED,
+                app_settings.SAML_REGISTRATION_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):

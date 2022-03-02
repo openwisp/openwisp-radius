@@ -639,7 +639,7 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
                 (
                     '',
                     _('Default')
-                    + f' ({_enabled_disabled_helper("SAML_LOGIN_ENABLED")})',
+                    + f' ({_enabled_disabled_helper("SAML_REGISTRATION_ENABLED")})',
                 ),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
@@ -647,6 +647,7 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         ),
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
         fallback='',
+        label='SAML registration enabled',
     )
     social_registration_enabled = FallbackNullChoiceField(
         required=False,
@@ -655,7 +656,7 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
                 (
                     '',
                     _('Default')
-                    + f' ({_enabled_disabled_helper("SOCIAL_LOGIN_ENABLED")})',
+                    + f' ({_enabled_disabled_helper("SOCIAL_REGISTRATION_ENABLED")})',
                 ),
                 (True, _('Enabled')),
                 (False, _('Disabled')),
@@ -754,7 +755,7 @@ OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
 
 # avoid cluttering the admin with too many models, leave only the
 # minimum required to configure social login and check if it's working
-if app_settings.SOCIAL_LOGIN_ENABLED:
+if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
     from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
 
     class SocialAccountInline(admin.StackedInline):

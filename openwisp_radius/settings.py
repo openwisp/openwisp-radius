@@ -40,8 +40,12 @@ BATCH_DELETE_EXPIRED = get_settings_value('BATCH_DELETE_EXPIRED', 18)
 BATCH_MAIL_SUBJECT = get_settings_value('BATCH_MAIL_SUBJECT', 'Credentials')
 BATCH_MAIL_SENDER = get_settings_value('BATCH_MAIL_SENDER', settings.DEFAULT_FROM_EMAIL)
 API_AUTHORIZE_REJECT = get_settings_value('API_AUTHORIZE_REJECT', False)
-SOCIAL_LOGIN_ENABLED = 'allauth.socialaccount' in settings.INSTALLED_APPS
-SAML_LOGIN_ENABLED = 'djangosaml2' in settings.INSTALLED_APPS
+SOCIAL_REGISTRATION_CONFIGURED = 'allauth.socialaccount' in getattr(
+    settings, 'INSTALLED_APPS', []
+)
+SOCIAL_REGISTRATION_ENABLED = get_settings_value('SOCIAL_REGISTRATION_ENABLED', False)
+SAML_REGISTRATION_CONFIGURED = 'djangosaml2' in getattr(settings, 'INSTALLED_APPS', [])
+SAML_REGISTRATION_ENABLED = get_settings_value('SAML_REGISTRATION_ENABLED', False)
 SAML_REGISTRATION_METHOD_LABEL = get_settings_value(
     'SAML_REGISTRATION_METHOD_LABEL', _('Single Sign-On (SAML)')
 )
