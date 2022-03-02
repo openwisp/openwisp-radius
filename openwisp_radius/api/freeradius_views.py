@@ -453,9 +453,11 @@ class AccountingView(ListCreateAPIView):
             return Response(None)
 
     def _is_interim_update_corner_case(self, error, data):
-        # Handles "Interim-Updates" for RadiusAccounting sessions
-        # that are closed by OpenWISP when user logs into
-        # another organization.
+        """
+        Handles "Interim-Updates" for RadiusAccounting sessions
+        that are closed by OpenWISP when user logs into
+        another organization.
+        """
         unique_id_errors = error.detail.get('unique_id', [])
         if len(unique_id_errors) == 1:
             error_detail = unique_id_errors.pop()
