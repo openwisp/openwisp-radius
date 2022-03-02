@@ -46,6 +46,12 @@ Install Python dependencies::
 
     pip install openwisp-radius[saml]
 
+.. important::
+
+    The SAML registration method is disabled by default but
+    can be enabled either via a :ref:`global setting or from the admin interface
+    <openwisp_radius_saml_registration_enabled>`.
+
 Ensure your ``settings.py`` looks like the following:
 
 .. code-block:: python

@@ -74,6 +74,12 @@ configure of the facebook social provider):
         }
     }
 
+.. important::
+
+    The registration using social login method is disabled by default but
+    can be enabled either via a :ref:`global setting or from the
+    admin interface <openwisp_radius_social_registration_enabled>`.
+
 Ensure your main ``urls.py`` contains the ``allauth.urls``:
 
 .. code-block:: python

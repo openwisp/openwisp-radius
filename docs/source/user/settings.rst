@@ -700,6 +700,8 @@ Social Login related settings
 
 The following settings are related to the :ref:`social login feature <social_login>`.
 
+.. _openwisp_radius_social_registration_enabled:
+
 ``OPENWISP_RADIUS_SOCIAL_REGISTRATION_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -730,6 +732,8 @@ SAML related settings
 =====================
 
 The following settings are related to the :ref:`SAML feature <saml_>`.
+
+.. _openwisp_radius_saml_registration_enabled:
 
 ``OPENWISP_RADIUS_SAML_REGISTRATION_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
