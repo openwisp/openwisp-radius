@@ -461,10 +461,10 @@ class RegisterSerializer(
         # Phone number is given preference over email and username.
         if has_key('phone_number'):
             user_lookup |= Q(phone_number=data['phone_number'])
-        if has_key('email'):
-            user_lookup |= Q(email=data['email'])
         if has_key('username'):
             user_lookup |= Q(username=data['username'])
+        if has_key('email'):
+            user_lookup |= Q(email=data['email'])
         users = User.objects.filter(user_lookup).values_list('id', flat=True)
         if not users:
             # Error is not related to cross organization registration
