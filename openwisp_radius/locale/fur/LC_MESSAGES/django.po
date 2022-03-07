@@ -114,31 +114,29 @@ msgstr "Salûts di rispiet"
 msgid ""
 "Please click on the button below to open a page where you can choose a new "
 "password:"
-msgstr ""
-"Fare clic sul pulsante in basso per aprire una pagina in cui è possibile scegliere un nuovo "
-"parola d'ordine:"
+msgstr "Fâ clic sul boton in bas par vierzi une pagjine là che si pues sielzi une gnove password:"
 
 #: openwisp_radius/api/serializers.py:378
 msgid "Reset password"
-msgstr "Resetta la password"
+msgstr "Resete la password"
 
 #: openwisp_radius/api/serializers.py:364
 #, python-format
 msgid "Password reset on %s"
-msgstr "Reimposta password su %s"
+msgstr "Sielç une gnove password su %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
 msgid "A new session has been started for your account:"
-msgstr "È iniziata una nuova sessione per il tuo account:"
+msgstr "E je stade inviade une gnove session pal to account:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
-msgstr "Puoi monitorare il consumo di tempo e traffico della tua sessione o terminare la sessione in qualsiasi momento cliccando sul collegamento seguente."
+msgstr "Tu puedis monitorâ il consum di timp e trafic de tô session o sierâ la session in cualsisedi moment clicant su chest link."
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
-msgstr "Gestisci sessione"
+msgstr "Gjestìs session"
 
-#: openwisp_radius/tasks.py: 80
+#: openwisp_radius/tasks.py:80
 msgid "New WiFi session started"
-msgstr "Nuova sessione WiFi iniziata"
+msgstr "Gnove session WiFi scomençade"

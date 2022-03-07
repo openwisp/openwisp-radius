@@ -117,8 +117,7 @@ msgid ""
 "Please click on the button below to open a page where you can choose a new "
 "password:"
 msgstr ""
-"Bitte klicken Sie auf die Schaltfläche unten, um eine Seite zu öffnen, auf der Sie eine neue auswählen können"
-"Passwort:"
+"Klicken Sie auf der Taste unten, um eine neue Seite zu öffnen und ein neues Passwort zu erstellen."
 
 #: openwisp_radius/api/serializers.py:378
 msgid "Reset password"
@@ -127,20 +126,20 @@ msgstr "Passwort zurücksetzen"
 #: openwisp_radius/api/serializers.py:364
 #, python-format
 msgid "Password reset on %s"
-msgstr "Passwort zurückgesetzt auf %s"
+msgstr "Passwort ändern an %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
 msgid "A new session has been started for your account:"
-msgstr "Für Ihr Konto wurde eine neue Sitzung gestartet:"
+msgstr "Eine neue Session für Ihren Account wird gestartet:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
-msgstr "Sie können Ihre Sitzung überprüfen, um herauszufinden, wie viel Zeit und/oder Verkehr verbraucht wurde, oder Sie können die Sitzung jederzeit beenden, indem Sie auf die Schaltfläche unten klicken."
+msgstr "Um die Dauer und den Datenverbrauch Ihrer Session zu überwachen oder um Ihre Session in jedem Moment zu beenden, klicken Sie auf den folgenden Link."
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
-msgstr "Sitzung verwalten"
+msgstr "Session verwalten"
 
 #: openwisp_radius/tasks.py: 80
 msgid "New WiFi session started"
-msgstr "Neue WLAN-Sitzung gestartet"
+msgstr "Neue Session WiFi gestartet"
