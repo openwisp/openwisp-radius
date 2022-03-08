@@ -33,12 +33,15 @@ from .base.models import (
     _GET_MOBILE_PREFIX_HELP_TEXT,
     _GET_OPTIONAL_FIELDS_HELP_TEXT,
     _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
+    _PASSWORD_RESET_URL_HELP_TEXT,
     _REGISTRATION_ENABLED_HELP_TEXT,
+    _SAML_REGISTRATION_ENABLED_HELP_TEXT,
     _SMS_VERIFICATION_HELP_TEXT,
+    _SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
     _encode_secret,
 )
-from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
+from .settings import PASSWORD_RESET_URLS, RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
 Nas = load_model('Nas')
@@ -629,6 +632,39 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
         fallback='',
     )
+    saml_registration_enabled = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("SAML_REGISTRATION_ENABLED")})',
+                ),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
+        label='SAML registration enabled',
+    )
+    social_registration_enabled = FallbackNullChoiceField(
+        required=False,
+        widget=Select(
+            choices=[
+                (
+                    '',
+                    _('Default')
+                    + f' ({_enabled_disabled_helper("SOCIAL_REGISTRATION_ENABLED")})',
+                ),
+                (True, _('Enabled')),
+                (False, _('Disabled')),
+            ]
+        ),
+        help_text=_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback='',
+    )
     sms_verification = FallbackNullChoiceField(
         required=False,
         widget=Select(
@@ -669,6 +705,15 @@ class OrganizationRadiusSettingsForm(AlwaysHasChangedMixin, forms.ModelForm):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
     )
+    password_reset_url = FallbackCharField(
+        required=False,
+        widget=forms.URLInput(attrs={'size': 60}),
+        help_text=_PASSWORD_RESET_URL_HELP_TEXT,
+        fallback=PASSWORD_RESET_URLS.get('default'),
+        label=OrganizationRadiusSettings._meta.get_field(
+            'password_reset_url'
+        ).verbose_name,
+    )
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
@@ -682,6 +727,8 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'token',
                     'freeradius_allowed_hosts',
                     'registration_enabled',
+                    'saml_registration_enabled',
+                    'social_registration_enabled',
                     'needs_identity_verification',
                     'sms_verification',
                     'first_name',
@@ -692,6 +739,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'allowed_mobile_prefixes',
                     'login_url',
                     'status_url',
+                    'password_reset_url',
                 )
             },
         ),
@@ -707,7 +755,7 @@ OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
 
 # avoid cluttering the admin with too many models, leave only the
 # minimum required to configure social login and check if it's working
-if app_settings.SOCIAL_LOGIN_ENABLED:
+if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
     from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
 
     class SocialAccountInline(admin.StackedInline):

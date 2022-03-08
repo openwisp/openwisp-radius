@@ -87,6 +87,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def setUp(self):
         cache.clear()
+        logging.disable(logging.WARNING)
         super().setUp()
 
     def test_invalid_token(self):
@@ -1004,6 +1005,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.test_user_auth_token_org_accounting_stop()
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_400_missing_status_type(self):
         data = self._get_accounting_params(**self.acct_post_data)
         response = self.post_json(data)
@@ -1012,6 +1014,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
+    @capture_any_output()
     def test_accounting_400_invalid_status_type(self):
         data = self.acct_post_data
         data['status_type'] = 'INVALID'
@@ -1022,7 +1025,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
-    def test_accounting_400_validation_error(self):
+    @mock.patch('logging.Logger.warn')
+    def test_accounting_400_validation_error(self, mocked_logger):
         data = self.acct_post_data
         data['status_type'] = 'Start'
         del data['nas_ip_address']
@@ -1031,6 +1035,60 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('nas_ip_address', response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
+        expected_error_string = (
+            '{\'nas_ip_address\': '
+            '[ErrorDetail(string=\'This field is required.\', '
+            'code=\'required\')]}'
+        )
+        mocked_logger.assert_called_with(
+            'Freeradius accounting request failed.\n'
+            f'Error: {expected_error_string}\n'
+            f'Request payload: {data}'
+        )
+
+    @freeze_time(START_DATE)
+    @mock.patch('logging.Logger.warn')
+    @capture_any_output()
+    def test_accounting_interim_update_openwisp_closed_session(self, mocked_logger):
+        org2 = self._create_org(name='org2', slug='org2')
+        org2.radius_settings = OrganizationRadiusSettings.objects.create(
+            organization=org2
+        )
+        org2.save()
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+
+        # Create RadiusAccounting object with "default" organization
+        data = self.acct_post_data
+        data['status_type'] = 'Interim-Update'
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+        # Create RadiusAccounting object with "org2" organization
+        org2_data = self.acct_post_data
+        org2_data['status_type'] = 'Interim-Update'
+        org2_data['unique_id'] = '42'
+        org2_data = self._get_accounting_params(**org2_data)
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(org2_data),
+            HTTP_AUTHORIZATION=f'Bearer {org2.pk} {org2.radius_settings.token}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 2)
+
+        # Send Interim-Update request for "default" organization
+        # with Authorization header containing "org2" credentials.
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(data),
+            HTTP_AUTHORIZATION=f'Bearer {org2.pk} {org2.radius_settings.token}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
 
     def test_accounting_list_200(self):
         data1 = self.acct_post_data

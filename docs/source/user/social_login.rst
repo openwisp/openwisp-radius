@@ -1,6 +1,17 @@
+.. _social_login:
+
 ============
 Social Login
 ============
+
+.. important::
+
+    The social login feature is disabled by default.
+
+    In order to enable this feature you have to follow
+    the :ref:`setup instructions <setup_social_login>` below
+    and then activate it via :ref:`global setting or from the admin interface
+    <openwisp_radius_social_registration_enabled>`.
 
 Social login is supported by generating an additional temporary token right
 after users perform the social sign-in, the user is then redirected to the
@@ -22,6 +33,8 @@ a social network.
    If you're building a public wifi service, we suggest
    to take a look at `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
    which is built to work with openwisp-radius.
+
+.. _setup_social_login:
 
 Setup
 -----
@@ -110,3 +123,8 @@ page and the organization slug respectively.
 Alternatively, you can take a look at
 `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
 which provides buttons for Facebook, Google and Twitter by default.
+
+Settings
+--------
+
+See :ref:`social login related settings <social_login_settings>`.

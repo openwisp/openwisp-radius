@@ -6,6 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from rest_framework.authtoken.models import Token
 
+from openwisp_radius.social.utils import is_social_authentication_enabled
+
 from ..api.views import RadiusTokenMixin
 from ..utils import load_model
 
@@ -33,6 +35,9 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
         authorization logic
         raises PermissionDenied if user is not authorized
         """
+        if not is_social_authentication_enabled(org):
+            raise PermissionDenied
+
         user = request.user
         if not user.is_authenticated or not user.socialaccount_set.exists():
             raise PermissionDenied()

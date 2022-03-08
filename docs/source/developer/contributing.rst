@@ -18,8 +18,7 @@ Follow these guidelines to speed up the process.
 Setup
 -----
 
-Once you have chosen an issue to work on, `setup your machine for development
-<./setup.html#installing-for-development>`_
+Once you have chosen an issue to work on, :ref:`setup your machine for development <installing_for_development>`.
 
 Ensure test coverage does not decrease
 --------------------------------------

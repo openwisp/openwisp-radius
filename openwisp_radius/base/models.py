@@ -42,6 +42,7 @@ from ..settings import (
     BATCH_MAIL_MESSAGE,
     BATCH_MAIL_SENDER,
     BATCH_MAIL_SUBJECT,
+    PASSWORD_RESET_URLS,
 )
 from ..utils import (
     SmsMessage,
@@ -159,6 +160,12 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
 _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
+_SAML_REGISTRATION_ENABLED_HELP_TEXT = _(
+    'Whether the registration using SAML should be enabled or not'
+)
+_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT = _(
+    'Whether the registration using social applications should be enabled or not'
+)
 _SMS_VERIFICATION_HELP_TEXT = _(
     'Whether users who sign up should be required to verify their mobile '
     'phone number via SMS'
@@ -167,8 +174,9 @@ _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
 )
-_LOGIN_URL_HELP_TEXT = _('Enter the url where users can log in to the wifi service')
-_STATUS_URL_HELP_TEXT = _('Enter the url where users can log out from the wifi service')
+_LOGIN_URL_HELP_TEXT = _('Enter the URL where users can log in to the wifi service')
+_STATUS_URL_HELP_TEXT = _('Enter the URL where users can log out from the wifi service')
+_PASSWORD_RESET_URL_HELP_TEXT = _('Enter the URL where users can reset their password')
 
 
 class AutoUsernameMixin(object):
@@ -1152,8 +1160,37 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         default=True,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
-    login_url = models.URLField(null=True, blank=True, help_text=_LOGIN_URL_HELP_TEXT)
-    status_url = models.URLField(null=True, blank=True, help_text=_STATUS_URL_HELP_TEXT)
+    saml_registration_enabled = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
+        verbose_name=_('SAML registration enabled'),
+    )
+    social_registration_enabled = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
+    )
+    login_url = models.URLField(
+        verbose_name=_('Login URL'),
+        null=True,
+        blank=True,
+        help_text=_LOGIN_URL_HELP_TEXT,
+    )
+    status_url = models.URLField(
+        verbose_name=_('Status URL'),
+        null=True,
+        blank=True,
+        help_text=_STATUS_URL_HELP_TEXT,
+    )
+    password_reset_url = models.URLField(
+        verbose_name=_('Password reset URL'),
+        null=True,
+        blank=True,
+        help_text=_PASSWORD_RESET_URL_HELP_TEXT,
+    )
 
     class Meta:
         verbose_name = _('Organization radius settings')
@@ -1187,6 +1224,21 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             return app_settings.SMS_VERIFICATION_ENABLED
         return self.sms_verification
 
+    def get_saml_registration_enabled(self):
+        if self.saml_registration_enabled is None:
+            return app_settings.SAML_REGISTRATION_ENABLED
+        return self.saml_registration_enabled
+
+    def get_social_registration_enabled(self):
+        print(
+            'social',
+            self.social_registration_enabled,
+            app_settings.SOCIAL_REGISTRATION_ENABLED,
+        )
+        if self.social_registration_enabled is None:
+            return app_settings.SOCIAL_REGISTRATION_ENABLED
+        return self.social_registration_enabled
+
     def clean(self):
         if self.get_sms_verification() and not self.sms_sender:
             raise ValidationError(
@@ -1199,6 +1251,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
         self._clean_optional_fields()
+        self._clean_password_reset_url()
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
@@ -1252,6 +1305,22 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         for field in ['first_name', 'last_name', 'location', 'birth_date']:
             if getattr(self, field) == global_settings.get(field):
                 setattr(self, field, None)
+
+    def _clean_password_reset_url(self):
+        if self.password_reset_url and (
+            '{uid}' not in self.password_reset_url
+            or '{token}' not in self.password_reset_url
+        ):
+            raise ValidationError(
+                {
+                    'password_reset_url': _(
+                        'The URL must contain the "{{token}}" and '
+                        '"{{uid}}" placeholders, eg: {}.'.format(
+                            PASSWORD_RESET_URLS.get('default')
+                        )
+                    )
+                }
+            )
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)

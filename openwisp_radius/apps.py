@@ -48,13 +48,15 @@ class OpenwispRadiusConfig(ApiAppConfig):
     SocialAccountConfig.default_auto_field = 'django.db.models.AutoField'
 
     def ready(self, *args, **kwargs):
+        from . import checks  # noqa
+
         super().ready(*args, **kwargs)
         self.connect_signals()
         self.regiser_menu_groups()
 
-        if app_settings.SOCIAL_LOGIN_ENABLED:
+        if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
             register_registration_method('social_login', _('Social login'))
-        if app_settings.SAML_LOGIN_ENABLED:
+        if app_settings.SAML_REGISTRATION_CONFIGURED:
             register_registration_method(
                 'saml',
                 app_settings.SAML_REGISTRATION_METHOD_LABEL,

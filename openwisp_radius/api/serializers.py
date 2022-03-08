@@ -164,6 +164,19 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             radius_token.can_auth = False
             radius_token.save()
 
+    def is_valid(self, raise_exception=False):
+        try:
+            return super().is_valid(raise_exception)
+        except serializers.ValidationError as error:
+            request = self.context.get('request', None)
+            if request:
+                logger.warn(
+                    'Freeradius accounting request failed.\n'
+                    f'Error: {error}\n'
+                    f'Request payload: {request.data}'
+                )
+            raise error
+
     def run_validation(self, data):
         for field in ['session_time', 'input_octets', 'output_octets']:
             if data.get('status_type', None) == 'Start' and data[field] == '':
@@ -458,26 +471,31 @@ class RegisterSerializer(
             return key in error_dict and key in data
 
         user_lookup = Q()
+        # Phone number is given preference over email and username.
+        if has_key('phone_number'):
+            user_lookup |= Q(phone_number=data['phone_number'])
         if has_key('username'):
             user_lookup |= Q(username=data['username'])
         if has_key('email'):
             user_lookup |= Q(email=data['email'])
-        if has_key('phone_number'):
-            user_lookup |= Q(phone_number=data['phone_number'])
-        try:
-            user = User.objects.get(user_lookup)
-        except User.DoesNotExist:
+        users = User.objects.filter(user_lookup).values_list('id', flat=True)
+        if not users:
             # Error is not related to cross organization registration
             raise error
+        # More that one user objects might be returned if a user
+        # supplies information that belongs to two different accounts.
+        # We ensure that none of the returned accounts belongs to the
+        # current organization and selects the first one based on query
+        # preference.
         if OrganizationUser.objects.filter(
             organization=self.context['view'].organization,
-            user=user,
+            user_id__in=users,
         ).exists():
             # User is registering to the organization it is already member of.
             raise error
-
+        user_id = users[0]
         organizations = (
-            OrganizationUser.objects.filter(user=user)
+            OrganizationUser.objects.filter(user_id=user_id)
             .select_related('organization')
             .values('organization__name', 'organization__slug')
         )

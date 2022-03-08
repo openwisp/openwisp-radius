@@ -41,6 +41,7 @@ _RADCHECK_ENTRY_PW_UPDATE = {
     'new_value': 'Cam0_liX',
     'attribute': 'NT-Password',
 }
+PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get('default')
 
 
 class TestAdmin(
@@ -53,16 +54,6 @@ class TestAdmin(
 
     app_label = 'openwisp_radius'
     app_label_users = 'openwisp_users'
-
-    operator_permission_filters = [
-        {'codename__endswith': 'nas'},
-        {'codename__endswith': 'accounting'},
-        {'codename__endswith': 'batch'},
-        {'codename__endswith': 'check'},
-        {'codename__endswith': 'reply'},
-        {'codename__endswith': 'group'},
-        {'codename__endswith': 'user'},
-    ]
 
     _RADCHECK_ENTRY = {
         'username': 'Monica',
@@ -544,6 +535,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Return FREERADIUS_ALLOWED_HOSTS back'):
@@ -592,6 +584,54 @@ class TestAdmin(
                     'or subnets separated by comma. (no spaces)'
                 ),
             )
+
+    def test_organization_radsettings_password_reset_url(self):
+        org = self._get_org()
+        url = reverse(
+            f'admin:{self.app_label_users}_organization_change',
+            args=[org.pk],
+        )
+        radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+        form_data = org.__dict__
+        form_data.update(
+            {
+                "owner-TOTAL_FORMS": "0",
+                "owner-INITIAL_FORMS": "0",
+                "owner-MIN_NUM_FORMS": "0",
+                "owner-MAX_NUM_FORMS": "1",
+                'radius_settings-TOTAL_FORMS': '1',
+                'radius_settings-INITIAL_FORMS': '1',
+                'radius_settings-MIN_NUM_FORMS': '0',
+                'radius_settings-MAX_NUM_FORMS': '1',
+                'radius_settings-0-token': '12345',
+                'radius_settings-0-sms_sender': '',
+                'radius_settings-0-sms_meta_data': 'null',
+                'radius_settings-0-id': radsetting.pk,
+                'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
+            }
+        )
+
+        with self.subTest(
+            'raise error if password_reset_url does not contain uid and token'
+        ):
+            pwd_reset_url = 'http://example.com/pwd/reset/'
+            form_data.update({'radius_settings-0-password_reset_url': pwd_reset_url})
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 200)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.password_reset_url, None)
+            self.assertContains(response, 'The URL must contain the ')
+            self.assertContains(response, 'errors field-password_reset_url')
+
+        with self.subTest('password_reset_url must be equal to fallback value'):
+            form_data.update(
+                {'radius_settings-0-password_reset_url': PASSWORD_RESET_URL}
+            )
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.password_reset_url, PASSWORD_RESET_URL)
 
     def test_radsettings_freeradius_allowed_hosts_help_text(self):
         url = reverse(f'admin:{self.app_label_users}_organization_add')
@@ -678,6 +718,7 @@ class TestAdmin(
             **{'name': 'inactive org', 'is_active': False, 'slug': 'inactive-org'}
         )
         operator = TestMultitenantAdminMixin()._create_operator()
+        administrator = self._create_administrator([org1, inactive])
         self._create_org_user(organization=org1, user=operator, is_admin=True)
         self._create_org_user(organization=inactive, user=operator, is_admin=True)
         user11 = User.objects.create(
@@ -807,6 +848,7 @@ class TestAdmin(
             user22=user22,
             user33=user33,
             operator=operator,
+            administrator=administrator,
         )
         if usergroup:
             ug1 = self._create_radius_usergroup(user=user11, group=rg1)
@@ -852,6 +894,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     @capture_any_output()
@@ -865,6 +908,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radiusreply_queryset(self):
@@ -882,6 +926,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     @capture_any_output()
@@ -895,6 +940,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radiusgroup_queryset(self):
@@ -912,6 +958,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_nas_queryset(self):
@@ -929,6 +976,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_radiusaccounting_queryset(self):
@@ -954,6 +1002,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_radius_usergroup_queryset(self):
@@ -987,6 +1036,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radius_groupcheck_queryset(self):
@@ -1084,6 +1134,7 @@ class TestAdmin(
                 'radius_settings-0-sms_meta_data': 'null',
                 'radius_settings-0-id': radsetting.pk,
                 'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
         with self.subTest('Valid mobile prefix list'):
