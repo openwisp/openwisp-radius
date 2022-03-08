@@ -135,7 +135,7 @@ except AssertionError:  # pragma: no cover
     )
 
 # Path of urls that need to be refered in migrations files.
-CSV_URL_PATH = 'api/v1/radiusbatch/csv/'
+CSV_URL_PATH = 'api/v1/radius/organization/'
 CALLED_STATION_IDS = get_settings_value('CALLED_STATION_IDS', {})
 CONVERT_CALLED_STATION_ON_CREATE = get_settings_value(
     'CONVERT_CALLED_STATION_ON_CREATE', False

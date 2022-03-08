@@ -830,7 +830,13 @@ _get_csv_file_private_storage = PrivateFileSystemStorage(
 
 
 def _get_csv_file_location(instance, filename):
-    return os.path.join(str(instance.organization.pk), filename)
+    return os.path.join(
+        str(instance.organization.slug),
+        'batch',
+        str(instance.organization.pk),
+        'csv',
+        filename,
+    )
 
 
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):

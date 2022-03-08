@@ -766,3 +766,22 @@ When using this strategy, in the response you can find the field
 (example: ``[['username', 'password'], ['sample_user', 'BBuOb5sN']]``)
 and the field ``pdf_link`` which can be used to download a PDF file
 containing the user credentials.
+
+Batch CSV Download
+-------------------
+
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>
+
+Responds only to **GET**.
+
+Parameters:
+
+===============    ===============================
+Param              Description
+===============    ===============================
+slug               string
+id                 string
+filename           string
+===============    ===============================
