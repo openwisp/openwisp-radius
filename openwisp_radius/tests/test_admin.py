@@ -55,16 +55,6 @@ class TestAdmin(
     app_label = 'openwisp_radius'
     app_label_users = 'openwisp_users'
 
-    operator_permission_filters = [
-        {'codename__endswith': 'nas'},
-        {'codename__endswith': 'accounting'},
-        {'codename__endswith': 'batch'},
-        {'codename__endswith': 'check'},
-        {'codename__endswith': 'reply'},
-        {'codename__endswith': 'group'},
-        {'codename__endswith': 'user'},
-    ]
-
     _RADCHECK_ENTRY = {
         'username': 'Monica',
         'value': 'Cam0_liX',
@@ -728,6 +718,7 @@ class TestAdmin(
             **{'name': 'inactive org', 'is_active': False, 'slug': 'inactive-org'}
         )
         operator = TestMultitenantAdminMixin()._create_operator()
+        administrator = self._create_administrator([org1, inactive])
         self._create_org_user(organization=org1, user=operator, is_admin=True)
         self._create_org_user(organization=inactive, user=operator, is_admin=True)
         user11 = User.objects.create(
@@ -857,6 +848,7 @@ class TestAdmin(
             user22=user22,
             user33=user33,
             operator=operator,
+            administrator=administrator,
         )
         if usergroup:
             ug1 = self._create_radius_usergroup(user=user11, group=rg1)
@@ -902,6 +894,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     @capture_any_output()
@@ -915,6 +908,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radiusreply_queryset(self):
@@ -932,6 +926,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     @capture_any_output()
@@ -945,6 +940,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radiusgroup_queryset(self):
@@ -962,6 +958,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_nas_queryset(self):
@@ -979,6 +976,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_radiusaccounting_queryset(self):
@@ -1004,6 +1002,7 @@ class TestAdmin(
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
             select_widget=True,
+            administrator=True,
         )
 
     def test_radius_usergroup_queryset(self):
@@ -1037,6 +1036,7 @@ class TestAdmin(
             ),
             visible=[data['user11']],
             hidden=[data['user22']],
+            administrator=True,
         )
 
     def test_radius_groupcheck_queryset(self):
