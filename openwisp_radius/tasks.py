@@ -10,6 +10,7 @@ from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_utils.admin_theme.email import send_email
+from openwisp_utils.tasks import OpenwispCeleryTask
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def convert_called_station_id(unique_id=None):
     management.call_command('convert_called_station_id', unique_id=unique_id)
 
 
-@shared_task
+@shared_task(base=OpenwispCeleryTask)
 def send_login_email(accounting_data):
     from sesame.utils import get_query_string
 
