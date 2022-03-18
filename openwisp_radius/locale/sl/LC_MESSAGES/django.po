@@ -133,6 +133,10 @@ msgstr "Začela se je nova seja vašega računa:"
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
 msgstr "Trajanje seje in prenos podatkov lahko spremljate ali kadar koli zaključite s klikom na naslednjo povezavo."
 
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Opomba: ta povezava velja samo %(sesame_max_age)s"
+
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
 msgstr "Upravljanje seje"

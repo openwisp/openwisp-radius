@@ -136,6 +136,10 @@ msgstr "Eine neue Session für Ihren Account wird gestartet:"
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
 msgstr "Um die Dauer und den Datenverbrauch Ihrer Session zu überwachen oder um Ihre Session in jedem Moment zu beenden, klicken Sie auf den folgenden Link."
 
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Hinweis: dieser Link ist nur %(sesame_max_age)s gültig"
+
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
 msgstr "Session verwalten"

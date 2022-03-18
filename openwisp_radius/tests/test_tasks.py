@@ -6,6 +6,7 @@ from celery.contrib.testing.worker import start_worker
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail, management
+from django.test.utils import override_settings
 from django.utils.timezone import now
 
 from openwisp_radius import tasks
@@ -115,7 +116,6 @@ class TestTasks(FileMixin, BaseTestCase):
         organization = self._get_org()
         accounting_data['organization'] = organization.id
         total_mails = len(mail.outbox)
-
         with self.subTest(
             'do not send mail if login_url does not exists for the organization'
         ):
@@ -173,9 +173,28 @@ class TestTasks(FileMixin, BaseTestCase):
                 ' and/or traffic has been used or you can terminate the session',
                 ' '.join(email.alternatives[0][0].split()),
             )
+            self.assertNotIn(
+                'Note: this link is valid only for an hour from now',
+                ' '.join(email.alternatives[0][0].split()),
+            )
             translation_activate.assert_called_with(user.language)
 
         translation_activate.reset_mock()
+
+        with override_settings(SESAME_MAX_AGE=2 * 60 * 60):
+            with self.subTest(
+                'it should check expiration text is present when SESAME_MAX_AGE is set'
+            ):
+                tasks.send_login_email.delay(accounting_data)
+                self.assertEqual(len(mail.outbox), total_mails + 1)
+                email = mail.outbox.pop()
+                self.assertIn(
+                    'Note: this link is valid only for an hour from now',
+                    ' '.join(email.alternatives[0][0].split()),
+                )
+                translation_activate.assert_called_with(user.language)
+
+            translation_activate.reset_mock()
 
         with self.subTest('it should send mail in user language preference'):
             user.language = 'it'

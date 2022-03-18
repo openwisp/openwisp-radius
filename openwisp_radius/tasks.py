@@ -1,12 +1,14 @@
 import logging
+from datetime import timedelta
 
 import swapper
 from celery import shared_task
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import management
 from django.core.exceptions import ObjectDoesNotExist
 from django.template import loader
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_utils.admin_theme.email import send_email
@@ -100,5 +102,12 @@ def send_login_email(accounting_data):
             'call_to_action_url': one_time_login_url,
             'call_to_action_text': _('Manage Session'),
         }
+        if hasattr(settings, 'SESAME_MAX_AGE'):
+            context.update(
+                {
+                    'sesame_max_age': timezone.now()
+                    + timedelta(seconds=settings.SESAME_MAX_AGE)
+                }
+            )
         body_html = loader.render_to_string('radius_accounting_start.html', context)
         send_email(subject, body_html, body_html, [user.email], context)

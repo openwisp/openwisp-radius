@@ -128,6 +128,10 @@ msgstr "Для вашей учетной записи началася нову�
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
 msgstr "Вы можете отслеживать время и потребление трафика вашей сессии или завершить сессию в любое время, нажав на следующую ссылку."
 
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Примечание: эта ссылка действительна только в течение %(sesame_max_age)s"
+
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
 msgstr "Управление сессией"
