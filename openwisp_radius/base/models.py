@@ -160,6 +160,12 @@ _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
 _REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration API endpoint should be enabled or not'
 )
+_SAML_REGISTRATION_ENABLED_HELP_TEXT = _(
+    'Whether the registration using SAML should be enabled or not'
+)
+_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT = _(
+    'Whether the registration using social applications should be enabled or not'
+)
 _SMS_VERIFICATION_HELP_TEXT = _(
     'Whether users who sign up should be required to verify their mobile '
     'phone number via SMS'
@@ -824,7 +830,13 @@ _get_csv_file_private_storage = PrivateFileSystemStorage(
 
 
 def _get_csv_file_location(instance, filename):
-    return os.path.join(str(instance.organization.pk), filename)
+    return os.path.join(
+        str(instance.organization.slug),
+        'batch',
+        str(instance.organization.pk),
+        'csv',
+        filename,
+    )
 
 
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
@@ -1148,6 +1160,19 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         default=True,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
     )
+    saml_registration_enabled = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
+        verbose_name=_('SAML registration enabled'),
+    )
+    social_registration_enabled = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
+    )
     login_url = models.URLField(
         verbose_name=_('Login URL'),
         null=True,
@@ -1198,6 +1223,21 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         if self.sms_verification is None:
             return app_settings.SMS_VERIFICATION_ENABLED
         return self.sms_verification
+
+    def get_saml_registration_enabled(self):
+        if self.saml_registration_enabled is None:
+            return app_settings.SAML_REGISTRATION_ENABLED
+        return self.saml_registration_enabled
+
+    def get_social_registration_enabled(self):
+        print(
+            'social',
+            self.social_registration_enabled,
+            app_settings.SOCIAL_REGISTRATION_ENABLED,
+        )
+        if self.social_registration_enabled is None:
+            return app_settings.SOCIAL_REGISTRATION_ENABLED
+        return self.social_registration_enabled
 
     def clean(self):
         if self.get_sms_verification() and not self.sms_sender:

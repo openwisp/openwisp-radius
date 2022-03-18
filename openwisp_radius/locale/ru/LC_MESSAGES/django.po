@@ -109,26 +109,24 @@ msgstr "С уважением"
 msgid ""
 "Please click on the button below to open a page where you can choose a new "
 "password:"
-msgstr ""
-"Пожалуйста, нажмите кнопку ниже, чтобы открыть страницу, где вы можете выбрать новую"
-"пароль:"
+msgstr "Нажмите кнопку ниже, чтобы открыть страницу, где вы можете выбрать новый пароль:"
 
 #: openwisp_radius/api/serializers.py:378
 msgid "Reset password"
-msgstr "Сброс пароля"
+msgstr "Изменить пароль"
 
 #: openwisp_radius/api/serializers.py:364
 #, python-format
 msgid "Password reset on %s"
-msgstr "Сброс пароля %s"
+msgstr "Ставить пароль на %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
 msgid "A new session has been started for your account:"
-msgstr "Для вашей учетной записи запущен новый сеанс:"
+msgstr "Для вашей учетной записи началася новую сессию:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
-msgstr "Вы можете просмотреть свой сеанс, чтобы узнать, сколько времени и / или трафика было использовано, или вы можете завершить сеанс в любое время, нажав кнопку ниже."
+msgstr "Вы можете отслеживать время и потребление трафика вашей сессии или завершить сессию в любое время, нажав на следующую ссылку."
 
 #: openwisp_radius/templates/radius_accounting_start.html:5
 msgid "NOTE: This link is valid only for %(sesame_max_age)s"
@@ -136,8 +134,8 @@ msgstr "ПРИМЕЧАНИЕ. Эта ссылка действительна т�
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
-msgstr "Управление сеансом"
+msgstr "Управление сессией"
 
-#: openwisp_radius/tasks.py: 80
+#: openwisp_radius/tasks.py:80
 msgid "New WiFi session started"
-msgstr "Начался новый сеанс Wi-Fi"
+msgstr "Начала новая сессия WiFi"

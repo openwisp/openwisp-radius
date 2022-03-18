@@ -114,8 +114,7 @@ msgid ""
 "Please click on the button below to open a page where you can choose a new "
 "password:"
 msgstr ""
-"Fare clic sul pulsante in basso per aprire una pagina in cui è possibile scegliere un nuovo "
-"parola d'ordine:"
+"Fare clic sul pulsante in basso per aprire una pagina in cui è possibile scegliere una nuova password:"
 
 #: openwisp_radius/api/serializers.py:378
 msgid "Reset password"
@@ -128,7 +127,7 @@ msgstr "Reimposta password su %s"
 
 #: openwisp_radius/templates/radius_accounting_start.html:3
 msgid "A new session has been started for your account:"
-msgstr "È iniziata una nuova sessione per il tuo account:"
+msgstr "È stata avviata una nuova sessione per il tuo account:"
 
 #: openwisp_radius/templates/radius_accounting_start.html:4
 msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
@@ -142,6 +141,6 @@ msgstr "NOTA: Questo link è valido solo per %(sesame_max_age)s"
 msgid "Manage Session"
 msgstr "Gestisci sessione"
 
-#: openwisp_radius/tasks.py: 80
+#: openwisp_radius/tasks.py:80
 msgid "New WiFi session started"
 msgstr "Nuova sessione WiFi iniziata"

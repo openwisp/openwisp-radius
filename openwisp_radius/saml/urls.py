@@ -4,7 +4,7 @@ from .. import settings as app_settings
 
 
 def get_saml_urls(saml_views=None):
-    if not app_settings.SAML_LOGIN_ENABLED:
+    if not app_settings.SAML_REGISTRATION_CONFIGURED:
         return []
 
     if not saml_views:

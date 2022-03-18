@@ -4,6 +4,15 @@
 Single Sign-On (SAML)
 =====================
 
+.. important::
+
+    The SAML registration method is disabled by default.
+
+    In order to enable this feature you have to follow
+    the :ref:`SAML setup instructions <setup_saml>` below
+    and then activate it via :ref:`global setting or from the admin interface
+    <openwisp_radius_saml_registration_enabled>`.
+
 `SAML <http://saml.xml.org/about-saml>`_ is supported by generating
 an additional temporary token right after users authenticates via SSO,
 the user is then redirected to the captive page with 3 querystring
@@ -34,6 +43,8 @@ a SSO.
    If you're building a public wifi service, we suggest
    to take a look at `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_,
    which is built to work with openwisp-radius.
+
+.. _setup_saml:
 
 Setup
 -----
