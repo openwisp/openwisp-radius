@@ -87,7 +87,7 @@ def send_login_email(accounting_data):
     except ObjectDoesNotExist:
         logger.warning(f'user with username "{username}" does not exists')
         return
-    if not organization.is_member(user):
+    if not user.is_member(organization):
         logger.warning(
             f'user with username "{username}" is not member of "{organization.name}"'
         )
