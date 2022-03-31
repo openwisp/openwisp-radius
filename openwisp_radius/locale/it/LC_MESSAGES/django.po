@@ -135,7 +135,7 @@ msgstr "Puoi monitorare il consumo di tempo e traffico della tua sessione o term
 
 #: openwisp_radius/templates/radius_accounting_start.html:6
 msgid "Note: this link is valid only for %(sesame_max_age)s"
-msgstr "Nota: questo link è scadrá %(sesame_max_age)s"
+msgstr "Nota: questo link scadrá %(sesame_max_age)s"
 
 #: openwisp_radius/tasks.py:75
 msgid "Manage Session"
