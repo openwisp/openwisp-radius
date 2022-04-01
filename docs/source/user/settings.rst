@@ -776,3 +776,15 @@ created during SAML sign-in as verified users (``RegisteredUser.is_verified=True
 
 This is useful when SAML identity providers can be trusted
 to be legally valid identity verifiers.
+
+.. _openwisp_radius_saml_updates_username:
+
+``OPENWISP_RADIUS_SAML_UPDATES_USERNAME``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Allows updating username of a registered user with the value
+received from SAML Identity Provider. Read the
+:ref:`FAQs in SAML integration documentation <preventing_change_in_username_of_registered_user>`
+for details.

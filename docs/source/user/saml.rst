@@ -142,3 +142,25 @@ Settings
 --------
 
 See :ref:`SAML related settings <saml_settings>`.
+
+FAQs
+----
+
+.. _preventing_change_in_username_of_registered_user:
+
+Preventing change in username of a registered user
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``djangosaml2`` requires configuring the ``SAML_DJANGO_USER_MAIN_ATTRIBUTE``
+setting which serves as the primary lookup value for User objects.
+Whenever a user logs in or registers through the SAML method,
+a database query is made to check whether such a user already exists.
+This lookup is done using the value of ``SAML_DJANGO_USER_MAIN_ATTRIBUTE`` setting.
+If a match is found, the details of the user are updated with the
+information received from SAML Identity Provider.
+
+If a user (who has registered on OpenWISP with a different method from SAML)
+logs into OpenWISP with SAML, then the details of this user will also get updated.
+This operation could also change the username of the user which
+will render old credentials useless. To avoid updating the username in such scenarios,
+set :ref:`OPENWISP_RADIUS_SAML_UPDATES_USERNAME <openwisp_radius_saml_updates_username>` to ``False``.

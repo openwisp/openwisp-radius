@@ -56,7 +56,7 @@ LOGIN_REDIRECT_URL = 'admin:index'
 
 AUTHENTICATION_BACKENDS = (
     'openwisp_users.backends.UsersAuthenticationBackend',
-    'djangosaml2.backends.Saml2Backend',
+    'openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend',
     'sesame.backends.ModelBackend',
 )
 
