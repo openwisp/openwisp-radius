@@ -386,6 +386,7 @@ class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
 @admin.register(RadiusBatch)
 class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     change_form_template = 'openwisp-radius/admin/rad_batch_users_change_form.html'
+    add_form_template = 'openwisp-radius/admin/rad_batch_users_add_form.html'
     list_display = [
         'name',
         'organization',
@@ -412,6 +413,20 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     ]
     search_fields = ['name']
     form = RadiusBatchForm
+    help_text = {
+        'text': _(
+            'Users imported or generated through this form will '
+            'be flagged as verified if the organization requires '
+            'identity verification, otherwise the generated users '
+            'would not be able to log in. If this organization '
+            'requires identity verification, make sure the identity '
+            'of the users is verified before importing or before '
+            'giving out the credentials.'
+        ),
+        'documentation_url': (
+            'https://openwisp-radius.readthedocs.io/en/latest/user/importing_users.html'
+        ),
+    }
 
     class Media:
         js = [
@@ -468,6 +483,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             form_url,
             extra_context=extra_context,
         )
+
+    def add_view(self, request, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['help_text'] = self.help_text
+        return super().add_view(request, form_url, extra_context)
 
     def get_actions(self, request):
         actions = super().get_actions(request)

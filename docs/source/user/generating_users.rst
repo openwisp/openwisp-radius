@@ -21,6 +21,12 @@ There are many features included in it such as:
 This operation can be performed via the admin interface,
 with a management command or via the REST API.
 
+.. note::
+    Users imported or generated through this form will be flagged as verified if the organization
+    requires identity verification, otherwise the generated users would not be able to log in. If
+    this organization requires identity verification, make sure the identity of the users is verified
+    before importing or before giving out the credentials.
+
 Using the admin interface
 -------------------------
 
