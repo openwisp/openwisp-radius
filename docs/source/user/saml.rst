@@ -76,7 +76,7 @@ Ensure your ``settings.py`` looks like the following:
     # Update AUTHENTICATION_BACKENDS
     AUTHENTICATION_BACKENDS = (
         'openwisp_users.backends.UsersAuthenticationBackend',
-        'djangosaml2.backends.Saml2Backend', # <- add for SAML login
+        'openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend', # <- add for SAML login
     )
 
     # Update MIDDLEWARE
