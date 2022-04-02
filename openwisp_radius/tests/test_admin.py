@@ -368,6 +368,8 @@ class TestAdmin(
     def test_radius_batch_save_model(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
+        response = self.client.get(add_url)
+        self.assertContains(response, 'flagged as verified if the organization')
         data = self._get_csv_post_data()
         response = self.client.post(add_url, data, follow=True)
         self.assertEqual(response.status_code, 200)

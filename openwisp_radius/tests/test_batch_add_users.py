@@ -139,3 +139,5 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
                 'ChilliSpot-Max-Total-Octets': 3000000000,
             },
         )
+        self.assertEqual(user.registered_user.is_verified, True)
+        self.assertEqual(user.registered_user.method, 'manual')

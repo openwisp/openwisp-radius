@@ -415,12 +415,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     form = RadiusBatchForm
     help_text = {
         'text': _(
-            'Users imported or generated through this form will '
-            'be flagged as verified if the organization requires '
-            'identity verification, otherwise the generated users '
-            'would not be able to log in. If this organization '
-            'requires identity verification, make sure the identity '
-            'of the users is verified before importing or before '
+            'Users imported or generated through this form will be flagged '
+            'as verified if the organization requires identity verification, '
+            'otherwise the generated users would not be able to log in. '
+            'If this organization requires identity verification, make sure '
+            'the identity of the users is verified before before '
             'giving out the credentials.'
         ),
         'documentation_url': (
@@ -433,7 +432,12 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             'admin/js/jquery.init.js',
             'openwisp-radius/js/strategy-switcher.js',
         ]
-        css = {'all': ('openwisp-radius/css/radiusbatch.css',)}
+        css = {
+            'all': (
+                'openwisp-radius/css/radiusbatch.css',
+                'admin/css/help-text-stacked.css',
+            )
+        }
 
     def number_of_users(self, obj):
         return obj.users.count()
