@@ -86,7 +86,7 @@ ensuring also that ``openwisp_radius`` has been removed:
 
     AUTHENTICATION_BACKENDS = (
         'openwisp_users.backends.UsersAuthenticationBackend',
-        'djangosaml2.backends.Saml2Backend', # optional, can be removed if SAML login is not needed
+        'openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend', # optional, can be removed if SAML login is not needed
     )
 
 .. important::

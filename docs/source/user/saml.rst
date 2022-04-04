@@ -76,7 +76,7 @@ Ensure your ``settings.py`` looks like the following:
     # Update AUTHENTICATION_BACKENDS
     AUTHENTICATION_BACKENDS = (
         'openwisp_users.backends.UsersAuthenticationBackend',
-        'djangosaml2.backends.Saml2Backend', # <- add for SAML login
+        'openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend', # <- add for SAML login
     )
 
     # Update MIDDLEWARE
@@ -142,3 +142,27 @@ Settings
 --------
 
 See :ref:`SAML related settings <saml_settings>`.
+
+FAQs
+----
+
+.. _preventing_change_in_username_of_registered_user:
+
+Preventing change in username of a registered user
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``djangosaml2`` library requires configuring ``SAML_DJANGO_USER_MAIN_ATTRIBUTE``
+setting which serves as the primary lookup value for User objects.
+Whenever a user logs in or registers through the SAML method,
+a database query is made to check whether such a user already exists.
+This lookup is done using the value of ``SAML_DJANGO_USER_MAIN_ATTRIBUTE`` setting.
+If a match is found, the details of the user are updated with the
+information received from SAML Identity Provider.
+
+If a user (who has registered on OpenWISP with a different method from SAML)
+logs into OpenWISP with SAML, then the default behaviour of OpenWISP RADIUS
+prevents updating username of this user. Because, this operation could
+render the user's old credentials useless. If you want to update the username
+in such scenarios with details received from Identity Provider, set
+:ref:`OPENWISP_RADIUS_SAML_UPDATES_PRE_EXISTING_USERNAME <openwisp_radius_saml_updates_pre_existing_username>`
+to ``True``.
