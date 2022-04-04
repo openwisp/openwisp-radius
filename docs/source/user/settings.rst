@@ -777,10 +777,10 @@ created during SAML sign-in as verified users (``RegisteredUser.is_verified=True
 This is useful when SAML identity providers can be trusted
 to be legally valid identity verifiers.
 
-.. _openwisp_radius_saml_updates_username:
+.. _openwisp_radius_saml_updates_pre_existing_username:
 
-``OPENWISP_RADIUS_SAML_UPDATES_USERNAME``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_SAML_UPDATES_PRE_EXISTING_USERNAME``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 

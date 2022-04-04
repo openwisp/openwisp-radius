@@ -6,7 +6,10 @@ from .. import settings as app_settings
 
 class OpenwispRadiusSaml2Backend(Saml2Backend):
     def _update_user(self, user, attributes, attribute_mapping, force_save=False):
-        if not app_settings.SAML_UPDATES_USERNAME and not user._state.adding:
+        if (
+            not app_settings.SAML_UPDATES_PRE_EXISTING_USERNAME
+            and not user._state.adding
+        ):
             # Skip updating user's username if the user didn't signed up
             # with SAML registration method.
             try:

@@ -121,7 +121,9 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
         )
 
         with self.subTest('Test username remains unchanged'):
-            with patch('openwisp_radius.settings.SAML_UPDATES_USERNAME', False):
+            with patch(
+                'openwisp_radius.settings.SAML_UPDATES_PRE_EXISTING_USERNAME', False
+            ):
                 saml_response, relay_state = self._get_saml_response_for_acs_view(
                     relay_state
                 )
@@ -137,7 +139,9 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
                 self.assertEqual(user.username, 'test-user')
 
         with self.subTest('Test username gets updated'):
-            with patch('openwisp_radius.settings.SAML_UPDATES_USERNAME', True):
+            with patch(
+                'openwisp_radius.settings.SAML_UPDATES_PRE_EXISTING_USERNAME', True
+            ):
                 saml_response, relay_state = self._get_saml_response_for_acs_view(
                     relay_state
                 )
