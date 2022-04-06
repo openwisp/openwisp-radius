@@ -1,0 +1,16 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+{% block field_sets %}
+{% if help_text %}
+<div class="ow-help-text">
+    <p>{{ help_text.text }}
+    {% if help_text.documentation_url %}
+        {% blocktrans with anchor_open='<a href="'|add:help_text.documentation_url|add:'">'|safe anchor_close='</a>'|safe %}
+        Please refer to the {{ anchor_open }}documentation{{ anchor_close }} for more information.
+        {% endblocktrans %}
+    {% endif %}
+    </p>
+</div>
+{{ block.super }}
+{% endif %}
+{% endblock %}

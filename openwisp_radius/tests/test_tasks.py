@@ -103,7 +103,9 @@ class TestTasks(FileMixin, BaseTestCase):
         management.call_command('batch_add_users', **options)
         User.objects.update(date_joined=now() - timedelta(days=3))
         for user in User.objects.all():
-            RegisteredUser.objects.create(user=user, method='email', is_verified=False)
+            user.registered_user.is_verified = False
+            user.registered_user.method = 'email'
+            user.registered_user.save(update_fields=['is_verified', 'method'])
         self.assertEqual(User.objects.count(), 3)
         tasks.delete_unverified_users.delay(older_than_days=2)
         self.assertEqual(User.objects.count(), 0)

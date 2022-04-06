@@ -177,9 +177,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self._call_command('batch_add_users', **options)
             User.objects.update(date_joined=now() - timedelta(days=3))
             for user in User.objects.all():
-                RegisteredUser.objects.create(
-                    user=user, method='email', is_verified=False
-                )
+                user.registered_user.is_verified = False
+                user.registered_user.method = 'email'
+                user.registered_user.save(update_fields=['is_verified', 'method'])
 
         with self.subTest('Delete unverified users older than 2 days'):
             _create_old_users()
