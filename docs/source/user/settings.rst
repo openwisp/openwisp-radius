@@ -474,8 +474,11 @@ then edit a specific organization and scroll down to
 
 **Default**: ``False``
 
-Indicates whether users who sign up should be required to verify their mobile phone number via SMS.
-This can be overridden for each organization separately via the admin interface.
+Indicates whether users who sign up should be required to verify their
+mobile phone number via SMS.
+
+This can be overridden for each organization separately
+via the admin interface.
 
 .. _openwisp_radius_needs_identity_verification:
 
@@ -767,3 +770,72 @@ Allows updating username of a registered user with the value
 received from SAML Identity Provider. Read the
 :ref:`FAQs in SAML integration documentation <preventing_change_in_username_of_registered_user>`
 for details.
+
+SMS token related settings
+==========================
+
+These settings allow to control aspects and limitations of the SMS tokens
+which are sent to users for verification purposes.
+
+``SENDSMS_BACKEND``
+~~~~~~~~~~~~~~~~~~~
+
+This setting takes a python path which points to the `django-sendsms
+<https://github.com/stefanfoulis/django-sendsms>`__
+backend which will be used by the system to send SMS messages.
+
+The list of supported SMS services can be seen in the source code of
+`the django-sendsms backends
+<https://github.com/stefanfoulis/django-sendsms/tree/main/sendsms/backends>`__.
+Adding support for other SMS services can be done by subclassing
+the ``BaseSmsBackend`` and implement the logic needed to talk to the
+SMS service.
+
+The value of this setting can point to any class on the python path,
+so the backend doesn't have to be necessarily shipped in django-sendsms
+but can be deployed in any other location.
+
+``OPENWISP_RADIUS_SMS_TOKEN_DEFAULT_VALIDITY``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``30``
+
+For how many minutes the SMS token is valid for.
+
+``OPENWISP_RADIUS_SMS_TOKEN_LENGTH``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``6``
+
+The length of the SMS token.
+
+``OPENWISP_RADIUS_SMS_TOKEN_HASH_ALGORITHM``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``'sha256'``
+
+The hashing algorithm used to generate the numeric code.
+
+``OPENWISP_RADIUS_SMS_TOKEN_MAX_ATTEMPTS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``5``
+
+The max number of mistakes tolerated during verification,
+after this amount of mistaken attempts, it won't be possible to
+verify the token anymore and it will be necessary to request a new one.
+
+``OPENWISP_RADIUS_SMS_TOKEN_MAX_USER_DAILY``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``5``
+
+The max number of SMS tokens a single user can request within a day.
+
+``OPENWISP_RADIUS_SMS_TOKEN_MAX_IP_DAILY``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``999``
+
+The max number of tokens which can be requested from the same IP address
+during the same day.
