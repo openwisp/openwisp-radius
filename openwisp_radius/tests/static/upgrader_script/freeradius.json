@@ -9,8 +9,7 @@
             "value": "1",
             "op": ":=",
             "attribute": "Max-Daily-Session",
-            "user": null,
-            "notes": ""
+            "user": null
         }
     },
     {

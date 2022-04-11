@@ -4,11 +4,8 @@ import json
 import logging
 import os
 import string
-from base64 import encodebytes
 from datetime import timedelta
-from hashlib import md5, sha1
 from io import StringIO
-from os import urandom
 from urllib.parse import urljoin
 
 import phonenumbers
@@ -19,14 +16,13 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import Count, ProtectedError
+from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
-from passlib.hash import lmhash, nthash, sha512_crypt
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 from private_storage.storage.files import PrivateFileSystemStorage
@@ -128,22 +124,6 @@ RAD_NAS_TYPES = app_settings.EXTRA_NAS_TYPES + (
     ('Other', 'Other'),
 )
 RADOP_REPLY_TYPES = (('=', '='), (':=', ':='), ('+=', '+='))
-RADCHECK_ATTRIBUTE_TYPES = [
-    'Max-Daily-Session',
-    'Max-All-Session',
-    'Max-Daily-Session-Traffic',
-]
-RADCHECK_PASSWD_TYPE = [
-    'Cleartext-Password',
-    'NT-Password',
-    'LM-Password',
-    'MD5-Password',
-    'SMD5-Password',
-    'SHA-Password',
-    'SSHA-Password',
-    'Crypt-Password',
-]
-RADCHECK_ATTRIBUTE_TYPES += RADCHECK_PASSWD_TYPE
 _STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
 _NOT_BLANK_MESSAGE = _('This field cannot be blank.')
 _GET_IP_LIST_HELP_TEXT = _(
@@ -217,69 +197,6 @@ class AutoGroupnameMixin(object):
             )
 
 
-class AbstractRadiusCheckQueryset(models.query.QuerySet):
-    def filter_duplicate_username(self):
-        pks = []
-        for i in (
-            self.values('username')
-            .annotate(Count('id'))
-            .order_by()
-            .filter(id__count__gt=1)
-        ):
-            pks.extend([account.pk for account in self.filter(username=i['username'])])
-        return self.filter(pk__in=pks)
-
-    def filter_duplicate_value(self):
-        pks = []
-        for i in (
-            self.values('value')
-            .annotate(Count('id'))
-            .order_by()
-            .filter(id__count__gt=1)
-        ):
-            pks.extend([accounts.pk for accounts in self.filter(value=i['value'])])
-        return self.filter(pk__in=pks)
-
-
-def _encode_secret(attribute, new_value=None):
-    if attribute == 'NT-Password':
-        attribute_value = nthash.hash(new_value)
-    elif attribute == 'LM-Password':
-        attribute_value = lmhash.hash(new_value)
-    elif attribute == 'MD5-Password':
-        attribute_value = md5(new_value.encode('utf-8')).hexdigest()
-    elif attribute == 'SMD5-Password':
-        salt = urandom(4)
-        hash = md5(new_value.encode('utf-8'))
-        hash.update(salt)
-        hash_encoded = encodebytes(hash.digest() + salt)
-        attribute_value = hash_encoded.decode('utf-8')[:-1]
-    elif attribute == 'SHA-Password':
-        attribute_value = sha1(new_value.encode('utf-8')).hexdigest()
-    elif attribute == 'SSHA-Password':
-        salt = urandom(4)
-        hash = sha1(new_value.encode('utf-8'))
-        hash.update(salt)
-        hash_encoded = encodebytes(hash.digest() + salt)
-        attribute_value = hash_encoded.decode('utf-8')[:-1]
-    elif attribute == 'Crypt-Password':
-        attribute_value = sha512_crypt.hash(new_value)
-    else:
-        attribute_value = new_value
-    return attribute_value
-
-
-class AbstractRadiusCheckManager(models.Manager):
-    def get_queryset(self):
-        return AbstractRadiusCheckQueryset(self.model, using=self._db)
-
-    def create(self, *args, **kwargs):
-        if 'new_value' in kwargs:
-            kwargs['value'] = _encode_secret(kwargs['attribute'], kwargs['new_value'])
-            del kwargs['new_value']
-        return super(AbstractRadiusCheckManager, self).create(*args, **kwargs)
-
-
 class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
     username = models.CharField(
         verbose_name=_('username'),
@@ -305,10 +222,6 @@ class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
-    # internal notes
-    notes = models.TextField(null=True, blank=True)
-    # custom manager
-    objects = AbstractRadiusCheckManager()
 
     class Meta:
         db_table = 'radcheck'

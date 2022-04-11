@@ -38,7 +38,7 @@ _RADCHECK_ENTRY = {
 }
 _RADCHECK_ENTRY_PW_UPDATE = {
     'username': 'Monica',
-    'new_value': 'Cam0_liX',
+    'value': 'Cam0_liX',
     'attribute': 'NT-Password',
 }
 PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get('default')
@@ -66,7 +66,7 @@ class TestAdmin(
     def _RADCHECK_ENTRY_PW_UPDATE(self):
         return {
             'username': 'Monica',
-            'new_value': 'Cam0_liX',
+            'value': 'Cam0_liX',
             'attribute': 'NT-Password',
             'op': ':=',
             'organization': str(self.default_org.pk),
@@ -192,20 +192,6 @@ class TestAdmin(
         _RADCHECK = self._RADCHECK_ENTRY.copy()
         _RADCHECK['attribute'] = 'Cleartext-Password'
         self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'LM-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'NT-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'MD5-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'SMD5-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'SHA-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'SSHA-Password'
-        self._create_radius_check(**_RADCHECK)
-        _RADCHECK['attribute'] = 'Crypt-Password'
-        self._create_radius_check(**_RADCHECK)
         data = self._RADCHECK_ENTRY_PW_UPDATE.copy()
         data['mode'] = 'custom'
         url = reverse(f'admin:{self.app_label}_radiuscheck_change', args=[obj.pk])
@@ -258,7 +244,7 @@ class TestAdmin(
 
     def test_radiuscheck_create_weak_passwd(self):
         _RADCHECK = self._RADCHECK_ENTRY_PW_UPDATE.copy()
-        _RADCHECK['new_value'] = ''
+        _RADCHECK['value'] = ''
         resp = self.client.post(
             reverse(f'admin:{self.app_label}_radiuscheck_add'),
             _RADCHECK,
@@ -266,15 +252,6 @@ class TestAdmin(
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'errors')
-
-    def test_radiuscheck_create_disabled_hash(self):
-        data = self._RADCHECK_ENTRY_PW_UPDATE.copy()
-        data['attribute'] = 'Cleartext-Password'
-        data['mode'] = 'custom'
-        url = reverse(f'admin:{self.app_label}_radiuscheck_add')
-        response = self.client.post(url, data, follow=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'errors')
 
     def test_radiuscheck_admin_save_model(self):
         obj = self._create_radius_check(**self._RADCHECK_ENTRY)
@@ -288,14 +265,12 @@ class TestAdmin(
         response = self.client.post(change_url, data, follow=True)
         self.assertNotContains(response, 'errors')
         obj.refresh_from_db()
-        self.assertNotEqual(obj.value, self._RADCHECK_ENTRY['value'])
-        self.assertNotEqual(obj.value, data['new_value'])  # hashed
-        # test also invalid password
-        data['new_value'] = 'cionfrazZ'
+        self.assertEqual(obj.value, data['value'])
+        # test change
+        data['value'] = 'cionfrazZ'
         response = self.client.post(change_url, data, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'errors')
-        self.assertContains(response, 'The secret must contain')
+        self.assertNotContains(response, 'errors')
 
     def test_radiuscheck_filter_duplicates_username(self):
         self._create_radius_check(**self._RADCHECK_ENTRY)

@@ -308,45 +308,29 @@ role ``<db_user>`` with ``<db_password>`` as password.
 Using Radius Checks for Authorization Information
 -------------------------------------------------
 
-Traditionally, when using an SQL backend with Freeradius, user authorization information such as User-Name and
-`"known good" <https://freeradius.org/radiusd/man/rlm_pap.html>`_ password are stored using the *radcheck*
-table provided by Freeradius' default SQL schema.  openwisp-radius utilizes Freeradius'
-`rlm_rest <https://networkradius.com/doc/current/raddb/mods-available/rest.html>`_ module in order to
-take advantage of the built in user management and authentication capabilities of Django.
-(See :ref:`configure-rest-module` and `User authentication in Django <https://docs.djangoproject.com/en/dev/topics/auth/>`_)
+Traditionally, when using an SQL backend with Freeradius,
+user authorization information such as User-Name and
+`"known good" <https://freeradius.org/radiusd/man/rlm_pap.html>`_
+password can be stored using the *radcheck*
+table provided by Freeradius' default SQL schema.
 
-For existing Freeradius deployments or in cases where it is preferred to utilize Freeradius' *radcheck* table for
-storing user credentials it is possible to utilize `rlm_sql <https://wiki.freeradius.org/modules/Rlm_sql>`_
+OpenWISP RADIUS instead uses the FreeRADIUS
+`rlm_rest <https://networkradius.com/doc/current/raddb/mods-available/rest.html>`_
+module in order to take advantage of the built in user management and
+authentication capabilities of Django
+(for more information about these topics see :ref:`configure-rest-module`
+and `User authentication in Django <https://docs.djangoproject.com/en/dev/topics/auth/>`_).
+
+When migrating from existing FreeRADIUS deployments or in cases where it
+is preferred to use the FreeRADIUS *radcheck* table for storing user
+credentials it is possible to utilize `rlm_sql <https://wiki.freeradius.org/modules/Rlm_sql>`_
 in parallel with (or instead of) `rlm_rest <https://networkradius.com/doc/current/raddb/mods-available/rest.html>`_
 for authorization.
 
 .. note::
-    Bypassing the openwisp-radius' REST API for authorization means you will have to manually create
-    Radius Check 'password' entries for each user you want to authenticate with Freeradius.
-
-Password hashing
-^^^^^^^^^^^^^^^^
-
-By default Django will use `PBKDF2 <https://en.wikipedia.org/wiki/PBKDF2>`_ to store all passwords in the database.
-(See `Password management in Django <https://docs.djangoproject.com/en/dev/topics/auth/passwords/)>`_).
-The default password hashing and storage algorithms in Django are not compatible with those used by Freeradius.
-Therefore, a default set of Freeradius compatible password storage methods have been provided for deployments that make use
-of Radius Checks for user credentials.
-
-* Cleartext-Password
-* NT-Password
-* LM-Password
-* MD5-Password
-* SMD5-Password
-* SHA-Password
-* SSHA-Password
-* Crypt-Password
-
-.. note::
-    Only the Crypt-Password hashing attribute is recommended for new entries as it makes
-    use of the sha512_crypt feature supported by most Unix/Linux operating systems.
-    (See `passlib.hash <https://passlib.readthedocs.io/en/stable/lib/passlib.hash.html#active-unix-hashes>`_)
-    The other password hashing algorithms have been provided for backward compatibility.
+    Bypassing the REST API of openwisp-radius means that you
+    will have to manually create the radius check entries for each user
+    you want to authenticate with FreeRADIUS.
 
 Configuration
 ^^^^^^^^^^^^^
@@ -366,17 +350,6 @@ the ``authorize`` section of your site as follows contains the ``sql`` module:
 
 Now you can add new Radius Check entries with one of the
 supported hashing/storage methods mentioned above.
-
-Additional Password Formats
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Freeradius supports additional password hashing algorithms which are listed in the Freeradius
-`rlm_pap <https://freeradius.org/radiusd/man/rlm_pap.html>`_ documentation.  If your existing
-deployment makes use of one of these or you would like to request an addition to openwisp-radius
-please see the documentation section on :doc:`/developer/contributing`.
-
-Keep in mind that using Radius Checks for accessing user credentials is considered an edge case in openwisp-radius.
-Full compatibility with new and existing features is not guaranteed.
 
 Debugging
 ---------

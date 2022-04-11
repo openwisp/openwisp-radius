@@ -21,8 +21,8 @@ from openwisp_utils.admin import (
 )
 
 from . import settings as app_settings
-from .base.admin_filters import DuplicateListFilter, RegisteredUserFilter
-from .base.forms import ModeSwitcherForm, RadiusBatchForm, RadiusCheckForm
+from .base.admin_filters import RegisteredUserFilter
+from .base.forms import ModeSwitcherForm, RadiusBatchForm
 from .base.models import (
     _GET_IP_LIST_HELP_TEXT,
     _GET_MOBILE_PREFIX_HELP_TEXT,
@@ -34,7 +34,6 @@ from .base.models import (
     _SMS_VERIFICATION_HELP_TEXT,
     _SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
     OPTIONAL_FIELD_CHOICES,
-    _encode_secret,
 )
 from .settings import PASSWORD_RESET_URLS, RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
@@ -75,6 +74,7 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
 
 @admin.register(RadiusCheck)
 class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
+    form = ModeSwitcherForm
     list_display = [
         'username',
         'organization',
@@ -86,13 +86,10 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     ]
     search_fields = ['username', 'value']
     list_filter = [
-        DuplicateListFilter,
         ('organization', MultitenantOrgFilter),
         'created',
         'modified',
     ]
-    readonly_fields = ['value']
-    form = RadiusCheckForm
     fields = [
         'mode',
         'organization',
@@ -101,31 +98,15 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'op',
         'attribute',
         'value',
-        'new_value',
-        'notes',
         'created',
         'modified',
     ]
     autocomplete_fields = ['user']
-    actions = TimeStampedEditableAdmin.actions
-
-    def save_model(self, request, obj, form, change):
-        if form.data.get('new_value'):
-            obj.value = _encode_secret(
-                form.data['attribute'], form.data.get('new_value')
-            )
-        obj.save()
-
-    def get_fields(self, request, obj=None):
-        """do not show raw value (readonly) when adding a new item"""
-        fields = self.fields[:]
-        if not obj:
-            fields.remove('value')
-        return fields
 
 
 @admin.register(RadiusReply)
 class RadiusReplyAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
+    form = ModeSwitcherForm
     list_display = [
         'username',
         'organization',
@@ -136,7 +117,6 @@ class RadiusReplyAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'modified',
     ]
     autocomplete_fields = ['user']
-    form = ModeSwitcherForm
     list_filter = (('organization', MultitenantOrgFilter),)
     fields = [
         'mode',

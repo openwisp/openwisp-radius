@@ -67,16 +67,6 @@ BATCH_PDF_TEMPLATE = get_settings_value(
 BATCH_MAIL_MESSAGE = get_settings_value(
     'BATCH_MAIL_MESSAGE', 'username: {}, password: {}'
 )
-RADCHECK_SECRET_VALIDATORS = get_settings_value(
-    'RADCHECK_SECRET_VALIDATORS',
-    {
-        'regexp_lowercase': '[a-z]+',
-        'regexp_uppercase': '[A-Z]+',
-        'regexp_number': '[0-9]+',
-        'regexp_special': '[\!\%\-_+=\[\]\
-                          {\}\:\,\.\?\<\>\(\)\;]+',
-    },
-)
 PASSWORD_RESET_URLS = {
     # fallback in case the specific org page is not defined
     'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',

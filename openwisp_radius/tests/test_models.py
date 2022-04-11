@@ -191,21 +191,15 @@ class TestRadiusCheck(BaseTestCase):
         # ensure related records have been updated
         self.assertEqual(c.username, u.username)
 
-    def test_auto_value(self):
-        obj = self._create_radius_check(
-            username='Monica', value='Cam0_liX', attribute='NT-Password', op=':='
-        )
-        self.assertEqual(obj.value, '891fc570507eef023cbfec043dd5f2b1')
-
     def test_create_radius_check_model(self):
         obj = RadiusCheck.objects.create(
             organization=self.default_org,
             username='Monica',
-            new_value='Cam0_liX',
+            value='Cam0_liX',
             attribute='NT-Password',
             op=':=',
         )
-        self.assertEqual(obj.value, '891fc570507eef023cbfec043dd5f2b1')
+        self.assertEqual(obj.value, 'Cam0_liX')
 
     def test_user_different_organization(self):
         org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})

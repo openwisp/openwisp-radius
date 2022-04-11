@@ -129,11 +129,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='radiuscheck',
-            name='notes',
-            field=models.TextField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='radiuscheck',
             name='organization',
             field=models.ForeignKey(
                 null=True,
