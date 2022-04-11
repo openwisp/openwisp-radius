@@ -135,7 +135,7 @@ should also call the SAML logout URL: ``/radius/saml2/logout/``.
 
 The `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
 app supports this with minimal configuration, refer to the
-`"Configuring SAML Login & Logout" <https://github.com/openwisp/openwisp-wifi-login-pages##configuring-saml-login--logout>`_
+`"Configuring SAML Login & Logout" <https://github.com/openwisp/openwisp-wifi-login-pages#configuring-saml-login--logout>`_
 section.
 
 Settings
