@@ -181,6 +181,7 @@ class AutoUsernameMixin(object):
             raise ValidationError(
                 {'username': _NOT_BLANK_MESSAGE, 'user': _NOT_BLANK_MESSAGE}
             )
+        return super().clean()
 
 
 class AutoGroupnameMixin(object):
@@ -197,7 +198,25 @@ class AutoGroupnameMixin(object):
             )
 
 
-class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
+class UniqueAtrributeMixin(object):
+    def clean(self):
+        """
+        checks if the check or reply attribute is unique
+        """
+        model = type(self).__name__
+        if 'RadiusGroup' in model:
+            options = dict(group=self.group)
+        else:
+            options = dict(organization=self.organization, user=self.user)
+        options.update(attribute=self.attribute)
+        if load_model(model).objects.filter(**options).exclude(pk=self.pk).exists():
+            raise ValidationError({'attribute': _('This attribute is already in use.')})
+        return super().clean()
+
+
+class AbstractRadiusCheck(
+    OrgMixin, AutoUsernameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -233,7 +252,9 @@ class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel)
         return self.username
 
 
-class AbstractRadiusReply(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
+class AbstractRadiusReply(
+    OrgMixin, AutoUsernameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -624,7 +645,9 @@ class AbstractRadiusUserGroup(
         return str(self.username)
 
 
-class AbstractRadiusGroupCheck(AutoGroupnameMixin, TimeStampedEditableModel):
+class AbstractRadiusGroupCheck(
+    AutoGroupnameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,
@@ -657,7 +680,9 @@ class AbstractRadiusGroupCheck(AutoGroupnameMixin, TimeStampedEditableModel):
         return str(self.groupname)
 
 
-class AbstractRadiusGroupReply(AutoGroupnameMixin, TimeStampedEditableModel):
+class AbstractRadiusGroupReply(
+    AutoGroupnameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,

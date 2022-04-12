@@ -221,6 +221,35 @@ class TestRadiusCheck(BaseTestCase):
         else:
             self.fail('ValidationError not raised')
 
+    def test_radius_check_unique_attribute(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        self._create_radius_check(
+            user=u,
+            op=':=',
+            attribute='Max-Daily-Session',
+            value='3600',
+            organization=org1,
+        )
+        try:
+            self._create_radius_check(
+                user=u,
+                op=':=',
+                attribute='Max-Daily-Session',
+                value='3200',
+                organization=org1,
+            )
+        except ValidationError as e:
+            self.assertEqual(
+                {'attribute': ['This attribute is already in use.']},
+                e.message_dict,
+            )
+        else:
+            self.fail('ValidationError not raised')
+
 
 class TestRadiusReply(BaseTestCase):
     def test_string_representation(self):
@@ -293,6 +322,35 @@ class TestRadiusReply(BaseTestCase):
             )
         except ValidationError as e:
             self.assertIn('organization', e.message_dict)
+        else:
+            self.fail('ValidationError not raised')
+
+    def test_radius_reply_unique_attribute(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        self._create_radius_reply(
+            user=u,
+            attribute='Reply-Message',
+            op=':=',
+            value='Login failed',
+            organization=org1,
+        )
+        try:
+            self._create_radius_reply(
+                user=u,
+                attribute='Reply-Message',
+                op='=',
+                value='Login failed',
+                organization=org1,
+            )
+        except ValidationError as e:
+            self.assertEqual(
+                {'attribute': ['This attribute is already in use.']},
+                e.message_dict,
+            )
         else:
             self.fail('ValidationError not raised')
 
@@ -618,6 +676,41 @@ class TestRadiusGroup(BaseTestCase):
             self.fail(f'ValidationError not raised, got {name}: {e} instead')
         else:
             self.fail('ValidationError not raised')
+
+    def test_unique_attribute(self):
+        org = self._create_org(**{'name': 'Cool WiFi', 'slug': 'cool-wifi'})
+        rg = RadiusGroup(name='guests', organization=org)
+        rg.save()
+        with self.subTest('test radius group check unique attribute'):
+            self._create_radius_groupcheck(
+                group=rg, attribute='Max-Daily-Session', op=':=', value='3600'
+            )
+            try:
+                self._create_radius_groupcheck(
+                    group=rg, attribute='Max-Daily-Session', op=':=', value='3200'
+                )
+            except ValidationError as e:
+                self.assertEqual(
+                    {'attribute': ['This attribute is already in use.']},
+                    e.message_dict,
+                )
+            else:
+                self.fail('ValidationError not raised')
+        with self.subTest('test radius reply check unique attribute'):
+            self._create_radius_groupreply(
+                group=rg, attribute='Reply-Message', op=':=', value='Login failed'
+            )
+            try:
+                self._create_radius_groupreply(
+                    group=rg, attribute='Reply-Message', op=':=', value='Login failed'
+                )
+            except ValidationError as e:
+                self.assertEqual(
+                    {'attribute': ['This attribute is already in use.']},
+                    e.message_dict,
+                )
+            else:
+                self.fail('ValidationError not raised')
 
 
 class TestRadiusBatch(BaseTestCase):

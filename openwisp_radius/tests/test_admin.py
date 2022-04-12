@@ -274,7 +274,7 @@ class TestAdmin(
 
     def test_radiuscheck_filter_duplicates_username(self):
         self._create_radius_check(**self._RADCHECK_ENTRY)
-        self._create_radius_check(**self._RADCHECK_ENTRY)
+        self._create_radius_check(**{**self._RADCHECK_ENTRY, 'attribute': 'Password'})
         url = (
             reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?duplicates=username'
@@ -284,7 +284,7 @@ class TestAdmin(
 
     def test_radiuscheck_filter_duplicates_value(self):
         self._create_radius_check(**self._RADCHECK_ENTRY)
-        self._create_radius_check(**self._RADCHECK_ENTRY)
+        self._create_radius_check(**{**self._RADCHECK_ENTRY, 'attribute': 'Password'})
         url = (
             reverse(f'admin:{self.app_label}_radiuscheck_changelist')
             + '?duplicates=value'
