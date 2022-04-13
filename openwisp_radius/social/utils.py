@@ -8,7 +8,7 @@ logger = logging.getLogger()
 
 def is_social_authentication_enabled(org):
     try:
-        return org.radius_settings.get_social_registration_enabled()
+        return org.radius_settings.social_registration_enabled
     except ObjectDoesNotExist:
         logger.exception(
             f'Got exception while accessing radius_settings for {org.name}'

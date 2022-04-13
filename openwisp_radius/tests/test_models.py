@@ -35,6 +35,7 @@ RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
@@ -391,6 +392,18 @@ class TestOrganizationRadiusSettings(BaseTestCase):
         'OPTIONAL_REGISTRATION_FIELDS',
         optional_settings_params,
     )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('first_name'), 'fallback', 'disabled'
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('last_name'), 'fallback', 'allowed'
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('location'), 'fallback', 'mandatory'
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('birth_date'), 'fallback', 'disabled'
+    )
     def test_org_settings_same_globally(self):
         org = self._get_org()
         org.radius_settings.first_name = 'disabled'
@@ -405,23 +418,34 @@ class TestOrganizationRadiusSettings(BaseTestCase):
         self.assertIsNone(org.radius_settings.location)
         self.assertIsNone(org.radius_settings.birth_date)
 
-    def test_get_registration_enabled(self):
+    @mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', True)
+    def test_fallback_fields(self):
         rad_setting = self._get_org().radius_settings
 
-        with self.subTest('Test registration enabled set to True'):
-            rad_setting.registration_enabled = True
-            self.assertEqual(rad_setting.get_registration_enabled(), True)
+        def _test_fallback_field(field_name, field_setting):
+            with self.subTest(f'Test {field_name} set to True'):
+                setattr(rad_setting, field_name, True)
+                rad_setting.full_clean()
+                rad_setting.save()
+                # The full_clean method set the field to "None" if the
+                # value is equal to the fallback value
+                self.assertEqual(getattr(rad_setting, field_name), None)
+                # Refreshing the object from databases forces the field
+                # to return the fallback value
+                rad_setting.refresh_from_db(fields=[field_name])
+                self.assertEqual(getattr(rad_setting, field_name), True)
 
-        with self.subTest('Test registration enabled set to False'):
-            rad_setting.registration_enabled = False
-            self.assertEqual(rad_setting.get_registration_enabled(), False)
+            with self.subTest(f'Test {field_name} set to False'):
+                setattr(rad_setting, field_name, False)
+                rad_setting.full_clean()
+                rad_setting.save()
+                self.assertEqual(getattr(rad_setting, field_name), False)
+                rad_setting.refresh_from_db(fields=[field_name])
+                self.assertEqual(getattr(rad_setting, field_name), False)
 
-        with self.subTest('Test registration enabled set to None'):
-            rad_setting.registration_enabled = None
-            self.assertEqual(
-                rad_setting.get_registration_enabled(),
-                app_settings.REGISTRATION_API_ENABLED,
-            )
+        _test_fallback_field(
+            'registration_enabled', app_settings.REGISTRATION_API_ENABLED
+        )
 
 
 class TestRadiusGroup(BaseTestCase):

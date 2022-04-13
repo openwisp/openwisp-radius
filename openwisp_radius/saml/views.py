@@ -15,8 +15,8 @@ from rest_framework.authtoken.models import Token
 
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
-from ..utils import load_model
-from .utils import get_url_or_path, is_saml_authentication_enabled
+from ..utils import get_organization_radius_settings, load_model
+from .utils import get_url_or_path
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,9 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
                 logger.error(str(error))
             return render(request, 'djangosaml2/login_error.html')
         else:
-            if not is_saml_authentication_enabled(organization):
+            if not get_organization_radius_settings(
+                organization, 'saml_registration_enabled'
+            ):
                 raise PermissionDenied()
 
         # Log out the user before initiating the SAML flow

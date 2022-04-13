@@ -49,7 +49,7 @@ from ..utils import (
     prefix_generate_users,
     validate_csvfile,
 )
-from .fields import FallbackBooleanField, FallbackChoiceField, FallbackTextField
+from .fields import FallbackBooleanField, FallbackCharField, FallbackTextField
 from .validators import ipv6_network_validator
 
 logger = logging.getLogger(__name__)
@@ -1056,17 +1056,19 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         on_delete=models.CASCADE,
     )
     token = KeyField(max_length=32)
-    sms_verification = models.BooleanField(
+    sms_verification = FallbackBooleanField(
         null=True,
         blank=True,
         default=None,
         help_text=_SMS_VERIFICATION_HELP_TEXT,
+        fallback=app_settings.SMS_VERIFICATION_ENABLED,
     )
-    needs_identity_verification = models.BooleanField(
+    needs_identity_verification = FallbackBooleanField(
         null=True,
         blank=True,
         default=None,
         help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
+        fallback=app_settings.NEEDS_IDENTITY_VERIFICATION,
     )
     sms_sender = models.CharField(
         _('Sender'),
@@ -1096,65 +1098,63 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
-    first_name = FallbackChoiceField(
+    first_name = FallbackCharField(
         verbose_name=_('first name'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         null=True,
         blank=True,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('first_name', 'disabled'),
+        fallback=OPTIONAL_SETTINGS.get('first_name', None),
     )
-    last_name = FallbackChoiceField(
+    last_name = FallbackCharField(
         verbose_name=_('last name'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         null=True,
         blank=True,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('last_name', 'disabled'),
+        fallback=OPTIONAL_SETTINGS.get('last_name', None),
     )
-    location = FallbackChoiceField(
+    location = FallbackCharField(
         verbose_name=_('location'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         null=True,
         blank=True,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('location', 'disabled'),
+        fallback=OPTIONAL_SETTINGS.get('location', None),
     )
-    birth_date = FallbackChoiceField(
+    birth_date = FallbackCharField(
         verbose_name=_('birth date'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         null=True,
         blank=True,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('birth_date', 'disabled'),
+        fallback=OPTIONAL_SETTINGS.get('birth_date', None),
     )
     registration_enabled = FallbackBooleanField(
         null=True,
         blank=True,
+        default=None,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
-        choices=[
-            ('', _('Default') + f' ({_enabled_disabled_helper()})'),
-            (True, _('Enabled')),
-            (False, _('Disabled')),
-        ],
-        fallback='',
+        fallback=app_settings.REGISTRATION_API_ENABLED,
     )
-    saml_registration_enabled = models.BooleanField(
+    saml_registration_enabled = FallbackBooleanField(
         null=True,
         blank=True,
         default=None,
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
         verbose_name=_('SAML registration enabled'),
+        fallback=app_settings.SAML_REGISTRATION_ENABLED,
     )
-    social_registration_enabled = models.BooleanField(
+    social_registration_enabled = FallbackBooleanField(
         null=True,
         blank=True,
         default=None,
         help_text=_SOCIAL_REGISTRATION_ENABLED_HELP_TEXT,
+        fallback=app_settings.SOCIAL_REGISTRATION_ENABLED,
     )
     login_url = models.URLField(
         verbose_name=_('Login URL'),
@@ -1197,33 +1197,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             mobile_prefixes = self.allowed_mobile_prefixes.split(',')
         return mobile_prefixes
 
-    def get_registration_enabled(self):
-        if self.registration_enabled is None:
-            return app_settings.REGISTRATION_API_ENABLED
-        return self.registration_enabled
-
-    def get_sms_verification(self):
-        if self.sms_verification is None:
-            return app_settings.SMS_VERIFICATION_ENABLED
-        return self.sms_verification
-
-    def get_saml_registration_enabled(self):
-        if self.saml_registration_enabled is None:
-            return app_settings.SAML_REGISTRATION_ENABLED
-        return self.saml_registration_enabled
-
-    def get_social_registration_enabled(self):
-        print(
-            'social',
-            self.social_registration_enabled,
-            app_settings.SOCIAL_REGISTRATION_ENABLED,
-        )
-        if self.social_registration_enabled is None:
-            return app_settings.SOCIAL_REGISTRATION_ENABLED
-        return self.social_registration_enabled
-
     def clean(self):
-        if self.get_sms_verification() and not self.sms_sender:
+        if self.sms_verification and not self.sms_sender:
             raise ValidationError(
                 {
                     'sms_sender': _(
@@ -1233,7 +1208,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             )
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
-        self._clean_optional_fields()
         self._clean_password_reset_url()
 
     def _clean_freeradius_allowed_hosts(self):
@@ -1282,12 +1256,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
         if allowed_mobile_prefixes_set == settings_allowed_mobile_prefixes_set:
             self.allowed_mobile_prefixes = None
-
-    def _clean_optional_fields(self):
-        global_settings = app_settings.OPTIONAL_REGISTRATION_FIELDS
-        for field in ['first_name', 'last_name', 'location', 'birth_date']:
-            if getattr(self, field) == global_settings.get(field):
-                setattr(self, field, None)
 
     def _clean_password_reset_url(self):
         if self.password_reset_url and (

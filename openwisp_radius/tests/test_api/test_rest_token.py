@@ -176,7 +176,18 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         url = reverse('radius:user_auth_token', args=[org2.slug])
 
         with self.subTest('Global disabled and organization None'):
-            with mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', False):
+            rad_setting_registration_enabled_field = rad_setting._meta.get_field(
+                'registration_enabled'
+            )
+            with mock.patch.object(
+                app_settings, 'REGISTRATION_API_ENABLED', False
+            ), mock.patch.object(
+                # The fallback value is set on project startup, hence
+                # it also required mocking.
+                rad_setting_registration_enabled_field,
+                'fallback',
+                False,
+            ):
                 _assert_registration_disabled()
 
         with self.subTest('Global enabled and organization None'):
@@ -186,11 +197,13 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
         with self.subTest('Organization disabled'):
             rad_setting.registration_enabled = False
+            rad_setting.full_clean()
             rad_setting.save()
             _assert_registration_disabled()
 
         with self.subTest('Global enabled and organization None'):
             rad_setting.registration_enabled = True
+            rad_setting.full_clean()
             rad_setting.save()
             _assert_registration_enabled()
 

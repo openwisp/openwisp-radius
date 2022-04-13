@@ -5,20 +5,20 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
+from swapper import load_model
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.social.utils import is_social_authentication_enabled
 from openwisp_utils.tests import capture_stderr
 
-from ..utils import load_model
 from .mixins import ApiTokenMixin, BaseTestCase
 
-RadiusToken = load_model('RadiusToken')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+RadiusToken = load_model('openwisp_radius', 'RadiusToken')
+OrganizationRadiusSettings = load_model('openwisp_radius', 'OrganizationRadiusSettings')
+Organization = load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
-@patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', True)
 class TestSocial(ApiTokenMixin, BaseTestCase):
     view_name = 'radius:redirect_cp'
 
@@ -56,7 +56,15 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         url = self.get_url()
 
         with self.subTest('Test social login disabled site-wide'):
-            with patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', False):
+            with patch(
+                'openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', False
+            ), patch.object(
+                OrganizationRadiusSettings._meta.get_field(
+                    'social_registration_enabled'
+                ),
+                'fallback',
+                False,
+            ):
                 response = self.client.get(url, {'cp': 'http://wifi.openwisp.org/cp'})
                 self.assertEqual(response.status_code, 403)
 
@@ -69,6 +77,8 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
             self.default_org.radius_settings.save()
 
     def test_redirect_cp_301(self):
+        self.default_org.radius_settings.social_registration_enabled = True
+        self.default_org.radius_settings.save()
         user = self._create_social_user()
         self.client.force_login(user)
         url = self.get_url()
@@ -97,6 +107,8 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertFalse(reg_user.is_verified)
 
     def test_authorize_using_radius_user_token_200(self):
+        self.default_org.radius_settings.social_registration_enabled = True
+        self.default_org.radius_settings.save()
         self.test_redirect_cp_301()
         rad_token = RadiusToken.objects.filter(user__username='socialuser').first()
         self.assertIsNotNone(rad_token)
@@ -108,6 +120,8 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_authorize_using_user_token_403(self):
+        self.default_org.radius_settings.social_registration_enabled = True
+        self.default_org.radius_settings.save()
         self.test_redirect_cp_301()
         rad_token = RadiusToken.objects.filter(user__username='socialuser').first()
         self.assertIsNotNone(rad_token)
@@ -128,14 +142,22 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to True'):
             org.radius_settings.social_registration_enabled = True
+            org.radius_settings.full_clean()
+            org.radius_settings.save()
             self.assertEqual(is_social_authentication_enabled(org), True)
 
         with self.subTest('Test social_registration_enabled set to False'):
             org.radius_settings.social_registration_enabled = False
+            org.radius_settings.full_clean()
+            org.radius_settings.save()
+            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(is_social_authentication_enabled(org), False)
 
         with self.subTest('Test social_registration_enabled set to None'):
             org.radius_settings.social_registration_enabled = None
+            org.radius_settings.full_clean()
+            org.radius_settings.save()
+            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
                 is_social_authentication_enabled(org),
                 app_settings.SOCIAL_REGISTRATION_ENABLED,

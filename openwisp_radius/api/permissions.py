@@ -5,8 +5,7 @@ from ipware import get_client_ip
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from ..utils import load_model
-from .utils import is_registration_enabled, is_sms_verification_enabled
+from ..utils import get_organization_radius_settings, load_model
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,9 @@ class IsSmsVerificationEnabled(BasePermission):
     def has_permission(self, request, view):
         organization = getattr(view, 'organization')
         client_ip = get_client_ip(request)[0]
-        verification = is_sms_verification_enabled(organization)
+        verification = get_organization_radius_settings(
+            organization, 'sms_verification'
+        )
         if not verification:
             logger.warning(
                 f'View {view.__class__.__name__} is being accessed for organization '
@@ -32,4 +33,6 @@ class IsSmsVerificationEnabled(BasePermission):
 
 class IsRegistrationEnabled(BasePermission):
     def has_permission(self, request, view):
-        return is_registration_enabled(view.organization)
+        return get_organization_radius_settings(
+            view.organization, 'registration_enabled'
+        )
