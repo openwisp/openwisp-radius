@@ -340,7 +340,9 @@ or Cameroon (``+237``).
 
 .. note::
 
-    This setting is applicable only for organizations which have enabled SMS verification.
+    This setting is applicable only for organizations
+    which have :ref:`enabled the SMS verification option
+    <openwisp_radius_sms_verification_enabled>`.
 
 .. _openwisp_radius_optional_registration_fields:
 
@@ -469,16 +471,27 @@ then edit a specific organization and scroll down to
     if all the organization use the same configuration, we recommend
     changing the global setting.
 
+.. _openwisp_radius_sms_verification_enabled:
+
 ``OPENWISP_RADIUS_SMS_VERIFICATION_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 
-Indicates whether users who sign up should be required to verify their
-mobile phone number via SMS.
+.. note::
+
+    If you're looking for instructions on how to configure SMS sending,
+    see :ref:`SMS Token Related Settings <sms_token_related_settings>`.
+
+If :ref:`Identity verification is required <openwisp_radius_needs_identity_verification>`,
+this setting indicates whether users who sign up should be required to
+verify their mobile phone number via SMS.
 
 This can be overridden for each organization separately
-via the admin interface.
+via the organization radius settings section of the admin interface.
+
+.. image:: /images/organization_sms_verification_setting.png
+   :alt: SMS verification enabled
 
 .. _openwisp_radius_needs_identity_verification:
 
@@ -497,9 +510,9 @@ The following choices are available by default:
 - ``''`` (empty string): unspecified
 - ``manual``: manually created
 - ``email``: Email (No Identity Verification)
-- ``mobile_phone``: Mobile phone number verification via SMS
-- ``social_login``: Social login, enabled only if ``allauth.socialaccount``
-  is listed in ``settings.INSTALLED_APPS``
+- ``mobile_phone``: Mobile phone number
+  :ref:`verification via SMS <openwisp_radius_sms_verification_enabled>`
+- ``social_login``: :ref:`social login feature <social_login>`
 
 .. note::
 
@@ -551,7 +564,9 @@ For example:
 
     Pass ``strong_identity`` as ``True`` to to indicate that users who
     register using that method have indirectly verified their identity
-    (eg: SMS verification, credit card, national ID card, etc).
+    (eg:  :ref:`SMS verification
+    <openwisp_radius_sms_verification_enabled>`,
+    credit card, national ID card, etc).
 
 .. warning::
 
@@ -771,11 +786,18 @@ received from SAML Identity Provider. Read the
 :ref:`FAQs in SAML integration documentation <preventing_change_in_username_of_registered_user>`
 for details.
 
+.. _sms_token_related_settings:
+
 SMS token related settings
 ==========================
 
 These settings allow to control aspects and limitations of the SMS tokens
-which are sent to users for verification purposes.
+which are sent to users for the purpose of
+:ref:`verifying their mobile phone number
+<openwisp_radius_needs_identity_verification>`.
+
+These settings are applicable only when
+:ref:`SMS verification is enabled <openwisp_radius_sms_verification_enabled>`.
 
 ``SENDSMS_BACKEND``
 ~~~~~~~~~~~~~~~~~~~

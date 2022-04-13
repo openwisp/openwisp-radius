@@ -448,7 +448,8 @@ method             string (\*\*\*)
 ===============    ===============================
 
 (\*) ``phone_number`` is required only when the organization has enabled
-SMS verification in its "Organization RADIUS Settings".
+:ref:`SMS verification in its "Organization RADIUS Settings"
+<openwisp_radius_sms_verification_enabled>`.
 
 (\*\*) ``first_name``, ``last_name``, ``birth_date`` and ``location``
 are optional fields which are disabled by default to make the registration
@@ -657,6 +658,10 @@ Responds only to **GET**.
 Create SMS token
 ----------------
 
+.. note::
+  This API endpoint will work only if the organization has enabled
+  :ref:`SMS verification <openwisp_radius_sms_verification_enabled>`.
+
 **Requires the user auth token (Bearer Token)**.
 
 Used for SMS verification, sends a code via SMS to the phone number of the user.
@@ -673,6 +678,10 @@ No parameters required.
 
 Verify/Validate SMS token
 -------------------------
+
+.. note::
+  This API endpoint will work only if the organization has enabled
+  :ref:`SMS verification <openwisp_radius_sms_verification_enabled>`.
 
 **Requires the user auth token (Bearer Token)**.
 
@@ -694,6 +703,10 @@ code                string
 
 Change phone number
 -------------------
+
+.. note::
+  This API endpoint will work only if the organization has enabled
+  :ref:`SMS verification <openwisp_radius_sms_verification_enabled>`.
 
 **Requires the user auth token (Bearer Token)**.
 
