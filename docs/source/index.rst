@@ -30,10 +30,6 @@ openwisp-radius
    :target: https://pypi.org/project/black/
    :alt: code style: black
 
-.. image:: images/demo_radius.gif
-   :alt: Feature Highlights
-
-
 **OpenWISP-RADIUS** is Django reusable app that provides an admin interface to a
 `freeradius <https://freeradius.org/>`_ database.
 
