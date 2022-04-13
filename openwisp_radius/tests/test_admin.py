@@ -272,26 +272,6 @@ class TestAdmin(
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'errors')
 
-    def test_radiuscheck_filter_duplicates_username(self):
-        self._create_radius_check(**self._RADCHECK_ENTRY)
-        self._create_radius_check(**self._RADCHECK_ENTRY)
-        url = (
-            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
-            + '?duplicates=username'
-        )
-        resp = self.client.get(url, follow=True)
-        self.assertEqual(resp.status_code, 200)
-
-    def test_radiuscheck_filter_duplicates_value(self):
-        self._create_radius_check(**self._RADCHECK_ENTRY)
-        self._create_radius_check(**self._RADCHECK_ENTRY)
-        url = (
-            reverse(f'admin:{self.app_label}_radiuscheck_changelist')
-            + '?duplicates=value'
-        )
-        resp = self.client.get(url, follow=True)
-        self.assertEqual(resp.status_code, 200)
-
     def test_nas_admin_save_model(self):
         options = {
             'name': 'test-NAS',
