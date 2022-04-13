@@ -205,6 +205,12 @@ class AttributeValidationMixin(object):
     def _get_error_message(self):
         raise NotImplementedError
 
+    @property
+    def _object_name(self):
+        return (
+            type(self).__name__.lower().replace('radius', '').replace('group', 'group ')
+        )
+
     def clean(self):
         """
         checks if the check or reply attribute is unique
@@ -227,11 +233,10 @@ class UserAttributeValidationMixin(AttributeValidationMixin):
         )
 
     def _get_error_message(self):
-        object_name = 'check' if 'Check' in type(self).__name__ else 'reply'
         return _(
             'Another %(object_name)s for the same user and with '
             'the same attribute already exists.'
-        ) % {'object_name': object_name}
+        ) % {'object_name': self._object_name}
 
 
 class GroupAttributeValidationMixin(AttributeValidationMixin):
@@ -239,11 +244,10 @@ class GroupAttributeValidationMixin(AttributeValidationMixin):
         return dict(group=self.group, attribute=self.attribute)
 
     def _get_error_message(self):
-        object_name = 'group check' if 'Check' in type(self).__name__ else 'group reply'
         return _(
             'Another %(object_name)s for the same group and with '
             'the same attribute already exists.'
-        ) % {'object_name': object_name}
+        ) % {'object_name': self._object_name}
 
 
 class AbstractRadiusCheck(
