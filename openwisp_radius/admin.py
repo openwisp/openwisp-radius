@@ -13,7 +13,11 @@ from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
-from openwisp_utils.admin import ReadOnlyAdmin, TimeReadonlyAdminMixin
+from openwisp_utils.admin import (
+    AlwaysHasChangedMixin,
+    ReadOnlyAdmin,
+    TimeReadonlyAdminMixin,
+)
 
 from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
