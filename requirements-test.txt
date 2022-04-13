@@ -3,8 +3,7 @@ djangorestframework-simplejwt
 django-cors-headers>=2.5.2
 redis~=3.5.0
 packaging
-sphinx~=4.4.0
-sphinx_rtd_theme
+sphinx_rtd_theme~=0.5.0
 freezegun
 django-extensions
 openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master/
