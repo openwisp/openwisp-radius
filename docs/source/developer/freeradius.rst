@@ -348,9 +348,6 @@ the ``authorize`` section of your site as follows contains the ``sql`` module:
         # ...
     }
 
-Now you can add new Radius Check entries with one of the
-supported hashing/storage methods mentioned above.
-
 Debugging
 ---------
 
