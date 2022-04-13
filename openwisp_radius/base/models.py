@@ -181,6 +181,7 @@ class AutoUsernameMixin(object):
             raise ValidationError(
                 {'username': _NOT_BLANK_MESSAGE, 'user': _NOT_BLANK_MESSAGE}
             )
+        return super().clean()
 
 
 class AutoGroupnameMixin(object):
@@ -197,7 +198,61 @@ class AutoGroupnameMixin(object):
             )
 
 
-class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
+class AttributeValidationMixin(object):
+    def _get_validation_queryset_kwargs(self):
+        raise NotImplementedError
+
+    def _get_error_message(self):
+        raise NotImplementedError
+
+    @property
+    def _object_name(self):
+        return (
+            type(self).__name__.lower().replace('radius', '').replace('group', 'group ')
+        )
+
+    def clean(self):
+        """
+        checks if the check or reply attribute is unique
+        """
+        model = type(self).__name__
+        if (
+            load_model(model)
+            .objects.filter(**self._get_validation_queryset_kwargs())
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError({'attribute': self._get_error_message()})
+        return super().clean()
+
+
+class UserAttributeValidationMixin(AttributeValidationMixin):
+    def _get_validation_queryset_kwargs(self):
+        return dict(
+            organization=self.organization, user=self.user, attribute=self.attribute
+        )
+
+    def _get_error_message(self):
+        return _(
+            'Another %(object_name)s for the same user and with '
+            'the same attribute already exists.'
+        ) % {'object_name': self._object_name}
+
+
+class GroupAttributeValidationMixin(AttributeValidationMixin):
+    def _get_validation_queryset_kwargs(self):
+        return dict(group=self.group, attribute=self.attribute)
+
+    def _get_error_message(self):
+        return _(
+            'Another %(object_name)s for the same group and with '
+            'the same attribute already exists.'
+        ) % {'object_name': self._object_name}
+
+
+class AbstractRadiusCheck(
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
+):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -233,7 +288,9 @@ class AbstractRadiusCheck(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel)
         return self.username
 
 
-class AbstractRadiusReply(OrgMixin, AutoUsernameMixin, TimeStampedEditableModel):
+class AbstractRadiusReply(
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
+):
     username = models.CharField(
         verbose_name=_('username'),
         max_length=64,
@@ -624,7 +681,9 @@ class AbstractRadiusUserGroup(
         return str(self.username)
 
 
-class AbstractRadiusGroupCheck(AutoGroupnameMixin, TimeStampedEditableModel):
+class AbstractRadiusGroupCheck(
+    AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
+):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,
@@ -657,7 +716,9 @@ class AbstractRadiusGroupCheck(AutoGroupnameMixin, TimeStampedEditableModel):
         return str(self.groupname)
 
 
-class AbstractRadiusGroupReply(AutoGroupnameMixin, TimeStampedEditableModel):
+class AbstractRadiusGroupReply(
+    AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
+):
     groupname = models.CharField(
         verbose_name=_('group name'),
         max_length=64,
