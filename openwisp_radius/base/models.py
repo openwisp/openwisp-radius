@@ -198,24 +198,56 @@ class AutoGroupnameMixin(object):
             )
 
 
-class UniqueAtrributeMixin(object):
+class AttributeValidationMixin(object):
+    def _get_validation_queryset_kwargs(self):
+        raise NotImplementedError
+
+    def _get_error_message(self):
+        raise NotImplementedError
+
     def clean(self):
         """
         checks if the check or reply attribute is unique
         """
         model = type(self).__name__
-        if 'RadiusGroup' in model:
-            options = dict(group=self.group)
-        else:
-            options = dict(organization=self.organization, user=self.user)
-        options.update(attribute=self.attribute)
-        if load_model(model).objects.filter(**options).exclude(pk=self.pk).exists():
-            raise ValidationError({'attribute': _('This attribute is already in use.')})
+        if (
+            load_model(model)
+            .objects.filter(**self._get_validation_queryset_kwargs())
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError({'attribute': self._get_error_message()})
         return super().clean()
 
 
+class UserAttributeValidationMixin(AttributeValidationMixin):
+    def _get_validation_queryset_kwargs(self):
+        return dict(
+            organization=self.organization, user=self.user, attribute=self.attribute
+        )
+
+    def _get_error_message(self):
+        object_name = 'check' if 'Check' in type(self).__name__ else 'reply'
+        return _(
+            'Another %(object_name)s for the same user and with '
+            'the same attribute already exists.'
+        ) % {'object_name': object_name}
+
+
+class GroupAttributeValidationMixin(AttributeValidationMixin):
+    def _get_validation_queryset_kwargs(self):
+        return dict(group=self.group, attribute=self.attribute)
+
+    def _get_error_message(self):
+        object_name = 'group check' if 'Check' in type(self).__name__ else 'group reply'
+        return _(
+            'Another %(object_name)s for the same group and with '
+            'the same attribute already exists.'
+        ) % {'object_name': object_name}
+
+
 class AbstractRadiusCheck(
-    OrgMixin, AutoUsernameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
         verbose_name=_('username'),
@@ -253,7 +285,7 @@ class AbstractRadiusCheck(
 
 
 class AbstractRadiusReply(
-    OrgMixin, AutoUsernameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
         verbose_name=_('username'),
@@ -646,7 +678,7 @@ class AbstractRadiusUserGroup(
 
 
 class AbstractRadiusGroupCheck(
-    AutoGroupnameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+    AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
 ):
     groupname = models.CharField(
         verbose_name=_('group name'),
@@ -681,7 +713,7 @@ class AbstractRadiusGroupCheck(
 
 
 class AbstractRadiusGroupReply(
-    AutoGroupnameMixin, UniqueAtrributeMixin, TimeStampedEditableModel
+    AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
 ):
     groupname = models.CharField(
         verbose_name=_('group name'),

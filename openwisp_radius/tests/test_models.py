@@ -244,7 +244,12 @@ class TestRadiusCheck(BaseTestCase):
             )
         except ValidationError as e:
             self.assertEqual(
-                {'attribute': ['This attribute is already in use.']},
+                {
+                    'attribute': [
+                        'Another check for the same user and with the '
+                        'same attribute already exists.'
+                    ]
+                },
                 e.message_dict,
             )
         else:
@@ -348,7 +353,12 @@ class TestRadiusReply(BaseTestCase):
             )
         except ValidationError as e:
             self.assertEqual(
-                {'attribute': ['This attribute is already in use.']},
+                {
+                    'attribute': [
+                        'Another reply for the same user and with the '
+                        'same attribute already exists.'
+                    ]
+                },
                 e.message_dict,
             )
         else:
@@ -691,12 +701,17 @@ class TestRadiusGroup(BaseTestCase):
                 )
             except ValidationError as e:
                 self.assertEqual(
-                    {'attribute': ['This attribute is already in use.']},
+                    {
+                        'attribute': [
+                            'Another group check for the same group and with the '
+                            'same attribute already exists.'
+                        ]
+                    },
                     e.message_dict,
                 )
             else:
                 self.fail('ValidationError not raised')
-        with self.subTest('test radius reply check unique attribute'):
+        with self.subTest('test radius reply unique attribute'):
             self._create_radius_groupreply(
                 group=rg, attribute='Reply-Message', op=':=', value='Login failed'
             )
@@ -706,7 +721,12 @@ class TestRadiusGroup(BaseTestCase):
                 )
             except ValidationError as e:
                 self.assertEqual(
-                    {'attribute': ['This attribute is already in use.']},
+                    {
+                        'attribute': [
+                            'Another group reply for the same group and with the '
+                            'same attribute already exists.'
+                        ]
+                    },
                     e.message_dict,
                 )
             else:
