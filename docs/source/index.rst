@@ -47,6 +47,7 @@ openwisp-radius
 
    /developer/setup
    /developer/freeradius
+   /developer/freeradius_wpa_enterprise
    /user/settings
    /user/management_commands
    /user/importing_users

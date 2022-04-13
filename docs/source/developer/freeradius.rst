@@ -1,13 +1,38 @@
-==============================================
-Installation and configuration of Freeradius 3
-==============================================
+.. _freeradius_setup_for_captive_portal:
 
-This guide explains how to install and configure `freeradius 3 <https://freeradius.org>`_
-in order to make it work with `openwisp-radius <https://github.com/openwisp/openwisp-radius/>`_.
+==================================================
+Freeradius Setup for Captive Portal authentication
+==================================================
+
+This guide explains how to install and configure
+`freeradius 3 <https://freeradius.org>`_
+in order to make it work with
+`OpenWISP RADIUS <https://github.com/openwisp/openwisp-radius/>`_
+for Captive Portal authentication.
+
+The guide is written for debian based systems, other linux
+distributions can work as well but the name of packages and
+files may be different.
+
+Widely used solutions used with OpenWISP RADIUS are PfSense and
+Coova-Chilli, but other solutions can be used as well.
 
 .. note::
-    The guide is written for debian based systems, other linux distributions can work as well but the
-    name of packages and files may be different.
+    Before users can authenticate through a captive portal,
+    they will most likely need to sign up through a web page,
+    or alternatively, they will need to perform social login or
+    some other kind of Single Sign On (SSO).
+
+    The `openwisp-wifi-login-pages
+    <https://github.com/openwisp/openwisp-wifi-login-pages>`_ web app
+    is an open source solution which integrates with
+    OpenWISP RADIUS to provide features like self user registration,
+    social login, SSO/SAML login, SMS verification,
+    simple username & password login using the
+    :ref:`radius_user_token` method.
+
+    For more information see: `openwisp-wifi-login-pages
+    <https://github.com/openwisp/openwisp-wifi-login-pages>`_.
 
 How to install freeradius 3
 ---------------------------
@@ -197,11 +222,13 @@ you have to do the following:
 
 - create one FreeRADIUS site for each organization
 - uncomment the line which starts with ``# api_token_header``
-- substitute the occurrences of ``<api_token>`` & ``<org-uuid>`` with
-  each the UUID & api_token of each organization, refer to the section
+- substitute the occurrences of ``<org_uuid>`` and
+  ``<org_radius_api_token>`` with the UUID & RADIUS API token of
+  each organization, refer to the section
   :ref:`organization_uuid_token` for finding these values.
 
-If you are using the RADIUS User Token method, you can get away with having
+If you are deploying a captive portal setup and can use
+the RADIUS User Token method, you can get away with having
 only one freeradius site for all the organizations and can simply copy
 the configuration shown below.
 
@@ -212,8 +239,8 @@ the configuration shown below.
 
     server default {
         # if you are not using Radius Token authentication method, please uncomment
-        # and set the values for <org-uuid> & <api_token>
-        # api_token_header = "Authorization: Bearer <org-uuid> <api_token>"
+        # and set the values for <org_uuid> & <org_radius_api_token>
+        # api_token_header = "Authorization: Bearer <org_uuid> <org_radius_api_token>"
 
         authorize {
             # if you are not using Radius Token authentication method, please uncomment the following
@@ -243,7 +270,7 @@ the configuration shown below.
         }
     }
 
-Please also ensure that ``acct_unique`` is present in tge ``pre-accounting`` section:
+Please also ensure that ``acct_unique`` is present in the ``pre-accounting`` section:
 
 .. code-block:: ini
 
@@ -252,6 +279,8 @@ Please also ensure that ``acct_unique`` is present in tge ``pre-accounting`` sec
         acct_unique
         # ...
     }
+
+.. _restart_freeradius:
 
 Restart freeradius to make the configuration effective
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -347,6 +376,8 @@ the ``authorize`` section of your site as follows contains the ``sql`` module:
         sql  # <-- the sql module
         # ...
     }
+
+.. _debugging:
 
 Debugging
 ---------

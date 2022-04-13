@@ -1,3 +1,5 @@
+.. _importing_users:
+
 ===============
 Importing users
 ===============
