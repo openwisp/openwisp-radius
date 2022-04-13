@@ -3,7 +3,7 @@ djangorestframework-simplejwt
 django-cors-headers>=2.5.2
 redis~=3.5.0
 packaging
-sphinx
+sphinx~=4.4.0
 sphinx_rtd_theme
 freezegun
 django-extensions
