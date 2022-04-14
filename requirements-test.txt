@@ -4,6 +4,7 @@ django-cors-headers>=2.5.2
 redis~=3.5.0
 packaging
 sphinx_rtd_theme~=0.5.0
+sphinx~=4.2.0
 freezegun
 django-extensions
 openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master/
