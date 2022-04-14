@@ -1,6 +1,6 @@
-================================================================
-Freradius Setup for WPA Enterprise (EAP-TTLS-PAP) authentication
-================================================================
+=================================================================
+Freeradius Setup for WPA Enterprise (EAP-TTLS-PAP) authentication
+=================================================================
 
 This guide explains how to install and configure
 `freeradius 3 <https://freeradius.org>`_
