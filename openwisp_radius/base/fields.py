@@ -13,12 +13,6 @@ class FallbackMixin(object):
             return self.fallback
         return value
 
-    def clean(self, value, model_instance):
-        value = super().clean(value, model_instance)
-        if value == self.fallback:
-            return None
-        return value
-
     def formfield(self, **kwargs):
         kwargs.update({'fallback': self.fallback})
         return super().formfield(**kwargs)
@@ -65,9 +59,7 @@ class FallbackCharField(FallbackMixin, CharField):
                 "choices_form_class": FallbackChoiceField,
             }
         )
-        form_field = super().formfield(**kwargs)
-        form_field.fallback = self.fallback
-        return form_field
+        return super().formfield(**kwargs)
 
 
 class FallbackTextField(FallbackMixin, TextField):
@@ -80,17 +72,6 @@ class FallbackFormFieldMixin(object):
     def __init__(self, *args, **kwargs):
         self.fallback = kwargs.pop('fallback', None)
         super().__init__(*args, **kwargs)
-
-    def prepare_value(self, value):
-        if value is self.fallback:
-            # It is required to set this value to None
-            # because the fallback model field sets the value
-            # of the field to the fallback value if the database
-            # returns null value. This affects rendering of the
-            # "select" widget and the option with the fallback value
-            # gets selected instead of the "Default" option.
-            value = None
-        return super().prepare_value(value)
 
 
 class FallbackCharFormField(FallbackFormFieldMixin, forms.CharField):

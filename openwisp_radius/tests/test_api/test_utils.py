@@ -19,7 +19,6 @@ class TestUtils(BaseTestCase):
             org.radius_settings.registration_enabled = True
             org.radius_settings.full_clean()
             org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'), True
             )
@@ -69,7 +68,6 @@ class TestUtils(BaseTestCase):
             org.radius_settings.sms_verification = False
             org.radius_settings.full_clean()
             org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['sms_verification'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'), False
             )

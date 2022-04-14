@@ -1,3 +1,5 @@
+from unittest import mock
+
 import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -481,42 +483,42 @@ class TestAdmin(
             # of failback values.
             radsetting.full_clean()
             self.assertEqual(radsetting.freeradius_allowed_hosts, None)
-        # with self.subTest('Valid IP list'):
-        #     form_data.update(
-        #         {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.45'}
-        #     )
-        #     response = self.client.post(url, form_data)
-        #     self.assertEqual(response.status_code, 302)
-        #     radsetting.refresh_from_db()
-        #     self.assertEqual(radsetting.freeradius_allowed_hosts, '127.0.0.45')
-        # with self.subTest('Empty IP list with FREERADIUS_ALLOWED_HOSTS'):
-        #     form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
-        #     response = self.client.post(url, form_data)
-        #     self.assertEqual(response.status_code, 302)
-        #     radsetting.refresh_from_db()
-        #     self.assertEqual(radsetting.freeradius_allowed_hosts, '')
-        # with self.subTest('Empty IP list without FREERADIUS_ALLOWED_HOSTS'):
-        #     with mock.patch('openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', []):
-        #         response = self.client.post(url, form_data)
-        #     self.assertContains(
-        #         response,
-        #         _(
-        #             'Cannot be empty when the settings value for '
-        #             '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
-        #         ),
-        #     )
-        # with self.subTest('Invalid IP list'):
-        #     form_data.update(
-        #         {'radius_settings-0-freeradius_allowed_hosts': '123.246.512.12'}
-        #     )
-        #     response = self.client.post(url, form_data)
-        #     self.assertContains(
-        #         response,
-        #         _(
-        #             'Invalid input. Please enter valid ip addresses '
-        #             'or subnets separated by comma. (no spaces)'
-        #         ),
-        #     )
+        with self.subTest('Valid IP list'):
+            form_data.update(
+                {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.45'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.freeradius_allowed_hosts, '127.0.0.45')
+        with self.subTest('Empty IP list with FREERADIUS_ALLOWED_HOSTS'):
+            form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
+            response = self.client.post(url, form_data)
+            self.assertEqual(response.status_code, 302)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.freeradius_allowed_hosts, '')
+        with self.subTest('Empty IP list without FREERADIUS_ALLOWED_HOSTS'):
+            with mock.patch('openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', []):
+                response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Cannot be empty when the settings value for '
+                    '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
+                ),
+            )
+        with self.subTest('Invalid IP list'):
+            form_data.update(
+                {'radius_settings-0-freeradius_allowed_hosts': '123.246.512.12'}
+            )
+            response = self.client.post(url, form_data)
+            self.assertContains(
+                response,
+                _(
+                    'Invalid input. Please enter valid ip addresses '
+                    'or subnets separated by comma. (no spaces)'
+                ),
+            )
 
     def test_organization_radsettings_password_reset_url(self):
         org = self._get_org()

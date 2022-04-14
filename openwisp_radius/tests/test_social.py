@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 from swapper import load_model
 
 from openwisp_radius import settings as app_settings
-from openwisp_radius.social.utils import is_social_authentication_enabled
+from openwisp_radius.utils import get_organization_radius_settings
 from openwisp_utils.tests import capture_stderr
 
 from .mixins import ApiTokenMixin, BaseTestCase
@@ -144,14 +144,19 @@ class TestUtils(BaseTestCase):
             org.radius_settings.social_registration_enabled = True
             org.radius_settings.full_clean()
             org.radius_settings.save()
-            self.assertEqual(is_social_authentication_enabled(org), True)
+            self.assertEqual(
+                get_organization_radius_settings(org, 'social_registration_enabled'),
+                True,
+            )
 
         with self.subTest('Test social_registration_enabled set to False'):
             org.radius_settings.social_registration_enabled = False
             org.radius_settings.full_clean()
             org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
-            self.assertEqual(is_social_authentication_enabled(org), False)
+            self.assertEqual(
+                get_organization_radius_settings(org, 'social_registration_enabled'),
+                False,
+            )
 
         with self.subTest('Test social_registration_enabled set to None'):
             org.radius_settings.social_registration_enabled = None
@@ -159,14 +164,14 @@ class TestUtils(BaseTestCase):
             org.radius_settings.save()
             org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
-                is_social_authentication_enabled(org),
+                get_organization_radius_settings(org, 'social_registration_enabled'),
                 app_settings.SOCIAL_REGISTRATION_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):
             org.radius_settings = None
             with self.assertRaises(Exception) as context_manager:
-                is_social_authentication_enabled(org)
+                get_organization_radius_settings(org, 'social_registration_enabled')
             self.assertEqual(
                 str(context_manager.exception),
                 'Could not complete operation because of an internal misconfiguration',

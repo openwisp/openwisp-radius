@@ -379,45 +379,6 @@ class TestRadiusPostAuth(BaseTestCase):
 
 
 class TestOrganizationRadiusSettings(BaseTestCase):
-
-    optional_settings_params = {
-        'first_name': 'disabled',
-        'last_name': 'allowed',
-        'birth_date': 'disabled',
-        'location': 'mandatory',
-    }
-
-    @mock.patch.object(
-        app_settings,
-        'OPTIONAL_REGISTRATION_FIELDS',
-        optional_settings_params,
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('first_name'), 'fallback', 'disabled'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('last_name'), 'fallback', 'allowed'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('location'), 'fallback', 'mandatory'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('birth_date'), 'fallback', 'disabled'
-    )
-    def test_org_settings_same_globally(self):
-        org = self._get_org()
-        org.radius_settings.first_name = 'disabled'
-        org.radius_settings.last_name = 'allowed'
-        org.radius_settings.location = 'mandatory'
-        org.radius_settings.birth_date = 'disabled'
-        org.radius_settings.full_clean()
-        org.radius_settings.save()
-
-        self.assertIsNone(org.radius_settings.first_name)
-        self.assertIsNone(org.radius_settings.last_name)
-        self.assertIsNone(org.radius_settings.location)
-        self.assertIsNone(org.radius_settings.birth_date)
-
     @mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', True)
     def test_fallback_fields(self):
         rad_setting = self._get_org().radius_settings
@@ -427,9 +388,6 @@ class TestOrganizationRadiusSettings(BaseTestCase):
                 setattr(rad_setting, field_name, True)
                 rad_setting.full_clean()
                 rad_setting.save()
-                # The full_clean method set the field to "None" if the
-                # value is equal to the fallback value
-                self.assertEqual(getattr(rad_setting, field_name), None)
                 # Refreshing the object from databases forces the field
                 # to return the fallback value
                 rad_setting.refresh_from_db(fields=[field_name])

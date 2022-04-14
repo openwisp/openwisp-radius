@@ -1042,12 +1042,6 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
         return self.key
 
 
-def _enabled_disabled_helper():
-    if app_settings.REGISTRATION_API_ENABLED:
-        return _('Enabled')
-    return _('Disabled')
-
-
 class AbstractOrganizationRadiusSettings(UUIDModel):
     organization = models.OneToOneField(
         swapper.get_model_name('openwisp_users', 'Organization'),
