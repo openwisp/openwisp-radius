@@ -43,17 +43,12 @@ First of all, become root:
 
     sudo -s
 
-Let's add the PPA repository for the Freeradius 3.x stable branch:
+In order to **install a recent version of FreeRADIUS**, we recommend
+using the `freeradius packages provided by NetworkRADIUS
+<https://networkradius.com/packages/>`_.
 
-.. note::
-    If you use a recent version of Debian like **Stretch** (9) or Ubuntu **Bionic** (18),
-    you should skip the following command and use the official repositories.
-
-.. code-block:: shell
-
-    apt-add-repository ppa:freeradius/stable-3.0
-
-Update the list of available packages:
+After having updated the APT sources list to pull the NetworkRADIUS packages,
+let's proceed to update the list of available packages:
 
 .. code-block:: shell
 
