@@ -110,7 +110,7 @@ You can specify multiple methods separated by comma(`,`). Following is an exampl
     ./manage.py delete_unverified_users --older-than-days 1 --exclude-methods mobile_phone,email
 
 ``upgrade_from_django_freeradius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------------
 
 If you are upgrading from `django-freeradius <https://github.com/openwisp/django-freeradius>`_
 to openwisp-radius, there is an easy migration script that will import your freeradius
@@ -139,10 +139,11 @@ by default the data is added to the first found organization, eg::
 .. _convert_called_station_id:
 
 ``convert_called_station_id``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 
 If an installation uses a centralized captive portal, the value of "Called Station ID" of
-RADIUS Session will show the MAC address of the captive portal instead of access points.
+RADIUS Sessions will always show the MAC address of the captive portal instead of the access points.
+
 This command will update the "Called Station ID" to reflect the MAC address of the access points
 using information from OpenVPN. It requires installing ``openvpn_status``,
 which can be installed using the following command
