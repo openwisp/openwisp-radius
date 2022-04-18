@@ -63,3 +63,4 @@ openwisp-radius
    /general/support
    /developer/contributing
    /general/goals
+   /general/changelog.rst
