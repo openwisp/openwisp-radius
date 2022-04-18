@@ -17,25 +17,18 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test registration enabled set to True'):
             org.radius_settings.registration_enabled = True
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'), True
             )
 
         with self.subTest('Test registration enabled set to False'):
             org.radius_settings.registration_enabled = False
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'), False
             )
 
         with self.subTest('Test registration enabled set to None'):
             org.radius_settings.registration_enabled = None
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'),
                 app_settings.REGISTRATION_API_ENABLED,
@@ -57,26 +50,18 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test sms verification enabled set to True'):
             org.radius_settings.sms_verification = True
-            org.radius_settings.sms_sender = 'test'
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'), True
             )
 
         with self.subTest('Test sms verification enabled set to False'):
             org.radius_settings.sms_verification = False
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'), False
             )
 
         with self.subTest('Test sms verification enabled set to None'):
             org.radius_settings.sms_verification = None
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['sms_verification'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'),
                 app_settings.SMS_VERIFICATION_ENABLED,

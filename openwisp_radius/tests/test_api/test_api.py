@@ -360,23 +360,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             'location': 'mandatory',
         },
     )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('first_name'), 'fallback', 'disabled'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('last_name'), 'fallback', 'allowed'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('location'), 'fallback', 'mandatory'
-    )
-    @mock.patch.object(
-        OrganizationRadiusSettings._meta.get_field('birth_date'), 'fallback', 'disabled'
-    )
     def test_optional_fields_registration(self):
-        # OrganizationRadiusSettings field mocks only take effect
-        # after refreshing object from the database.
-        self.default_org.radius_settings.refresh_from_db()
-
         self._superuser_login()
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         params = {

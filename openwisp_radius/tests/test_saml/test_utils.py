@@ -1,4 +1,5 @@
 from openwisp_radius import settings as app_settings
+from openwisp_utils.tests import capture_any_output
 
 from ...utils import get_organization_radius_settings, load_model
 from ..mixins import BaseTestCase
@@ -7,20 +8,19 @@ OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 
 
 class TestUtils(BaseTestCase):
+    @capture_any_output()
     def test_is_saml_authentication_enabled(self):
         org = self._create_org()
         OrganizationRadiusSettings.objects.create(organization=org)
 
         with self.subTest('Test saml_registration_enabled set to True'):
             org.radius_settings.saml_registration_enabled = True
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'), True
             )
 
         with self.subTest('Test saml_registration_enabled set to False'):
             org.radius_settings.saml_registration_enabled = False
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'),
                 False,
@@ -28,8 +28,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test saml_registration_enabled set to None'):
             org.radius_settings.saml_registration_enabled = None
-            org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['saml_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'),
                 app_settings.SAML_REGISTRATION_ENABLED,

@@ -478,10 +478,6 @@ class TestAdmin(
             radsetting.refresh_from_db()
             # This should fail when the value of FREERADIUS_ALLOWED_HOSTS is
             # stored in the model as well.
-            # It is required to run full_clean after refreshing the object
-            # from the database because "refresh_from_db" forces evaluation
-            # of failback values.
-            radsetting.full_clean()
             self.assertEqual(radsetting.freeradius_allowed_hosts, None)
         with self.subTest('Valid IP list'):
             form_data.update(

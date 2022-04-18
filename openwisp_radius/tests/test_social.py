@@ -19,6 +19,12 @@ Organization = load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
+@patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', True)
+@patch.object(
+    OrganizationRadiusSettings._meta.get_field('social_registration_enabled'),
+    'fallback',
+    True,
+)
 class TestSocial(ApiTokenMixin, BaseTestCase):
     view_name = 'radius:redirect_cp'
 
@@ -77,8 +83,6 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
             self.default_org.radius_settings.save()
 
     def test_redirect_cp_301(self):
-        self.default_org.radius_settings.social_registration_enabled = True
-        self.default_org.radius_settings.save()
         user = self._create_social_user()
         self.client.force_login(user)
         url = self.get_url()
@@ -107,8 +111,6 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertFalse(reg_user.is_verified)
 
     def test_authorize_using_radius_user_token_200(self):
-        self.default_org.radius_settings.social_registration_enabled = True
-        self.default_org.radius_settings.save()
         self.test_redirect_cp_301()
         rad_token = RadiusToken.objects.filter(user__username='socialuser').first()
         self.assertIsNotNone(rad_token)
@@ -120,8 +122,6 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_authorize_using_user_token_403(self):
-        self.default_org.radius_settings.social_registration_enabled = True
-        self.default_org.radius_settings.save()
         self.test_redirect_cp_301()
         rad_token = RadiusToken.objects.filter(user__username='socialuser').first()
         self.assertIsNotNone(rad_token)
@@ -142,8 +142,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to True'):
             org.radius_settings.social_registration_enabled = True
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 True,
@@ -151,8 +149,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to False'):
             org.radius_settings.social_registration_enabled = False
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 False,
@@ -160,9 +156,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to None'):
             org.radius_settings.social_registration_enabled = None
-            org.radius_settings.full_clean()
-            org.radius_settings.save()
-            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 app_settings.SOCIAL_REGISTRATION_ENABLED,

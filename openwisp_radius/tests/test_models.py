@@ -378,34 +378,6 @@ class TestRadiusPostAuth(BaseTestCase):
         self.assertIsInstance(radiuspostauth.pk, UUID)
 
 
-class TestOrganizationRadiusSettings(BaseTestCase):
-    @mock.patch.object(app_settings, 'REGISTRATION_API_ENABLED', True)
-    def test_fallback_fields(self):
-        rad_setting = self._get_org().radius_settings
-
-        def _test_fallback_field(field_name, field_setting):
-            with self.subTest(f'Test {field_name} set to True'):
-                setattr(rad_setting, field_name, True)
-                rad_setting.full_clean()
-                rad_setting.save()
-                # Refreshing the object from databases forces the field
-                # to return the fallback value
-                rad_setting.refresh_from_db(fields=[field_name])
-                self.assertEqual(getattr(rad_setting, field_name), True)
-
-            with self.subTest(f'Test {field_name} set to False'):
-                setattr(rad_setting, field_name, False)
-                rad_setting.full_clean()
-                rad_setting.save()
-                self.assertEqual(getattr(rad_setting, field_name), False)
-                rad_setting.refresh_from_db(fields=[field_name])
-                self.assertEqual(getattr(rad_setting, field_name), False)
-
-        _test_fallback_field(
-            'registration_enabled', app_settings.REGISTRATION_API_ENABLED
-        )
-
-
 class TestRadiusGroup(BaseTestCase):
     def test_group_str(self):
         g = RadiusGroup(name='entry groupname')
