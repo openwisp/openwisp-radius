@@ -14,7 +14,7 @@ from openwisp_radius.saml.utils import get_url_or_path
 from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests import capture_any_output
 
-from .utils import TestSamlMixins
+from .utils import TestSamlMixin as BaseTestSamlMixin
 
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
@@ -33,6 +33,15 @@ CERT_PATH = os.path.join(BASE_PATH, 'mycert.pem')
 KEY_PATH = os.path.join(BASE_PATH, 'mycert.key')
 
 
+class TestSamlMixin(TestOrganizationMixin, BaseTestSamlMixin):
+    def setUp(self):
+        super().setUp()
+        org = Organization.objects.get_or_create(slug='default')[0]
+        org.radius_settings.saml_registration_enabled = True
+        org.radius_settings.full_clean()
+        org.radius_settings.save()
+
+
 @override_settings(
     SAML_CONFIG=conf.create_conf(
         sp_host='sp.example.com',
@@ -43,8 +52,7 @@ KEY_PATH = os.path.join(BASE_PATH, 'mycert.key')
     SAML_USE_NAME_ID_AS_USERNAME=False,
     SAML_DJANGO_USER_MAIN_ATTRIBUTE='email',
 )
-@patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', True)
-class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, TestCase):
+class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
     login_url = reverse('radius:saml2_login')
 
     def _get_relay_state(self, redirect_url, org_slug):
@@ -166,8 +174,7 @@ class TestAssertionConsumerServiceView(TestOrganizationMixin, TestSamlMixins, Te
     SAML_ATTRIBUTE_MAPPING={'uid': ('username',)},
     SAML_USE_NAME_ID_AS_USERNAME=False,
 )
-@patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', True)
-class TestLoginView(TestOrganizationMixin, TestCase):
+class TestLoginView(TestSamlMixin, TestCase):
     login_url = reverse('radius:saml2_login')
 
     def test_organization_absolute_path(self):
@@ -205,9 +212,18 @@ class TestLoginView(TestOrganizationMixin, TestCase):
         self.assertIn('idp.example.com', response.url)
 
     def test_saml_login_disabled(self):
+        org = self._get_org('default')
+        org.radius_settings.saml_registration_enabled = None
+        org.radius_settings.save()
         redirect_url = 'https://captive-portal.example.com'
         with self.subTest('SAML authentication is disabled site-wide'):
-            with patch('openwisp_radius.settings.SAML_REGISTRATION_ENABLED', False):
+            with patch(
+                'openwisp_radius.settings.SAML_REGISTRATION_ENABLED', False
+            ), patch.object(
+                OrganizationRadiusSettings._meta.get_field('saml_registration_enabled'),
+                'fallback',
+                False,
+            ):
                 response = self.client.get(
                     self.login_url,
                     {'RelayState': f'{redirect_url}?org=default'},
@@ -215,7 +231,6 @@ class TestLoginView(TestOrganizationMixin, TestCase):
                 self.assertEqual(response.status_code, 403)
 
         with self.subTest('SAML registration is disabled for organization'):
-            org = self._get_org('default')
             org.radius_settings.saml_registration_enabled = False
             org.radius_settings.save()
             response = self.client.get(

@@ -47,7 +47,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..exceptions import PhoneTokenException, UserAlreadyVerified
-from ..utils import generate_pdf, load_model
+from ..utils import generate_pdf, get_organization_radius_settings, load_model
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
@@ -59,7 +59,7 @@ from .serializers import (
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
-from .utils import ErrorDictMixin, IDVerificationHelper, is_registration_enabled
+from .utils import ErrorDictMixin, IDVerificationHelper
 
 authorize = freeradius_views.authorize
 postauth = freeradius_views.postauth
@@ -309,7 +309,9 @@ class ObtainAuthTokenView(
 
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
-            if is_registration_enabled(self.organization):
+            if get_organization_radius_settings(
+                self.organization, 'registration_enabled'
+            ):
                 if self._needs_identity_verification(
                     org=self.organization
                 ) and not self.is_identity_verified_strong(user):

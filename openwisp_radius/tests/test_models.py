@@ -35,6 +35,7 @@ RadiusGroupCheck = load_model('RadiusGroupCheck')
 RadiusGroupReply = load_model('RadiusGroupReply')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusBatch = load_model('RadiusBatch')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 
 
@@ -375,53 +376,6 @@ class TestRadiusPostAuth(BaseTestCase):
     def test_id(self):
         radiuspostauth = RadiusPostAuth(username='test id')
         self.assertIsInstance(radiuspostauth.pk, UUID)
-
-
-class TestOrganizationRadiusSettings(BaseTestCase):
-
-    optional_settings_params = {
-        'first_name': 'disabled',
-        'last_name': 'allowed',
-        'birth_date': 'disabled',
-        'location': 'mandatory',
-    }
-
-    @mock.patch.object(
-        app_settings,
-        'OPTIONAL_REGISTRATION_FIELDS',
-        optional_settings_params,
-    )
-    def test_org_settings_same_globally(self):
-        org = self._get_org()
-        org.radius_settings.first_name = 'disabled'
-        org.radius_settings.last_name = 'allowed'
-        org.radius_settings.location = 'mandatory'
-        org.radius_settings.birth_date = 'disabled'
-        org.radius_settings.full_clean()
-        org.radius_settings.save()
-
-        self.assertIsNone(org.radius_settings.first_name)
-        self.assertIsNone(org.radius_settings.last_name)
-        self.assertIsNone(org.radius_settings.location)
-        self.assertIsNone(org.radius_settings.birth_date)
-
-    def test_get_registration_enabled(self):
-        rad_setting = self._get_org().radius_settings
-
-        with self.subTest('Test registration enabled set to True'):
-            rad_setting.registration_enabled = True
-            self.assertEqual(rad_setting.get_registration_enabled(), True)
-
-        with self.subTest('Test registration enabled set to False'):
-            rad_setting.registration_enabled = False
-            self.assertEqual(rad_setting.get_registration_enabled(), False)
-
-        with self.subTest('Test registration enabled set to None'):
-            rad_setting.registration_enabled = None
-            self.assertEqual(
-                rad_setting.get_registration_enabled(),
-                app_settings.REGISTRATION_API_ENABLED,
-            )
 
 
 class TestRadiusGroup(BaseTestCase):

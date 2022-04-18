@@ -5,20 +5,26 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
+from swapper import load_model
 
 from openwisp_radius import settings as app_settings
-from openwisp_radius.social.utils import is_social_authentication_enabled
+from openwisp_radius.utils import get_organization_radius_settings
 from openwisp_utils.tests import capture_stderr
 
-from ..utils import load_model
 from .mixins import ApiTokenMixin, BaseTestCase
 
-RadiusToken = load_model('RadiusToken')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+RadiusToken = load_model('openwisp_radius', 'RadiusToken')
+OrganizationRadiusSettings = load_model('openwisp_radius', 'OrganizationRadiusSettings')
+Organization = load_model('openwisp_users', 'Organization')
 User = get_user_model()
 
 
 @patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', True)
+@patch.object(
+    OrganizationRadiusSettings._meta.get_field('social_registration_enabled'),
+    'fallback',
+    True,
+)
 class TestSocial(ApiTokenMixin, BaseTestCase):
     view_name = 'radius:redirect_cp'
 
@@ -56,7 +62,15 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         url = self.get_url()
 
         with self.subTest('Test social login disabled site-wide'):
-            with patch('openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', False):
+            with patch(
+                'openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED', False
+            ), patch.object(
+                OrganizationRadiusSettings._meta.get_field(
+                    'social_registration_enabled'
+                ),
+                'fallback',
+                False,
+            ):
                 response = self.client.get(url, {'cp': 'http://wifi.openwisp.org/cp'})
                 self.assertEqual(response.status_code, 403)
 
@@ -128,23 +142,29 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to True'):
             org.radius_settings.social_registration_enabled = True
-            self.assertEqual(is_social_authentication_enabled(org), True)
+            self.assertEqual(
+                get_organization_radius_settings(org, 'social_registration_enabled'),
+                True,
+            )
 
         with self.subTest('Test social_registration_enabled set to False'):
             org.radius_settings.social_registration_enabled = False
-            self.assertEqual(is_social_authentication_enabled(org), False)
+            self.assertEqual(
+                get_organization_radius_settings(org, 'social_registration_enabled'),
+                False,
+            )
 
         with self.subTest('Test social_registration_enabled set to None'):
             org.radius_settings.social_registration_enabled = None
             self.assertEqual(
-                is_social_authentication_enabled(org),
+                get_organization_radius_settings(org, 'social_registration_enabled'),
                 app_settings.SOCIAL_REGISTRATION_ENABLED,
             )
 
         with self.subTest('Test related radius setting does not exist'):
             org.radius_settings = None
             with self.assertRaises(Exception) as context_manager:
-                is_social_authentication_enabled(org)
+                get_organization_radius_settings(org, 'social_registration_enabled')
             self.assertEqual(
                 str(context_manager.exception),
                 'Could not complete operation because of an internal misconfiguration',

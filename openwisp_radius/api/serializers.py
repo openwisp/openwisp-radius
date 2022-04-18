@@ -32,8 +32,8 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..registration import REGISTRATION_METHOD_CHOICES
-from ..utils import load_model
-from .utils import ErrorDictMixin, IDVerificationHelper, is_sms_verification_enabled
+from ..utils import get_organization_radius_settings, load_model
+from .utils import ErrorDictMixin, IDVerificationHelper
 
 logger = logging.getLogger(__name__)
 
@@ -422,7 +422,7 @@ class RegisterSerializer(
 
     def validate_phone_number(self, phone_number):
         org = self.context['view'].organization
-        if is_sms_verification_enabled(org):
+        if get_organization_radius_settings(org, 'sms_verification'):
             if not phone_number:
                 raise serializers.ValidationError(_('This field is required.'))
             mobile_prefixes = org.radius_settings.allowed_mobile_prefixes_list

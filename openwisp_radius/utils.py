@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from datetime import timedelta
 from io import BytesIO, StringIO
@@ -6,12 +7,13 @@ from io import BytesIO, StringIO
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import validate_email
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
 from weasyprint import HTML
@@ -22,6 +24,8 @@ SESSION_TIME_ATTRIBUTE = 'Max-Daily-Session'
 SESSION_TRAFFIC_ATTRIBUTE = 'Max-Daily-Session-Traffic'
 DEFAULT_SESSION_TIME_LIMIT = '10800'  # seconds
 DEFAULT_SESSION_TRAFFIC_LIMIT = '3000000000'  # bytes (octets)
+
+logger = logging.getLogger(__name__)
 
 
 def load_model(model):
@@ -188,3 +192,15 @@ def update_user_related_records(sender, instance, created, **kwargs):
     instance.radiususergroup_set.update(username=instance.username)
     instance.radiuscheck_set.update(username=instance.username)
     instance.radiusreply_set.update(username=instance.username)
+
+
+def get_organization_radius_settings(organization, radius_setting):
+    try:
+        return organization.radius_settings.get_setting(radius_setting)
+    except ObjectDoesNotExist:
+        logger.exception(
+            f'Got exception while accessing radius_settings for {organization.name}'
+        )
+        raise APIException(
+            _('Could not complete operation because of an internal misconfiguration')
+        )
