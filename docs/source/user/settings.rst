@@ -406,6 +406,12 @@ be used.
 ``OPENWISP_RADIUS_PASSWORD_RESET_URLS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+    This setting can be overridden for each organization in the
+    organization admin page, the setting implementation is left
+    for backward compatibility but may be deprecated in the future.
+
 **Default**:
 
 .. code-block:: python
