@@ -42,13 +42,13 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
         try:
             raw_info = self._get_raw_management_info(host, port, password)
         except ConnectionRefusedError:
-            logger.error(
+            logger.warning(
                 'Unable to establish telnet connection to '
                 f'{host} on {port}. Skipping!'
             )
             return {}
-        except (OSError, TimeoutError) as error:
-            logger.error(
+        except (OSError, TimeoutError, EOFError) as error:
+            logger.warning(
                 f'Error encountered while connecting to {host}:{port}: {error}. '
                 'Skipping!'
             )
@@ -141,12 +141,12 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                     mac_address = RE_VIRTUAL_ADDR_MAC.search(common_name)[0]
                     radius_session.called_station_id = mac_address.replace(':', '-')
                 except KeyError:
-                    logger.warn(
+                    logger.warning(
                         'Failed to find routing information for '
                         f'{radius_session.session_id}. Skipping!'
                     )
                 except (TypeError, IndexError):
-                    logger.warn(
+                    logger.warning(
                         f'Failed to find a MAC address in "{common_name}". '
                         f'Skipping {radius_session.session_id}!'
                     )

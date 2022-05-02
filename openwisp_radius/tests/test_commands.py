@@ -291,7 +291,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         radius_acc = self._create_radius_accounting(**options)
 
         with self.subTest('Test telnet connection error'):
-            with patch('logging.Logger.error') as mocked_logger:
+            with patch('logging.Logger.warning') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
                     'Unable to establish telnet connection to 127.0.0.1 on 7505. '
@@ -299,7 +299,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 )
 
         with self.subTest('Test telnet raises OSError'):
-            with patch('logging.Logger.error') as mocked_logger, patch(
+            with patch('logging.Logger.warning') as mocked_logger, patch(
                 'openwisp_radius.management.commands.base.convert_called_station_id'
                 '.BaseConvertCalledStationIdCommand._get_raw_management_info',
                 side_effect=OSError('[Errno 113] No route to host'),
@@ -311,14 +311,15 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 )
 
         with self.subTest('Test telnet connection timed out'):
-            with patch('logging.Logger.exception') as mocked_logger, patch(
+            with patch('logging.Logger.warning') as mocked_logger, patch(
                 'openwisp_radius.management.commands.base.convert_called_station_id'
                 '.BaseConvertCalledStationIdCommand._get_raw_management_info',
-                side_effect=EOFError,
+                side_effect=EOFError('EOFError'),
             ):
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'Error encountered while connecting to 127.0.0.1:7505. ' 'Skipping!'
+                    'Error encountered while connecting to 127.0.0.1:7505: '
+                    'EOFError. Skipping!'
                 )
 
         with self.subTest('Test telnet password incorrect'):
@@ -354,7 +355,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openwisp_radius.management.commands.base.convert_called_station_id'
                 '.BaseConvertCalledStationIdCommand._get_openvpn_routing_info',
                 return_value={options['calling_station_id']: dummy_routing_obj},
-            ), patch('logging.Logger.warn') as mocked_logger:
+            ), patch('logging.Logger.warning') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
                     f'Failed to find a MAC address in "{dummy_routing_obj.common_name}"'
@@ -366,7 +367,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openwisp_radius.management.commands.base.convert_called_station_id'
                 '.BaseConvertCalledStationIdCommand._get_openvpn_routing_info',
                 return_value={'dd:dd:dd:dd:dd:dd': Routing()},
-            ), patch('logging.Logger.warn') as mocked_logger:
+            ), patch('logging.Logger.warning') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
                     f'Failed to find routing information for {radius_acc.session_id}.'
