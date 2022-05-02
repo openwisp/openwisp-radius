@@ -64,7 +64,6 @@ Features
   `OPENWISP_RADIUS_SAML_UPDATES_PRE_EXISTING_USERNAME
   <https://openwisp-radius.readthedocs.io/en/latest/user/settings.html#openwisp-radius-saml-updates-pre-existing-username>`_
 
-
 Changes
 ~~~~~~~
 
