@@ -478,6 +478,10 @@ class TestAdmin(
             radsetting.refresh_from_db()
             # This should fail when the value of FREERADIUS_ALLOWED_HOSTS is
             # stored in the model as well.
+            # Accessing "radsetting.freeradius_allowed_hosts" returns
+            # fallback value instead of "None". Calling "radsetting.clean()"
+            # resets the value only if the value is equal to the global default.
+            radsetting.clean()
             self.assertEqual(radsetting.freeradius_allowed_hosts, None)
         with self.subTest('Valid IP list'):
             form_data.update(
@@ -487,13 +491,8 @@ class TestAdmin(
             self.assertEqual(response.status_code, 302)
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.freeradius_allowed_hosts, '127.0.0.45')
-        with self.subTest('Empty IP list with FREERADIUS_ALLOWED_HOSTS'):
-            form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
-            response = self.client.post(url, form_data)
-            self.assertEqual(response.status_code, 302)
-            radsetting.refresh_from_db()
-            self.assertEqual(radsetting.freeradius_allowed_hosts, '')
         with self.subTest('Empty IP list without FREERADIUS_ALLOWED_HOSTS'):
+            form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
             with mock.patch('openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', []):
                 response = self.client.post(url, form_data)
             self.assertContains(

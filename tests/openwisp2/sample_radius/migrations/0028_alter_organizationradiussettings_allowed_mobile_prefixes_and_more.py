@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='birth_date',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='first_name',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='last_name',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -108,7 +108,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='location',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='needs_identity_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -157,7 +157,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='saml_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -171,7 +171,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='sms_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -185,7 +185,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='social_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(

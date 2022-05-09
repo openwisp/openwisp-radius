@@ -1616,9 +1616,9 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         org = self._get_org()
         self.assertEqual(cache.get(f'ip-{org.pk}'), None)
         with self.subTest('Without Cache'):
-            authorize_and_assert(11, [])
+            authorize_and_assert(11, ['127.0.0.1'])
         with self.subTest('With Cache'):
-            authorize_and_assert(8, [])
+            authorize_and_assert(8, ['127.0.0.1'])
         with self.subTest('Organization Settings Updated'):
             radsetting = OrganizationRadiusSettings.objects.get(organization=org)
             radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
