@@ -1,5 +1,5 @@
 from django import forms
-from django.db.models.fields import BooleanField, CharField, TextField
+from django.db.models.fields import BooleanField, CharField, TextField, URLField
 from django.utils.translation import gettext_lazy as _
 
 
@@ -26,7 +26,7 @@ class FallbackBooleanChoiceField(FallbackMixin, BooleanField):
         default_value = _('Enabled') if self.fallback else _('Disabled')
         kwargs.update(
             {
-                "form_class": FallbackBooleanChoiceFormField,
+                "form_class": forms.NullBooleanField,
                 'widget': forms.Select(
                     choices=[
                         (
@@ -54,13 +54,36 @@ class FallbackCharChoiceField(FallbackMixin, CharField):
     def formfield(self, **kwargs):
         kwargs.update(
             {
-                "choices_form_class": FallbackCharChoiceFormField,
+                "choices_form_class": forms.TypedChoiceField,
             }
         )
         return super().formfield(**kwargs)
 
 
+class FallbackCharField(FallbackMixin, FallbackFromDbValueMixin, CharField):
+    """
+    Populates the form with the fallback value
+    if the value is set to null in the database.
+    """
+
+    pass
+
+
+class FallbackURLField(FallbackMixin, FallbackFromDbValueMixin, URLField):
+    """
+    Populates the form with the fallback value
+    if the value is set to null in the database.
+    """
+
+    pass
+
+
 class FallbackTextField(FallbackMixin, FallbackFromDbValueMixin, TextField):
+    """
+    Populates the form with the fallback value
+    if the value is set to null in the database.
+    """
+
     def formfield(self, **kwargs):
         kwargs.update({'form_class': FallbackTextFormField})
         return super().formfield(**kwargs)
@@ -71,11 +94,3 @@ class FallbackTextFormField(forms.CharField):
         attrs = super().widget_attrs(widget)
         attrs.update({'rows': 2, 'cols': 34, 'style': 'width:auto'})
         return attrs
-
-
-class FallbackCharChoiceFormField(forms.TypedChoiceField):
-    pass
-
-
-class FallbackBooleanChoiceFormField(forms.NullBooleanField):
-    pass

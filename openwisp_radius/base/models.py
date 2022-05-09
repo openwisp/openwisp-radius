@@ -53,6 +53,7 @@ from .fields import (
     FallbackBooleanChoiceField,
     FallbackCharChoiceField,
     FallbackTextField,
+    FallbackURLField,
 )
 from .validators import ipv6_network_validator
 
@@ -1088,12 +1089,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_GET_IP_LIST_HELP_TEXT,
+        default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
         fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
     )
     allowed_mobile_prefixes = FallbackTextField(
         null=True,
         blank=True,
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
+        default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
     first_name = FallbackCharChoiceField(
@@ -1166,11 +1169,13 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         help_text=_STATUS_URL_HELP_TEXT,
     )
-    password_reset_url = models.URLField(
+    password_reset_url = FallbackURLField(
         verbose_name=_('Password reset URL'),
         null=True,
         blank=True,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
+        default=PASSWORD_RESET_URLS.get('default'),
+        fallback=PASSWORD_RESET_URLS.get('default'),
     )
 
     class Meta:
@@ -1275,6 +1280,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
+        if (
+            not self.password_reset_url
+            or self.password_reset_url == PASSWORD_RESET_URLS.get('default')
+        ):
+            self.password_reset_url = None
 
     def get_setting(self, field_name):
         value = getattr(self, field_name)
