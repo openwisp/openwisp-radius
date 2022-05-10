@@ -19,18 +19,19 @@ class Migration(migrations.Migration):
             name='allowed_mobile_prefixes',
             field=openwisp_radius.base.fields.FallbackTextField(
                 blank=True,
+                default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+                fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
                 help_text=(
-                    'Comma separated list of international mobile prefixes'
-                    ' allowed to register via the user registration API.'
+                    'Comma separated list of international mobile'
+                    ' prefixes allowed to register via the user registration API.'
                 ),
                 null=True,
-                fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
             ),
         ),
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='birth_date',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -52,7 +53,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='first_name',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -76,18 +77,19 @@ class Migration(migrations.Migration):
             name='freeradius_allowed_hosts',
             field=openwisp_radius.base.fields.FallbackTextField(
                 blank=True,
+                default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+                fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
                 help_text=(
-                    'Comma separated list of IP addresses allowed'
-                    ' to access freeradius API'
+                    'Comma separated list of IP addresses allowed to'
+                    ' access freeradius API'
                 ),
                 null=True,
-                fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
             ),
         ),
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='last_name',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -109,7 +111,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='location',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_radius.base.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -131,7 +133,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='needs_identity_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -144,8 +146,20 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='organizationradiussettings',
+            name='password_reset_url',
+            field=openwisp_radius.base.fields.FallbackURLField(
+                blank=True,
+                default=app_settings.PASSWORD_RESET_URLS.get('default', ''),
+                fallback=app_settings.PASSWORD_RESET_URLS.get('default', ''),
+                help_text='Enter the URL where users can reset their password',
+                null=True,
+                verbose_name='Password reset URL',
+            ),
+        ),
+        migrations.AlterField(
+            model_name='organizationradiussettings',
             name='registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -158,7 +172,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='saml_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -172,7 +186,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='sms_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -186,7 +200,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='social_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanField(
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(

@@ -49,7 +49,12 @@ from ..utils import (
     prefix_generate_users,
     validate_csvfile,
 )
-from .fields import FallbackBooleanField, FallbackCharField, FallbackTextField
+from .fields import (
+    FallbackBooleanChoiceField,
+    FallbackCharChoiceField,
+    FallbackTextField,
+    FallbackURLField,
+)
 from .validators import ipv6_network_validator
 
 logger = logging.getLogger(__name__)
@@ -1050,14 +1055,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         on_delete=models.CASCADE,
     )
     token = KeyField(max_length=32)
-    sms_verification = FallbackBooleanField(
+    sms_verification = FallbackBooleanChoiceField(
         null=True,
         blank=True,
         default=None,
         help_text=_SMS_VERIFICATION_HELP_TEXT,
         fallback=app_settings.SMS_VERIFICATION_ENABLED,
     )
-    needs_identity_verification = FallbackBooleanField(
+    needs_identity_verification = FallbackBooleanChoiceField(
         null=True,
         blank=True,
         default=None,
@@ -1084,15 +1089,17 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_GET_IP_LIST_HELP_TEXT,
+        default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
         fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
     )
     allowed_mobile_prefixes = FallbackTextField(
         null=True,
         blank=True,
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
+        default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
-    first_name = FallbackCharField(
+    first_name = FallbackCharChoiceField(
         verbose_name=_('first name'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
@@ -1101,7 +1108,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('first_name', None),
     )
-    last_name = FallbackCharField(
+    last_name = FallbackCharChoiceField(
         verbose_name=_('last name'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
@@ -1110,7 +1117,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('last_name', None),
     )
-    location = FallbackCharField(
+    location = FallbackCharChoiceField(
         verbose_name=_('location'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
@@ -1119,7 +1126,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('location', None),
     )
-    birth_date = FallbackCharField(
+    birth_date = FallbackCharChoiceField(
         verbose_name=_('birth date'),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
@@ -1128,14 +1135,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         choices=OPTIONAL_FIELD_CHOICES,
         fallback=OPTIONAL_SETTINGS.get('birth_date', None),
     )
-    registration_enabled = FallbackBooleanField(
+    registration_enabled = FallbackBooleanChoiceField(
         null=True,
         blank=True,
         default=None,
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
         fallback=app_settings.REGISTRATION_API_ENABLED,
     )
-    saml_registration_enabled = FallbackBooleanField(
+    saml_registration_enabled = FallbackBooleanChoiceField(
         null=True,
         blank=True,
         default=None,
@@ -1143,7 +1150,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         verbose_name=_('SAML registration enabled'),
         fallback=app_settings.SAML_REGISTRATION_ENABLED,
     )
-    social_registration_enabled = FallbackBooleanField(
+    social_registration_enabled = FallbackBooleanChoiceField(
         null=True,
         blank=True,
         default=None,
@@ -1162,11 +1169,13 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         help_text=_STATUS_URL_HELP_TEXT,
     )
-    password_reset_url = models.URLField(
+    password_reset_url = FallbackURLField(
         verbose_name=_('Password reset URL'),
         null=True,
         blank=True,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
+        default=PASSWORD_RESET_URLS.get('default'),
+        fallback=PASSWORD_RESET_URLS.get('default'),
     )
 
     class Meta:
@@ -1216,6 +1225,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
+        elif not allowed_hosts_set:
+            self.freeradius_allowed_hosts = None
         elif allowed_hosts_set:
             if allowed_hosts_set == settings_allowed_hosts_set:
                 self.freeradius_allowed_hosts = None
@@ -1248,7 +1259,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     }
                 )
 
-        if allowed_mobile_prefixes_set == settings_allowed_mobile_prefixes_set:
+        if (
+            not allowed_mobile_prefixes_set
+            or allowed_mobile_prefixes_set == settings_allowed_mobile_prefixes_set
+        ):
             self.allowed_mobile_prefixes = None
 
     def _clean_password_reset_url(self):
@@ -1266,6 +1280,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
+        if (
+            not self.password_reset_url
+            or self.password_reset_url == PASSWORD_RESET_URLS.get('default')
+        ):
+            self.password_reset_url = None
 
     def get_setting(self, field_name):
         value = getattr(self, field_name)

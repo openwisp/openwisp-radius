@@ -540,6 +540,7 @@ UserAdmin.list_select_related = ('registered_user',)
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
     model = OrganizationRadiusSettings
+    form = AlwaysHasChangedForm
     fieldsets = (
         (
             None,
