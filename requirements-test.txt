@@ -7,7 +7,7 @@ sphinx_rtd_theme~=0.5.0
 sphinx~=4.2.0
 freezegun
 django-extensions
-openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master/
+openwisp-utils[qa]~=1.0.0
 pylinkvalidator
 lxml~=4.8.0
 cssselect~=1.1.0
