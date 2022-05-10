@@ -91,12 +91,9 @@ class AllowedMobilePrefixMixin(object):
         Verifies if a phone number's international prefix is allowed
         """
         country_code = phonenumbers.parse(str(phone_number)).country_code
-        allowed_global_prefixes = set(app_settings.ALLOWED_MOBILE_PREFIXES)
-        allowed_org_prefixes = set(mobile_prefixes)
-        allowed_prefixes = allowed_global_prefixes.union(allowed_org_prefixes)
-        if not allowed_prefixes:
+        if not mobile_prefixes:
             return True
-        return ('+' + str(country_code)) in allowed_prefixes
+        return '+' + str(country_code) in mobile_prefixes
 
 
 class AuthorizeSerializer(serializers.Serializer):

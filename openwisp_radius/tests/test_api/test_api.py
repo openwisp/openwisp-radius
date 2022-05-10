@@ -172,7 +172,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIn('username', response.data)
         self.assertIn('email', response.data)
 
-    @mock.patch('openwisp_radius.settings.ALLOWED_MOBILE_PREFIXES', ['+33'])
     def test_register_duplicate_different_org(self):
         self.default_org.radius_settings.sms_verification = True
         self.default_org.radius_settings.save()
@@ -183,7 +182,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         params = {
             'username': self._test_email,
             'email': self._test_email,
-            'phone_number': '+33675579231',
+            'phone_number': '+393664255803',
             'password1': 'password',
             'password2': 'password',
         }
@@ -200,7 +199,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest('Test existing email'):
             options = params.copy()
-            options['phone_number'] = '+33675579231'
+            options['phone_number'] = '+393664255803'
             options['username'] = 'test2'
 
             response = self.client.post(url, data=options)
@@ -265,7 +264,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             params = {
                 'username': test_user2.username,
                 'email': test_user2.email,
-                'phone_number': '+33675579231',
+                'phone_number': '+393664255803',
                 'password1': 'password',
                 'password2': 'password',
             }
@@ -286,7 +285,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             params = {
                 'username': test_user2.username,
                 'email': test_user2.email,
-                'phone_number': '+33675579231',
+                'phone_number': '+393664255803',
                 'password1': 'password',
                 'password2': 'password',
             }
@@ -714,13 +713,13 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 401)
 
     @capture_any_output()
-    @mock.patch('openwisp_users.settings.AUTH_BACKEND_AUTO_PREFIXES', ['+33'])
+    @mock.patch('openwisp_users.settings.AUTH_BACKEND_AUTO_PREFIXES', ['+39'])
     def test_api_password_reset(self):
         test_user = User.objects.create_user(
             username='test_name',
             password='test_password',
             email='test@email.com',
-            phone_number='+33675579231',
+            phone_number='+393664255803',
         )
         self._create_org_user(organization=self.default_org, user=test_user)
         mail_count = len(mail.outbox)
