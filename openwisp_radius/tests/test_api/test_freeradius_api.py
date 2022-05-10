@@ -1635,11 +1635,19 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_ip_from_setting_invalid(self):
+        org = self._get_org()
+        cache.delete(f'ip-{org.pk}')
         test_fail_msg = (
             'Request rejected: (localhost) in organization settings or '
             'settings.py is not a valid IP address. Please contact administrator.'
         )
-        with mock.patch(self.freeradius_hosts_path, ['localhost']):
+        with mock.patch(
+            'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', ['localhost']
+        ), mock.patch.object(
+            OrganizationRadiusSettings._meta.get_field('freeradius_allowed_hosts'),
+            'from_db_value',
+            return_value='localhost',
+        ):
             response = self.client.post(reverse('radius:authorize'), self.params)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data['detail'], test_fail_msg)
@@ -1674,14 +1682,20 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     def test_ip_from_radsetting_not_exist(self):
         org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
-        self._create_org_user(**{'organization': org2})
-        self.client.post(reverse('radius:user_auth_token', args=[org2.slug]))
+        user = self._create_user(username='org2-tester', email='tester@org2.com')
+        self._create_org_user(**{'organization': org2, 'user': user})
+        params = self.params.copy()
+        params['username'] = 'org2-tester'
+        response = self.client.post(
+            reverse('radius:user_auth_token', args=[org2.slug]), params
+        )
+        self.assertEqual(response.status_code, 200)
         with self.subTest('FREERADIUS_ALLOWED_HOSTS is 127.0.0.1'):
-            response = self.client.post(reverse('radius:authorize'), self.params)
+            response = self.client.post(reverse('radius:authorize'), params)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         with self.subTest('Empty Settings'), mock.patch(self.freeradius_hosts_path, []):
-            response = self.client.post(reverse('radius:authorize'), self.params)
+            response = self.client.post(reverse('radius:authorize'), params)
             self.assertEqual(response.status_code, 403)
             self.assertEqual(response.data['detail'], self.fail_msg)
 
