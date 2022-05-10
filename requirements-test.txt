@@ -9,3 +9,5 @@ freezegun
 django-extensions
 openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master/
 pylinkvalidator
+lxml~=4.8.0
+cssselect~=1.1.0

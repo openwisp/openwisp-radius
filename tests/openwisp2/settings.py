@@ -14,6 +14,7 @@ SECRET_KEY = '&a@f(0@lrl%606smticbu20=pvribdvubk5=gjti8&n1y%bi&4'
 
 ALLOWED_HOSTS = []
 OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
+OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ['+44', '+39', '+237', '+595']
 
 INSTALLED_APPS = [
     'django.contrib.auth',

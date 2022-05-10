@@ -1,5 +1,6 @@
 from unittest import mock
 
+import lxml.html as lxml_html
 import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -443,6 +444,13 @@ class TestAdmin(
         self.assertContains(response, 'error')
         self.assertContains(response, 'Cannot proceed with the delete')
 
+    def _assert_text_input(self, response, selector, value):
+        doc = lxml_html.fromstring(response.content.decode())
+        elements = doc.cssselect(selector)
+        self.assertEqual(len(elements), 1)
+        element = elements[0]
+        self.assertEqual(element.value.strip(), value)
+
     def test_organization_radsettings_freeradius_allowed_hosts(self):
         org = self._get_org()
         url = reverse(
@@ -469,6 +477,7 @@ class TestAdmin(
                 'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
+
         with self.subTest('Return FREERADIUS_ALLOWED_HOSTS back'):
             form_data.update(
                 {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.1'}
@@ -483,6 +492,13 @@ class TestAdmin(
             # resets the value only if the value is equal to the global default.
             radsetting.clean()
             self.assertEqual(radsetting.freeradius_allowed_hosts, None)
+
+        with self.subTest('Ensure admin HTML shows the default value'):
+            response = self.client.get(url)
+            self._assert_text_input(
+                response, '#id_radius_settings-0-freeradius_allowed_hosts', '127.0.0.1'
+            )
+
         with self.subTest('Valid IP list'):
             form_data.update(
                 {'radius_settings-0-freeradius_allowed_hosts': '127.0.0.45'}
@@ -491,6 +507,7 @@ class TestAdmin(
             self.assertEqual(response.status_code, 302)
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.freeradius_allowed_hosts, '127.0.0.45')
+
         with self.subTest('Empty IP list without FREERADIUS_ALLOWED_HOSTS'):
             form_data.update({'radius_settings-0-freeradius_allowed_hosts': ''})
             with mock.patch('openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', []):
@@ -502,6 +519,7 @@ class TestAdmin(
                     '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
                 ),
             )
+
         with self.subTest('Invalid IP list'):
             form_data.update(
                 {'radius_settings-0-freeradius_allowed_hosts': '123.246.512.12'}
@@ -557,6 +575,15 @@ class TestAdmin(
             self.assertEqual(radsetting.password_reset_url, None)
             self.assertContains(response, 'The URL must contain the ')
             self.assertContains(response, 'errors field-password_reset_url')
+
+        with self.subTest('Ensure admin HTML shows the default value'):
+            response = self.client.get(url)
+            self._assert_text_input(
+                response,
+                '#id_radius_settings-0-password_reset_url',
+                'http://localhost:8080/{organization}/password/'
+                'reset/confirm/{uid}/{token}',
+            )
 
         with self.subTest('password_reset_url must be equal to fallback value'):
             form_data.update(
@@ -1071,12 +1098,22 @@ class TestAdmin(
                 'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
             }
         )
+
+        with self.subTest('Ensure admin HTML shows the default value'):
+            response = self.client.get(url)
+            self._assert_text_input(
+                response,
+                '#id_radius_settings-0-allowed_mobile_prefixes',
+                '+44,+39,+237,+595',
+            )
+
         with self.subTest('Valid mobile prefix list'):
             form_data.update({'radius_settings-0-allowed_mobile_prefixes': '+51,+44'})
             response = self.client.post(url, form_data)
             self.assertEqual(response.status_code, 302)
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.allowed_mobile_prefixes, '+51,+44')
+
         with self.subTest('Invalid list'):
             form_data.update({'radius_settings-0-allowed_mobile_prefixes': '+51, +44'})
             response = self.client.post(url, form_data)
