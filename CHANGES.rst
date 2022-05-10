@@ -1,6 +1,19 @@
 Change log
 ==========
 
+Version 1.0.1 [2022-05-10]
+--------------------------
+
+- Fixed a bug in the organization radius settings form which was causing it
+  to not display some default values correctly
+- Fixed a bug in allowed mobile prefix implementation:
+  the implementation was joining the globally allowed prefixes
+  and the prefixes allowed at org level, with the result
+  that disabling a prefix at org level was not possible
+- Called-station-ID command: log with warning instead of ``warn`` or ``error``:
+  - warn > warning (warn is deprecated)
+  - use warning instead of errors for more temporary connection issues cases
+
 Version 1.0.0 [2022-04-18]
 --------------------------
 
