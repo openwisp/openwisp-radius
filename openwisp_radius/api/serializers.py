@@ -237,12 +237,15 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         if not ids or instance.called_station_id == acct_data['called_station_id']:
             return acct_data
         try:
+            organization = acct_data['organization']
             if (
                 ids
-                and acct_data['organization']
-                and acct_data['organization'].slug in ids
+                and organization
+                and (organization.slug in ids or str(organization.id) in ids)
             ):
-                unconverted_ids = ids[acct_data['organization'].slug]['unconverted_ids']
+                unconverted_ids = ids.get(str(organization.id), {}).get(
+                    'unconverted_ids', []
+                ) + ids.get(organization.slug, {}).get('unconverted_ids', [])
                 if acct_data['called_station_id'] in unconverted_ids:
                     acct_data['called_station_id'] = instance.called_station_id
         except Exception:

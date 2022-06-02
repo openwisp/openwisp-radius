@@ -76,11 +76,14 @@ def convert_radius_called_station_id(instance, created, **kwargs):
     if not created or not instance.called_station_id:
         return
     try:
-        assert (
-            instance.called_station_id
-            in app_settings.CALLED_STATION_IDS[instance.organization.slug][
-                'unconverted_ids'
-            ]
+        assert instance.called_station_id in app_settings.CALLED_STATION_IDS.get(
+            str(instance.organization.id), {}
+        ).get(
+            'unconverted_ids', []
+        ) or instance.called_station_id in app_settings.CALLED_STATION_IDS.get(
+            instance.organization.slug, {}
+        ).get(
+            'unconverted_ids', []
         )
     except (AssertionError, KeyError):
         return

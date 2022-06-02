@@ -214,7 +214,7 @@ It should contain configuration in following format:
     OPENWISP_RADIUS_CALLED_STATION_IDS = {
         # Slug of the organization for which settings are being specified
         # In this example 'default'
-        '<organization_slug>': {
+        '<organization_uuid>': {
             'openvpn_config': [
                 {
                     # Host address of OpenVPN management

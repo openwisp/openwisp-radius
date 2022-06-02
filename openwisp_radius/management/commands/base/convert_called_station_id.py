@@ -80,11 +80,10 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
 
     def _get_called_station_setting(self, radius_session):
         try:
-            return {
-                radius_session.organization.slug: CALLED_STATION_IDS[
-                    radius_session.organization.slug
-                ]
-            }
+            organization = radius_session.organization
+            if str(organization.id) in CALLED_STATION_IDS:
+                return {str(organization.id): CALLED_STATION_IDS[str(organization.id)]}
+            return {organization.slug: CALLED_STATION_IDS[organization.slug]}
         except KeyError:
             logger.error(
                 'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting '
