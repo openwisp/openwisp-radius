@@ -98,7 +98,7 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS
     for key, value in PASSWORD_RESET_URLS.items():
-        if key != '__all__':
+        if key != '__all__' and key != 'default':
             try:
                 UUID(key)
             except ValueError:

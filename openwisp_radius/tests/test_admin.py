@@ -42,7 +42,9 @@ _RADCHECK_ENTRY_PW_UPDATE = {
     'value': 'Cam0_liX',
     'attribute': 'NT-Password',
 }
-PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get('__all__')
+PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get(
+    '__all__'
+) or app_settings.PASSWORD_RESET_URLS.get('default')
 
 
 class TestAdmin(

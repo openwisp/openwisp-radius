@@ -1166,8 +1166,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
-        default=PASSWORD_RESET_URLS.get('__all__'),
-        fallback=PASSWORD_RESET_URLS.get('__all__'),
+        default=PASSWORD_RESET_URLS.get('__all__')
+        or PASSWORD_RESET_URLS.get('default'),
+        fallback=PASSWORD_RESET_URLS.get('__all__')
+        or PASSWORD_RESET_URLS.get('default'),
     )
 
     class Meta:
@@ -1268,6 +1270,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                         'The URL must contain the "{{token}}" and '
                         '"{{uid}}" placeholders, eg: {}.'.format(
                             PASSWORD_RESET_URLS.get('__all__')
+                            or PASSWORD_RESET_URLS.get('default')
                         )
                     )
                 }
@@ -1275,6 +1278,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         if (
             not self.password_reset_url
             or self.password_reset_url == PASSWORD_RESET_URLS.get('__all__')
+            or self.password_reset_url == PASSWORD_RESET_URLS.get('default')
         ):
             self.password_reset_url = None
 
