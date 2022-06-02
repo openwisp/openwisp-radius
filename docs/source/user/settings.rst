@@ -432,7 +432,7 @@ be used.
 .. code-block:: python
 
     {
-        'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}'
+        '__all__': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
 A dictionary representing the frontend URLs through which end users can complete
@@ -441,7 +441,7 @@ the password reset operation.
 The frontend could be `openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
 or another in-house captive page solution.
 
-Keys of the dictionary must be either UUID of organizations or ``default``, which is the fallback URL
+Keys of the dictionary must be either UUID of organizations or ``__all__``, which is the fallback URL
 that will be used in case there's no customized URL for a specific organization.
 
 The password reset URL must contain the "{token}" and "{uid}" placeholders.

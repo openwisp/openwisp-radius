@@ -69,7 +69,7 @@ BATCH_MAIL_MESSAGE = get_settings_value(
 )
 PASSWORD_RESET_URLS = {
     # fallback in case the specific org page is not defined
-    'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
+    '__all__': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
     # use the uuid because the slug can change
 }
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
@@ -98,7 +98,7 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS
     for key, value in PASSWORD_RESET_URLS.items():
-        if key != 'default':
+        if key != '__all__':
             try:
                 UUID(key)
             except ValueError:

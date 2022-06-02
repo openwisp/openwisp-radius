@@ -212,7 +212,7 @@ SOCIALACCOUNT_PROVIDERS = {
 redis_host = os.getenv('REDIS_HOST', 'localhost')
 
 OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
-    'default': (
+    '__all__': (
         'http://localhost:8080/{organization}/password/reset/confirm/{uid}/{token}'
     ),
 }
@@ -278,7 +278,7 @@ ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = 'email_confirmation_succ
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # fallback in case the specific org page is not defined
-#     'default': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
+#     '__all__': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
 #     # use the uuid because the slug can change
 #     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://org.com/{organization}/password/reset/confirm/{uid}/{token}',
 # }
