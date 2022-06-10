@@ -76,6 +76,8 @@ def convert_radius_called_station_id(instance, created, **kwargs):
     if not created or not instance.called_station_id:
         return
     try:
+        # organization slug is maintained for backward compatibility
+        # but will removed in future versions
         assert instance.called_station_id in app_settings.CALLED_STATION_IDS.get(
             str(instance.organization.id), {}
         ).get(

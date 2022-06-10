@@ -83,6 +83,8 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             organization = radius_session.organization
             if str(organization.id) in CALLED_STATION_IDS:
                 return {str(organization.id): CALLED_STATION_IDS[str(organization.id)]}
+            # organization slug is maintained for backward compatibility
+            # but will removed in future versions
             return {organization.slug: CALLED_STATION_IDS[organization.slug]}
         except KeyError:
             logger.error(

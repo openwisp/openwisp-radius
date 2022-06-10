@@ -26,6 +26,14 @@ _RADACCT = {
     'output_octets': '4',
     'session_id': uuid4().int,
 }
+_CALLED_STATION_IDS = {
+    'test-org': {
+        'openvpn_config': [
+            {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+        ],
+        'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
+    }
+}
 
 Nas = load_model('Nas')
 RadiusAccounting = load_model('RadiusAccounting')

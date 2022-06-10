@@ -243,6 +243,8 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 and organization
                 and (organization.slug in ids or str(organization.id) in ids)
             ):
+                # organization slug is maintained for backward compatibility
+                # but will removed in future versions
                 unconverted_ids = ids.get(str(organization.id), {}).get(
                     'unconverted_ids', []
                 ) + ids.get(organization.slug, {}).get('unconverted_ids', [])
