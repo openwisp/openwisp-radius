@@ -36,7 +36,7 @@ from ..settings import (
     BATCH_MAIL_MESSAGE,
     BATCH_MAIL_SENDER,
     BATCH_MAIL_SUBJECT,
-    PASSWORD_RESET_URLS,
+    DEFAULT_PASSWORD_RESET_URL,
 )
 from ..utils import (
     SmsMessage,
@@ -1166,10 +1166,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
-        default=PASSWORD_RESET_URLS.get('__all__')
-        or PASSWORD_RESET_URLS.get('default'),
-        fallback=PASSWORD_RESET_URLS.get('__all__')
-        or PASSWORD_RESET_URLS.get('default'),
+        default=DEFAULT_PASSWORD_RESET_URL,
+        fallback=DEFAULT_PASSWORD_RESET_URL,
     )
 
     class Meta:
@@ -1269,16 +1267,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     'password_reset_url': _(
                         'The URL must contain the "{{token}}" and '
                         '"{{uid}}" placeholders, eg: {}.'.format(
-                            PASSWORD_RESET_URLS.get('__all__')
-                            or PASSWORD_RESET_URLS.get('default')
+                            DEFAULT_PASSWORD_RESET_URL
                         )
                     )
                 }
             )
         if (
             not self.password_reset_url
-            or self.password_reset_url == PASSWORD_RESET_URLS.get('__all__')
-            or self.password_reset_url == PASSWORD_RESET_URLS.get('default')
+            or self.password_reset_url == DEFAULT_PASSWORD_RESET_URL
         ):
             self.password_reset_url = None
 

@@ -490,9 +490,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         uid = user_pk_to_url_str(user)
         token = default_token_generator.make_token(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
-        password_reset_url = password_reset_urls.get(
-            '__all__'
-        ) or password_reset_urls.get('default')
+        password_reset_url = app_settings.DEFAULT_PASSWORD_RESET_URL
         domain = get_current_site(self.request).domain
         if getattr(self, 'swagger_fake_view', False):
             organization_pk, organization_slug = None, None  # pragma: no cover

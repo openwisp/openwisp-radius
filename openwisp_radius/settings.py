@@ -73,6 +73,11 @@ PASSWORD_RESET_URLS = {
     # use the uuid because the slug can change
 }
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
+DEFAULT_PASSWORD_RESET_URL = (
+    PASSWORD_RESET_URLS.get('__all__')
+    # kept for backward compatibility, will be removed in future versions
+    or PASSWORD_RESET_URLS.get('default')
+)
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
 SMS_TOKEN_DEFAULT_VALIDITY = get_settings_value('SMS_TOKEN_DEFAULT_VALIDITY', 30)

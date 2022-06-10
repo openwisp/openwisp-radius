@@ -148,8 +148,8 @@ class Migration(migrations.Migration):
             name='password_reset_url',
             field=openwisp_radius.base.fields.FallbackURLField(
                 blank=True,
-                default=app_settings.PASSWORD_RESET_URLS.get('__all__', ''),
-                fallback=app_settings.PASSWORD_RESET_URLS.get('__all__', ''),
+                default=app_settings.DEFAULT_PASSWORD_RESET_URL,
+                fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 help_text='Enter the URL where users can reset their password',
                 null=True,
                 verbose_name='Password reset URL',
