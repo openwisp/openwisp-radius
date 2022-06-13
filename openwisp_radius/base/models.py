@@ -6,7 +6,6 @@ import os
 import string
 from datetime import timedelta
 from io import StringIO
-from urllib.parse import urljoin
 
 import phonenumbers
 import swapper
@@ -25,7 +24,6 @@ from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
-from private_storage.storage.files import PrivateFileSystemStorage
 
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
 from openwisp_users.mixins import OrgMixin
@@ -789,12 +787,6 @@ class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
         return str(self.username)
 
 
-_get_csv_file_private_storage = PrivateFileSystemStorage(
-    location=settings.PRIVATE_STORAGE_ROOT,
-    base_url=urljoin(app_settings.RADIUS_API_BASEURL, app_settings.CSV_URL_PATH),
-)
-
-
 def _get_csv_file_location(instance, filename):
     return os.path.join(
         str(instance.organization.slug),
@@ -830,7 +822,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         null=True,
         blank=True,
         verbose_name='CSV',
-        storage=_get_csv_file_private_storage,
+        storage=app_settings.PRIVATE_STORAGE_INSTANCE,
         upload_to=_get_csv_file_location,
         help_text=_('The csv file containing the user details to be uploaded'),
         max_file_size=app_settings.MAX_CSV_FILE_SIZE,

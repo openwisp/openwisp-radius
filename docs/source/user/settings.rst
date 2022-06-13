@@ -181,6 +181,21 @@ This setting can be used to set the maximum size limit for firmware images, eg:
     The numeric value represents the size of files in bytes.
     Setting this to ``None`` will mean there's no max size.
 
+``OPENWISP_RADIUS_PRIVATE_STORAGE_INSTANCE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++--------------+-------------------------------------------------------------------------------------+
+| **type**:    | ``str``                                                                             |
++--------------+-------------------------------------------------------------------------------------+
+| **default**: |  ``openwisp_radius.private_storage.storage.private_file_system_storage``            |
++--------------+-------------------------------------------------------------------------------------+
+
+Dotted path to an instance of any one of the storage classes in
+`private_storage <https://github.com/edoburu/django-private-storage#django-private-storage>`_.
+This instance is used for storing csv files to batch import users.
+
+By default, an instance of ``private_storage.storage.files.PrivateFileSystemStorage``
+is used.
+
 .. _openwisp_radius_called_station_ids:
 
 ``OPENWISP_RADIUS_CALLED_STATION_IDS``
