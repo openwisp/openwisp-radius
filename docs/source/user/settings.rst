@@ -191,7 +191,7 @@ This setting can be used to set the maximum size limit for firmware images, eg:
 
 Dotted path to an instance of any one of the storage classes in
 `private_storage <https://github.com/edoburu/django-private-storage#django-private-storage>`_.
-This instance is used for storing csv files to batch import users.
+This instance is used for storing csv files of batch imports of users.
 
 By default, an instance of ``private_storage.storage.files.PrivateFileSystemStorage``
 is used.
