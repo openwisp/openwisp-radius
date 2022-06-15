@@ -129,6 +129,16 @@ except AssertionError:  # pragma: no cover
 
 # Path of urls that need to be refered in migrations files.
 CSV_URL_PATH = 'api/v1/radius/organization/'
+try:
+    PRIVATE_STORAGE_INSTANCE = import_string(
+        get_settings_value(
+            'PRIVATE_STORAGE_INSTANCE',
+            'openwisp_radius.private_storage.storage.private_file_system_storage',
+        )
+    )
+except ImportError:
+    raise ImproperlyConfigured('Failed to import PRIVATE_STORAGE_INSTANCE')
+
 CALLED_STATION_IDS = get_settings_value('CALLED_STATION_IDS', {})
 CONVERT_CALLED_STATION_ON_CREATE = get_settings_value(
     'CONVERT_CALLED_STATION_ON_CREATE', False
