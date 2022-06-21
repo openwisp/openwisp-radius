@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 RE_VIRTUAL_ADDR_MAC = re.compile(
     u'^{0}:{0}:{0}:{0}:{0}:{0}'.format(u'[a-f0-9]{2}'), re.I
 )
-TELNET_CONNECTION_TIMEOUT = 10  # In seconds
+TELNET_CONNECTION_TIMEOUT = 30  # In seconds
 
 RadiusAccounting = load_model('RadiusAccounting')
 
@@ -29,7 +29,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 tn.write(password.encode('ascii') + b'\n')
             tn.read_until(
                 b'>INFO:OpenVPN Management Interface Version 3 -- type '
-                b'\'help\ for more info',
+                b'\'help\' for more info',
                 timeout=TELNET_CONNECTION_TIMEOUT,
             )
             tn.write('status'.encode('ascii') + b'\n')
@@ -54,7 +54,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             )
             return {}
         except Exception:
-            logger.exception(
+            logger.warning(
                 f'Error encountered while connecting to {host}:{port}. Skipping!'
             )
             return {}
@@ -62,9 +62,9 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             parsed_info = openvpn_status.parse_status(raw_info)
             return parsed_info.routing_table
         except openvpn_status.ParsingError as error:
-            logger.error(
+            logger.warning(
                 'Unable to parse information received from '
-                f'{host}. ParsingError: {error}. Skipping!',
+                f'{host}:{port}. ParsingError: {error}. Skipping!',
             )
             return {}
 
@@ -74,7 +74,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 unique_id=unique_id
             )
         except RadiusAccounting.DoesNotExist:
-            logger.error(
+            logger.warning(
                 f'RadiusAccount object with unique_id "{unique_id}" does not exist.'
             )
 
