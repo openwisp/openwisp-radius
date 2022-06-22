@@ -405,7 +405,7 @@ class AccountingView(ListCreateAPIView):
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
-    filter_class = AccountingFilter
+    filterset_class = AccountingFilter
 
     def get_queryset(self):
         return super().get_queryset().filter(organization_id=self.request.auth)
