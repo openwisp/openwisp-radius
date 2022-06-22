@@ -420,7 +420,7 @@ class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
-    filter_class = UserAccountingFilter
+    filterset_class = UserAccountingFilter
     queryset = RadiusAccounting.objects.all().order_by('-start_time')
 
     def list(self, request, *args, **kwargs):
