@@ -129,13 +129,21 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     )
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
-    def test_convert_called_station_id_with_organization_slug(self):
+    def test_convert_called_station_id_with_organization_slug(self, *args, **kwargs):
+        setattr(
+            app_settings,
+            'CALLED_STATION_IDS',
+            _CALLED_STATION_IDS,
+        )
         self.convert_called_station_id_tests()
 
     @capture_any_output()
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
-    def test_convert_called_station_id_with_organization_id(self):
+    def test_convert_called_station_id_with_organization_id(self, *args, **kwargs):
+        _CALLED_STATION_IDS[str(self._get_org().id)] = _CALLED_STATION_IDS.get(
+            'test-org'
+        )
         setattr(
             app_settings,
             'CALLED_STATION_IDS',
