@@ -329,10 +329,10 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 'openwisp_radius.management.commands.base.convert_called_station_id'
                 '.BaseConvertCalledStationIdCommand._get_raw_management_info',
                 return_value='PASSWORD:',
-            ), patch('logging.Logger.error') as mocked_logger:
+            ), patch('logging.Logger.warning') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'Unable to parse information received from 127.0.0.1. '
+                    'Unable to parse information received from 127.0.0.1:7505. '
                     'ParsingError: expected \'OpenVPN CLIENT LIST\' but got '
                     '\'PASSWORD:\'. Skipping!'
                 )
@@ -381,7 +381,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-0C')
 
         with self.subTest('Test session with unique_id does not exist'):
-            with patch('logging.Logger.error') as mocked_logger:
+            with patch('logging.Logger.warning') as mocked_logger:
                 call_command('convert_called_station_id', unique_id='111')
                 mocked_logger.assert_called_once_with(
                     'RadiusAccount object with unique_id "111" does not exist.'
