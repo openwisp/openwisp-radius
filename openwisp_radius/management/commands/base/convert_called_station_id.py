@@ -109,7 +109,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             if not called_station_id_setting:
                 return
 
-        for org_slug, config in called_station_id_setting.items():
+        for org, config in called_station_id_setting.items():
             routing_dict = {}
             for openvpn_config in config['openvpn_config']:
                 routing_dict.update(
@@ -120,17 +120,14 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                     )
                 )
             if not routing_dict:
-                logger.info(
-                    'No routing information found for '
-                    f'organization with "{org_slug}" slug'
-                )
+                logger.info(f'No routing information found for "{org}" organization')
                 continue
 
             if unique_id:
                 qs = [input_radius_session]
             else:
                 qs = RadiusAccounting.objects.filter(
-                    organization__slug=org_slug,
+                    organization__slug=org,
                     called_station_id__in=config['unconverted_ids'],
                     stop_time__isnull=True,
                 ).iterator()
