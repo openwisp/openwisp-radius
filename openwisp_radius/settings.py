@@ -74,9 +74,9 @@ PASSWORD_RESET_URLS = {
 }
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
 DEFAULT_PASSWORD_RESET_URL = (
-    PASSWORD_RESET_URLS.get('__all__')
     # kept for backward compatibility, will be removed in future versions
-    or PASSWORD_RESET_URLS.get('default')
+    PASSWORD_RESET_URLS.get('default')
+    or PASSWORD_RESET_URLS.get('__all__')
 )
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
