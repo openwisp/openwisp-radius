@@ -277,10 +277,10 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = 'email_confirmation_success'
 ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = 'email_confirmation_success'
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
-#     # fallback in case the specific org page is not defined
-#     '__all__': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token},
 #     # use the uuid because the slug can change
 #     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://org.com/{organization}/password/reset/confirm/{uid}/{token}',
+#     # fallback in case the specific org page is not defined
+#     '__all__': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token}',
 # }
 
 if TESTING:

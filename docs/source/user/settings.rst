@@ -464,7 +464,7 @@ the configuration should be simply changed to:
 .. code-block:: python
 
     {
-        'default': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
+        '__all__': 'https://login.wifiservice.com/{organization}/password/reset/confirm/{uid}/{token}'
     }
 
 .. _openwisp_radius_registration_api_enabled:
