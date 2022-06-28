@@ -212,7 +212,7 @@ It should contain configuration in following format:
 .. code-block:: python
 
     OPENWISP_RADIUS_CALLED_STATION_IDS = {
-        # Id of the organization for which settings are being specified
+        # UUID of the organization for which settings are being specified
         # In this example 'default'
         '<organization_uuid>': {
             'openvpn_config': [

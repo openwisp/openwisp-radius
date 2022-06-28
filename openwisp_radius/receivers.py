@@ -87,6 +87,6 @@ def convert_radius_called_station_id(instance, created, **kwargs):
         ).get(
             'unconverted_ids', []
         )
-    except (AssertionError, KeyError):
+    except AssertionError:
         return
     tasks.convert_called_station_id.delay(instance.unique_id)
