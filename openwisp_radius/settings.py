@@ -25,6 +25,12 @@ def get_settings_value(option, default):
     return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
 
 
+def get_default_password_reset_url(urls):
+    # default is kept for backward compatibility,
+    # will be removed in future versions
+    return urls.get('default') or urls.get('__all__')
+
+
 RADIUS_API = get_settings_value('API', True)
 RADIUS_API_BASEURL = get_settings_value('API_BASEURL', '/')
 RADIUS_API_URLCONF = get_settings_value('API_URLCONF', None)
@@ -73,11 +79,7 @@ PASSWORD_RESET_URLS = {
     # use the uuid because the slug can change
 }
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
-DEFAULT_PASSWORD_RESET_URL = (
-    # kept for backward compatibility, will be removed in future versions
-    PASSWORD_RESET_URLS.get('default')
-    or PASSWORD_RESET_URLS.get('__all__')
-)
+DEFAULT_PASSWORD_RESET_URL = get_default_password_reset_url(PASSWORD_RESET_URLS)
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
 SMS_TOKEN_DEFAULT_VALIDITY = get_settings_value('SMS_TOKEN_DEFAULT_VALIDITY', 30)
