@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, urlparse
 import swapper
 from django.conf import settings
 from django.contrib.auth import logout
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.shortcuts import get_object_or_404, render
 from djangosaml2.views import (
@@ -52,6 +53,10 @@ class AssertionConsumerServiceView(
 ):
     def post_login_hook(self, request, user, session_info):
         """If desired, a hook to add logic after a user has successfully logged in."""
+        # In some cases, it possible that the organization cache for
+        # the user is not updated before execution of the following
+        # code. Hence, the cache is manually updated here.
+        cache.delete('user_{}_organizations'.format(user.pk))
         org = self.get_organization_from_relay_state()
         is_member = user.is_member(org)
         # add user to organization
