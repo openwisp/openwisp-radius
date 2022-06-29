@@ -153,9 +153,9 @@ for organization in CALLED_STATION_IDS.keys():  # pragma: no cover
         UUID(organization)
     except ValueError:
         logger.warning(
-            'Organization slug in CALLED_STATION_IDS setting is deprecated.'
-            ' It will be removed in future, please replace'
-            f' organization slug: {organization} with its id.'
+            'Organization slug in CALLED_STATION_IDS setting is deprecated. '
+            'It will be removed in future, please replace '
+            f'organization slug: {organization} with its id.'
         )
 CONVERT_CALLED_STATION_ON_CREATE = get_settings_value(
     'CONVERT_CALLED_STATION_ON_CREATE', False
