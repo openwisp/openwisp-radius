@@ -25,6 +25,12 @@ def get_settings_value(option, default):
     return getattr(settings, f'OPENWISP_RADIUS_{option}', default)
 
 
+def get_default_password_reset_url(urls):
+    # default is kept for backward compatibility,
+    # will be removed in future versions
+    return urls.get('default') or urls.get('__all__')
+
+
 RADIUS_API = get_settings_value('API', True)
 RADIUS_API_BASEURL = get_settings_value('API_BASEURL', '/')
 RADIUS_API_URLCONF = get_settings_value('API_URLCONF', None)
@@ -69,10 +75,11 @@ BATCH_MAIL_MESSAGE = get_settings_value(
 )
 PASSWORD_RESET_URLS = {
     # fallback in case the specific org page is not defined
-    'default': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
+    '__all__': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
     # use the uuid because the slug can change
 }
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
+DEFAULT_PASSWORD_RESET_URL = get_default_password_reset_url(PASSWORD_RESET_URLS)
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
 SMS_TOKEN_DEFAULT_VALIDITY = get_settings_value('SMS_TOKEN_DEFAULT_VALIDITY', 30)
@@ -98,7 +105,7 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS
     for key, value in PASSWORD_RESET_URLS.items():
-        if key != 'default':
+        if key != '__all__' and key != 'default':
             try:
                 UUID(key)
             except ValueError:

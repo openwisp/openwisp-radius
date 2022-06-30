@@ -42,7 +42,7 @@ _RADCHECK_ENTRY_PW_UPDATE = {
     'value': 'Cam0_liX',
     'attribute': 'NT-Password',
 }
-PASSWORD_RESET_URL = app_settings.PASSWORD_RESET_URLS.get('default')
+PASSWORD_RESET_URL = app_settings.DEFAULT_PASSWORD_RESET_URL
 
 
 class TestAdmin(
@@ -593,6 +593,30 @@ class TestAdmin(
             self.assertEqual(response.status_code, 302)
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.password_reset_url, PASSWORD_RESET_URL)
+
+    def test_backward_compatible_default_password_reset_url(self):
+        # this test is only for backward compatible change
+        # it will be removed in the future
+        default_password_reset_url = (
+            'http://localhost:8081/{organization}/password/reset/confirm/{uid}/{token}'
+        )
+        url = reverse(
+            f'admin:{self.app_label_users}_organization_add',
+        )
+        PASSWORD_RESET_URLS = {'default': default_password_reset_url}
+        with mock.patch.object(
+            app_settings,
+            'DEFAULT_PASSWORD_RESET_URL',
+            app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
+        ), mock.patch.object(
+            # The default value is set on project startup, hence
+            # it also requires mocking.
+            OrganizationRadiusSettings._meta.get_field('password_reset_url'),
+            'default',
+            app_settings.DEFAULT_PASSWORD_RESET_URL,
+        ):
+            response = self.client.get(url)
+            self.assertContains(response, default_password_reset_url)
 
     def test_radsettings_freeradius_allowed_hosts_help_text(self):
         url = reverse(f'admin:{self.app_label_users}_organization_add')
