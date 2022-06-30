@@ -6,7 +6,7 @@ import openvpn_status
 from django.core.management import BaseCommand
 from netaddr import EUI, mac_unix
 
-from ....settings import CALLED_STATION_IDS, OPENVPN_DATETIME_FORMAT
+from .... import settings as app_settings
 from ....utils import load_model
 
 logger = logging.getLogger(__name__)
@@ -81,11 +81,17 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     def _get_called_station_setting(self, radius_session):
         try:
             organization = radius_session.organization
-            if str(organization.id) in CALLED_STATION_IDS:
-                return {str(organization.id): CALLED_STATION_IDS[str(organization.id)]}
+            if str(organization.id) in app_settings.CALLED_STATION_IDS:
+                return {
+                    str(organization.id): app_settings.CALLED_STATION_IDS[
+                        str(organization.id)
+                    ]
+                }
             # organization slug is maintained for backward compatibility
             # but will removed in future versions
-            return {organization.slug: CALLED_STATION_IDS[organization.slug]}
+            return {
+                organization.slug: app_settings.CALLED_STATION_IDS[organization.slug]
+            }
         except KeyError:
             logger.error(
                 'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting '
@@ -98,7 +104,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     def handle(self, *args, **options):
         unique_id = options.get('unique_id')
         if not unique_id:
-            called_station_id_setting = CALLED_STATION_IDS
+            called_station_id_setting = app_settings.CALLED_STATION_IDS
         else:
             input_radius_session = self._get_radius_session(unique_id)
             if not input_radius_session:
@@ -157,7 +163,7 @@ def parse_virtual_address(virtual_address):
     return openvpn_status.utils.parse_vaddr(virtual_address.split('@')[0])
 
 
-openvpn_status.utils.DATETIME_FORMAT_OPENVPN = OPENVPN_DATETIME_FORMAT
+openvpn_status.utils.DATETIME_FORMAT_OPENVPN = app_settings.OPENVPN_DATETIME_FORMAT
 openvpn_status.models.Routing.virtual_address = (
     openvpn_status.descriptors.LabelProperty(
         u'Virtual Address', input_type=parse_virtual_address
