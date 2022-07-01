@@ -22,7 +22,7 @@ from ..utils import (
     SESSION_TRAFFIC_ATTRIBUTE,
     load_model,
 )
-from . import _RADACCT, FileMixin
+from . import _CALLED_STATION_IDS, _RADACCT, FileMixin
 from .mixins import BaseTestCase
 
 Nas = load_model('Nas')
@@ -74,22 +74,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         radiusaccounting.framed_ipv6_prefix = 'invalid ipv6_prefix'
         self.assertRaises(ValidationError, radiusaccounting.full_clean)
 
-    @capture_any_output()
-    @mock.patch.object(
-        app_settings,
-        'CALLED_STATION_IDS',
-        {
-            'test-org': {
-                'openvpn_config': [
-                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
-                ],
-                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
-            }
-        },
-    )
-    @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
-    @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
-    def test_convert_called_station_id(self):
+    def convert_called_station_id_tests(self):
         radiusaccounting_options = _RADACCT.copy()
         radiusaccounting_options.update(
             {
@@ -100,7 +85,6 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 'called_station_id': 'AA-AA-AA-AA-AA-0A',
             }
         )
-
         with self.subTest('Settings disabled'):
             options = radiusaccounting_options.copy()
             options['unique_id'] = '113'
@@ -111,7 +95,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
         RadiusAppConfig.connect_signals()
 
-        with self.subTest('CALLED_STATAION_ID not defined for organization'):
+        with self.subTest('CALLED_STATION_ID not defined for organization'):
             options = radiusaccounting_options.copy()
             options['unique_id'] = '111'
             options['organization'] = self._create_org(name='new-org')
@@ -136,6 +120,31 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 self.assertEqual(
                     radiusaccounting.called_station_id, 'CC-CC-CC-CC-CC-0C'
                 )
+
+    @capture_any_output()
+    @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
+    def test_convert_called_station_id_with_organization_id(self, *args, **kwargs):
+        called_station_ids = {
+            str(self._get_org().id): _CALLED_STATION_IDS.get('test-org')
+        }
+        with mock.patch.object(
+            app_settings,
+            'CALLED_STATION_IDS',
+            called_station_ids,
+        ):
+            self.convert_called_station_id_tests()
+
+    @capture_any_output()
+    @mock.patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        _CALLED_STATION_IDS,
+    )
+    @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
+    def test_convert_called_station_id_with_organization_slug(self, *args, **kwargs):
+        self.convert_called_station_id_tests()
 
 
 class TestRadiusCheck(BaseTestCase):

@@ -345,7 +345,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             ), patch('logging.Logger.info') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'No routing information found for organization with "test-org" slug'
+                    'No routing information found for "test-org" organization'
                 )
 
         with self.subTest('Test client common name does not contain a MAC address'):
