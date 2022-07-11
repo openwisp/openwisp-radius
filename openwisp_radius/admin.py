@@ -178,14 +178,6 @@ class NasAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     ]
     list_filter = (('organization', MultitenantOrgFilter),)
 
-    def save_model(self, request, obj, form, change):
-        data = form.cleaned_data
-        obj.type = data.get('custom_type') or data.get('type')
-        super(NasAdmin, self).save_model(request, obj, form, change)
-
-    class Media:
-        css = {'all': ('openwisp-radius/css/nas.css',)}
-
 
 class RadiusGroupCheckInline(TimeReadonlyAdminMixin, StackedInline):
     model = RadiusGroupCheck
