@@ -995,9 +995,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def _remove_files(self):
         if self.csvfile:
-            path = self.csvfile.path
-            if os.path.isfile(path):
-                os.remove(path)
+            self.csvfile.storage.delete(self.csvfile.name)
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
