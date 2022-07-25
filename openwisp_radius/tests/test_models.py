@@ -810,3 +810,32 @@ class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
         user = self._get_admin()
         self.client.force_login(user)
         self._download_csv_file_status(200)
+
+    def test_delete_csv_file(self):
+        file_storage_backend = RadiusBatch.csvfile.field.storage
+
+        with self.subTest('Test deleting object deletes file'):
+            batch = self._create_radius_batch(
+                name='test1', strategy='csv', csvfile=self.csvfile
+            )
+            file_name = batch.csvfile.name
+            self.assertEqual(file_storage_backend.exists(file_name), True)
+            batch.delete()
+            self.assertEqual(file_storage_backend.exists(file_name), False)
+
+        with self.subTest('Test deleting object with a deleted file'):
+            batch = self._create_radius_batch(
+                name='test2', strategy='csv', csvfile=self.csvfile
+            )
+            file_name = batch.csvfile.name
+            # Delete the file from the storage backend before
+            # deleting the object
+            file_storage_backend.delete(file_name)
+            self.assertNotEqual(batch.csvfile, None)
+            batch.delete()
+
+        with self.subTest('Test deleting object without csvfile'):
+            batch = self._create_radius_batch(
+                name='test3', strategy='prefix', prefix='test-prefix16'
+            )
+            batch.delete()
