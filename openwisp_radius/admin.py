@@ -419,7 +419,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        radbatch = RadiusBatch.objects.get(pk=object_id)
+        radbatch = self.get_object(request, object_id)
+        if radbatch is None:
+            return self._get_obj_does_not_exist_redirect(
+                request, self.model._meta, object_id
+            )
         if radbatch.strategy == 'prefix':
             batch_pdf_api_url = reverse(
                 'radius:download_rad_batch_pdf',

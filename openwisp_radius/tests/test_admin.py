@@ -990,6 +990,22 @@ class TestAdmin(
             administrator=True,
         )
 
+    def test_non_existing_radiusbatch_change_view(self):
+        id = '00000000-0000-0000-0000-0000000000000'
+        response = self.client.post(
+            reverse(f'admin:{self.app_label}_radiusbatch_change', args=[id]),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            (
+                f'Batch user creation with ID “{id}” doesn’t exist.'
+                ' Perhaps it was deleted?'
+            ),
+            html=True,
+        )
+
     def test_radius_usergroup_queryset(self):
         data = self._create_multitenancy_test_env(usergroup=True)
         self._test_multitenant_admin(
