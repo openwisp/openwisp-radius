@@ -419,7 +419,14 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        radbatch = RadiusBatch.objects.get(pk=object_id)
+        radbatch = self.get_object(request, object_id)
+        if radbatch is None:
+            # This is an internal Django method that redirects the
+            # user to the admin index page with a message that points
+            # out that the requested object does not exist.
+            return self._get_obj_does_not_exist_redirect(
+                request, self.model._meta, object_id
+            )
         if radbatch.strategy == 'prefix':
             batch_pdf_api_url = reverse(
                 'radius:download_rad_batch_pdf',
