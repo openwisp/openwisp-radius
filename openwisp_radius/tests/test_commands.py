@@ -40,6 +40,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
+            self.assertEqual(session.terminate_cause, 'Session Timeout')
 
         with self.subTest(
             'Test start_time older than specified time but update_time is recent'
@@ -54,6 +55,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(session.stop_time, None)
             self.assertEqual(session.session_time, None)
             self.assertEqual(session.update_time, update_time)
+            self.assertEqual(session.terminate_cause, None)
 
         with self.subTest('Test start_time and update_time older than specified time'):
             options['unique_id'] = '119'
@@ -65,6 +67,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
+            self.assertEqual(session.terminate_cause, 'Session Timeout')
 
     @capture_any_output()
     def test_delete_old_postauth_command(self):

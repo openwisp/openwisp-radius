@@ -531,6 +531,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
+            session.terminate_cause = 'Session Timeout'
             session.save()
 
 
