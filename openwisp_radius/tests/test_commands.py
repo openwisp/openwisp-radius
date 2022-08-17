@@ -27,13 +27,44 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     @capture_any_output()
     def test_cleanup_stale_radacct_command(self):
         options = _RADACCT.copy()
-        options['unique_id'] = '117'
-        self._create_radius_accounting(**options)
-        call_command('cleanup_stale_radacct', 30)
-        session = RadiusAccounting.objects.get(unique_id='117')
-        self.assertNotEqual(session.stop_time, None)
-        self.assertNotEqual(session.session_time, None)
-        self.assertEqual(session.update_time, session.stop_time)
+
+        with self.subTest(
+            'Test update_time unset and start_time older than specified time'
+        ):
+            options['unique_id'] = '117'
+            options['update_time'] = None
+            options['start_time'] = '2017-06-10 10:50:00'
+            self._create_radius_accounting(**options)
+            call_command('cleanup_stale_radacct', 1)
+            session = RadiusAccounting.objects.get(unique_id='117')
+            self.assertNotEqual(session.stop_time, None)
+            self.assertNotEqual(session.session_time, None)
+            self.assertEqual(session.update_time, session.stop_time)
+
+        with self.subTest(
+            'Test start_time older than specified time but update_time is recent'
+        ):
+            update_time = now()
+            options['unique_id'] = '118'
+            options['start_time'] = '2017-06-10 10:50:00'
+            options['update_time'] = str(update_time)
+            self._create_radius_accounting(**options)
+            call_command('cleanup_stale_radacct', 1)
+            session = RadiusAccounting.objects.get(unique_id='118')
+            self.assertEqual(session.stop_time, None)
+            self.assertEqual(session.session_time, None)
+            self.assertEqual(session.update_time, update_time)
+
+        with self.subTest('Test start_time and update_time older than specified time'):
+            options['unique_id'] = '119'
+            options['update_time'] = '2017-06-10 10:50:00'
+            options['start_time'] = '2017-06-10 10:50:00'
+            self._create_radius_accounting(**options)
+            call_command('cleanup_stale_radacct', 1)
+            session = RadiusAccounting.objects.get(unique_id='119')
+            self.assertNotEqual(session.stop_time, None)
+            self.assertNotEqual(session.session_time, None)
+            self.assertEqual(session.update_time, session.stop_time)
 
     @capture_any_output()
     def test_delete_old_postauth_command(self):
