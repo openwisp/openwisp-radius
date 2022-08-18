@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now
@@ -514,6 +514,25 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
 
     def __str__(self):
         return self.unique_id
+
+    @classmethod
+    def close_stale_sessions(cls, days):
+        older_than = timezone.now() - timedelta(days=days)
+        # If the "update_time" is recent, then the session is not closed
+        # even when the "start_time" is older than the specified time.
+        # The "start_time" of a session is only checked when the
+        # "update_time" is not set.
+        sessions = cls.objects.filter(
+            Q(update_time__lt=older_than)
+            | (Q(update_time=None) & Q(start_time__lt=older_than))
+        )
+        for session in sessions:
+            # calculate seconds in between two dates
+            session.session_time = (now() - session.start_time).total_seconds()
+            session.stop_time = now()
+            session.update_time = session.stop_time
+            session.terminate_cause = 'Session Timeout'
+            session.save()
 
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
