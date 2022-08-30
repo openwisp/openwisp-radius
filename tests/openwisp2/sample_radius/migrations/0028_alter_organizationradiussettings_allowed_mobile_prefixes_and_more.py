@@ -210,4 +210,19 @@ class Migration(migrations.Migration):
                 fallback=app_settings.SOCIAL_REGISTRATION_ENABLED,
             ),
         ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='sms_message',
+            field=openwisp_radius.base.fields.FallbackTextField(
+                blank=True,
+                fallback=app_settings.SMS_MESSAGE_TEMPLATE,
+                help_text=(
+                    'SMS message template used for sending verification code.'
+                    ' Must contain "{code}" placeholder for OTP value.'
+                ),
+                max_length=160,
+                null=True,
+                verbose_name='SMS Message',
+            ),
+        ),
     ]

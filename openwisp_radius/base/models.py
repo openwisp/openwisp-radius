@@ -1087,6 +1087,17 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             'alpha numeric identifier used as sender for SMS sent by this organization'
         ),
     )
+    sms_message = FallbackTextField(
+        _('SMS Message'),
+        max_length=160,
+        blank=True,
+        null=True,
+        help_text=_(
+            'SMS message template used for sending verification code.'
+            ' Must contain "{code}" placeholder for OTP value.'
+        ),
+        fallback=app_settings.SMS_MESSAGE_TEMPLATE,
+    )
     sms_meta_data = JSONField(
         null=True,
         blank=True,
@@ -1406,8 +1417,8 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
         org_radius_settings = org_user.organization.radius_settings
-        message = _('{organization} verification code: {code}').format(
-            organization=org_radius_settings.organization.name, code=self.token
+        message = _(org_radius_settings.get_setting('sms_message')).format(
+            organization_name=org_radius_settings.organization.name, code=self.token
         )
         sms_message = SmsMessage(
             body=str(message),

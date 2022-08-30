@@ -92,6 +92,9 @@ SMS_TOKEN_MAX_IP_DAILY = get_settings_value('SMS_TOKEN_MAX_IP_DAILY', 999)
 ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])
 REGISTRATION_API_ENABLED = get_settings_value('REGISTRATION_API_ENABLED', True)
 NEEDS_IDENTITY_VERIFICATION = get_settings_value('NEEDS_IDENTITY_VERIFICATION', False)
+SMS_MESSAGE_TEMPLATE = get_settings_value(
+    'SMS_MESSAGE_TEMPLATE', '{organization_name} verification code: {code}'
+)
 OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
     'OPTIONAL_REGISTRATION_FIELDS',
     {
