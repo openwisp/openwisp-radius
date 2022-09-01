@@ -886,7 +886,7 @@ during the same day.
 ``OPENWISP_RADIUS_SMS_MESSAGE_TEMPLATE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``{organization_name} verification code: {code}``
+**Default**: ``{organization} verification code: {code}``
 
 The template used for sending verification code to users via SMS.
 
@@ -897,4 +897,8 @@ The template used for sending verification code to users via SMS.
 
 This value can be overridden per organization in the organization
 change page. You can skip setting this option if you intend to set
-it from organization change page for each organization.
+it from organization change page for each organization. Keep in mind that
+the default value is translated in other languages. If the value is
+customized the translations will not work, so if you need this message
+to be translated in different languages you should either not change the
+default value or prepare the additional translations.

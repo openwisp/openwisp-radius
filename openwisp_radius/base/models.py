@@ -1418,7 +1418,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
             )
         org_radius_settings = org_user.organization.radius_settings
         message = _(org_radius_settings.get_setting('sms_message')).format(
-            organization_name=org_radius_settings.organization.name, code=self.token
+            organization=org_radius_settings.organization.name, code=self.token
         )
         sms_message = SmsMessage(
             body=str(message),

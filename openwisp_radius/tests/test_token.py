@@ -216,7 +216,7 @@ class TestPhoneToken(BaseTestCase):
     def test_org_sms_message(self, sms_message_mock, *args):
         radius_settings = self.default_org.radius_settings
         radius_settings.sms_message = (
-            '{organization_name} custom verification message: {code}'
+            '{organization} custom verification message: {code}'
         )
         radius_settings.save()
         token = self._create_token()
@@ -228,7 +228,7 @@ class TestPhoneToken(BaseTestCase):
         self.assertEqual(
             sms_body,
             radius_settings.sms_message.format(
-                organization_name=self.default_org.name, code=token.token
+                organization=self.default_org, code=token.token
             ),
         )
         radius_settings.sms_message = None
