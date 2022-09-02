@@ -1321,7 +1321,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     def get_setting(self, field_name):
         value = getattr(self, field_name)
         field = self._meta.get_field(field_name)
-        if value is None and hasattr(field, 'fallback'):
+        if value in [None, ''] and hasattr(field, 'fallback'):
             return field.fallback
         return value
 

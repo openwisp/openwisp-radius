@@ -16,7 +16,7 @@ class FallbackMixin(object):
 
 class FallbackFromDbValueMixin:
     def from_db_value(self, value, expression, connection):
-        if value is None:
+        if value in [None, '']:
             return self.fallback
         return value
 
