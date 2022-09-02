@@ -1232,6 +1232,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
         self._clean_password_reset_url()
+        self._clean_sms_message()
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
@@ -1305,6 +1306,22 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             or self.password_reset_url == DEFAULT_PASSWORD_RESET_URL
         ):
             self.password_reset_url = None
+
+    def _clean_sms_message(self):
+        if self.sms_message and ('{code}' not in self.sms_message):
+            raise ValidationError(
+                {
+                    'sms_message': _(
+                        'The SMS message must contain the "{{code}}" '
+                        'placeholder, eg: {}.'.format(app_settings.SMS_MESSAGE_TEMPLATE)
+                    )
+                }
+            )
+        if (
+            not self.sms_message
+            or self.sms_message == app_settings.SMS_MESSAGE_TEMPLATE
+        ):
+            self.sms_message = None
 
     def get_setting(self, field_name):
         value = getattr(self, field_name)
