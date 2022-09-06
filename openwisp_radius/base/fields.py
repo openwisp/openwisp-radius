@@ -15,6 +15,15 @@ class FallbackMixin(object):
 
 
 class FallbackFromDbValueMixin:
+    """
+    Returns the fallback value when the value of the field
+    is falsy (None or '').
+
+    It does not set the field's value to "None" when the value
+    is equal to the fallback value. This allows overriding of
+    the value when a user knows that the default will get changed.
+    """
+
     def from_db_value(self, value, expression, connection):
         if value in [None, '']:
             return self.fallback
