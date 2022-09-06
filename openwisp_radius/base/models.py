@@ -1317,11 +1317,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
-        if (
-            not self.sms_message
-            or self.sms_message == app_settings.SMS_MESSAGE_TEMPLATE
-        ):
-            self.sms_message = None
 
     def get_setting(self, field_name):
         value = getattr(self, field_name)
