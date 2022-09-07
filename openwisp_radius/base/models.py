@@ -1301,11 +1301,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
-        if (
-            not self.password_reset_url
-            or self.password_reset_url == DEFAULT_PASSWORD_RESET_URL
-        ):
-            self.password_reset_url = None
 
     def _clean_sms_message(self):
         if self.sms_message and ('{code}' not in self.sms_message):
@@ -1321,7 +1316,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     def get_setting(self, field_name):
         value = getattr(self, field_name)
         field = self._meta.get_field(field_name)
-        if value in [None, ''] and hasattr(field, 'fallback'):
+        if value is None and hasattr(field, 'fallback'):
             return field.fallback
         return value
 

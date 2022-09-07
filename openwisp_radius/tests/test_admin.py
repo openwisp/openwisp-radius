@@ -568,11 +568,6 @@ class TestAdmin(
             response = self.client.post(url, form_data)
             self.assertEqual(response.status_code, 200)
             radsetting.refresh_from_db()
-            # Accessing "radsetting.password_reset_url" returns
-            # fallback value instead of "None". Calling "radsetting.clean()"
-            # resets the value only if the value is equal to the global default.
-            radsetting.clean()
-            self.assertEqual(radsetting.password_reset_url, None)
             self.assertContains(response, 'The URL must contain the ')
             self.assertContains(response, 'errors field-password_reset_url')
 

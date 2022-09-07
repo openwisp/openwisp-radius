@@ -25,9 +25,30 @@ class FallbackFromDbValueMixin:
     """
 
     def from_db_value(self, value, expression, connection):
-        if value in [None, '']:
+        if value is None:
             return self.fallback
         return value
+
+
+class FalsyValueNoneMixin:
+    """
+    If the field contains an empty string, then
+    stores "None" in the database if the field is
+    nullable.
+    """
+
+    # TDjango convention is to use the empty string, not NULL
+    # for representing "no data" in the database.
+    # https://docs.djangoproject.com/en/dev/ref/models/fields/#null
+    # We need to use NULL for fallback field here to keep
+    # the fallback logic simple. Hence, we allow only "None" (NULL)
+    # as empty value here.
+    empty_values = [None]
+
+    def clean(self, value, model_instance):
+        if not value and self.null is True:
+            return None
+        return super().clean(value, model_instance)
 
 
 class FallbackBooleanChoiceField(FallbackMixin, BooleanField):
@@ -69,7 +90,9 @@ class FallbackCharChoiceField(FallbackMixin, CharField):
         return super().formfield(**kwargs)
 
 
-class FallbackCharField(FallbackMixin, FallbackFromDbValueMixin, CharField):
+class FallbackCharField(
+    FallbackMixin, FalsyValueNoneMixin, FallbackFromDbValueMixin, CharField
+):
     """
     Populates the form with the fallback value
     if the value is set to null in the database.
@@ -78,7 +101,9 @@ class FallbackCharField(FallbackMixin, FallbackFromDbValueMixin, CharField):
     pass
 
 
-class FallbackURLField(FallbackMixin, FallbackFromDbValueMixin, URLField):
+class FallbackURLField(
+    FallbackMixin, FalsyValueNoneMixin, FallbackFromDbValueMixin, URLField
+):
     """
     Populates the form with the fallback value
     if the value is set to null in the database.
@@ -87,7 +112,9 @@ class FallbackURLField(FallbackMixin, FallbackFromDbValueMixin, URLField):
     pass
 
 
-class FallbackTextField(FallbackMixin, FallbackFromDbValueMixin, TextField):
+class FallbackTextField(
+    FallbackMixin, FalsyValueNoneMixin, FallbackFromDbValueMixin, TextField
+):
     """
     Populates the form with the fallback value
     if the value is set to null in the database.
