@@ -1189,6 +1189,48 @@ class TestAdmin(
                 ),
             )
 
+    def test_organization_radsettings_sms_message(self):
+        org = self._get_org()
+        url = reverse(
+            f'admin:{self.app_label_users}_organization_change',
+            args=[org.pk],
+        )
+        radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+        form_data = org.__dict__
+        form_data.update(
+            {
+                "owner-TOTAL_FORMS": "0",
+                "owner-INITIAL_FORMS": "0",
+                "owner-MIN_NUM_FORMS": "0",
+                "owner-MAX_NUM_FORMS": "1",
+                'radius_settings-TOTAL_FORMS': '1',
+                'radius_settings-INITIAL_FORMS': '1',
+                'radius_settings-MIN_NUM_FORMS': '0',
+                'radius_settings-MAX_NUM_FORMS': '1',
+                'radius_settings-0-token': '12345',
+                'radius_settings-0-sms_sender': '',
+                'radius_settings-0-sms_meta_data': 'null',
+                'radius_settings-0-id': radsetting.pk,
+                'radius_settings-0-organization': org.pk,
+                'radius_settings-0-password_reset_url': PASSWORD_RESET_URL,
+                '_continue': True,
+            }
+        )
+
+        with self.subTest('raise error if sms_message does not contain code'):
+            sms_message = 'Verification code for {organization}'
+            form_data.update({'radius_settings-0-sms_message': sms_message})
+            response = self.client.post(url, form_data, follow=True)
+            self.assertEqual(response.status_code, 200)
+            radsetting.refresh_from_db()
+            self.assertContains(
+                response,
+                'The SMS message must contain the "{code}" placeholder,'
+                ' eg: {organization} verification code: {code}.',
+                html=True,
+            )
+            self.assertContains(response, 'errors field-sms_message')
+
     def test_inline_registered_user(self):
         app_label = User._meta.app_label
         user = User.objects.first()

@@ -882,3 +882,23 @@ The max number of SMS tokens a single user can request within a day.
 
 The max number of tokens which can be requested from the same IP address
 during the same day.
+
+``OPENWISP_RADIUS_SMS_MESSAGE_TEMPLATE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``{organization} verification code: {code}``
+
+The template used for sending verification code to users via SMS.
+
+.. note::
+
+    The template should always contain ``{code}`` placeholder.
+    Otherwise, the sent SMS will not contain the verification code.
+
+This value can be overridden per organization in the organization
+change page. You can skip setting this option if you intend to set
+it from organization change page for each organization. Keep in mind that
+the default value is translated in other languages. If the value is
+customized the translations will not work, so if you need this message
+to be translated in different languages you should either not change the
+default value or prepare the additional translations.

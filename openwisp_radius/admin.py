@@ -557,6 +557,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'birth_date',
                     'location',
                     'sms_sender',
+                    'sms_message',
                     'allowed_mobile_prefixes',
                     'login_url',
                     'status_url',

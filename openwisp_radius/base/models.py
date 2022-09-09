@@ -1087,6 +1087,17 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             'alpha numeric identifier used as sender for SMS sent by this organization'
         ),
     )
+    sms_message = FallbackTextField(
+        _('SMS Message'),
+        max_length=160,
+        blank=True,
+        null=True,
+        help_text=_(
+            'SMS message template used for sending verification code.'
+            ' Must contain "{code}" placeholder for OTP value.'
+        ),
+        fallback=app_settings.SMS_MESSAGE_TEMPLATE,
+    )
     sms_meta_data = JSONField(
         null=True,
         blank=True,
@@ -1221,6 +1232,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         self._clean_freeradius_allowed_hosts()
         self._clean_allowed_mobile_prefixes()
         self._clean_password_reset_url()
+        self._clean_sms_message()
 
     def _clean_freeradius_allowed_hosts(self):
         allowed_hosts_set = set(self.freeradius_allowed_hosts_list)
@@ -1294,6 +1306,17 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             or self.password_reset_url == DEFAULT_PASSWORD_RESET_URL
         ):
             self.password_reset_url = None
+
+    def _clean_sms_message(self):
+        if self.sms_message and ('{code}' not in self.sms_message):
+            raise ValidationError(
+                {
+                    'sms_message': _(
+                        'The SMS message must contain the "{{code}}" '
+                        'placeholder, eg: {}.'.format(app_settings.SMS_MESSAGE_TEMPLATE)
+                    )
+                }
+            )
 
     def get_setting(self, field_name):
         value = getattr(self, field_name)
@@ -1406,7 +1429,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
         org_radius_settings = org_user.organization.radius_settings
-        message = _('{organization} verification code: {code}').format(
+        message = _(org_radius_settings.get_setting('sms_message')).format(
             organization=org_radius_settings.organization.name, code=self.token
         )
         sms_message = SmsMessage(
