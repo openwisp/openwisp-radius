@@ -6,6 +6,11 @@ Admin related settings
 
 These settings control details of the administration interface of openwisp-radius.
 
+.. note::
+
+    The values of overridden settings fields do not change even when
+    the global defaults are changed.
+
 ``OPENWISP_RADIUS_EDITABLE_ACCOUNTING``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

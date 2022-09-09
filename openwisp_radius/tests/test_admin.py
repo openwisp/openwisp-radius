@@ -568,11 +568,6 @@ class TestAdmin(
             response = self.client.post(url, form_data)
             self.assertEqual(response.status_code, 200)
             radsetting.refresh_from_db()
-            # Accessing "radsetting.password_reset_url" returns
-            # fallback value instead of "None". Calling "radsetting.clean()"
-            # resets the value only if the value is equal to the global default.
-            radsetting.clean()
-            self.assertEqual(radsetting.password_reset_url, None)
             self.assertContains(response, 'The URL must contain the ')
             self.assertContains(response, 'errors field-password_reset_url')
 
@@ -1230,6 +1225,35 @@ class TestAdmin(
                 html=True,
             )
             self.assertContains(response, 'errors field-sms_message')
+
+        with self.subTest('Ensure admin HTML shows the default value'):
+            response = self.client.get(url)
+            self._assert_text_input(
+                response,
+                '#id_radius_settings-0-sms_message',
+                app_settings.SMS_MESSAGE_TEMPLATE,
+            )
+
+        with self.subTest('sms_message must be equal to fallback value'):
+            form_data.update(
+                {'radius_settings-0-sms_message': app_settings.SMS_MESSAGE_TEMPLATE}
+            )
+            response = self.client.post(url, form_data, follow=True)
+            self.assertEqual(response.status_code, 200)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.sms_message, app_settings.SMS_MESSAGE_TEMPLATE)
+
+        with self.subTest('sms_message fallbacks to default when empty'):
+            form_data.update({'radius_settings-0-sms_message': ''})
+            response = self.client.post(url, form_data, follow=True)
+            self.assertEqual(response.status_code, 200)
+            radsetting.refresh_from_db()
+            self.assertEqual(radsetting.sms_message, app_settings.SMS_MESSAGE_TEMPLATE)
+            self._assert_text_input(
+                response,
+                '#id_radius_settings-0-sms_message',
+                app_settings.SMS_MESSAGE_TEMPLATE,
+            )
 
     def test_inline_registered_user(self):
         app_label = User._meta.app_label

@@ -1301,11 +1301,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
-        if (
-            not self.password_reset_url
-            or self.password_reset_url == DEFAULT_PASSWORD_RESET_URL
-        ):
-            self.password_reset_url = None
 
     def _clean_sms_message(self):
         if self.sms_message and ('{code}' not in self.sms_message):
