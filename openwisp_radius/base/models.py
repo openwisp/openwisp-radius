@@ -50,10 +50,10 @@ from ..utils import (
 from .fields import (
     FallbackBooleanChoiceField,
     FallbackCharChoiceField,
+    FallbackCharField,
     FallbackTextField,
-    FallbackURLField,
 )
-from .validators import ipv6_network_validator
+from .validators import ipv6_network_validator, password_reset_url_validator
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1189,13 +1189,15 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         help_text=_STATUS_URL_HELP_TEXT,
     )
-    password_reset_url = FallbackURLField(
+    password_reset_url = FallbackCharField(
         verbose_name=_('Password reset URL'),
         null=True,
         blank=True,
+        max_length=200,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
         default=DEFAULT_PASSWORD_RESET_URL,
         fallback=DEFAULT_PASSWORD_RESET_URL,
+        validators=[password_reset_url_validator],
     )
 
     class Meta:
