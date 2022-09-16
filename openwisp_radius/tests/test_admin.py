@@ -589,6 +589,25 @@ class TestAdmin(
             radsetting.refresh_from_db()
             self.assertEqual(radsetting.password_reset_url, PASSWORD_RESET_URL)
 
+        with self.subTest('Test "site" placeholder does not break validation'):
+            with mock.patch.object(
+                app_settings,
+                'DEFAULT_PASSWORD_RESET_URL',
+                'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
+            ):
+                payload = form_data.copy()
+                payload.update(
+                    {
+                        'radius_settings-0-password_reset_url': (
+                            app_settings.DEFAULT_PASSWORD_RESET_URL
+                        ),
+                        '_continue': True,
+                    }
+                )
+                response = self.client.post(url, payload, follow=True)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'Enter a valid URL.')
+
     def test_backward_compatible_default_password_reset_url(self):
         # this test is only for backward compatible change
         # it will be removed in the future

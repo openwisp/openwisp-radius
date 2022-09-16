@@ -146,13 +146,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='password_reset_url',
-            field=openwisp_radius.base.fields.FallbackURLField(
+            field=openwisp_radius.base.fields.FallbackCharField(
                 blank=True,
                 default=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 help_text='Enter the URL where users can reset their password',
                 null=True,
                 verbose_name='Password reset URL',
+                max_length=200,
+                validators=[
+                    openwisp_radius.base.validators.password_reset_url_validator
+                ],
             ),
         ),
         migrations.AlterField(
