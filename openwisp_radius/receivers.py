@@ -90,3 +90,25 @@ def convert_radius_called_station_id(instance, created, **kwargs):
     except AssertionError:
         return
     tasks.convert_called_station_id.delay(instance.unique_id)
+
+
+def close_previous_radius_accounting_sessions(instance, created, **kwargs):
+    if not created or not instance.called_station_id:
+        return
+    RadiusAccounting = load_model('RadiusAccounting')
+    closed_session = []
+    open_sessions = RadiusAccounting.objects.exclude(
+        unique_id=instance.unique_id
+    ).filter(
+        stop_time__isnull=True,
+        called_station_id=instance.called_station_id,
+        calling_station_id=instance.calling_station_id,
+        username=instance.username,
+    )
+    for session in open_sessions:
+        session.stop_time = session.update_time
+        session.terminate_cause = 'Session-Timeout'
+        closed_session.append(session)
+    RadiusAccounting.objects.bulk_update(
+        closed_session, fields=['stop_time', 'terminate_cause']
+    )

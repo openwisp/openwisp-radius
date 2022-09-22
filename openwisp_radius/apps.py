@@ -12,6 +12,7 @@ from openwisp_utils.utils import default_or_test
 
 from . import settings as app_settings
 from .receivers import (
+    close_previous_radius_accounting_sessions,
     convert_radius_called_station_id,
     create_default_groups_handler,
     organization_post_save,
@@ -117,6 +118,11 @@ class OpenwispRadiusConfig(ApiAppConfig):
             self.radiusorgsettings_post_delete,
             sender=OrganizationRadiusSettings,
             dispatch_uid='openwisp_radius_organizationradiussettings_post_delete',
+        )
+        post_save.connect(
+            close_previous_radius_accounting_sessions,
+            sender=RadiusAccounting,
+            dispatch_uid='openwisp_radius_close_previous_radius_accounting_sessions',
         )
         if app_settings.CONVERT_CALLED_STATION_ON_CREATE:
             post_save.connect(
