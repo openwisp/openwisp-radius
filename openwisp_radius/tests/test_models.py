@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db.models import ProtectedError
 from django.urls import reverse
+from django.utils import timezone
 from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
@@ -121,6 +122,44 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 self.assertEqual(
                     radiusaccounting.called_station_id, 'CC-CC-CC-CC-CC-0C'
                 )
+
+    def test_multiple_accounting_sessions(self):
+        radiusaccounting_options = _RADACCT.copy()
+        radiusaccounting_options.update(
+            {
+                'organization': self.default_org,
+                'nas_ip_address': '192.168.182.3',
+                'framed_ipv6_prefix': '::/64',
+                'calling_station_id': str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix)),
+                'called_station_id': 'AA-AA-AA-AA-AA-0A',
+            }
+        )
+
+        with self.subTest('Test new session with same called_station_id'):
+            radiusaccounting1 = self._create_radius_accounting(
+                unique_id='111', update_time=timezone.now(), **radiusaccounting_options
+            )
+            radiusaccounting2 = self._create_radius_accounting(
+                unique_id='112', update_time=timezone.now(), **radiusaccounting_options
+            )
+            radiusaccounting1.refresh_from_db()
+            radiusaccounting2.refresh_from_db()
+            self.assertEqual(radiusaccounting1.terminate_cause, 'Session-Timeout')
+            self.assertEqual(radiusaccounting1.stop_time, radiusaccounting1.update_time)
+            self.assertEqual(radiusaccounting2.stop_time, None)
+
+        with self.subTest('Test different called_session_id'):
+            self.assertEqual(
+                RadiusAccounting.objects.filter(stop_time__isnull=True).count(), 1
+            )
+            radiusaccounting_options['called_station_id'] = 'AA-AA-AA-AA-AA-0B'
+            self._create_radius_accounting(
+                unique_id='113', **radiusaccounting_options, update_time=timezone.now()
+            )
+            radiusaccounting2.refresh_from_db()
+            self.assertEqual(RadiusAccounting.objects.filter(stop_time=None).count(), 2)
+            self.assertEqual(radiusaccounting2.terminate_cause, None)
+            self.assertEqual(radiusaccounting2.stop_time, None)
 
     @capture_any_output()
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
