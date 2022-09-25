@@ -9,5 +9,5 @@ freezegun
 django-extensions
 openwisp-utils[qa]~=1.0.0
 pylinkvalidator
-lxml~=4.8.0
+lxml~=4.9.1
 cssselect~=1.1.0
