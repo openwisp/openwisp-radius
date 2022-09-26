@@ -29,6 +29,10 @@ openwisp-radius
    :target: https://pypi.org/project/black/
    :alt: code style: black
 
+.. image:: https://kandi.openweaver.com/badges/xray.svg
+   :target: https://kandi.openweaver.com/python/openwisp/openwisp-radius
+   :alt: code style: green   
+
 **OpenWISP RADIUS** provides a web interface to a `freeradius <https://freeradius.org/>`_ database,
 a rich `REST HTTP API <https://openwisp-radius.readthedocs.io/en/latest/user/api.html>`_
 and features like
