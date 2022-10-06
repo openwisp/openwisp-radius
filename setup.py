@@ -36,8 +36,9 @@ setup(
     zip_safe=False,
     install_requires=[
         'django>=3.0,<=4.1.0',
-        'openwisp-users~=1.0.0',
-        'openwisp-utils[rest,celery]~=1.0.0',
+        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
+        'openwisp-utils[rest,celery] @ '
+        'https://github.com/openwisp/openwisp-utils/tarball/master',
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
         'weasyprint>=43,<53',
