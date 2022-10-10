@@ -5,7 +5,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
-from django.utils.timezone import now
+from django.utils.timezone import get_default_timezone, now
 from netaddr import EUI, mac_unix
 from openvpn_status.models import Routing
 
@@ -68,6 +68,23 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
             self.assertEqual(session.terminate_cause, 'Session Timeout')
+
+        with self.subTest('Test does not affect closed session'):
+            options['unique_id'] = '120'
+            options['start_time'] = '2017-06-10 10:50:00'
+            options['update_time'] = '2017-06-10 10:55:00'
+            options['stop_time'] = '2017-06-10 10:55:00'
+            self._create_radius_accounting(**options)
+            call_command('cleanup_stale_radacct', 1)
+            session = RadiusAccounting.objects.get(unique_id='120')
+            self.assertEqual(
+                session.stop_time.astimezone(get_default_timezone()).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                ),
+                '2017-06-10 10:55:00',
+            )
+            self.assertEqual(session.update_time, session.stop_time)
+            self.assertNotEqual(session.terminate_cause, 'Session Timeout')
 
     @capture_any_output()
     def test_delete_old_postauth_command(self):
