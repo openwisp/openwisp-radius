@@ -30,8 +30,11 @@ openwisp-radius
    :target: https://pypi.org/project/black/
    :alt: code style: black
 
-**OpenWISP-RADIUS** is Django reusable app that provides an admin interface to a
-`freeradius <https://freeradius.org/>`_ database.
+**OpenWISP-RADIUS** provides an admin interface to a
+`freeradius <https://freeradius.org/>`_ database and offers features
+that are common in WiFi and ISP deployments.
+
+**Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
 
 .. note::
    If you're building a public wifi service, we suggest

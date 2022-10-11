@@ -2,10 +2,16 @@
 Setup
 =====
 
+Try the demo
+------------
+
+**Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
+
 Deploy it in production
 -----------------------
 
-An automated installer is available at `ansible-openwisp2 <https://github.com/openwisp/ansible-openwisp2#enabling-the-radius-module>`_.
+An automated installer is available at
+`ansible-openwisp2 <https://github.com/openwisp/ansible-openwisp2#enabling-the-radius-module>`_.
 
 Create a virtual environment
 ----------------------------
