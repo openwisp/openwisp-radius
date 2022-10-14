@@ -7,6 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -527,8 +528,8 @@ def get_is_verified(self, obj):
         value = 'yes' if obj.registered_user.is_verified else 'no'
     except Exception:
         value = 'unknown'
-
-    return mark_safe(f'<img src="/static/admin/img/icon-{value}.svg" alt="{value}">')
+    icon_url = static(f'admin/img/icon-{value}.svg')
+    return mark_safe(f'<img src="{icon_url}" alt="{value}">')
 
 
 UserAdmin.get_is_verified = get_is_verified
