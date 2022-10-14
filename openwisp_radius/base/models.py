@@ -523,8 +523,11 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         # The "start_time" of a session is only checked when the
         # "update_time" is not set.
         sessions = cls.objects.filter(
-            Q(update_time__lt=older_than)
-            | (Q(update_time=None) & Q(start_time__lt=older_than))
+            Q(stop_time__isnull=True)
+            & (
+                Q(update_time__lt=older_than)
+                | (Q(update_time=None) & Q(start_time__lt=older_than))
+            )
         )
         for session in sessions:
             # calculate seconds in between two dates
