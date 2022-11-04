@@ -158,6 +158,7 @@ _ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
     'Whether identity verification is required at the time of user registration'
 )
+_COA_ENABLED_HELP_TEXT = _('Whether RADIUS Change Of Authoization (CoA) is enabled')
 _LOGIN_URL_HELP_TEXT = _('Enter the URL where users can log in to the wifi service')
 _STATUS_URL_HELP_TEXT = _('Enter the URL where users can log out from the wifi service')
 _PASSWORD_RESET_URL_HELP_TEXT = _('Enter the URL where users can reset their password')
@@ -1117,6 +1118,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         help_text=_GET_IP_LIST_HELP_TEXT,
         default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
         fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+    )
+    coa_enabled = FallbackBooleanChoiceField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_COA_ENABLED_HELP_TEXT,
+        fallback=app_settings.COA_ENABLED,
+        verbose_name=_('CoA Enabled'),
     )
     allowed_mobile_prefixes = FallbackTextField(
         null=True,

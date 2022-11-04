@@ -1,6 +1,6 @@
 import os
 from unittest import mock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import swapper
 from django.apps.registry import apps
@@ -17,6 +17,8 @@ from openwisp_users.tests.utils import TestMultitenantAdminMixin
 from openwisp_utils.tests import capture_any_output
 
 from .. import settings as app_settings
+from ..radclient.client import RadClient
+from ..tasks import perform_change_of_authorization
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
     DEFAULT_SESSION_TRAFFIC_LIMIT,
@@ -25,7 +27,7 @@ from ..utils import (
     load_model,
 )
 from . import _CALLED_STATION_IDS, _RADACCT, FileMixin
-from .mixins import BaseTestCase
+from .mixins import BaseTestCase, BaseTransactionTestCase
 
 Nas = load_model('Nas')
 RadiusAccounting = load_model('RadiusAccounting')
@@ -910,3 +912,204 @@ class TestOrganizationRadiusSettings(BaseTestCase):
 
         with self.subTest('Test "password_reset_url" field'):
             _verify_none_database_value('password_reset_url')
+
+
+class TestChangeOfAuthorization(BaseTransactionTestCase):
+    def _change_radius_user_group(self, user, organization):
+        rad_user_group = user.radiususergroup_set.first()
+        power_user_group = RadiusGroup.objects.get(
+            organization=organization, name__contains='power-users'
+        )
+        rad_user_group.group = power_user_group
+        rad_user_group.save()
+
+    def _create_radius_accounting(self, user, organization, options=None):
+        radiusaccounting_options = _RADACCT.copy()
+        radiusaccounting_options.update(
+            {
+                'organization': organization,
+                'unique_id': '113',
+                'username': user.username,
+            }
+        )
+        options = options or {}
+        radiusaccounting_options.update(options)
+        return super()._create_radius_accounting(**radiusaccounting_options)
+
+    @mock.patch('openwisp_radius.tasks.perform_change_of_authorization.delay')
+    def test_no_change_of_authorization_on_new_radius_user_group(self, mocked_task):
+        # This method creates a new organization user
+        # which has a RadiusUserGroup by default.
+        user = self._get_user_with_org()
+        self.assertEqual(user.radiususergroup_set.count(), 1)
+        mocked_task.assert_not_called()
+
+    @capture_any_output()
+    @mock.patch('openwisp_radius.tasks.perform_change_of_authorization.delay')
+    def test_no_change_of_authorization_on_closed_sessions(self, mocked_task):
+        user = self._get_user_with_org()
+        org = self._get_org()
+        self._create_radius_accounting(
+            user, org, options={'stop_time': '2022-11-04 10:50:00'}
+        )
+        self._change_radius_user_group(user, org)
+        mocked_task.assert_not_called()
+
+    @mock.patch.object(RadClient, 'perform_change_of_authorization', return_value=False)
+    @mock.patch('logging.Logger.warning')
+    def test_perform_change_of_authorization_celery_task_failures(
+        self, mocked_logger, *args
+    ):
+        mocked_user_id = uuid4()
+        mocked_old_group_id = uuid4()
+        mocked_new_group_id = uuid4()
+        org = self._get_org()
+        user = self._get_user_with_org()
+        user_group = RadiusGroup.objects.get(organization=org, name=f'{org.slug}-users')
+        power_user_group = RadiusGroup.objects.get(
+            organization=org, name=f'{org.slug}-power-users'
+        )
+        with self.subTest('Test user deleted after scheduling of task'):
+            perform_change_of_authorization(
+                user_id=mocked_user_id,
+                old_group_id=mocked_old_group_id,
+                new_group_id=mocked_new_group_id,
+            )
+            mocked_logger.assert_called_once_with(
+                f'Failed to find user with "{mocked_user_id}" ID.'
+                ' Skipping CoA operation.'
+            )
+        mocked_logger.reset_mock()
+
+        with self.subTest('Test user session closed after scheduling of task'):
+            perform_change_of_authorization(
+                user_id=user.id,
+                old_group_id=mocked_old_group_id,
+                new_group_id=mocked_new_group_id,
+            )
+            mocked_logger.assert_called_once_with(
+                f'The user with "{user.id}" ID does not have any open'
+                ' RadiusAccounting sessions. Skipping CoA operation.'
+            )
+        mocked_logger.reset_mock()
+
+        session = self._create_radius_accounting(user, org)
+
+        with self.subTest('Test new RadiusGroup was deleted after scheduling of task'):
+            perform_change_of_authorization(
+                user_id=user.id,
+                old_group_id=user_group,
+                new_group_id=mocked_new_group_id,
+            )
+            mocked_logger.assert_called_once_with(
+                f'Failed to find RadiusGroup with "{mocked_new_group_id}".'
+                ' Skipping CoA operation.'
+            )
+        mocked_logger.reset_mock()
+
+        with self.subTest('Test NAS not found for the RadiusAccounting object'):
+            perform_change_of_authorization(
+                user_id=user.id,
+                old_group_id=user_group.id,
+                new_group_id=power_user_group.id,
+            )
+            mocked_logger.assert_called_once_with(
+                f'Failed to find RADIUS secret for "{session.unique_id}"'
+                ' RadiusAccounting object. Skipping CoA operation'
+                ' for this session.'
+            )
+        mocked_logger.reset_mock()
+
+        self._create_nas(
+            name='127.0.0.1',
+            organization=org,
+            short_name='test',
+            type='Virtual',
+            secret='testing123',
+        )
+
+        with self.subTest('Test RadClient encountered error while sending CoA packet'):
+            perform_change_of_authorization(
+                user_id=user.id,
+                old_group_id=user_group.id,
+                new_group_id=power_user_group.id,
+            )
+            mocked_logger.assert_called_once_with(
+                f'Failed to perform CoA for "{session.unique_id}"'
+                f' RadiusAccounting object of "{user}" user'
+            )
+
+    @capture_any_output()
+    @mock.patch.object(RadClient, 'perform_change_of_authorization')
+    def test_change_of_authorization(self, mocked_radclient, *args):
+        org = self._get_org()
+        user = self._get_user_with_org()
+        nas_options = {
+            'organization': org,
+            'short_name': 'test',
+            'type': 'Virtual',
+            'secret': 'testing123',
+        }
+        self._create_nas(name='10.8.0.0/24', **nas_options)
+        self._create_nas(name='172.16.0.0/24', **nas_options)
+        self._create_radius_accounting(
+            user, org, options={'nas_ip_address': '10.8.0.1'}
+        )
+        user_radiususergroup = user.radiususergroup_set.first()
+        restricted_user_group = RadiusGroup.objects.get(
+            organization=org, name=f'{org.slug}-users'
+        )
+        power_user_group = RadiusGroup.objects.get(
+            organization=org, name=f'{org.slug}-power-users'
+        )
+
+        # RadiusGroup is changed to a power user.
+        # Limitations set by the previous RadiusGroup
+        # should be removed.
+        user_radiususergroup.group = power_user_group
+        user_radiususergroup.save()
+        mocked_radclient.assert_called_with(
+            {
+                'User-Name': user.username,
+                'Max-Daily-Session': ':=',
+                'Max-Daily-Session-Traffic': ':=',
+            }
+        )
+
+        mocked_radclient.reset_mock()
+        # RadiusGroup is changed to a restricted user.
+        # Limitations set by the previous RadiusGroup
+        # should be removed.
+        user_radiususergroup.group = restricted_user_group
+        user_radiususergroup.save()
+        mocked_radclient.assert_called_with(
+            {
+                'User-Name': user.username,
+                'Max-Daily-Session': ':=10800',
+                'Max-Daily-Session-Traffic': ':=3000000000',
+            }
+        )
+
+    @mock.patch.object(RadClient, 'perform_change_of_authorization')
+    def test_change_of_authorization_org_disabled(self, mocked_radclient):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = False
+        org.radius_settings.save()
+        user = self._get_user_with_org()
+        nas_options = {
+            'organization': org,
+            'short_name': 'test',
+            'type': 'Virtual',
+            'secret': 'testing123',
+        }
+        self._create_nas(name='10.8.0.0/24', **nas_options)
+        self._create_radius_accounting(
+            user, org, options={'nas_ip_address': '10.8.0.1'}
+        )
+        user_radiususergroup = user.radiususergroup_set.first()
+        power_user_group = RadiusGroup.objects.get(
+            organization=org, name=f'{org.slug}-power-users'
+        )
+        user_radiususergroup.group = power_user_group
+        user_radiususergroup.save()
+        mocked_radclient.assert_not_called()

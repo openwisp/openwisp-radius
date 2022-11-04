@@ -548,6 +548,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                 'fields': (
                     'token',
                     'freeradius_allowed_hosts',
+                    'coa_enabled',
                     'registration_enabled',
                     'saml_registration_enabled',
                     'social_registration_enabled',

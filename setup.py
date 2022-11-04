@@ -47,6 +47,7 @@ setup(
         'jsonfield~=3.1.0',
         'django-private-storage~=3.0',
         'django-ipware~=3.0.0',
+        'pyrad~=2.4',
     ],
     extras_require={
         'saml': ['djangosaml2~=1.5.0'],

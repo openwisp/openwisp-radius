@@ -14,6 +14,7 @@ SECRET_KEY = '&a@f(0@lrl%606smticbu20=pvribdvubk5=gjti8&n1y%bi&4'
 
 ALLOWED_HOSTS = []
 OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
+OPENWISP_RADIUS_COA_ENABLED = True
 OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ['+44', '+39', '+237', '+595']
 
 INSTALLED_APPS = [
@@ -265,6 +266,9 @@ CELERY_BEAT_SCHEDULE = {
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
 OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
+OPENWISP_RADIUS_RADCLIENT_ATTRIBUTE_DICTIONARIES = [
+    os.path.join(BASE_DIR, 'radclient_dictionary.txt')
+]
 
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer'

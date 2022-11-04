@@ -229,4 +229,16 @@ class Migration(migrations.Migration):
                 verbose_name='SMS Message',
             ),
         ),
+        migrations.AddField(
+            model_name='organizationradiussettings',
+            name='coa_enabled',
+            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+                blank=True,
+                default=None,
+                fallback=app_settings.COA_ENABLED,
+                help_text='Whether RADIUS Change Of Authoization (CoA) is enabled',
+                null=True,
+                verbose_name='CoA Enabled',
+            ),
+        ),
     ]
