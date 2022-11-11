@@ -180,6 +180,26 @@ If this option and organization change page option are both
 empty, then all freeradius API requests for the organization
 will return ``403``.
 
+.. _coa_enabled_setting:
+
+``OPENWISP_RADIUS_COA_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False```
+
+If set to ``True``, openwisp-radius will update the NAS with the
+user's current RADIUS attributes whenever the ``RadiusGroup`` of
+user is changed. This allow enforcing of rate limits on active
+RADIUS sessions without requiring users to re-authenticate. For
+more details, :ref:`read the dedicated section for configuring
+openwisp-radius and NAS for using CoA <change_of_authorization>`.
+
+This can be overridden for each organization separately
+via the organization radius settings section of the admin interface.
+
+.. image:: /images/organization_coa_enabled.png
+   :alt: CoA enabled
+
 ``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -37,22 +37,7 @@
 #	directive to the end of the file if you want to see the old names
 #	in the logfiles too.
 #
-#$INCLUDE dictionary.compat	# compability issues
-#$INCLUDE dictionary.acc
-#$INCLUDE dictionary.ascend
-#$INCLUDE dictionary.bay
-#$INCLUDE dictionary.cisco
-#$INCLUDE dictionary.livingston
-#$INCLUDE dictionary.microsoft
-#$INCLUDE dictionary.quintum
-#$INCLUDE dictionary.redback
-#$INCLUDE dictionary.shasta
-#$INCLUDE dictionary.shiva
-#$INCLUDE dictionary.tunnel
-#$INCLUDE dictionary.usr
-#$INCLUDE dictionary.versanet
-#$INCLUDE dictionary.erx
-#$INCLUDE dictionary.alcatel
+#$INCLUDE /usr/share/freeradius/dictionary.chillispot
 
 #
 #	Following are the proper new names. Use these.

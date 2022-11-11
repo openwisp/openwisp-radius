@@ -141,7 +141,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
         rad_group_checks = RadiusGroupCheck.objects.filter(group_id=new_group_id)
         if rad_group_checks:
             for check in rad_group_checks:
-                attributes[check.attribute] = f'{check.op}{check.value}'
+                attributes[check.attribute] = f'{check.value}'
         elif (
             not rad_group_checks
             and RadiusGroup.objects.filter(id=new_group_id).exists()
@@ -150,7 +150,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             # Unset attributes set by the previous group.
             rad_group_checks = RadiusGroupCheck.objects.filter(group_id=old_group_id)
             for check in rad_group_checks:
-                attributes[check.attribute] = ':='
+                attributes[check.attribute] = ''
         return attributes
 
     try:
