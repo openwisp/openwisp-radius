@@ -70,6 +70,20 @@ overwhelming users with too many options*.
 If for some reason you need to enable direct editing of user group items
 you can do so by setting this to ``True``.
 
+``OPENWISP_RADIUS_USERGROUP_ADMIN``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+The functionality of editing a user's ``RadiusToken`` directly
+through an inline from the user admin page is disabled by default.
+
+*This is done with the aim of simplifying the admin interface and avoid
+overwhelming users with too many options*.
+
+If for some reason you need to enable editing user's ``RadiusToken``
+from the user admin page, you can do so by setting this to ``True``.
+
 Model related settings
 ======================
 
