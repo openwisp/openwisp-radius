@@ -87,7 +87,7 @@ class BaseCounter(ABC):
         if not self.group_check:
             raise SkipCheck(
                 message=(
-                    f'Group {self.group} has does not have '
+                    f'Group {self.group} does not have '
                     f'any {self.check_name} check defined'
                 ),
                 level='debug',
