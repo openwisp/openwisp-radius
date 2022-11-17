@@ -70,8 +70,8 @@ overwhelming users with too many options*.
 If for some reason you need to enable direct editing of user group items
 you can do so by setting this to ``True``.
 
-``OPENWISP_RADIUS_USERGROUP_ADMIN``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_USER_ADMIN_RADIUSTOKEN_INLINE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 
