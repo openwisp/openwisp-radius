@@ -596,6 +596,31 @@ if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
     admin.site.register(SocialApp, SocialAppAdmin)
 
 
+if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
+
+    class RadiusTokenInline(TimeReadonlyAdminMixin, admin.StackedInline):
+        model = RadiusToken
+        extra = 0
+
+        def get_exclude(self, request, obj=None):
+            fields = super().get_exclude(request, obj) or []
+            if not hasattr(obj, 'radius_token'):
+                return fields + ['key']
+            return fields
+
+        def get_formset(self, request, obj=None, **kwargs):
+            kwargs['widgets'] = kwargs.get('widgets', {})
+            kwargs['widgets'].update(
+                {
+                    'key': forms.widgets.TextInput(
+                        attrs={'class': 'readonly vTextField', 'readonly': True}
+                    )
+                }
+            )
+            return super().get_formset(request, obj, **kwargs)
+
+    UserAdmin.inlines.insert(0, RadiusTokenInline)
+
 if settings.DEBUG:
 
     @admin.register(RadiusToken)

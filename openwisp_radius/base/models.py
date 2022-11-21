@@ -1056,7 +1056,10 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
         return get_random_string(length=40)
 
     def __str__(self):
-        return self.key
+        # When the object is deleted, the key is set to None.
+        # This raises error when deleting the object from
+        # UserAdmin.
+        return self.key or f'RadiusToken: {self.user.username}'
 
 
 class AbstractOrganizationRadiusSettings(UUIDModel):
