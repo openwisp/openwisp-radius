@@ -956,6 +956,23 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         radtoken.refresh_from_db()
         self.assertFalse(radtoken.can_auth)
 
+    @mock.patch.object(
+        app_settings,
+        'DISPOSABLE_RADIUS_USER_TOKEN',
+        False,
+    )
+    def test_user_auth_token_not_disabled_on_stop(self):
+        self._get_org_user()
+        radtoken = self._create_radius_token(can_auth=True)
+        # Send Accounting stop request
+        data = self.acct_post_data
+        data.update(username='tester', status_type='Stop')
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        radtoken.refresh_from_db()
+        self.assertTrue(radtoken.can_auth)
+
     @freeze_time(START_DATE)
     def test_user_auth_token_org_accounting_stop(self):
         self._get_org_user()
