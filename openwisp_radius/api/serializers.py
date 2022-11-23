@@ -152,7 +152,13 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         write_only=True, required=True, choices=STATUS_TYPE_CHOICES
     )
 
-    def _disable_token_auth(self, user):
+    def _disable_radius_token_auth(self, user):
+        """
+        Disables radius token auth capability unless
+        OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN is False
+        """
+        if not app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
+            return
         try:
             radius_token = RadiusToken.objects.get(user__username=user)
         except RadiusToken.DoesNotExist:
@@ -198,8 +204,7 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         if status_type == 'Stop':
             data['update_time'] = time
             data['stop_time'] = time
-            # disable radius_token auth capability
-            self._disable_token_auth(data['username'])
+            self._disable_radius_token_auth(data['username'])
         return data
 
     def create(self, validated_data):
