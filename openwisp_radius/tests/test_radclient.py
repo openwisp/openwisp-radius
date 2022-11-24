@@ -1,6 +1,6 @@
-from unittest import TestCase
 from unittest.mock import patch
 
+from django.test import TestCase
 from pyrad.client import Client, Timeout
 
 from .. import settings as app_settings
@@ -35,8 +35,8 @@ class TestRadClient(TestCase):
         self.assertEqual(
             cleaned_attrs,
             {
-                'Max-Daily-Session': ':=10800',
-                'Max-Daily-Session-Traffic': ':=3000000',
+                'Session-Timeout': ':=10800',
+                app_settings.TRAFFIC_COUNTER_REPLY_NAME: ':=3000000',
                 'WISPr-Bandwidth-Max-Down': ':=30000',
             },
         )

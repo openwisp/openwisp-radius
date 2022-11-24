@@ -3,14 +3,24 @@ import logging
 from pyrad.client import Client, Timeout
 from pyrad.dictionary import Dictionary
 from pyrad.packet import CoAACK, CoANAK
+from pyrad.packet import CoAPacket as BaseCoAPacket
+
+from .. import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
 ATTRIBUTE_MAP = {
     # OpenWISP Check Attribute: Coova-Chilli Attribute
-    'Max-Daily-Session-Traffic': 'ChilliSpot-Max-Input-Octets',
+    'Max-Daily-Session-Traffic': app_settings.TRAFFIC_COUNTER_REPLY_NAME,
     'Max-Daily-Session': 'Session-Timeout',
 }
+
+
+class CoaPacket(BaseCoAPacket):
+    def _EncodeKeyValues(self, key, values):
+        if values == '':
+            return (key, values)
+        return super()._EncodeKeyValues(key, values)
 
 
 class RadClient(object):
@@ -34,9 +44,9 @@ class RadClient(object):
         Otherwise, returns False.
         """
         attrs = self.clean_attributes(attributes)
-        request = self.client.CreateCoAPacket(**attrs)
+        request = CoaPacket(secret=self.client.secret, dict=self.client.dict, **attrs)
         try:
-            response = self.client.SendPacket(request)
+            response = self.client._SendPacket(request, port=self.client.coaport)
         except Timeout as error:
             logger.info(
                 f'Failed to perform CoA with {self.client.server}'

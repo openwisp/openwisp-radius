@@ -14,7 +14,7 @@ from django.utils import timezone
 from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
-from openwisp_utils.tests import capture_any_output
+from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from .. import settings as app_settings
 from ..radclient.client import RadClient
@@ -1039,8 +1039,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 f' RadiusAccounting object of "{user}" user'
             )
 
-    @capture_any_output()
     @mock.patch.object(RadClient, 'perform_change_of_authorization')
+    @capture_stderr()
     def test_change_of_authorization(self, mocked_radclient, *args):
         org = self._get_org()
         user = self._get_user_with_org()
@@ -1071,8 +1071,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         mocked_radclient.assert_called_with(
             {
                 'User-Name': user.username,
-                'Max-Daily-Session': ':=',
-                'Max-Daily-Session-Traffic': ':=',
+                'Max-Daily-Session': '',
+                'Max-Daily-Session-Traffic': '',
             }
         )
 
@@ -1085,8 +1085,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         mocked_radclient.assert_called_with(
             {
                 'User-Name': user.username,
-                'Max-Daily-Session': ':=10800',
-                'Max-Daily-Session-Traffic': ':=3000000000',
+                'Max-Daily-Session': '10800',
+                'Max-Daily-Session-Traffic': '3000000000',
             }
         )
 
