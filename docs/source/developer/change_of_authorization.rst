@@ -8,7 +8,7 @@ Change of Authorization (CoA)
 
     The *Change of Authorization (CoA)* is disabled by default.
 
-    In order to enable this feature you have it via
+    In order to enable this feature you have it enable it via
     :ref:`global setting or from the admin interface
     <coa_enabled_setting>`.
 

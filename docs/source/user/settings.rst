@@ -200,6 +200,21 @@ via the organization radius settings section of the admin interface.
 .. image:: /images/organization_coa_enabled.png
    :alt: CoA enabled
 
+```RADCLIENT_ATTRIBUTE_DICTIONARIES```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
++--------------+----------+
+| **type**:    | ``list`` |
++--------------+----------+
+| **default**: |  ``[]``  |
++--------------+----------+
+
+List of absolute file path of RADIUS dictionaries used
+for RADIUS attribute mapping.
+
+You can refer this `example dictionary <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/radclient_dictionary.txt>`_
+to get started.
+
 ``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

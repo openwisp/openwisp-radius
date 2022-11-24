@@ -47,19 +47,19 @@ class RadClient(object):
         request = CoaPacket(secret=self.client.secret, dict=self.client.dict, **attrs)
         try:
             response = self.client._SendPacket(request, port=self.client.coaport)
-        except Timeout as error:
+        except Timeout:
             logger.info(
                 f'Failed to perform CoA with {self.client.server}'
-                f' with payload {attrs}. Error: {error}'
+                f' with payload {attrs}. Error: CoA request timed out.'
             )
             return False
         if response.code == CoAACK:
             logger.info(
-                f'CoAACK received from {self.client.server}' f' for payload: {attrs}'
+                f'CoAACK received from {self.client.server} for payload: {attrs}'
             )
             return True
         if response.code == CoANAK:
             logger.info(
-                f'CoANAK received from {self.client.server}' f' for payload: {attrs}'
+                f'CoANAK received from {self.client.server} for payload: {attrs}'
             )
         return False
