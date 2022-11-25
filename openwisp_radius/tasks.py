@@ -170,16 +170,19 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             ' RadiusAccounting sessions. Skipping CoA operation.'
         )
         return
-
-    attributes = get_radius_attributes()
-    if not attributes:
+    try:
+        new_rad_group = RadiusGroup.objects.only('name').get(id=new_group_id)
+    except RadiusGroup.DoesNotExist:
         logger.warning(
             f'Failed to find RadiusGroup with "{new_group_id}".'
             ' Skipping CoA operation.'
         )
         return
+    else:
+        attributes = get_radius_attributes()
 
     attributes['User-Name'] = user.username
+    updated_sessions = []
     for session in open_sessions:
         if not session.organization.radius_settings.get_setting('coa_enabled'):
             continue
@@ -197,8 +200,12 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             dicts=app_settings.RADCLIENT_ATTRIBUTE_DICTIONARIES,
         )
         result = client.perform_change_of_authorization(attributes)
-        if not result:
+        if result is True:
+            session.groupname = new_rad_group.name
+            updated_sessions.append(session)
+        else:
             logger.warning(
                 f'Failed to perform CoA for "{session.unique_id}"'
                 f' RadiusAccounting object of "{user}" user'
             )
+    RadiusAccounting.objects.bulk_update(updated_sessions, fields=['groupname'])

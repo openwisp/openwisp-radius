@@ -1039,7 +1039,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 f' RadiusAccounting object of "{user}" user'
             )
 
-    @mock.patch.object(RadClient, 'perform_change_of_authorization')
+    @mock.patch.object(RadClient, 'perform_change_of_authorization', return_value=True)
     @capture_stderr()
     def test_change_of_authorization(self, mocked_radclient, *args):
         org = self._get_org()
@@ -1052,7 +1052,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         }
         self._create_nas(name='10.8.0.0/24', **nas_options)
         self._create_nas(name='172.16.0.0/24', **nas_options)
-        self._create_radius_accounting(
+        rad_acct = self._create_radius_accounting(
             user, org, options={'nas_ip_address': '10.8.0.1'}
         )
         user_radiususergroup = user.radiususergroup_set.first()
@@ -1075,6 +1075,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 'Max-Daily-Session-Traffic': '',
             }
         )
+        rad_acct.refresh_from_db()
+        self.assertEqual(rad_acct.groupname, power_user_group.name)
 
         mocked_radclient.reset_mock()
         # RadiusGroup is changed to a restricted user.
@@ -1089,6 +1091,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 'Max-Daily-Session-Traffic': '3000000000',
             }
         )
+        rad_acct.refresh_from_db()
+        self.assertEqual(rad_acct.groupname, restricted_user_group.name)
 
     @mock.patch.object(RadClient, 'perform_change_of_authorization')
     def test_change_of_authorization_org_disabled(self, mocked_radclient):
