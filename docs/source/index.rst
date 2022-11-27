@@ -46,7 +46,6 @@ that are common in WiFi and ISP deployments.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
    /developer/setup
    /developer/freeradius
