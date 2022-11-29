@@ -1,5 +1,9 @@
 from ...counters.mysql.daily_counter import DailyCounter
 from ...counters.mysql.daily_traffic_counter import DailyTrafficCounter
+from ...counters.mysql.monthly_traffic_counter import (
+    MonthlySubscriptionTrafficCounter,
+    MonthlyTrafficCounter,
+)
 from ...utils import load_model
 from ..mixins import BaseTestCase
 from .utils import TestCounterMixin
@@ -18,7 +22,7 @@ class TestMysqlCounters(TestCounterMixin, BaseTestCase):
         )
         self.assertEqual(repr(counter), expected)
 
-    def test_traffic_counter_repr(self):
+    def test_daily_traffic_counter_repr(self):
         opts = self._get_kwargs('Max-Daily-Session')
         counter = DailyTrafficCounter(**opts)
         expected = (
@@ -27,3 +31,22 @@ class TestMysqlCounters(TestCounterMixin, BaseTestCase):
             f'organization_id={counter.organization_id})'
         )
         self.assertEqual(repr(counter), expected)
+
+    def test_monthly_traffic_counter_repr(self):
+        opts = self._get_kwargs('Max-Daily-Session')
+        counter = MonthlyTrafficCounter(**opts)
+        expected = (
+            'mysql.MonthlyTrafficCounter(user=tester, '
+            'group=test-org-users, '
+            f'organization_id={counter.organization_id})'
+        )
+        self.assertEqual(repr(counter), expected)
+
+        with self.subTest('MonthlySubscriptionTrafficCounter'):
+            counter = MonthlySubscriptionTrafficCounter(**opts)
+            expected = (
+                'mysql.MonthlySubscriptionTrafficCounter(user=tester, '
+                'group=test-org-users, '
+                f'organization_id={counter.organization_id})'
+            )
+            self.assertEqual(repr(counter), expected)

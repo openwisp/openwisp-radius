@@ -415,7 +415,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     logger=logging,
                 )
                 response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data, truncated_accept_response)
 
@@ -438,7 +438,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.side_effect = ValueError('Unexpected error')
                 response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data, truncated_accept_response)
 
@@ -455,7 +455,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.return_value = 1200
                 response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
                 expected['Session-Timeout'] = 1200
@@ -466,7 +466,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.return_value = 3000000000
                 response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+                self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
                 expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
@@ -492,7 +492,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 mocked_warning.assert_called_once_with(
                     'Session-Timeout value ("broken") cannot be converted to integer.'
                 )
-            self.assertEqual(mocked_check.call_count, len(app_settings.COUNTERS))
+            self.assertEqual(mocked_check.call_count, 2)
             self.assertEqual(response.status_code, 200)
             expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
             expected['Session-Timeout'] = 10800

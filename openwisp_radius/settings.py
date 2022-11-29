@@ -181,14 +181,17 @@ TRAFFIC_COUNTER_REPLY_NAME = get_settings_value(
 COUNTERS_POSTGRESQL = (
     'openwisp_radius.counters.postgresql.daily_counter.DailyCounter',
     'openwisp_radius.counters.postgresql.daily_traffic_counter.DailyTrafficCounter',
+    'openwisp_radius.counters.postgresql.monthly_traffic_counter.MonthlyTrafficCounter',
 )
 COUNTERS_MYSQL = (
     'openwisp_radius.counters.mysql.daily_counter.DailyCounter',
     'openwisp_radius.counters.mysql.daily_traffic_counter.DailyTrafficCounter',
+    'openwisp_radius.counters.mysql.monthly_traffic_counter.MonthlyTrafficCounter',
 )
 COUNTERS_SQLITE = (
     'openwisp_radius.counters.sqlite.daily_counter.DailyCounter',
     'openwisp_radius.counters.sqlite.daily_traffic_counter.DailyTrafficCounter',
+    'openwisp_radius.counters.sqlite.monthly_traffic_counter.MonthlyTrafficCounter',
 )
 DEFAULT_COUNTERS = {
     'django.db.backends.postgresql': COUNTERS_POSTGRESQL,

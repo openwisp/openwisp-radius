@@ -62,7 +62,7 @@ class BaseCounter(ABC):
 
     def get_reset_timestamps(self):
         try:
-            return resets[self.reset]()
+            return resets[self.reset](self.user)
         except KeyError:
             raise SkipCheck(
                 message=f'Reset time with key "{self.reset}" not available.',
@@ -141,10 +141,8 @@ class BaseDailyCounter(BaseCounter):
         ]
 
 
-class BaseDailyTrafficCounter(BaseCounter):
-    check_name = app_settings.TRAFFIC_COUNTER_CHECK_NAME
+class BaseTrafficCounter(BaseCounter):
     reply_name = app_settings.TRAFFIC_COUNTER_REPLY_NAME
-    reset = 'daily'
 
     def get_sql_params(self, start_time, end_time):
         return [
@@ -152,3 +150,13 @@ class BaseDailyTrafficCounter(BaseCounter):
             self.organization_id,
             start_time,
         ]
+
+
+class BaseDailyTrafficCounter(BaseTrafficCounter):
+    check_name = app_settings.TRAFFIC_COUNTER_CHECK_NAME
+    reset = 'daily'
+
+
+class BaseMontlhyTrafficCounter(BaseTrafficCounter):
+    check_name = 'Max-Monthly-Session-Traffic'
+    reset = 'monthly'

@@ -4,11 +4,14 @@ from ...counters.base import BaseCounter
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...counters.sqlite.daily_counter import DailyCounter
 from ...counters.sqlite.daily_traffic_counter import DailyTrafficCounter
+from ...counters.sqlite.monthly_traffic_counter import MonthlyTrafficCounter
 from ...utils import load_model
 from ..mixins import BaseTestCase
 from .utils import TestCounterMixin, _acct_data
 
 RadiusAccounting = load_model('RadiusAccounting')
+RadiusGroup = load_model('RadiusGroup')
+RadiusGroupCheck = load_model('RadiusGroupCheck')
 
 
 class TestSqliteCounters(TestCounterMixin, BaseTestCase):
@@ -102,3 +105,20 @@ class TestSqliteCounters(TestCounterMixin, BaseTestCase):
         counter = DailyTrafficCounter(**opts)
         self.assertEqual(counter.check_name, 'Max-Daily-Session-Traffic')
         self.assertEqual(counter.reply_name, 'ChilliSpot-Max-Total-Octets')
+
+    def test_monthly_traffic_counter_with_sessions(self):
+        rg = RadiusGroup.objects.filter(name='test-org-users').first()
+        rgc = RadiusGroupCheck(
+            group=rg, attribute='Max-Monthly-Session-Traffic', value='3000000000'
+        )
+        rgc.full_clean()
+        rgc.save()
+        RadiusGroupCheck.objects.filter(attribute='Max-Daily-Session-Traffic').delete()
+        opts = self._get_kwargs('Max-Monthly-Session-Traffic')
+        counter = MonthlyTrafficCounter(**opts)
+        acct = _acct_data.copy()
+        acct.update({'input_octets': '50000', 'output_octets': '60000'})
+        self._create_radius_accounting(**acct)
+        traffic = int(acct['input_octets']) + int(acct['output_octets'])
+        expected = int(opts['group_check'].value) - traffic
+        self.assertEqual(counter.check(), expected)
