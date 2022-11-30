@@ -13,7 +13,6 @@ class TestRadClient(TestCase):
         return RadClient(
             host='127.0.0.1',
             radsecret='testing',
-            dicts=app_settings.RADCLIENT_ATTRIBUTE_DICTIONARIES,
         )
 
     def test_clean_attributes(self):

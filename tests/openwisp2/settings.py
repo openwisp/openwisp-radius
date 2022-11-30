@@ -266,9 +266,6 @@ CELERY_BEAT_SCHEDULE = {
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
 OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
-OPENWISP_RADIUS_RADCLIENT_ATTRIBUTE_DICTIONARIES = [
-    os.path.join(BASE_DIR, 'radclient_dictionary.txt')
-]
 
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer'

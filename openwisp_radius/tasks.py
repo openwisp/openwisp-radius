@@ -15,7 +15,6 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
-from . import settings as app_settings
 from .radclient.client import RadClient
 from .utils import load_model
 
@@ -197,7 +196,6 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
         client = RadClient(
             host=session.nas_ip_address,
             radsecret=radsecret,
-            dicts=app_settings.RADCLIENT_ATTRIBUTE_DICTIONARIES,
         )
         result = client.perform_change_of_authorization(attributes)
         if result is True:

@@ -206,14 +206,17 @@ via the organization radius settings section of the admin interface.
 +--------------+----------+
 | **type**:    | ``list`` |
 +--------------+----------+
-| **default**: |  ``[]``  |
+| **default**: | ``[]``   |
 +--------------+----------+
 
-List of absolute file path of RADIUS dictionaries used
+List of absolute file paths of additional RADIUS dictionaries used
 for RADIUS attribute mapping.
 
-You can refer this `example dictionary <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/radclient_dictionary.txt>`_
-to get started.
+.. note::
+
+    A `default dictionary <https://github.com/openwisp/openwisp-radius/blob/master/openwisp_radius/radclient/dictionary>`_
+    is shipped with openwisp-radius. Any dictionary added using this setting
+    will be used alongside the default dictionary. 
 
 ``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

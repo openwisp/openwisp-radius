@@ -1,4 +1,5 @@
 import logging
+import os
 
 from pyrad.client import Client, Timeout
 from pyrad.dictionary import Dictionary
@@ -14,6 +15,8 @@ ATTRIBUTE_MAP = {
     'Max-Daily-Session-Traffic': app_settings.TRAFFIC_COUNTER_REPLY_NAME,
     'Max-Daily-Session': 'Session-Timeout',
 }
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DICTIONARY = os.path.join(MODULE_DIR, 'dictionary')
 
 
 class CoaPacket(BaseCoAPacket):
@@ -24,10 +27,15 @@ class CoaPacket(BaseCoAPacket):
 
 
 class RadClient(object):
-    def __init__(self, host, radsecret, dicts):
+    def __init__(self, host, radsecret):
         self.client = Client(
-            server=host, secret=radsecret.encode(), dict=Dictionary(*dicts)
+            server=host,
+            secret=radsecret.encode(),
+            dict=Dictionary(*self.get_dictionaries()),
         )
+
+    def get_dictionaries(self):
+        return [DEFAULT_DICTIONARY] + app_settings.RADCLIENT_ATTRIBUTE_DICTIONARIES
 
     def clean_attributes(self, attributes):
         attr = {}
