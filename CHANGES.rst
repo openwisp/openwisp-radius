@@ -1,8 +1,38 @@
 Change log
 ==========
 
+Version 1.0.2 [2022-12-05]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Made private storage backend configurable
+- Updated API views to use  ``filterset_class`` instead of ``filter_class``
+  (required by ``django-filter==22.1``)
+- Fixed organization cache bug in SAML ACS view: A forceful update of
+  the user's organization cache is done before performing post-login
+  operations to avoid issues occurring due to outdated cache.
+- Added missing Furlan translation for sesame link validity
+- Use storage backend method for deleting ``RadiusBatch.csvfile``:
+  The previous implementation used the "os" module for deleting resisdual
+  csv files. This causes issues when the project uses a file storage backend
+  other than based on file system.
+- Added error handling in RadiusBatch admin change view: Accessing admin change
+  view of a non-existent RadiusBatch object resulted in Server Error 500
+  because the ``DoesNotExist`` conditioned was not handled.
+- Load image using ``static()`` in RegisteredUserInline.get_is_verified
+- Use ``path`` URL kwarg in "serve_private_file" URL pattern
+- Honor DISPOSABLE_RADIUS_USER_TOKEN in accounting stop API view:
+  The accounting stop REST API operation was not taking into
+  account the OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN
+  setting when disabling the auth capability of the radius token.
+
 Version 1.0.1 [2022-05-10]
 --------------------------
+
+Bugfixes
+~~~~~~~~
 
 - Fixed a bug in the organization radius settings form which was causing it
   to not display some default values correctly
