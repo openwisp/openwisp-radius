@@ -3,7 +3,7 @@ import os
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 
 from openwisp_utils.tests import AssertNumQueriesSubTestMixin
@@ -18,6 +18,7 @@ RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+RadiusUserGroup = load_model('RadiusUserGroup')
 
 
 class GetEditFormInlineMixin(object):
@@ -197,7 +198,7 @@ class ApiTokenMixin(BasePostParamsMixin):
         return login_response.json()['radius_user_token']
 
 
-class BaseTestCase(AssertNumQueriesSubTestMixin, DefaultOrgMixin, TestCase):
+class BaseTestMixin:
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -210,3 +211,15 @@ class BaseTestCase(AssertNumQueriesSubTestMixin, DefaultOrgMixin, TestCase):
     def _superuser_login(self):
         admin = self._get_admin()
         self.client.force_login(admin)
+
+
+class BaseTestCase(
+    BaseTestMixin, AssertNumQueriesSubTestMixin, DefaultOrgMixin, TestCase
+):
+    pass
+
+
+class BaseTransactionTestCase(
+    BaseTestMixin, AssertNumQueriesSubTestMixin, DefaultOrgMixin, TransactionTestCase
+):
+    pass

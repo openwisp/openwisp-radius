@@ -17,6 +17,7 @@ from .receivers import (
     create_default_groups_handler,
     organization_post_save,
     organization_pre_save,
+    radius_user_group_change,
     send_email_on_new_accounting_handler,
     set_default_group_handler,
 )
@@ -70,6 +71,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
         OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
         RadiusToken = load_model('RadiusToken')
         RadiusAccounting = load_model('RadiusAccounting')
+        RadiusUserGroup = load_model('RadiusUserGroup')
         User = get_user_model()
         from openwisp_radius.api.freeradius_views import AccountingView
 
@@ -123,6 +125,11 @@ class OpenwispRadiusConfig(ApiAppConfig):
             close_previous_radius_accounting_sessions,
             sender=RadiusAccounting,
             dispatch_uid='openwisp_radius_close_previous_radius_accounting_sessions',
+        )
+        pre_save.connect(
+            radius_user_group_change,
+            sender=RadiusUserGroup,
+            dispatch_uid='radius_user_group_change_coa',
         )
         if app_settings.CONVERT_CALLED_STATION_ON_CREATE:
             post_save.connect(

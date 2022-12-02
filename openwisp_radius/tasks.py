@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 from datetime import timedelta
 
@@ -13,6 +14,9 @@ from django.utils.translation import gettext_lazy as _
 
 from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
+
+from .radclient.client import RadClient
+from .utils import load_model
 
 logger = logging.getLogger(__name__)
 
@@ -111,3 +115,95 @@ def send_login_email(accounting_data):
             )
         body_html = loader.render_to_string('radius_accounting_start.html', context)
         send_email(subject, body_html, body_html, [user.email], context)
+
+
+@shared_task
+def perform_change_of_authorization(user_id, old_group_id, new_group_id):
+    RadiusAccounting = load_model('RadiusAccounting')
+    RadiusGroupCheck = load_model('RadiusGroupCheck')
+    RadiusGroup = load_model('RadiusGroup')
+    Nas = load_model('Nas')
+    User = get_user_model()
+
+    def get_radsecret_from_radacct(rad_acct):
+        qs = Nas.objects.filter(organization_id=rad_acct.organization_id).only(
+            'name', 'secret'
+        )
+        for nas in qs.iterator():
+            if ipaddress.ip_address(rad_acct.nas_ip_address) in ipaddress.ip_network(
+                nas.name
+            ):
+                return nas.secret
+
+    def get_radius_attributes():
+        attributes = {}
+        rad_group_checks = RadiusGroupCheck.objects.filter(group_id=new_group_id)
+        if rad_group_checks:
+            for check in rad_group_checks:
+                attributes[check.attribute] = f'{check.value}'
+        elif (
+            not rad_group_checks
+            and RadiusGroup.objects.filter(id=new_group_id).exists()
+        ):
+            # The new group does not have any limitations.
+            # Unset attributes set by the previous group.
+            rad_group_checks = RadiusGroupCheck.objects.filter(group_id=old_group_id)
+            for check in rad_group_checks:
+                attributes[check.attribute] = ''
+        return attributes
+
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        logger.warning(
+            f'Failed to find user with "{user_id}" ID. Skipping CoA operation.'
+        )
+        return
+    # Check is user has open RadiusAccounting sessions
+    open_sessions = RadiusAccounting.objects.filter(
+        username=user.username, stop_time__isnull=True
+    ).select_related('organization', 'organization__radius_settings')
+    if not open_sessions:
+        logger.warning(
+            f'The user with "{user_id}" ID does not have any open'
+            ' RadiusAccounting sessions. Skipping CoA operation.'
+        )
+        return
+    try:
+        new_rad_group = RadiusGroup.objects.only('name').get(id=new_group_id)
+    except RadiusGroup.DoesNotExist:
+        logger.warning(
+            f'Failed to find RadiusGroup with "{new_group_id}".'
+            ' Skipping CoA operation.'
+        )
+        return
+    else:
+        attributes = get_radius_attributes()
+
+    attributes['User-Name'] = user.username
+    updated_sessions = []
+    for session in open_sessions:
+        if not session.organization.radius_settings.get_setting('coa_enabled'):
+            continue
+        radsecret = get_radsecret_from_radacct(session)
+        if not radsecret:
+            logger.warning(
+                f'Failed to find RADIUS secret for "{session.unique_id}"'
+                ' RadiusAccounting object. Skipping CoA operation'
+                ' for this session.'
+            )
+            continue
+        client = RadClient(
+            host=session.nas_ip_address,
+            radsecret=radsecret,
+        )
+        result = client.perform_change_of_authorization(attributes)
+        if result is True:
+            session.groupname = new_rad_group.name
+            updated_sessions.append(session)
+        else:
+            logger.warning(
+                f'Failed to perform CoA for "{session.unique_id}"'
+                f' RadiusAccounting object of "{user}" user'
+            )
+    RadiusAccounting.objects.bulk_update(updated_sessions, fields=['groupname'])

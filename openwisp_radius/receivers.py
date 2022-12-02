@@ -4,6 +4,7 @@ Receiver functions for django signals (eg: post_save)
 import logging
 
 from celery.exceptions import OperationalError
+from django.db import transaction
 
 from openwisp_radius.tasks import send_login_email
 
@@ -112,3 +113,23 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
     RadiusAccounting.objects.bulk_update(
         closed_session, fields=['stop_time', 'terminate_cause']
     )
+
+
+def radius_user_group_change(sender, instance, **kwargs):
+    RadiusUserGroup = load_model('RadiusUserGroup')
+    RadiusAccounting = load_model('RadiusAccounting')
+    try:
+        db_instance = RadiusUserGroup.objects.only('group_id').get(id=instance.id)
+    except RadiusUserGroup.DoesNotExist:
+        return
+    user_has_open_session = RadiusAccounting.objects.filter(
+        username=instance.username, stop_time__isnull=True
+    ).exists()
+    if instance.group_id != db_instance.group_id and user_has_open_session:
+        transaction.on_commit(
+            lambda: tasks.perform_change_of_authorization.delay(
+                user_id=instance.user_id,
+                old_group_id=db_instance.group_id,
+                new_group_id=instance.group_id,
+            )
+        )
