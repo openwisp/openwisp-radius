@@ -1,0 +1,181 @@
+/* Scrollbar */
+:root {
+  scrollbar-color: #777 #f1f1f1 !important;
+}
+body::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #777;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
+.wy-side-nav-search>a.icon img.logo, .wy-side-nav-search .wy-dropdown>a.icon img.logo {
+  width: 200px;
+  height: 50px;
+}
+.wy-side-nav-search {
+  background-color: #f9f9f9;
+  margin-bottom: 5px;
+}
+.wy-nav-top {
+  background-color: #f9f9f9;
+}
+.wy-nav-top a{
+  color: #df5d43;
+}
+.wy-nav-top i{
+  color: #777;
+}
+.wy-nav-content a {
+  color: #df5d43;
+}
+.wy-nav-content a:hover {
+  color: #D32F2F;
+}
+.wy-nav-content a:visited {
+  color: #B71C1C;
+}
+.wy-nav-side {
+  background-color: #f9f9f9;
+}
+.wy-menu a {
+  color: #777;
+  padding: .5045em 1.618em;
+}
+.wy-menu a:hover {
+  color: #df5d43;
+  background-color: #ffe5e5 ;
+}
+.wy-menu-vertical li.current a{
+  border: 0;
+}
+.wy-menu a:active {
+  background-color: #fbe8e8;
+  color: #be472f;
+}
+.wy-side-nav-search input[type=text] {
+  border-color: #eee;
+  border-radius: 5px;
+  padding: 10px 12px 10px;
+  line-height: 14px;
+}
+.wy-side-nav-search input[type=text]:focus{
+  border: 1px solid rgb(0, 0, 0);
+}
+.wy-side-nav-search>div.version {
+  color: #9E9E9E;
+}
+.toctree-l1.current .current,
+.toctree-l1.current .current:hover {
+  background-color: #ffe5e5;
+  color: #df5d43;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+.wy-menu-vertical li.current ul {
+  background-color: #fdf2f2f2;
+}
+.wy-menu-vertical li:hover{
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.current a {
+  color: #777;
+}
+.wy-menu-vertical li.current a:hover{
+  color: #df5d43;
+}
+.wy-menu-vertical li.toctree-l1.current[area-expanded="true"]{
+  color: #df5d43;
+  background-color: #ffe5e5;
+}
+.toctree-l1.current .current, .toctree-l1.current .current:hover{
+  border: 0;
+}
+.wy-menu-vertical li.toctree-l1.current>a{
+  border : 0;
+}
+.wy-menu-vertical li.toctree-l1.current>a:visited,
+.wy-menu-vertical li.toctree-l1.current>a:active{
+  color: #df5d43;
+  background-color: #ffe5e5;
+  border: 0;
+}
+.wy-menu-vertical li.toctree-l2.current>a:visited,
+.wy-menu-vertical li.toctree-l2.current>a:active{
+  color: #df5d43;
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l3.current>a:visited
+.wy-menu-vertical li.toctree-l3.current>a:active{
+  color: #df5d43;
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l2.current>a {
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.current a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a{
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.on a, .wy-menu-vertical li.current>a {
+  border: none;
+}
+.wy-menu-vertical li.toctree-l2 a:hover span.toctree-expand {
+  color: #a3a3a3;
+}
+.wy-menu-vertical li{
+  margin: -1px 0 -1px -1px;
+}
+.wy-menu-vertical li.current>a, .wy-menu-vertical li.on a{
+  color: #df5d43;
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a{
+  background-color: #fdf2f2f2;
+}
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a:hover{
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a[aria-expanded="true"]{
+  background-color: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4>a {
+  background: #fdf2f2f2;
+}
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4>a:hover {
+  background: #ffe5e5;
+}
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4>a[aria-expanded="true"]{
+  background: #ffe5e5;
+}
+  
+/* PREVIOUS & NEXT BTN */
+  
+body > div > section > div > div > footer > div.rst-footer-buttons > a.btn.btn-neutral.float-right{
+  color: #ffff !important;
+}
+body > div > section > div > div > footer > div.rst-footer-buttons > a.btn.btn-neutral.float-left{
+  color: #ffff !important;
+}
+.btn-neutral {
+  background-color: #333!important;
+}
+.btn-neutral:hover{
+  background-color: #999 !important;
+}
+.btn {
+  padding: 6px 12px 6px;
+}
+.icon.icon-home {
+  color: #333;
+}
