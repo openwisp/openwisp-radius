@@ -63,6 +63,24 @@ class TestBaseCounter(TestCounterMixin, BaseTestCase):
             self.assertEqual(str(datetime.fromtimestamp(start)), '2021-11-01 00:00:00')
             self.assertEqual(str(datetime.fromtimestamp(end)), '2021-12-01 00:00:00')
 
+        user = self._get_user()
+
+        with self.subTest('monthly_subscription same month'):
+            user.date_joined = datetime.fromisoformat('2021-07-02 12:34:58')
+            user.save(update_fields=['date_joined'])
+            start, end = resets['monthly_subscription'](user)
+            self.assertIsInstance(start, int)
+            self.assertIsInstance(end, int)
+            self.assertEqual(str(datetime.fromtimestamp(start)), '2021-11-02 00:00:00')
+            self.assertEqual(str(datetime.fromtimestamp(end)), '2021-12-02 00:00:00')
+
+        with self.subTest('monthly_subscription prev month'):
+            user.date_joined = datetime.fromisoformat('2021-07-22 12:34:58')
+            user.save(update_fields=['date_joined'])
+            start, end = resets['monthly_subscription'](user)
+            self.assertEqual(str(datetime.fromtimestamp(start)), '2021-10-22 00:00:00')
+            self.assertEqual(str(datetime.fromtimestamp(end)), '2021-11-22 00:00:00')
+
         with self.subTest('never'):
             start, end = resets['never']()
             self.assertEqual(start, 0)

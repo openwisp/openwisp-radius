@@ -65,7 +65,7 @@ The default counters available are described below.
 ``DailyCounter``
 ~~~~~~~~~~~~~~~~
 
-This check is used to limit the amount of time users can use
+This counter is used to limit the amount of time users can use
 the network every day. It works by checking whether the total
 session time of a user during a specific day is below the value indicated in
 the ``Max-Daily-Session`` group check attribute, sending the remaining
@@ -77,7 +77,7 @@ the authorization if the limit has been passed.
 ``DailyTrafficCounter``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-This check is used to limit the amount of traffic
+This counter is used to limit the amount of traffic
 users can consume every day. It works by  checking whether the total amount
 of download plus upload octets (bytes consumed) is below the value indicated
 in the ``Max-Daily-Session-Traffic`` group check attribute, sending the
@@ -87,6 +87,35 @@ the authorization if the limit has been passed.
 The attributes used for the check and or the reply message are configurable
 because it can differ from NAS to NAS, see :ref:`traffic_counter_check_name`
 :ref:`traffic_counter_reply_name` for more information.
+
+``MonthlyTrafficCounter``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This counter is used to limit the amount of traffic
+users can consume every solar month.
+It works by  checking whether the total amount
+of download plus upload octets (bytes consumed) is below the value indicated
+in the ``Max-Monthly-Session-Traffic`` group check attribute, sending the
+remaining octets with a reply message or rejecting
+the authorization if the limit has been passed.
+
+The reply message is configurable
+because it can differ from NAS to NAS,
+:ref:`traffic_counter_reply_name` for more information.
+
+``MonthlySubscriptionTrafficCounter``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. important::
+
+  This counter is not enabled by default.
+  It can be enabled via the :ref:`counter_related_settings`.
+
+Same as ``MonthlyTrafficCounter``, but with the difference that
+the reset period depends on the day in which the user subscribed
+to the service: if the user signed up (or their account was created by
+an admin) on a date like November 15 2022, the reset period will
+start on the 15th day of every month.
 
 Database support
 ~~~~~~~~~~~~~~~~

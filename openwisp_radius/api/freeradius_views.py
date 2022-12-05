@@ -259,6 +259,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             for counter in app_settings.COUNTERS:
                 group_check = group_checks.get(counter.check_name)
+                if not group_check:
+                    continue
                 try:
                     remaining = counter(
                         user=user, group=user_group.group, group_check=group_check
