@@ -147,7 +147,8 @@ then implement at least the following attributes:
 - ``counter_name``: name of the counter, used internally for debugging;
 - ``check_name``: attribute name used in the database lookup to the group check table;
 - ``reply_name``: attribute name sent in the reply message;
-- ``reset``: reset period, either ``daily``, ``weekly``, ``monthly`` or ``never``;
+- ``reset``: reset period, either ``daily``, ``weekly``, ``monthly``,
+  ``monthly_subscription`` or ``never``;
 - ``sql``: the raw SQL query to execute;
 - ``get_sql_params``: a method which returns a list of the arguments passed
   to the interpolation of the raw sql query.
