@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - master
+      - "1.0"
   pull_request:
     branches:
       - master
+      - "1.0"
 
 jobs:
   build:
