@@ -36,7 +36,11 @@ setup(
     zip_safe=False,
     install_requires=[
         'django>=3.0,<=4.1.0',
-        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/master',
+        (
+            'openwisp-users '
+            '@ https://github.com/openwisp/openwisp-users/tarball/'
+            '3ec78ab47395b5aa1e4f27fd9670b57b6f0a3acb'
+        ),
         'openwisp-utils[rest,celery] @ '
         'https://github.com/openwisp/openwisp-utils/tarball/master',
         'passlib~=1.7.1',
