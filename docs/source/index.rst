@@ -50,7 +50,6 @@ that are common in WiFi and ISP deployments.
    /developer/setup
    /developer/freeradius
    /developer/freeradius_wpa_enterprise
-   /developer/change_of_authorization
    /user/settings
    /user/management_commands
    /user/importing_users
@@ -59,6 +58,7 @@ that are common in WiFi and ISP deployments.
    /user/registration
    /user/social_login
    /user/saml
+   /user/change_of_authorization
    /user/api
    /developer/signals
    /developer/how_to_extend
