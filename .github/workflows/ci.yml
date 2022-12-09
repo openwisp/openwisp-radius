@@ -12,23 +12,21 @@ on:
 jobs:
   build:
     name: Python==${{ matrix.python-version }} | ${{ matrix.django-version }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
         python-version:
-          - 3.7
-          - 3.8
-          - 3.9
+          - "3.8"
+          - "3.9"
+          - "3.10"
         django-version:
-          - django~=3.0.0
-          - django~=3.1.0
-          - django~=3.2.8
+          - django~=3.2.0
+          - django~=4.0.0
         include:
-          - django-version: django~=4.0.0
-            python-version: 3.9
-            experimental: true
+          - django-version: django~=3.2.0
+            python-version: 3.7
 
     steps:
       - uses: actions/checkout@v2
