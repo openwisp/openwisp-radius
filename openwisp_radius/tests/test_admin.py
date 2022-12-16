@@ -878,6 +878,51 @@ class TestAdmin(
             data.update(dict(gr1=gr1, gr2=gr2, gr3=gr3))
         return data
 
+    def _test_radius_admin_autocomplete_filter(self, url_reverse=None, payloads=None):
+        url = reverse(url_reverse)
+
+        with self.subTest('test superadmin org user autocomplete filter'):
+            user = User.objects.filter(is_superuser=True, is_staff=True).first()
+            users_id_list = User.objects.values_list('id', flat=True)
+            orgs_id_list = Organization.objects.values_list('id', flat=True)
+
+            self.client.force_login(user)
+            for payload in payloads:
+                response = self.client.get(url, payload)
+                self.assertEqual(response.status_code, 200)
+                for option in response.json()['results']:
+                    if payload.get('field_name') in ['user']:
+                        assert option['id'] in [str(id) for id in users_id_list]
+                    else:
+                        assert option['id'] in [str(id) for id in orgs_id_list]
+
+        with self.subTest('test non superadmin org user autocomplete filter'):
+            user = User.objects.get(username='administrator')
+            users_id_list = Organization.objects.filter(
+                pk__in=user.organizations_managed
+            ).values_list('users__pk', flat=True)
+            org_managed_id_list = Organization.objects.filter(
+                pk__in=user.organizations_managed
+            ).values_list('id', flat=True)
+            org_not_managed_id_list = Organization.objects.exclude(
+                pk__in=user.organizations_managed
+            ).values_list('id', flat=True)
+
+            self.client.force_login(user)
+            response = self.client.get(url, payload)
+            self.assertEqual(response.status_code, 200)
+            for payload in payloads:
+                response = self.client.get(url, payload)
+                self.assertEqual(response.status_code, 200)
+                for option in response.json()['results']:
+                    if payload.get('field_name') in ['user']:
+                        assert option['id'] in [str(id) for id in users_id_list]
+                    else:
+                        assert option['id'] in [str(id) for id in org_managed_id_list]
+                        assert option['id'] not in [
+                            str(id) for id in org_not_managed_id_list
+                        ]
+
     def test_radiuscheck_queryset(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
@@ -887,13 +932,21 @@ class TestAdmin(
         )
 
     def test_radiuscheck_organization_fk_queryset(self):
-        data = self._create_multitenancy_test_env()
-        self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiuscheck_add'),
-            visible=[data['org1'].name],
-            hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
-            administrator=True,
+        self._create_multitenancy_test_env()
+        payloads = [
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiuscheck',
+                'field_name': 'user',
+            },
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiuscheck',
+                'field_name': 'organization',
+            },
+        ]
+        self._test_radius_admin_autocomplete_filter(
+            url_reverse='admin:autocomplete', payloads=payloads
         )
 
     @capture_any_output()
@@ -919,13 +972,21 @@ class TestAdmin(
         )
 
     def test_radiusreply_organization_fk_queryset(self):
-        data = self._create_multitenancy_test_env()
-        self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiusreply_add'),
-            visible=[data['org1'].name],
-            hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
-            administrator=True,
+        self._create_multitenancy_test_env()
+        payloads = [
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiusreply',
+                'field_name': 'user',
+            },
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiusreply',
+                'field_name': 'organization',
+            },
+        ]
+        self._test_radius_admin_autocomplete_filter(
+            url_reverse='admin:autocomplete', payloads=payloads
         )
 
     @capture_any_output()
@@ -951,13 +1012,16 @@ class TestAdmin(
         )
 
     def test_radiusgroup_organization_fk_queryset(self):
-        data = self._create_multitenancy_test_env()
-        self._test_multitenant_admin(
-            url=(reverse(f'admin:{self.app_label}_radiusgroup_add')),
-            visible=[data['org1'].name],
-            hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
-            administrator=True,
+        self._create_multitenancy_test_env()
+        payloads = [
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiusgroup',
+                'field_name': 'organization',
+            }
+        ]
+        self._test_radius_admin_autocomplete_filter(
+            url_reverse='admin:autocomplete', payloads=payloads
         )
 
     def test_nas_queryset(self):
@@ -969,13 +1033,16 @@ class TestAdmin(
         )
 
     def test_nas_organization_fk_queryset(self):
-        data = self._create_multitenancy_test_env()
-        self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_nas_add'),
-            visible=[data['org1'].name],
-            hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
-            administrator=True,
+        self._create_multitenancy_test_env()
+        payloads = [
+            {
+                'app_label': self.app_label,
+                'model_name': 'nas',
+                'field_name': 'organization',
+            }
+        ]
+        self._test_radius_admin_autocomplete_filter(
+            url_reverse='admin:autocomplete', payloads=payloads
         )
 
     def test_radiusaccounting_queryset(self):
@@ -995,13 +1062,16 @@ class TestAdmin(
         )
 
     def test_radiusbatch_organization_fk_queryset(self):
-        data = self._create_multitenancy_test_env()
-        self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiusbatch_add'),
-            visible=[data['org1'].name],
-            hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
-            administrator=True,
+        self._create_multitenancy_test_env()
+        payloads = [
+            {
+                'app_label': self.app_label,
+                'model_name': 'radiusbatch',
+                'field_name': 'organization',
+            }
+        ]
+        self._test_radius_admin_autocomplete_filter(
+            url_reverse='admin:autocomplete', payloads=payloads
         )
 
     def test_non_existing_radiusbatch_change_view(self):

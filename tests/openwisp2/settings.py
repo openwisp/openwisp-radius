@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'openwisp_radius',
     'openwisp_users',
     # admin
+    'admin_auto_filters',
     'django.contrib.admin',
     'private_storage',
     'drf_yasg',
