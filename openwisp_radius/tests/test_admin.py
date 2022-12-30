@@ -886,13 +886,14 @@ class TestAdmin(
             hidden=[data['rc2'].username, data['org2'].name, data['rc3'].username],
         )
 
-    def test_radiuscheck_organization_fk_queryset(self):
+    def test_radiuscheck_organization_fk_autocomplete_view(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiuscheck_add'),
+            url=self._get_autocomplete_view_path(
+                self.app_label, 'radiuscheck', 'organization'
+            ),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
             administrator=True,
         )
 
@@ -918,13 +919,14 @@ class TestAdmin(
             hidden=[data['rr2'].username, data['org2'], data['rr3'].username],
         )
 
-    def test_radiusreply_organization_fk_queryset(self):
+    def test_radiusreply_organization_fk_autocomplete_view(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiusreply_add'),
+            url=self._get_autocomplete_view_path(
+                self.app_label, 'radiusreply', 'organization'
+            ),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
             administrator=True,
         )
 
@@ -950,13 +952,14 @@ class TestAdmin(
             hidden=[data['org2'].name, data['rg2'].name, data['rg3'].name],
         )
 
-    def test_radiusgroup_organization_fk_queryset(self):
+    def test_radiusgroup_organization_fk_autocomplete_view(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=(reverse(f'admin:{self.app_label}_radiusgroup_add')),
+            url=self._get_autocomplete_view_path(
+                self.app_label, 'radiusgroup', 'organization'
+            ),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
             administrator=True,
         )
 
@@ -968,13 +971,12 @@ class TestAdmin(
             hidden=[data['nas2'].name, data['org2'].name, data['nas3'].name],
         )
 
-    def test_nas_organization_fk_queryset(self):
+    def test_nas_organization_fk_autocomplete_view(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_nas_add'),
+            url=self._get_autocomplete_view_path(self.app_label, 'nas', 'organization'),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
             administrator=True,
         )
 
@@ -994,13 +996,14 @@ class TestAdmin(
             hidden=[data['rb2'].name, data['org2'].name, data['rb3'].name],
         )
 
-    def test_radiusbatch_organization_fk_queryset(self):
+    def test_radiusbatch_organization_fk_autocomplete_view(self):
         data = self._create_multitenancy_test_env()
         self._test_multitenant_admin(
-            url=reverse(f'admin:{self.app_label}_radiusbatch_add'),
+            url=self._get_autocomplete_view_path(
+                self.app_label, 'radiusbatch', 'organization'
+            ),
             visible=[data['org1'].name],
             hidden=[data['org2'].name, data['inactive']],
-            select_widget=True,
             administrator=True,
         )
 

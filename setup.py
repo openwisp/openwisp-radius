@@ -39,7 +39,7 @@ setup(
         (
             'openwisp-users '
             '@ https://github.com/openwisp/openwisp-users/tarball/'
-            '3ec78ab47395b5aa1e4f27fd9670b57b6f0a3acb'
+            'master'
         ),
         'openwisp-utils[rest,celery] @ '
         'https://github.com/openwisp/openwisp-utils/tarball/master',
