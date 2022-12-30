@@ -89,7 +89,7 @@ class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'created',
         'modified',
     ]
-    autocomplete_fields = ('user', 'organization')
+    autocomplete_fields = ('user',)
 
 
 @admin.register(RadiusReply)
@@ -116,7 +116,7 @@ class RadiusReplyAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'created',
         'modified',
     ]
-    autocomplete_fields = ('user', 'organization')
+    autocomplete_fields = ('user',)
 
 
 BaseAccounting = ReadOnlyAdmin if not app_settings.EDITABLE_ACCOUNTING else ModelAdmin
@@ -144,7 +144,6 @@ class RadiusAccountingAdmin(OrganizationFirstMixin, BaseAccounting):
         'nas_ip_address',
     ]
     list_filter = ['start_time', 'stop_time', MultitenantOrgFilter]
-    autocomplete_fields = ('organization',)
     ordering = ['-start_time']
 
 
@@ -179,7 +178,6 @@ class NasAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'modified',
     ]
     list_filter = (MultitenantOrgFilter,)
-    autocomplete_fields = ('organization',)
 
 
 class RadiusGroupCheckInline(TimeReadonlyAdminMixin, StackedInline):
@@ -209,7 +207,6 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     list_filter = (MultitenantOrgFilter,)
     inlines = [RadiusGroupCheckInline, RadiusGroupReplyInline]
     select_related = ('organization',)
-    autocomplete_fields = ('organization',)
 
     def get_group_name(self, obj):
         return obj.name.replace(f'{obj.organization.slug}-', '')
@@ -333,7 +330,6 @@ class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
     search_fields = ['username', 'reply', 'calling_station_id', 'called_station_id']
     exclude = ['id']
     ordering = ['-date']
-    autocomplete_fields = ('organization',)
 
 
 @admin.register(RadiusBatch)
@@ -364,7 +360,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         'strategy',
         MultitenantOrgFilter,
     ]
-    autocomplete_fields = ('organization',)
     search_fields = ['name']
     form = RadiusBatchForm
     help_text = {
@@ -630,11 +625,9 @@ if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 if settings.DEBUG:
 
     @admin.register(RadiusToken)
-    class RadiusTokenAdmin(ModelAdmin):
+    class RadiusTokenAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         list_display = ['key', 'user', 'created']
         fields = ['user', 'organization', 'can_auth']
         ordering = ('-created',)
-        autocomplete_fields = (
-            'user',
-            'organization',
-        )
+        list_filter = [MultitenantOrgFilter]
+        autocomplete_fields = ('user',)
