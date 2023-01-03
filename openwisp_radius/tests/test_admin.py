@@ -107,6 +107,20 @@ class TestAdmin(
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
 
+    def test_radiusreply_add_when_organization_field_empty(self):
+        data = dict(
+            username='bob', attribute='Cleartext-Password', op=':=', value='passbob'
+        )
+        url = reverse(f'admin:{self.app_label}_radiusreply_add')
+        self.assertEqual(RadiusReply.objects.count(), 0)
+        # try to post data without an organisation field
+        response = self.client.post(url, data)
+        # response should contain errors
+        self.assertContains(response, 'errors')
+        self.assertContains(response, 'This field is required.')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusReply.objects.count(), 0)
+
     def test_radiusgroupreply_change(self):
         options = dict(
             groupname='students', attribute='Cleartext-Password', op=':=', value='PPP'
@@ -199,6 +213,19 @@ class TestAdmin(
         response = self.client.post(url, data, follow=True)
         self.assertContains(response, 'ok')
         self.assertNotContains(response, 'errors')
+
+    def test_radiuscheck_add_when_organization_field_empty(self):
+        data = self._RADCHECK_ENTRY.copy()
+        data['mode'] = 'custom'
+        url = reverse(f'admin:{self.app_label}_radiuscheck_add')
+        self.assertEqual(RadiusCheck.objects.count(), 0)
+        # try to post data without an organisation field
+        response = self.client.post(url, data)
+        # response should contain errors
+        self.assertContains(response, 'errors')
+        self.assertContains(response, 'This field is required.')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusCheck.objects.count(), 0)
 
     def test_radiusbatch_change(self):
         obj = self._create_radius_batch(
