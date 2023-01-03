@@ -307,6 +307,22 @@ class TestRadiusCheck(BaseTestCase):
         else:
             self.fail('ValidationError not raised')
 
+    def test_radius_check_empty_organization_field(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        with self.assertRaises(ValidationError) as err:
+            self._create_radius_check(
+                user=u,
+                op=':=',
+                attribute='Max-Daily-Session',
+                value='3200',
+                organization=None,
+            )
+        self.assertIn('This field cannot be null.', err.exception.messages)
+
 
 class TestRadiusReply(BaseTestCase):
     def test_string_representation(self):
@@ -415,6 +431,22 @@ class TestRadiusReply(BaseTestCase):
             )
         else:
             self.fail('ValidationError not raised')
+
+    def test_radius_reply_empty_organization_field(self):
+        org1 = self._create_org(**{'name': 'org1', 'slug': 'org1'})
+        u = get_user_model().objects.create(
+            username='test', email='test@test.org', password='test'
+        )
+        self._create_org_user(organization=org1, user=u)
+        with self.assertRaises(ValidationError) as err:
+            self._create_radius_reply(
+                user=u,
+                attribute='Reply-Message',
+                op=':=',
+                value='Login failed',
+                organization=None,
+            )
+        self.assertIn('This field cannot be null.', err.exception.messages)
 
 
 class TestRadiusPostAuth(BaseTestCase):

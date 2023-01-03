@@ -256,8 +256,28 @@ class GroupAttributeValidationMixin(AttributeValidationMixin):
         ) % {'object_name': self._object_name}
 
 
+class OrganizationValitationMixin(object):
+    def _check_organization_field_empty(self):
+        """
+        checks if the `RadiusCheck` or `RadiusReply`
+        `organization` field is empty or not
+        """
+        return not getattr(self, 'organization_id') and (
+            getattr(self, 'user_id') or getattr(self, 'username')
+        )
+
+    def clean(self):
+        if self._check_organization_field_empty():
+            return
+        return super().clean()
+
+
 class AbstractRadiusCheck(
-    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
+    OrgMixin,
+    AutoUsernameMixin,
+    OrganizationValitationMixin,
+    UserAttributeValidationMixin,
+    TimeStampedEditableModel,
 ):
     username = models.CharField(
         verbose_name=_('username'),
@@ -295,7 +315,11 @@ class AbstractRadiusCheck(
 
 
 class AbstractRadiusReply(
-    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
+    OrgMixin,
+    AutoUsernameMixin,
+    OrganizationValitationMixin,
+    UserAttributeValidationMixin,
+    TimeStampedEditableModel,
 ):
     username = models.CharField(
         verbose_name=_('username'),
