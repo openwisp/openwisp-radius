@@ -725,7 +725,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
 
     @mock.patch('openwisp_radius.receivers.send_login_email.delay')
-    def test_accounting_framed_protocol_ppp_send_login_email(self, send_login_email):
+    def test_accounting_start_radius_token_201_ppp(self, send_login_email):
         self._get_org_user()
         self._login_and_obtain_auth_token()
         data = self._prep_start_acct_data()
