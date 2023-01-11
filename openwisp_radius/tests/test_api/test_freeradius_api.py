@@ -724,6 +724,29 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
 
+    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    def test_accounting_start_radius_token_201_ppp(self, send_login_email):
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        data = self._prep_start_acct_data()
+        data.update(username='tester')
+        # set `framed_protocol` to 'PPP'
+        data.update(framed_protocol='PPP')
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        with catch_signal(radius_accounting_success) as handler:
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(data),
+                content_type='application/json',
+            )
+        # assert `send_email_on_new_accounting_handler` is called once
+        handler.assert_called_once()
+        # assert `send_login_email` is not called
+        send_login_email.assert_not_called()
+        self.assertIsNone(response.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
     def test_accounting_start_radius_token_expired_200(self):
         self._get_org_user()
         self._create_radius_token(can_auth=False)

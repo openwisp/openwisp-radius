@@ -19,7 +19,10 @@ def send_email_on_new_accounting_handler(sender, accounting_data, view, **kwargs
     request = view.request
     accounting_data['organization'] = request.auth
     status_type = request.data.get('status_type')
-    if status_type == 'Start':
+    framed_protocol = accounting_data.get('framed_protocol')
+    # don't send login email when the
+    # accounting `framed_protocol` is 'PPP'
+    if status_type == 'Start' and framed_protocol != 'PPP':
         try:
             send_login_email.delay(accounting_data)
         except OperationalError:
