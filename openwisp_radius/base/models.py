@@ -234,12 +234,12 @@ class AttributeValidationMixin(object):
 
 class UserAttributeValidationMixin(AttributeValidationMixin):
     def _get_validation_queryset_kwargs(self):
+        kwargs = dict(user=self.user, attribute=self.attribute)
+        org = getattr(self, 'organization', None)
         # only add `organization` key if it exists
-        if getattr(self, 'organization_id'):
-            return dict(
-                organization=self.organization, user=self.user, attribute=self.attribute
-            )
-        return dict(user=self.user, attribute=self.attribute)
+        if org:
+            kwargs['organization'] = org
+        return kwargs
 
     def _get_error_message(self):
         return _(
@@ -260,10 +260,7 @@ class GroupAttributeValidationMixin(AttributeValidationMixin):
 
 
 class AbstractRadiusCheck(
-    OrgMixin,
-    AutoUsernameMixin,
-    UserAttributeValidationMixin,
-    TimeStampedEditableModel,
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
         verbose_name=_('username'),
@@ -301,10 +298,7 @@ class AbstractRadiusCheck(
 
 
 class AbstractRadiusReply(
-    OrgMixin,
-    AutoUsernameMixin,
-    UserAttributeValidationMixin,
-    TimeStampedEditableModel,
+    OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
         verbose_name=_('username'),
