@@ -234,9 +234,12 @@ class AttributeValidationMixin(object):
 
 class UserAttributeValidationMixin(AttributeValidationMixin):
     def _get_validation_queryset_kwargs(self):
-        return dict(
-            organization=self.organization, user=self.user, attribute=self.attribute
-        )
+        kwargs = dict(user=self.user, attribute=self.attribute)
+        org = getattr(self, 'organization', None)
+        # only add `organization` key if it exists
+        if org:
+            kwargs['organization'] = org
+        return kwargs
 
     def _get_error_message(self):
         return _(
