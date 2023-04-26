@@ -62,9 +62,9 @@ def convert_called_station_id(unique_id=None):
 
 @shared_task(base=OpenwispCeleryTask)
 def send_login_email(accounting_data):
+    from allauth.account.models import EmailAddress
     from sesame.utils import get_query_string
 
-    User = get_user_model()
     Organization = swapper.load_model('openwisp_users', 'Organization')
     username = accounting_data.get('username', None)
     org_uuid = accounting_data.get('organization')
@@ -87,7 +87,11 @@ def send_login_email(accounting_data):
         return
 
     try:
-        user = User.objects.get(username=username)
+        user = (
+            EmailAddress.objects.select_related('user')
+            .get(user__username=username, verified=True, primary=True)
+            .user
+        )
     except ObjectDoesNotExist:
         logger.warning(f'user with username "{username}" does not exists')
         return
