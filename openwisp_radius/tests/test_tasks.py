@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest import mock
 
+from allauth.account.models import EmailAddress
 from celery import Celery
 from celery.contrib.testing.worker import start_worker
 from django.conf import settings
@@ -112,7 +113,7 @@ class TestTasks(FileMixin, BaseTestCase):
 
     @mock.patch('openwisp_radius.tasks.logger')
     @mock.patch('django.utils.translation.activate')
-    @capture_stdout()
+    # @capture_stdout()
     def test_send_login_email(self, translation_activate, logger):
         accounting_data = _RADACCT.copy()
         organization = self._get_org()
@@ -214,6 +215,23 @@ class TestTasks(FileMixin, BaseTestCase):
 
         translation_activate.reset_mock()
         total_mails = len(mail.outbox)
+
+        with self.subTest('user has multiple verified email addresses'):
+            EmailAddress.objects.create(
+                user=user, email='tester-change@example.com', verified=True
+            )
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails + 1)
+
+        translation_activate.reset_mock()
+        total_mails = len(mail.outbox)
+
+        with self.subTest('do not send email to unverified email address'):
+            user.emailaddress_set.update(verified=False)
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+
+        user.emailaddress_set.update(verified=True)
 
         with self.subTest('do not fail if radius_settings missing'):
             organization.radius_settings.delete()
