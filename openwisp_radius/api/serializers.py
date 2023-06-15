@@ -169,7 +169,7 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
 
     def is_valid(self, raise_exception=False):
         try:
-            return super().is_valid(raise_exception)
+            return super().is_valid(raise_exception=raise_exception)
         except serializers.ValidationError as error:
             request = self.context.get('request', None)
             if request:

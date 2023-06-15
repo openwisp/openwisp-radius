@@ -203,3 +203,8 @@ class OpenwispRadiusConfig(ApiAppConfig):
             position=70,
             config={'label': _('RADIUS'), 'items': items, 'icon': 'ow-radius'},
         )
+
+
+del ApiAppConfig
+del AccountConfig
+del SocialAccountConfig

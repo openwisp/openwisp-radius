@@ -265,7 +265,7 @@ class ObtainAuthTokenView(
     UserDetailsUpdaterMixin,
 ):
     throttle_scope = 'obtain_auth_token'
-    serializer_class = rest_auth_settings.TokenSerializer
+    serializer_class = rest_auth_settings.api_settings.TOKEN_SERIALIZER
     auth_serializer_class = AuthTokenSerializer
     authentication_classes = [SesameAuthentication]
 
@@ -383,7 +383,7 @@ class ValidateAuthTokenView(
                     )
                 response = RadiusUserSerializer(user).data
                 context = {'view': self, 'request': request}
-                token_data = rest_auth_settings.TokenSerializer(
+                token_data = rest_auth_settings.api_settings.TOKEN_SERIALIZER(
                     token, context=context
                 ).data
                 token_data['auth_token'] = token_data.pop('key')

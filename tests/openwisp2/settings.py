@@ -268,12 +268,10 @@ CELERY_BEAT_SCHEDULE = {
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'
 OPENWISP_RADIUS_EXTRA_NAS_TYPES = (('cisco', 'Cisco Router'),)
 
-REST_AUTH_SERIALIZERS = {
-    'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer'
-}
-
-REST_AUTH_REGISTER_SERIALIZERS = {
-    'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer'
+REST_AUTH = {
+    'SESSION_LOGIN': False,
+    'PASSWORD_RESET_SERIALIZER': 'openwisp_radius.api.serializers.PasswordResetSerializer',
+    'REGISTER_SERIALIZER': 'openwisp_radius.api.serializers.RegisterSerializer',
 }
 
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = 'email_confirmation_success'
