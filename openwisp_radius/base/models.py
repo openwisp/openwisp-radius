@@ -1112,7 +1112,8 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_(
-            'Additional configuration for SMS backend in JSON format (optional)'
+            'Additional configuration for SMS backend in JSON format'
+            ' (optional, leave blank if unsure)'
         ),
     )
     freeradius_allowed_hosts = FallbackTextField(

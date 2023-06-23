@@ -50,8 +50,8 @@ class Migration(migrations.Migration):
             field=jsonfield.fields.JSONField(
                 blank=True,
                 help_text=(
-                    'Additional configuration for SMS backend '
-                    'in JSON format (optional)'
+                    'Additional configuration for SMS backend in JSON format'
+                    ' (optional, leave blank if unsure)'
                 ),
                 null=True,
             ),
