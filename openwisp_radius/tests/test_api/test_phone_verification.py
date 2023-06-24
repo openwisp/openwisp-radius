@@ -7,6 +7,7 @@ from dateutil import parser
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils import timezone
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 
@@ -182,6 +183,59 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 self.assertIn('Maximum', str(r.data['non_field_errors']))
             else:
                 self.assertEqual(r.status_code, 201)
+
+    @capture_any_output()
+    def test_phone_token_status_401(self):
+        url = reverse('radius:phone_token_status', args=[self.default_org.slug])
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 401)
+
+    @capture_any_output()
+    def test_phone_token_status_200(self):
+        self._register_user()
+        token = Token.objects.last()
+        url = reverse('radius:phone_token_status', args=[self.default_org.slug])
+        with self.subTest('Test no PhoneToken present'):
+            response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'active': False})
+
+        # Create PhoneToken
+        response = self.client.post(
+            reverse('radius:phone_token_create', args=[self.default_org.slug]),
+            HTTP_AUTHORIZATION=f'Bearer {token.key}',
+        )
+        self.assertEqual(response.status_code, 201)
+
+        with self.subTest('Test valid PhoneToken present'):
+            response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'active': True})
+
+        with self.subTest('Test expired PhoneToken present'):
+            with freeze_time(timezone.now() + timedelta(days=1)):
+                response = self.client.get(
+                    url, HTTP_AUTHORIZATION=f'Bearer {token.key}'
+                )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'active': False})
+
+        with self.subTest('Test PhoneToken already verified'):
+            PhoneToken.objects.update(verified=True)
+            response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'active': False})
+
+    @capture_any_output()
+    def test_phone_token_status_400_not_member(self):
+        self.test_create_phone_token_201()
+        OrganizationUser.objects.all().delete()
+        token = Token.objects.last()
+        url = reverse('radius:phone_token_status', args=[self.default_org.slug])
+        r = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {token.key}')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('non_field_errors', r.data)
+        self.assertIn('is not member', str(r.data['non_field_errors']))
 
     @freeze_time(_TEST_DATE)
     @capture_any_output()

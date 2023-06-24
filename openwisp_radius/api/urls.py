@@ -57,6 +57,11 @@ def get_api_urls(api_views=None):
                 name='phone_token_create',
             ),
             path(
+                'radius/organization/<slug:slug>/account/phone/token/active/',
+                api_views.get_phone_token_status,
+                name='phone_token_status',
+            ),
+            path(
                 'radius/organization/<slug:slug>/account/phone/verify/',
                 api_views.validate_phone_token,
                 name='phone_token_validate',

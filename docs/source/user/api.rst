@@ -184,6 +184,7 @@ To override the default API throttling settings, add the following to your ``set
             'obtain_auth_token': None,
             'validate_auth_token': None,
             'create_phone_token': None,
+            'phone_token_status': None,
             'validate_phone_token': None,
             # Relaxed throttling Policy
             'others': '400/hour',
@@ -671,6 +672,26 @@ Used for SMS verification, sends a code via SMS to the phone number of the user.
     /api/v1/radius/organization/<organization-slug>/account/phone/token/
 
 Responds only to **POST**.
+
+No parameters required.
+
+Get active SMS token status
+---------------------------
+
+.. note::
+  This API endpoint will work only if the organization has enabled
+  :ref:`SMS verification <openwisp_radius_sms_verification_enabled>`.
+
+**Requires the user auth token (Bearer Token)**.
+
+Used for SMS verification, allows users to check if a SMS code is
+already generated for their mobile number.
+
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/account/phone/token/active/
+
+Responds only to **GET**.
 
 No parameters required.
 

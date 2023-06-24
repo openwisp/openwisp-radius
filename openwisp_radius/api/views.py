@@ -606,6 +606,44 @@ class CreatePhoneTokenView(
 create_phone_token = CreatePhoneTokenView.as_view()
 
 
+class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
+    throttle_scope = 'phone_token_status'
+    authentication_classes = (BearerAuthentication,)
+    permission_classes = (
+        IsSmsVerificationEnabled,
+        IsAuthenticated,
+    )
+    serializer_class = serializers.Serializer
+
+    @swagger_auto_schema(
+        operation_description=(
+            """
+            **Requires the user auth token (Bearer Token).**
+            Used for SMS verification, allows users to check if
+            a PhoneToken (SMS code) is already generated for
+            their mobile number.
+            """
+        ),
+        responses={200: '`{"active":"true/false"}`'},
+    )
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        self.validate_membership(user)
+        is_active = PhoneToken.objects.filter(
+            user=request.user,
+            phone_number=user.phone_number,
+            valid_until__gte=timezone.now(),
+            verified=False,
+        ).exists()
+        return Response(
+            data={'active': is_active},
+            status=200,
+        )
+
+
+get_phone_token_status = GetPhoneTokenStatusView.as_view()
+
+
 class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
     throttle_scope = 'validate_phone_token'
     authentication_classes = (BearerAuthentication,)
