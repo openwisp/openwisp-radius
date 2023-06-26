@@ -52,7 +52,6 @@ jobs:
       - name: Install openwisp-radius
         run: |
           pip install -e .[saml,openvpn_status]
-          pip install "openwisp-utils[rest,celery] @ https://github.com/openwisp/openwisp-utils/tarball/master"
           pip install ${{ matrix.django-version }}
 
       - name: QA checks
