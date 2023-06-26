@@ -619,9 +619,9 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
         operation_description=(
             """
             **Requires the user auth token (Bearer Token).**
-            Used for SMS verification, allows users to check if
-            a PhoneToken (SMS code) is already generated for
-            their mobile number.
+            Used for SMS verification, allows checking whether an active
+            SMS token was already requested for the mobile phone number
+            of the logged in account.
             """
         ),
         responses={200: '`{"active":"true/false"}`'},
