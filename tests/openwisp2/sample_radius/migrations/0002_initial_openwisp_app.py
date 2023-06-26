@@ -551,6 +551,7 @@ class Migration(migrations.Migration):
                             ' (optional, leave blank if unsure)'
                         ),
                         null=True,
+                        verbose_name='SMS meta data',
                     ),
                 ),
                 (

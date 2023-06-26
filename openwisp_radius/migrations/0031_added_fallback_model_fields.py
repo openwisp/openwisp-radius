@@ -195,6 +195,7 @@ class Migration(migrations.Migration):
                 ),
                 null=True,
                 fallback=app_settings.SMS_VERIFICATION_ENABLED,
+                verbose_name='SMS verification',
             ),
         ),
         migrations.AlterField(

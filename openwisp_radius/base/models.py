@@ -1080,6 +1080,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         default=None,
         help_text=_SMS_VERIFICATION_HELP_TEXT,
         fallback=app_settings.SMS_VERIFICATION_ENABLED,
+        verbose_name=_('SMS verification'),
     )
     needs_identity_verification = FallbackBooleanChoiceField(
         null=True,
@@ -1115,6 +1116,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             'Additional configuration for SMS backend in JSON format'
             ' (optional, leave blank if unsure)'
         ),
+        verbose_name=_('SMS meta data'),
     )
     freeradius_allowed_hosts = FallbackTextField(
         null=True,

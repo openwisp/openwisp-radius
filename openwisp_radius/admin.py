@@ -571,13 +571,10 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'sms_sender',
                     'sms_message',
                     'allowed_mobile_prefixes',
+                    'sms_meta_data',
                 ),
                 'classes': ('org-sms-options',),
             },
-        ),
-        (
-            _('Advanced options'),
-            {'classes': ('collapse',), 'fields': ('sms_meta_data',)},
         ),
     )
 
