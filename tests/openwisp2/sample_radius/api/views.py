@@ -7,6 +7,9 @@ from openwisp_radius.api.views import CreatePhoneTokenView as BaseCreatePhoneTok
 from openwisp_radius.api.views import (
     DownloadRadiusBatchPdfView as BaseDownloadRadiusBatchPdfView,
 )
+from openwisp_radius.api.views import (
+    GetPhoneTokenStatusView as BaseGetPhoneTokenStatusView,
+)
 from openwisp_radius.api.views import ObtainAuthTokenView as BaseObtainAuthTokenView
 from openwisp_radius.api.views import PasswordChangeView as BasePasswordChangeView
 from openwisp_radius.api.views import (
@@ -69,6 +72,10 @@ class CreatePhoneTokenView(BaseCreatePhoneTokenView):
     pass
 
 
+class GetPhoneTokenStatusView(BaseGetPhoneTokenStatusView):
+    pass
+
+
 class ValidatePhoneTokenView(BaseValidatePhoneTokenView):
     pass
 
@@ -93,6 +100,7 @@ password_change = PasswordChangeView.as_view()
 password_reset = PasswordResetView.as_view()
 password_reset_confirm = PasswordResetConfirmView.as_view()
 create_phone_token = CreatePhoneTokenView.as_view()
+get_phone_token_status = GetPhoneTokenStatusView.as_view()
 validate_phone_token = ValidatePhoneTokenView.as_view()
 change_phone_number = ChangePhoneNumberView.as_view()
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()

@@ -42,6 +42,7 @@ class OpenwispRadiusConfig(ApiAppConfig):
             'validate_auth_token': None,
             'create_phone_token': None,
             'validate_phone_token': None,
+            'phone_token_status': None,
             # Relaxed throttling Policy
             'others': default_or_test('400/hour', None),
         },
