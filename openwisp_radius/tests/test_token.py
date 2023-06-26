@@ -1,4 +1,3 @@
-import sys
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -220,11 +219,7 @@ class TestPhoneToken(BaseTestCase):
         )
         radius_settings.save()
         token = self._create_token()
-        if sys.version_info < (3, 8):
-            # TODO: Remove when dropping support for Python 3.7
-            sms_body = sms_message_mock.call_args[1]['body']
-        else:
-            sms_body = sms_message_mock.call_args.kwargs['body']
+        sms_body = sms_message_mock.call_args.kwargs['body']
         self.assertEqual(
             sms_body,
             radius_settings.sms_message.format(

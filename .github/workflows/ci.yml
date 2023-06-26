@@ -23,10 +23,8 @@ jobs:
           - "3.10"
         django-version:
           - django~=3.2.0
-          - django~=4.0.0
-        include:
-          - django-version: django~=3.2.0
-            python-version: 3.7
+          - django~=4.1.0
+          - django~=4.2.0
 
     steps:
       - uses: actions/checkout@v2
@@ -54,6 +52,7 @@ jobs:
       - name: Install openwisp-radius
         run: |
           pip install -e .[saml,openvpn_status]
+          pip install "openwisp-utils[rest,celery] @ https://github.com/openwisp/openwisp-utils/tarball/master"
           pip install ${{ matrix.django-version }}
 
       - name: QA checks

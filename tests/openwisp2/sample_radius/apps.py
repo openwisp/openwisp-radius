@@ -17,3 +17,6 @@ class SampleOpenwispRadiusConfig(OpenwispRadiusConfig):
             dispatch_uid='send_email_on_new_accounting',
         )
         return super().connect_signals()
+
+
+del OpenwispRadiusConfig

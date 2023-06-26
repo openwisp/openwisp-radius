@@ -16,6 +16,3 @@ def get_version():
                 rev = 0
             version = '%s%s%s' % (version, VERSION[3][0:1], rev)
     return version
-
-
-default_app_config = 'openwisp_radius.apps.OpenwispRadiusConfig'

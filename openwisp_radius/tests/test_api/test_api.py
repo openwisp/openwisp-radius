@@ -6,6 +6,9 @@ from unittest import mock
 import swapper
 from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
+from dj_rest_auth.tests.utils import (
+    override_api_settings as override_dj_rest_auth_settings,
+)
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -477,7 +480,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     if (sys.version_info.major, sys.version_info.minor) > (3, 6):
 
-        @override_settings(REST_USE_JWT=True)
+        @override_dj_rest_auth_settings(USE_JWT=True)
         def test_registration_with_jwt(self):
             user_count = User.objects.all().count()
             url = reverse('radius:rest_register', args=[self.default_org.slug])
@@ -491,8 +494,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
             )
             self.assertEqual(r.status_code, 201)
-            self.assertIn('access_token', r.data)
-            self.assertIn('refresh_token', r.data)
+            self.assertIn('access', r.data)
+            self.assertIn('refresh', r.data)
             self.assertEqual(User.objects.all().count(), user_count + 1)
 
     def test_api_batch_add_users(self):
