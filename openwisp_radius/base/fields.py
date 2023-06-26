@@ -65,7 +65,8 @@ class FallbackBooleanChoiceField(FallbackMixin, BooleanField):
                         ),
                         (True, _('Enabled')),
                         (False, _('Disabled')),
-                    ]
+                    ],
+                    attrs={'data-default-value': str(self.fallback)},
                 ),
             }
         )

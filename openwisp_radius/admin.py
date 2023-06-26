@@ -553,14 +553,10 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'saml_registration_enabled',
                     'social_registration_enabled',
                     'needs_identity_verification',
-                    'sms_verification',
                     'first_name',
                     'last_name',
                     'birth_date',
                     'location',
-                    'sms_sender',
-                    'sms_message',
-                    'allowed_mobile_prefixes',
                     'login_url',
                     'status_url',
                     'password_reset_url',
@@ -568,10 +564,25 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
             },
         ),
         (
-            _('Advanced options'),
-            {'classes': ('collapse',), 'fields': ('sms_meta_data',)},
+            _('SMS options'),
+            {
+                'fields': (
+                    'sms_verification',
+                    'sms_sender',
+                    'sms_message',
+                    'allowed_mobile_prefixes',
+                    'sms_meta_data',
+                ),
+                'classes': ('org-sms-options',),
+            },
         ),
     )
+
+    class Media:
+        js = [
+            'admin/js/jquery.init.js',
+            'openwisp-radius/js/organization-setting-inline.js',
+        ]
 
 
 OrganizationAdmin.save_on_top = True
