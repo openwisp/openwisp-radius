@@ -2,7 +2,8 @@
 
 from django.db import migrations
 
-import openwisp_radius.base.fields
+import openwisp_radius
+import openwisp_utils.fields
 from openwisp_radius import settings as app_settings
 
 
@@ -16,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='allowed_mobile_prefixes',
-            field=openwisp_radius.base.fields.FallbackTextField(
+            field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
                 fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
@@ -30,7 +31,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='birth_date',
-            field=openwisp_radius.base.fields.FallbackCharChoiceField(
+            field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -52,7 +53,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='first_name',
-            field=openwisp_radius.base.fields.FallbackCharChoiceField(
+            field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -74,7 +75,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='freeradius_allowed_hosts',
-            field=openwisp_radius.base.fields.FallbackTextField(
+            field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
                 fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
@@ -88,7 +89,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='last_name',
-            field=openwisp_radius.base.fields.FallbackCharChoiceField(
+            field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -110,7 +111,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='location',
-            field=openwisp_radius.base.fields.FallbackCharChoiceField(
+            field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
                     ('disabled', 'Disabled'),
@@ -132,7 +133,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='needs_identity_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -146,7 +147,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='password_reset_url',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_utils.fields.FallbackCharField(
                 blank=True,
                 default=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
@@ -162,7 +163,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -175,7 +176,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='saml_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -189,7 +190,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='sms_verification',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -204,7 +205,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='social_registration_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
@@ -218,7 +219,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizationradiussettings',
             name='sms_message',
-            field=openwisp_radius.base.fields.FallbackTextField(
+            field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 fallback=app_settings.SMS_MESSAGE_TEMPLATE,
                 help_text=(
@@ -233,7 +234,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizationradiussettings',
             name='coa_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=app_settings.COA_ENABLED,

@@ -7,7 +7,6 @@ from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
@@ -881,37 +880,6 @@ class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
                 name='test3', strategy='prefix', prefix='test-prefix16'
             )
             batch.delete()
-
-
-class TestOrganizationRadiusSettings(BaseTestCase):
-    def test_fallback_field_falsy_values(self):
-        org = self._get_org()
-        rad_settings = org.radius_settings
-
-        def _verify_none_database_value(field_name):
-            setattr(rad_settings, field_name, '')
-            rad_settings.full_clean()
-            rad_settings.save()
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    f'SELECT {field_name} FROM'
-                    f' {rad_settings._meta.app_label}_{rad_settings._meta.model_name}'
-                    f' WHERE id = \'{rad_settings.id.hex}\';',
-                )
-                row = cursor.fetchone()
-            self.assertEqual(row[0], None)
-
-        with self.subTest('Test "sms_message" field'):
-            _verify_none_database_value('sms_message')
-
-        with self.subTest('Test "freeradius_allowed_hosts" field'):
-            _verify_none_database_value('freeradius_allowed_hosts')
-
-        with self.subTest('Test "allowed_mobile_prefixes" field'):
-            _verify_none_database_value('allowed_mobile_prefixes')
-
-        with self.subTest('Test "password_reset_url" field'):
-            _verify_none_database_value('password_reset_url')
 
 
 class TestChangeOfAuthorization(BaseTransactionTestCase):

@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-import openwisp_radius.base.fields
+import openwisp_utils.fields
 from openwisp_radius import settings as app_settings
 
 
@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizationradiussettings',
             name='coa_enabled',
-            field=openwisp_radius.base.fields.FallbackBooleanChoiceField(
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=app_settings.COA_ENABLED,
