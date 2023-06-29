@@ -28,6 +28,12 @@ from private_storage.fields import PrivateFileField
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
+from openwisp_utils.fields import (
+    FallbackBooleanChoiceField,
+    FallbackCharChoiceField,
+    FallbackCharField,
+    FallbackTextField,
+)
 
 from .. import exceptions
 from .. import settings as app_settings
@@ -46,12 +52,6 @@ from ..utils import (
     load_model,
     prefix_generate_users,
     validate_csvfile,
-)
-from .fields import (
-    FallbackBooleanChoiceField,
-    FallbackCharChoiceField,
-    FallbackCharField,
-    FallbackTextField,
 )
 from .validators import ipv6_network_validator, password_reset_url_validator
 

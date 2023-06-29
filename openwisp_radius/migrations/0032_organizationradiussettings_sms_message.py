@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-import openwisp_radius.base.fields
+import openwisp_utils.fields
 from openwisp_radius import settings as app_settings
 
 
@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizationradiussettings',
             name='sms_message',
-            field=openwisp_radius.base.fields.FallbackTextField(
+            field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 fallback=app_settings.SMS_MESSAGE_TEMPLATE,
                 help_text=(

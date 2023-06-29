@@ -2,8 +2,8 @@
 
 from django.db import migrations
 
-import openwisp_radius.base.fields
 import openwisp_radius.base.validators
+import openwisp_utils.fields
 from openwisp_radius import settings as app_settings
 
 
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organizationradiussettings',
             name='password_reset_url',
-            field=openwisp_radius.base.fields.FallbackCharField(
+            field=openwisp_utils.fields.FallbackCharField(
                 blank=True,
                 default=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
