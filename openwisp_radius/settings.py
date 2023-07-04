@@ -205,6 +205,7 @@ DEFAULT_COUNTERS = {
     'django.contrib.gis.db.backends.postgis': COUNTERS_POSTGRESQL,
     'django.contrib.gis.db.backends.mysql': COUNTERS_MYSQL,
     'django.contrib.gis.db.backends.spatialite': COUNTERS_SQLITE,
+    'openwisp_utils.db.backends.spatialite': COUNTERS_SQLITE,
 }
 
 try:
