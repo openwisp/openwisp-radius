@@ -243,4 +243,18 @@ class Migration(migrations.Migration):
                 verbose_name='CoA Enabled',
             ),
         ),
+        migrations.AddField(
+            model_name="organizationradiussettings",
+            name="sms_timeout",
+            field=openwisp_utils.fields.FallbackPositiveIntegerField(
+                blank=True,
+                fallback=30,
+                help_text=(
+                    "Time period a user will have to wait before"
+                    " requesting another SMS token (in seconds)."
+                ),
+                null=True,
+                verbose_name="SMS Timeout",
+            ),
+        ),
     ]

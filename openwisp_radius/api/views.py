@@ -46,7 +46,11 @@ from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeVie
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
-from ..exceptions import PhoneTokenException, UserAlreadyVerified
+from ..exceptions import (
+    PhoneTokenException,
+    SmsAttemptTimeoutException,
+    UserAlreadyVerified,
+)
 from ..utils import generate_pdf, get_organization_radius_settings, load_model
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
@@ -599,8 +603,39 @@ class CreatePhoneTokenView(
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({'user': str(e)})
+        org_timeout = self.organization.radius_settings.get_setting('sms_timeout')
+        try:
+            self.enforce_sms_request_timeout(org_timeout, phone_number)
+        except SmsAttemptTimeoutException as e:
+            return Response(
+                {'non_field_errors': [str(e)], 'timeout': e.timeout}, status=400
+            )
         phone_token.save()
-        return Response(None, status=201)
+        return Response(
+            {'timeout': org_timeout},
+            status=201,
+        )
+
+    def enforce_sms_request_timeout(self, timeout, phone_number):
+        # enforce SMS_REQUEST_TIMEOUT
+        datetime_now = timezone.now()
+        last_phone_token = (
+            PhoneToken.objects.filter(
+                user=self.request.user,
+                phone_number=phone_number,
+                created__gt=datetime_now - timezone.timedelta(seconds=timeout),
+            )
+            .only('created')
+            .first()
+        )
+        if last_phone_token:
+            remaining_timeout = timeout - round(
+                (datetime_now - last_phone_token.created).total_seconds()
+            )
+            raise SmsAttemptTimeoutException(
+                _('Wait before requesting another SMS token.'),
+                timeout=remaining_timeout,
+            )
 
 
 create_phone_token = CreatePhoneTokenView.as_view()

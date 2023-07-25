@@ -14,6 +14,7 @@ from rest_framework.authtoken.models import Token
 from openwisp_utils.tests import capture_any_output, capture_stderr, capture_stdout
 
 from ... import settings as app_settings
+from ...api.views import CreatePhoneTokenView
 from ...utils import load_model
 from .. import _TEST_DATE
 from ..mixins import ApiTokenMixin, BaseTestCase
@@ -21,6 +22,7 @@ from ..mixins import ApiTokenMixin, BaseTestCase
 User = get_user_model()
 PhoneToken = load_model('PhoneToken')
 RadiusToken = load_model('RadiusToken')
+OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 
@@ -169,7 +171,11 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @freeze_time(_TEST_DATE)
     @capture_any_output()
-    def test_create_phone_token_400_limit_reached(self):
+    @mock.patch.object(
+        CreatePhoneTokenView,
+        'enforce_sms_request_timeout',
+    )
+    def test_create_phone_token_400_limit_reached(self, *args):
         self._register_user()
         token = Token.objects.last()
         token_header = f'Bearer {token.key}'
@@ -183,6 +189,30 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 self.assertIn('Maximum', str(r.data['non_field_errors']))
             else:
                 self.assertEqual(r.status_code, 201)
+
+    @capture_any_output()
+    def test_create_phone_token_400_sms_request_timeout(self):
+        start_time = timezone.now()
+        self._register_user()
+        token = Token.objects.last()
+        token_header = f'Bearer {token.key}'
+        url = reverse('radius:phone_token_create', args=[self.default_org.slug])
+        with freeze_time(start_time):
+            response = self.client.post(url, HTTP_AUTHORIZATION=token_header)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.data['timeout'],
+            self.default_org.radius_settings.get_setting('sms_timeout'),
+        )
+
+        with freeze_time(start_time + timedelta(seconds=15)):
+            response = self.client.post(url, HTTP_AUTHORIZATION=token_header)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['timeout'], 15)
+        self.assertEqual(
+            response.data['non_field_errors'],
+            ['Wait before requesting another SMS token.'],
+        )
 
     @capture_any_output()
     def test_phone_token_status_401(self):

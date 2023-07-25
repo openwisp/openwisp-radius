@@ -49,6 +49,10 @@ msgstr "Не найдено проверочного код для этого п
 msgid "Invalid code."
 msgstr "Неверный код."
 
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Подождите, прежде чем запрашивать другой SMS-токен."
+
 #: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
 #: openwisp_radius/base/models.py:883
 msgid "This field cannot be blank."

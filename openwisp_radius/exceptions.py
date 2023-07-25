@@ -10,6 +10,16 @@ class MaxAttemptsException(PhoneTokenException):
     pass
 
 
+class SmsAttemptTimeoutException(PhoneTokenException):
+    def __init__(
+        self,
+        *args,
+        timeout=None,
+    ):
+        self.timeout = timeout
+        super().__init__(*args)
+
+
 class ExpiredTokenException(PhoneTokenException):
     pass
 
