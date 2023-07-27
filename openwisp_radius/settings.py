@@ -91,7 +91,7 @@ SMS_TOKEN_LENGTH = get_settings_value('SMS_TOKEN_LENGTH', 6)
 SMS_TOKEN_HASH_ALGORITHM = get_settings_value('SMS_TOKEN_HASH_ALGORITHM', 'sha256')
 SMS_TOKEN_MAX_ATTEMPTS = get_settings_value('SMS_TOKEN_MAX_ATTEMPTS', 5)
 SMS_TOKEN_MAX_USER_DAILY = get_settings_value('SMS_TOKEN_MAX_USER_DAILY', 5)
-SMS_REQUEST_TIMEOUT = get_settings_value('SMS_REQUEST_TIMEOUT', 30)
+SMS_COOLDOWN = get_settings_value('SMS_COOLDOWN', 30)
 # default is high because openwisp-wifi-login-pages results always as 1 IP
 SMS_TOKEN_MAX_IP_DAILY = get_settings_value('SMS_TOKEN_MAX_IP_DAILY', 999)
 ALLOWED_MOBILE_PREFIXES = get_settings_value('ALLOWED_MOBILE_PREFIXES', [])

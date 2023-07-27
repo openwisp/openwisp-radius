@@ -10,13 +10,13 @@ class MaxAttemptsException(PhoneTokenException):
     pass
 
 
-class SmsAttemptTimeoutException(PhoneTokenException):
+class SmsAttemptCooldownException(PhoneTokenException):
     def __init__(
         self,
         *args,
-        timeout=None,
+        cooldown=None,
     ):
-        self.timeout = timeout
+        self.cooldown = cooldown
         super().__init__(*args)
 
 

@@ -571,7 +571,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'sms_sender',
                     'sms_message',
                     'allowed_mobile_prefixes',
-                    'sms_timeout',
+                    'sms_cooldown',
                     'sms_meta_data',
                 ),
                 'classes': ('org-sms-options',),

@@ -416,8 +416,8 @@ or Cameroon (``+237``).
     which have :ref:`enabled the SMS verification option
     <openwisp_radius_sms_verification_enabled>`.
 
-``OPENWISP_RADIUS_SMS_REQUEST_TIMEOUT``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_SMS_COOLDOWN``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``30``
 
@@ -428,7 +428,7 @@ For example:
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_SMS_REQUEST_TIMEOUT = 60
+    OPENWISP_RADIUS_SMS_COOLDOWN = 60
 
 .. note::
 

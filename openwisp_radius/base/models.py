@@ -1110,15 +1110,15 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         ),
         fallback=app_settings.SMS_MESSAGE_TEMPLATE,
     )
-    sms_timeout = FallbackPositiveIntegerField(
-        _('SMS Timeout'),
+    sms_cooldown = FallbackPositiveIntegerField(
+        _('SMS Cooldown'),
         blank=True,
         null=True,
         help_text=_(
             'Time period a user will have to wait before requesting'
             ' another SMS token (in seconds).'
         ),
-        fallback=app_settings.SMS_REQUEST_TIMEOUT,
+        fallback=app_settings.SMS_COOLDOWN,
     )
     sms_meta_data = JSONField(
         null=True,

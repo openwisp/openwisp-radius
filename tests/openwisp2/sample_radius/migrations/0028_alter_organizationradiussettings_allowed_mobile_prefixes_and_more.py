@@ -245,7 +245,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="organizationradiussettings",
-            name="sms_timeout",
+            name="sms_cooldown",
             field=openwisp_utils.fields.FallbackPositiveIntegerField(
                 blank=True,
                 fallback=30,
@@ -254,7 +254,7 @@ class Migration(migrations.Migration):
                     " requesting another SMS token (in seconds)."
                 ),
                 null=True,
-                verbose_name="SMS Timeout",
+                verbose_name="SMS Cooldown",
             ),
         ),
     ]

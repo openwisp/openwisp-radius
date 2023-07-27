@@ -173,7 +173,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     @mock.patch.object(
         CreatePhoneTokenView,
-        'enforce_sms_request_timeout',
+        'enforce_sms_request_cooldown',
     )
     def test_create_phone_token_400_limit_reached(self, *args):
         self._register_user()
@@ -191,7 +191,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 self.assertEqual(r.status_code, 201)
 
     @capture_any_output()
-    def test_create_phone_token_400_sms_request_timeout(self):
+    def test_create_phone_token_400_sms_request_cooldown(self):
         start_time = timezone.now()
         self._register_user()
         token = Token.objects.last()
@@ -201,17 +201,26 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
             response = self.client.post(url, HTTP_AUTHORIZATION=token_header)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
-            response.data['timeout'],
-            self.default_org.radius_settings.get_setting('sms_timeout'),
+            response.data['cooldown'],
+            self.default_org.radius_settings.get_setting('sms_cooldown'),
         )
 
         with freeze_time(start_time + timedelta(seconds=15)):
             response = self.client.post(url, HTTP_AUTHORIZATION=token_header)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data['timeout'], 15)
+        self.assertEqual(response.data['cooldown'], 15)
         self.assertEqual(
             response.data['non_field_errors'],
             ['Wait before requesting another SMS token.'],
+        )
+
+        # PhoneToken is returned after the cooldown
+        with freeze_time(start_time + timedelta(seconds=31)):
+            response = self.client.post(url, HTTP_AUTHORIZATION=token_header)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.data['cooldown'],
+            self.default_org.radius_settings.get_setting('sms_cooldown'),
         )
 
     @capture_any_output()

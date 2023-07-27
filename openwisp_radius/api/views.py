@@ -48,7 +48,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import settings as app_settings
 from ..exceptions import (
     PhoneTokenException,
-    SmsAttemptTimeoutException,
+    SmsAttemptCooldownException,
     UserAlreadyVerified,
 )
 from ..utils import generate_pdf, get_organization_radius_settings, load_model
@@ -603,38 +603,38 @@ class CreatePhoneTokenView(
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({'user': str(e)})
-        org_timeout = self.organization.radius_settings.get_setting('sms_timeout')
+        org_cooldown = self.organization.radius_settings.get_setting('sms_cooldown')
         try:
-            self.enforce_sms_request_timeout(org_timeout, phone_number)
-        except SmsAttemptTimeoutException as e:
+            self.enforce_sms_request_cooldown(org_cooldown, phone_number)
+        except SmsAttemptCooldownException as e:
             return Response(
-                {'non_field_errors': [str(e)], 'timeout': e.timeout}, status=400
+                {'non_field_errors': [str(e)], 'cooldown': e.cooldown}, status=400
             )
         phone_token.save()
         return Response(
-            {'timeout': org_timeout},
+            {'cooldown': org_cooldown},
             status=201,
         )
 
-    def enforce_sms_request_timeout(self, timeout, phone_number):
-        # enforce SMS_REQUEST_TIMEOUT
+    def enforce_sms_request_cooldown(self, cooldown, phone_number):
+        # enforce SMS_COOLDOWN
         datetime_now = timezone.now()
         last_phone_token = (
             PhoneToken.objects.filter(
                 user=self.request.user,
                 phone_number=phone_number,
-                created__gt=datetime_now - timezone.timedelta(seconds=timeout),
+                created__gt=datetime_now - timezone.timedelta(seconds=cooldown),
             )
             .only('created')
             .first()
         )
         if last_phone_token:
-            remaining_timeout = timeout - round(
+            remaining_cooldown = cooldown - round(
                 (datetime_now - last_phone_token.created).total_seconds()
             )
-            raise SmsAttemptTimeoutException(
+            raise SmsAttemptCooldownException(
                 _('Wait before requesting another SMS token.'),
-                timeout=remaining_timeout,
+                cooldown=remaining_cooldown,
             )
 
 
