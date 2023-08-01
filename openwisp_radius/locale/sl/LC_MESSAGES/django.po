@@ -54,6 +54,10 @@ msgstr "Za tega uporabnika ni potrditvene kode."
 msgid "Invalid code."
 msgstr "Neveljavna koda."
 
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Počakajte, preden zahtevate nov žeton SMS."
+
 #: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
 #: openwisp_radius/base/models.py:883
 msgid "This field cannot be blank."

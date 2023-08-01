@@ -216,7 +216,7 @@ for RADIUS attribute mapping.
 
     A `default dictionary <https://github.com/openwisp/openwisp-radius/blob/master/openwisp_radius/radclient/dictionary>`_
     is shipped with openwisp-radius. Any dictionary added using this setting
-    will be used alongside the default dictionary. 
+    will be used alongside the default dictionary.
 
 ``OPENWISP_RADIUS_MAX_CSV_FILE_SIZE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -409,6 +409,26 @@ For example:
 
 Using the setting above will only allow phone numbers from the UK (``+44``)
 or Cameroon (``+237``).
+
+.. note::
+
+    This setting is applicable only for organizations
+    which have :ref:`enabled the SMS verification option
+    <openwisp_radius_sms_verification_enabled>`.
+
+``OPENWISP_RADIUS_SMS_COOLDOWN``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``30``
+
+This setting is used to specify time (in seconds) a user needs to wait before
+re-requesting a SMS token.
+
+For example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_SMS_COOLDOWN = 60
 
 .. note::
 

@@ -32,6 +32,7 @@ from openwisp_utils.fields import (
     FallbackBooleanChoiceField,
     FallbackCharChoiceField,
     FallbackCharField,
+    FallbackPositiveIntegerField,
     FallbackTextField,
 )
 
@@ -1108,6 +1109,16 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             ' Must contain "{code}" placeholder for OTP value.'
         ),
         fallback=app_settings.SMS_MESSAGE_TEMPLATE,
+    )
+    sms_cooldown = FallbackPositiveIntegerField(
+        _('SMS Cooldown'),
+        blank=True,
+        null=True,
+        help_text=_(
+            'Time period a user will have to wait before requesting'
+            ' another SMS token (in seconds).'
+        ),
+        fallback=app_settings.SMS_COOLDOWN,
     )
     sms_meta_data = JSONField(
         null=True,

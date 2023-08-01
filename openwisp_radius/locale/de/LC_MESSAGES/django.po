@@ -54,6 +54,10 @@ msgstr "Es wurde kein Verifizierungscode für diesen Benutzer im System gefunden
 msgid "Invalid code."
 msgstr "Ungültiger Code."
 
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Warten Sie, bevor Sie ein weiteres SMS-Token anfordern."
+
 #: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
 #: openwisp_radius/base/models.py:883
 msgid "This field cannot be blank."
