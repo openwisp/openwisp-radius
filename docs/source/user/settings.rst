@@ -416,6 +416,17 @@ or Cameroon (``+237``).
     which have :ref:`enabled the SMS verification option
     <openwisp_radius_sms_verification_enabled>`.
 
+``OPENWISP_RADIUS_ALLOW_FIXED_LINE_OR_MOBILE``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+OpenWISP RADIUS only allow using mobile phone numbers for user registration.
+This can cause issues in regions where fixed line and mobile phone numbers
+ uses the same pattern (e.g. USA). Setting the value to ``True``
+would make phone number type checking less strict.
+
+
 ``OPENWISP_RADIUS_SMS_COOLDOWN``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
