@@ -1,4 +1,5 @@
 import logging
+import random
 import uuid
 from urllib.parse import urlparse
 
@@ -53,7 +54,8 @@ def captive_portal_login(request):
             session_id=id_,
             nas_ip_address='127.0.0.1',
             calling_station_id='00:00:00:00:00:00',
-            called_station_id='11:00:00:00:00:11',
+            # called_station_id='E8:48:B8:80:24:BC',
+            called_station_id='11:22:33:44:55:66',
             session_time=0,
             input_octets=0,
             output_octets=0,
@@ -81,6 +83,8 @@ def captive_portal_logout(request):
                 terminate_cause='User-Request',
                 nas_ip_address='127.0.0.1',
                 unique_id=session_id,
+                input_octets=random.randint(20, 50) * 100000,
+                output_octets=random.randint(20, 50) * 100000,
             )
             post_accounting_data(request, data)
             logger.info(

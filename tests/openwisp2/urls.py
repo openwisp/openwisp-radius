@@ -29,6 +29,8 @@ else:
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('openwisp_controller.urls')),
+    path('', include('openwisp_monitoring.urls')),
     path('api/v1/', include('openwisp_utils.api.urls')),
     path('api/v1/', include('openwisp_users.api.urls')),
     path('accounts/', include('openwisp_users.accounts.urls')),
@@ -46,3 +48,8 @@ urlpatterns = [
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += staticfiles_urlpatterns()
+
+if settings.DEBUG and 'debug_toolbar' in settings.INSTALLED_APPS:
+    import debug_toolbar
+
+    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))

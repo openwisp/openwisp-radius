@@ -1,0 +1,38 @@
+{% extends "admin/config/device/change_form.html" %}
+{% load i18n %}
+
+{% block inline_field_sets %}
+{{ block.super }}
+{% comment %}
+RadiusAccounting model does not have a ForeignKey to Device object.
+Therefore, RadiusAccounting inline is added using HTML and JS.
+{% endcomment %}
+{% if not add %}
+<div class="js-inline-admin-formset inline-group" id="radius-sessions">
+    <div id="no-session-msg"><h3>{% trans "There are no RADIUS sessions for this device." %}</h3></div>
+    <div class="tabular inline-related">
+        <fieldset class="module">.
+            <h2>{% trans 'RADIUS Sessions' %}</h2>
+            <table id="device-radius-sessions-table" class="hide">
+                <thead>
+                    <th>{% trans "session ID" %}</th>
+                    <th>{% trans "username" %}</th>
+                    <th>{% trans "input octets" %}</th>
+                    <th>{% trans "ouput octets" %}</th>
+                    <th>{% trans "called station ID" %}</th>
+                    <th>{% trans "start time" %}</th>
+                    <th>{% trans "stop time" %}</th>
+                </thead>
+                <tbody id="radius-session-tbody"></tbody>
+            </table>
+        </fieldset>
+    <div id="view-all-radius-session-wrapper" class="hide"><a class="button">{% trans "View all RADIUS Sessions" %}</a></div>
+    </div>
+</div>
+<script>
+    const radiusAccountingApiEndpoint = "{{ radius_accounting_api_endpoint }}";
+    const radiusAccountingAdminPath = "{{ radius_accounting }}";
+</script>
+{% endif %}
+{% endblock %}
+<script>alert('from the template')</script>

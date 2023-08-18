@@ -1,0 +1,82 @@
+(function ($) {
+    'use strict';
+    const viewAllSessionMsg = gettext('View all RADIUS Sessions');
+    const onlineMsg = gettext('online');
+    const radiusSessionAdminPath = '/admin/openwisp_radius/radiusaccounting/'
+    $(document).ready(function () {
+        if (!$('#radius-sessions').length) {
+            return;
+        }
+        let deviceMac = encodeURIComponent($('#id_mac_address').val()),
+            apiEndpoint = `${radiusAccountingApiEndpoint}?called_station_id=${deviceMac}`;
+
+        function getFormattedDateTimeString(dateTimeString) {
+            // Strip the timezone from the dateTimeString.
+            // THis is done to show the time in server's timezone
+            // because RadiusAccounting also shows the time in server's timezone.
+            let strippedDateTime = new Date(dateTimeString.substring(0, dateTimeString.lastIndexOf('-'))),
+                formattedDate = strippedDateTime.strftime('%d %b %Y, %I:%M %p');
+
+            return formattedDate.replace(/AM/g, 'a.m.').replace(/PM/g, 'p.m.');
+        }
+
+        function fetchRadiusSessions() {
+            if ($('#radius-session-tbody').children().length) {
+                return;
+            }
+            $.ajax({
+                type: 'GET',
+                url: apiEndpoint,
+                xhrFields: {
+                    withCredentials: true
+                },
+                crossDomain: true,
+                beforeSend: function() {
+                    $('#loading-overlay').show();
+                },
+                complete: function () {
+                    $('#loading-overlay').fadeOut(250);
+                },
+                success: function (response) {
+                    if (response.length === 0) {
+                        return;
+                    }
+                    $('#no-session-msg').hide()
+                    $('#device-radius-sessions-table').show()
+                    $('#view-all-radius-session-wrapper').show()
+                    response.forEach(element => {
+                        element.start_time = getFormattedDateTimeString(element.start_time)
+                        if (!element.stop_time) {
+                            element.stop_time = `<strong>${onlineMsg}</strong>`;
+                        } else {
+                            element.stop_time = getFormattedDateTimeString(element.stop_time);
+                        }
+                        $('#radius-session-tbody').append(
+                            `<tr>
+                                <td><p>${element.session_id}</p></td>
+                                <td><p>${element.username}</p></td>
+                                <td><p>${element.input_octets}</p></td>
+                                <td><p>${element.output_octets}</p></td>
+                                <td><p>${element.called_station_id}</p></td>
+                                <td><p>${element.start_time}</p></td>
+                                <td><p>${element.stop_time}</p></td>
+                            </tr>`
+                        );
+                    });
+                }
+            })
+        }
+        $(document).on('tabshown', function (e) {
+            if (e.tabId === '#radius-sessions') {
+                fetchRadiusSessions()
+            }
+        });
+        if (window.location.hash == '#radius-sessions') {
+            $.event.trigger({
+                type: 'tabshown',
+                tabId: window.location.hash,
+            });
+        }
+        $('#view-all-radius-session-wrapper a').attr('href', `${radiusAccountingAdminPath}?called_station_id=${deviceMac}`)
+    });
+}(django.jQuery));
