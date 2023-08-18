@@ -643,8 +643,8 @@ If this is enabled, each registered user should be verified using a verification
 The following choices are available by default:
 
 - ``''`` (empty string): unspecified
-- ``manual``: manually created
-- ``email``: Email (No Identity Verification)
+- ``manual``: Manually created
+- ``email``: Email
 - ``mobile_phone``: Mobile phone number
   :ref:`verification via SMS <openwisp_radius_sms_verification_enabled>`
 - ``social_login``: :ref:`social login feature <social_login>`
