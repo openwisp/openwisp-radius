@@ -1,11 +1,17 @@
+import csv
+
+from django.core.files.temp import NamedTemporaryFile
+from django.core.management import call_command
 from django.urls import reverse
 
 from openwisp_users.tests.test_admin import TestBasicUsersIntegration
+from openwisp_utils.tests import capture_stdout
 
 from ..utils import load_model
 from .mixins import GetEditFormInlineMixin
 
 RadiusToken = load_model('RadiusToken')
+RegisteredUser = load_model('RegisteredUser')
 
 
 class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
@@ -73,6 +79,26 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         response = self.client.post(url, params, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(RadiusToken.objects.count(), 0)
+
+    @capture_stdout()
+    def test_export_users_command(self):
+        temp_file = NamedTemporaryFile(delete=False)
+        user = self._create_org_user().user
+        RegisteredUser.objects.create(
+            user=user, method='mobile_phone', is_verified=False
+        )
+        with self.assertNumQueries(1):
+            call_command('export_users', filename=temp_file.name)
+
+        with open(temp_file.name, 'r') as file:
+            csv_reader = csv.reader(file)
+            csv_data = list(csv_reader)
+
+        self.assertEqual(len(csv_data), 2)
+        self.assertIn('registered_user.method', csv_data[0])
+        self.assertIn('registered_user.is_verified', csv_data[0])
+        self.assertEqual(csv_data[1][-2], 'mobile_phone')
+        self.assertEqual(csv_data[1][-1], 'False')
 
 
 del TestBasicUsersIntegration

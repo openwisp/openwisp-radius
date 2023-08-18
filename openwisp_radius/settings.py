@@ -223,3 +223,15 @@ for counter_path in _counters:
     except ImportError as e:  # pragma: no cover
         raise ImproperlyConfigured(str(e))
     COUNTERS.append(counter_class)
+
+
+# Extend the EXPORT_USERS_COMMAND_CONFIG[fields]
+if not hasattr(settings, 'OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG'):
+    from openwisp_users import settings as ow_users_settings
+
+    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG['fields'].extend(
+        ['registered_user.method', 'registered_user.is_verified']
+    )
+    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG['select_related'].extend(
+        ['registered_user']
+    )
