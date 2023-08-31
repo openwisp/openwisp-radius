@@ -61,6 +61,7 @@ jobs:
       - name: Tests
         run: |
           coverage run --source=openwisp_radius runtests.py
+          MONITORING_INTEGRATION=1 coverage run --append --source=openwisp_radius runtests.py
           # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
           SAMPLE_APP=1 ./runtests.py --parallel --keepdb
 

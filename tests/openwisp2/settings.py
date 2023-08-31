@@ -24,7 +24,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    'django.contrib.gis',
     # all-auth
     'django.contrib.sites',
     # overrides allauth templates
@@ -36,21 +35,13 @@ INSTALLED_APPS = [
     'django_extensions',
     # openwisp2 modules
     'openwisp_users',
-    'openwisp_controller.pki',
-    'openwisp_controller.config',
-    'openwisp_controller.geo',
-    'openwisp_controller.connection',
-    'openwisp_ipam',
-    'openwisp_monitoring.monitoring',
-    'openwisp_monitoring.device',
-    'openwisp_monitoring.check',
-    'nested_admin',
-    'openwisp_notifications',
-    'flat_json_widget',
     'dj_rest_auth',
     'dj_rest_auth.registration',
+    # social login
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.google',
+    # openwisp radius
     'openwisp_radius',
-    'openwisp_radius.integrations.monitoring',
     # openwisp2 admin theme
     # (must be loaded here)
     'openwisp_utils.admin_theme',
@@ -59,17 +50,13 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.forms',
     # other dependencies
-    'sortedm2m',
-    'reversion',
-    'leaflet',
     'rest_framework',
-    'rest_framework_gis',
     'rest_framework.authtoken',
     'django_filters',
     'private_storage',
     'drf_yasg',
-    'import_export',
-    'channels',
+    'openwisp2.integrations',
+    'djangosaml2',
     # 'debug_toolbar',
 ]
 
@@ -128,7 +115,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'openwisp_utils.admin_theme.context_processor.menu_groups',
-                'openwisp_notifications.context_processors.notification_api_settings',
             ],
         },
     }
@@ -239,7 +225,7 @@ OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
     ),
 }
 
-if TESTING:
+if not TESTING:
     CELERY_BROKER_URL = os.getenv('REDIS_URL', f'redis://{redis_host}/1')
 else:
     OPENWISP_RADIUS_GROUPCHECK_ADMIN = True
@@ -324,36 +310,84 @@ else:
 
 OPENWISP_USERS_AUTH_API = True
 
-TIMESERIES_DATABASE = {
-    'BACKEND': 'openwisp_monitoring.db.backends.influxdb',
-    'USER': 'openwisp',
-    'PASSWORD': 'openwisp',
-    'NAME': 'openwisp2',
-    'HOST': os.getenv('INFLUXDB_HOST', 'localhost'),
-    'PORT': '8086',
-    # UDP writes are disabled by default
-    'OPTIONS': {'udp_writes': False, 'udp_port': 8089},
-}
-EXTENDED_APPS = ['django_x509', 'django_loci']
+if os.environ.get('MONITORING_INTEGRATION', False):
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('django.contrib.sites'),
+        'django.contrib.gis',
+    )
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('openwisp_radius') + 1,
+        'openwisp_radius.integrations.monitoring',
+    )
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('rest_framework.authtoken'), 'rest_framework_gis'
+    )
+    INSTALLED_APPS.append('channels')
+    dj_rest_auth_index = INSTALLED_APPS.index('dj_rest_auth')
+    INSTALLED_APPS = (
+        INSTALLED_APPS[:dj_rest_auth_index]
+        + [
+            'openwisp_controller.pki',
+            'openwisp_controller.config',
+            'openwisp_controller.geo',
+            'openwisp_controller.connection',
+            'openwisp_monitoring.monitoring',
+            'openwisp_monitoring.device',
+            'openwisp_monitoring.check',
+            'nested_admin',
+            'openwisp_notifications',
+            'flat_json_widget',
+            'openwisp_ipam',
+            'sortedm2m',
+            'reversion',
+            'leaflet',
+            'import_export',
+        ]
+        + INSTALLED_APPS[dj_rest_auth_index:]
+    )
+    TEMPLATES[0]['OPTIONS']['context_processors'].append(
+        'openwisp_notifications.context_processors.notification_api_settings'
+    )
 
-ASGI_APPLICATION = 'openwisp2.routing.application'
-if TESTING:
-    CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
-else:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {'hosts': [f'redis://{redis_host}/7']},
-        }
+    TIMESERIES_DATABASE = {
+        'BACKEND': 'openwisp_monitoring.db.backends.influxdb',
+        'USER': 'openwisp',
+        'PASSWORD': 'openwisp',
+        'NAME': 'openwisp2',
+        'HOST': os.getenv('INFLUXDB_HOST', 'localhost'),
+        'PORT': '8086',
     }
+    EXTENDED_APPS = ['django_x509', 'django_loci']
 
+    ASGI_APPLICATION = 'openwisp2.routing.application'
+    if TESTING:
+        CHANNEL_LAYERS = {
+            'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}
+        }
+    else:
+        CHANNEL_LAYERS = {
+            'default': {
+                'BACKEND': 'channels_redis.core.RedisChannelLayer',
+                'CONFIG': {'hosts': [f'redis://{redis_host}/7']},
+            }
+        }
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': 'redis://127.0.0.1:6379/6',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                },
+            }
+        }
+print(INSTALLED_APPS)
 
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')
     INSTALLED_APPS.remove('openwisp_users')
     INSTALLED_APPS.append('openwisp2.sample_radius')
     INSTALLED_APPS.append('openwisp2.sample_users')
-    # EXTENDED_APPS = ('openwisp_radius', 'openwisp_users')
+    EXTENDED_APPS = ('openwisp_radius', 'openwisp_users')
     AUTH_USER_MODEL = 'sample_users.User'
     OPENWISP_USERS_GROUP_MODEL = 'sample_users.Group'
     OPENWISP_USERS_ORGANIZATION_MODEL = 'sample_users.Organization'
@@ -408,14 +442,3 @@ except ImportError:
     pass
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
-
-if not TESTING:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': 'redis://127.0.0.1:6379/6',
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
-        }
-    }
