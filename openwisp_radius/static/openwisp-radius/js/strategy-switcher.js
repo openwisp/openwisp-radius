@@ -35,7 +35,7 @@
             }
         }
 
-        strategy.change(function (e) {
+        strategy.change(function () {
             if (strategy.val() === 'prefix') {
                 prefix_strategy();
             } else if (strategy.val() === 'csv') {

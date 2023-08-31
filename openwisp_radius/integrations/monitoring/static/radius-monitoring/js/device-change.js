@@ -1,27 +1,29 @@
 (function ($) {
     'use strict';
-    const viewAllSessionMsg = gettext('View all RADIUS Sessions');
+
     const onlineMsg = gettext('online');
-    const radiusSessionAdminPath = '/admin/openwisp_radius/radiusaccounting/'
+
     $(document).ready(function () {
         if (!$('#radius-sessions').length) {
+            // RADIUS sessions tab should not appear on Device add page.
             return;
         }
-        let deviceMac = encodeURIComponent($('#id_mac_address').val()),
+        const deviceMac = encodeURIComponent($('#id_mac_address').val()),
             apiEndpoint = `${radiusAccountingApiEndpoint}?called_station_id=${deviceMac}`;
 
         function getFormattedDateTimeString(dateTimeString) {
             // Strip the timezone from the dateTimeString.
-            // THis is done to show the time in server's timezone
-            // because RadiusAccounting also shows the time in server's timezone.
+            // This is done to show the time in server's timezone
+            // because RadiusAccounting admin also shows the time in server's timezone.
             let strippedDateTime = new Date(dateTimeString.substring(0, dateTimeString.lastIndexOf('-'))),
                 formattedDate = strippedDateTime.strftime('%d %b %Y, %I:%M %p');
-
             return formattedDate.replace(/AM/g, 'a.m.').replace(/PM/g, 'p.m.');
         }
 
         function fetchRadiusSessions() {
             if ($('#radius-session-tbody').children().length) {
+                // Don't fetch if RADIUS sessions are already present
+                // in the table
                 return;
             }
             $.ajax({
@@ -41,11 +43,11 @@
                     if (response.length === 0) {
                         return;
                     }
-                    $('#no-session-msg').hide()
-                    $('#device-radius-sessions-table').show()
-                    $('#view-all-radius-session-wrapper').show()
+                    $('#no-session-msg').hide();
+                    $('#device-radius-sessions-table').show();
+                    $('#view-all-radius-session-wrapper').show();
                     response.forEach(element => {
-                        element.start_time = getFormattedDateTimeString(element.start_time)
+                        element.start_time = getFormattedDateTimeString(element.start_time);
                         if (!element.stop_time) {
                             element.stop_time = `<strong>${onlineMsg}</strong>`;
                         } else {
@@ -64,11 +66,11 @@
                         );
                     });
                 }
-            })
+            });
         }
         $(document).on('tabshown', function (e) {
             if (e.tabId === '#radius-sessions') {
-                fetchRadiusSessions()
+                fetchRadiusSessions();
             }
         });
         if (window.location.hash == '#radius-sessions') {
@@ -77,6 +79,6 @@
                 tabId: window.location.hash,
             });
         }
-        $('#view-all-radius-session-wrapper a').attr('href', `${radiusAccountingAdminPath}?called_station_id=${deviceMac}`)
+        $('#view-all-radius-session-wrapper a').attr('href', `${radiusAccountingAdminPath}?called_station_id=${deviceMac}`);
     });
 }(django.jQuery));
