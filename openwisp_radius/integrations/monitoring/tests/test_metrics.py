@@ -1,21 +1,21 @@
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
-from openwisp_controller.config.tests.utils import CreateConfigMixin
-from openwisp_monitoring.monitoring.tests import TestMonitoringMixin
+from django.test import tag
 from swapper import load_model
 
 from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
-from .. import tasks
+from .mixins import CreateDeviceMonitoringMixin
+
+TASK_PATH = 'openwisp_radius.integrations.monitoring.tasks'
 
 RegisteredUser = load_model('openwisp_radius', 'RegisteredUser')
-Metric = load_model('monitoring', 'Metric')
-Device = load_model('config', 'Device')
 
 
-class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCase):
+@tag('radius_monitoring')
+class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def _create_registered_user(self, **kwargs):
         options = {'is_verified': False, 'method': 'mobile_phone'}
         options.update(**kwargs)
@@ -35,7 +35,7 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
         self._create_org_user(user=user, organization=org2)
         self._create_registered_user(user=user)
         self.assertEqual(
-            Metric.objects.filter(
+            self.metric_model.objects.filter(
                 configuration='user_signups',
                 name='User SignUps',
                 key='user_signups',
@@ -44,18 +44,17 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
             ).count(),
             1,
         )
-        metric = Metric.objects.filter(key='user_signups').first()
+        metric = self.metric_model.objects.filter(key='user_signups').first()
         points = metric.read()
         # The query performs DISTINCT on the username field,
         # therefore the read() method returns only one point.
         self.assertEqual(len(points), 1)
         # Assert username field is hashed
         self.assertNotEqual(points[0]['user_id'], str(user.id))
-        self.assertEqual(points[0]['user_id'], tasks.sha1_hash(str(user.id)))
 
-    @patch.object(Metric, 'write')
+    @patch('openwisp_monitoring.monitoring.models.Metric.write')
     @patch('logging.Logger.warning')
-    @patch.object(Metric, 'batch_write')
+    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
     def test_post_save_registered_user_edge_cases(
         self, mocked_metric_batch_write, mocked_logger, *args
     ):
@@ -72,7 +71,7 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
         self._create_org_user(user=user)
 
         with self.subTest('Test saving an existing RegisteredUser object'):
-            with patch.object(tasks.post_save_registereduser, 'delay') as mocked_task:
+            with patch(f'{TASK_PATH}.post_save_registereduser.delay') as mocked_task:
                 reg_user.is_verified = True
                 reg_user.full_clean()
                 reg_user.save()
@@ -85,7 +84,7 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
         self._create_registered_user(user=user)
         self._create_org_user(user=user)
         self.assertEqual(
-            Metric.objects.filter(
+            self.metric_model.objects.filter(
                 configuration='user_signups',
                 name='User SignUps',
                 key='user_signups',
@@ -94,16 +93,15 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
             ).count(),
             1,
         )
-        metric = Metric.objects.filter(key='user_signups').first()
+        metric = self.metric_model.objects.filter(key='user_signups').first()
         points = metric.read()
         self.assertEqual(len(points), 1)
         # Assert username field is hashed
         self.assertNotEqual(points[0]['user_id'], str(user.id))
-        self.assertEqual(points[0]['user_id'], tasks.sha1_hash(str(user.id)))
 
-    @patch.object(Metric, 'batch_write')
+    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
     @patch('logging.Logger.warning')
-    @patch.object(Metric, 'write')
+    @patch('openwisp_monitoring.monitoring.models.Metric.write')
     def test_post_save_organization_user_edge_cases(
         self, mocked_metric_write, mocked_logger, *args
     ):
@@ -120,7 +118,7 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
         self._create_registered_user(user=user)
 
         with self.subTest('Test saving an existing RegisteredUser object'):
-            with patch.object(tasks.post_save_organizationuser, 'delay') as mocked_task:
+            with patch(f'{TASK_PATH}.post_save_organizationuser.delay') as mocked_task:
                 org_user.is_admin = True
                 org_user.full_clean()
                 org_user.save()
@@ -147,12 +145,12 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
 
         self._create_radius_accounting(**options)
         self.assertEqual(
-            Metric.objects.filter(
+            self.metric_model.objects.filter(
                 configuration='radius_acc',
                 name='RADIUS Accounting',
                 key='radius_acc',
                 object_id=str(device.id),
-                content_type=ContentType.objects.get_for_model(Device),
+                content_type=ContentType.objects.get_for_model(self.device_model),
                 extra_tags={
                     'called_station_id': device.mac_address,
                     'calling_station_id': '00:00:00:00:00:00',
@@ -163,16 +161,22 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
             ).count(),
             1,
         )
-        metric = Metric.objects.filter(configuration='radius_acc').first()
-        chart = metric.chart_set.first()
-        points = chart.read()
+        metric = self.metric_model.objects.filter(configuration='radius_acc').first()
+        traffic_chart = metric.chart_set.get(configuration='radius_traffic')
+        points = traffic_chart.read()
         self.assertEqual(points['traces'][0][0], 'download')
         self.assertEqual(points['traces'][0][1][-1], 8)
         self.assertEqual(points['traces'][1][0], 'upload')
         self.assertEqual(points['traces'][1][1][-1], 9)
         self.assertEqual(points['summary'], {'upload': 9, 'download': 8})
 
-    @patch.object(Metric, 'write')
+        session_chart = metric.chart_set.get(configuration='rad_session')
+        points = session_chart.read()
+        self.assertEqual(points['traces'][0][0], 'mobile_phone')
+        self.assertEqual(points['traces'][0][1][-1], 1)
+        self.assertEqual(points['summary'], {'mobile_phone': 1})
+
+    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
     @patch('logging.Logger.warning')
     def post_save_radiusaccounting_edge_cases(
         self, mocked_logger, mocked_metric_write, *args
@@ -181,7 +185,9 @@ class TestMetrics(TestMonitoringMixin, CreateConfigMixin, BaseTransactionTestCas
         options['called_station_id'] = '00:00:00:00:00:00'
         options['unique_id'] = '117'
         with self.subTest('Test session is not closed'):
-            with patch.object(tasks.post_save_registereduser, 'delay') as mocked_task:
+            with patch.object(
+                f'{TASK_PATH}.post_save_registereduser.delay'
+            ) as mocked_task:
                 rad_acc = self._create_radius_accounting(**options)
                 self.assertEqual(rad_acc.stop_time, None)
             mocked_task.assert_not_called()

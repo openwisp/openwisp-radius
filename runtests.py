@@ -18,5 +18,7 @@ if __name__ == '__main__':
     else:
         args.insert(2, 'openwisp2')
     if os.environ.get('MONITORING_INTEGRATION', False):
-        args.extend(['-k', 'openwisp_radius.integrations.monitoring.tests'])
+        args.extend(['--tag', 'radius_monitoring'])
+    else:
+        args.extend(['--exclude-tag', 'radius_monitoring'])
     execute_from_command_line(args)
