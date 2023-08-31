@@ -47,7 +47,7 @@ jobs:
           pip install -U -r requirements-test.txt
 
       - name: Install npm dependencies
-        run: sudo npm install -g jslint
+        run: sudo npm install -g jslint stylelint jshint
 
       - name: Install openwisp-radius
         run: |
