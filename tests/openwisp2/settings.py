@@ -380,7 +380,6 @@ if os.environ.get('MONITORING_INTEGRATION', False):
                 },
             }
         }
-print(INSTALLED_APPS)
 
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')

@@ -1,11 +1,13 @@
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.urls import reverse
-from openwisp_controller.config.tests.utils import CreateConfigMixin
 
 from openwisp_users.tests.utils import TestOrganizationMixin
 
+from .mixins import CreateDeviceMonitoringMixin
 
-class TestDeviceAdmin(CreateConfigMixin, TestOrganizationMixin, TestCase):
+
+@tag('radius_monitoring')
+class TestDeviceAdmin(TestOrganizationMixin, CreateDeviceMonitoringMixin, TestCase):
     app_label = 'config'
 
     def setUp(self):
