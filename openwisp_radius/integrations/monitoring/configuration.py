@@ -42,12 +42,13 @@ user_singups_chart_config = {
     },
     'colors': [
         DEFAULT_COLORS[7],
-        DEFAULT_COLORS[0],
-        DEFAULT_COLORS[1],
-        DEFAULT_COLORS[2],
-        DEFAULT_COLORS[3],
         DEFAULT_COLORS[4],
+        DEFAULT_COLORS[3],
         DEFAULT_COLORS[5],
+        DEFAULT_COLORS[0],
+        DEFAULT_COLORS[2],
+        DEFAULT_COLORS[1],
+        DEFAULT_COLORS[6],
     ],
 }
 
