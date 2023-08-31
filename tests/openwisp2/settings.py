@@ -106,8 +106,8 @@ TEMPLATES = [
         'OPTIONS': {
             'loaders': [
                 'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',
                 'openwisp_utils.loaders.DependencyLoader',
+                'django.template.loaders.app_directories.Loader',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -380,6 +380,7 @@ if os.environ.get('MONITORING_INTEGRATION', False):
                 },
             }
         }
+    DATABASES['default']['ENGINE'] = 'openwisp_utils.db.backends.spatialite'
 
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')
