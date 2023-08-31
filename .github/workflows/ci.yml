@@ -44,6 +44,7 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt-get -qq -y install xmlsec1 gettext
+          sudo npm install -g jslint stylelint jshint
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
