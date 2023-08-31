@@ -6,9 +6,6 @@
   text-align: center;
   margin: 5px;
 }
-#radius-sessions th {
-  text-align: center;
-}
 #radius-session-tbody strong {
   color: green;
 }

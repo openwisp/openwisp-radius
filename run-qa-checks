@@ -32,6 +32,8 @@ cd ..
 echo ''
 echo 'Running checks for openwisp-radius'
 openwisp-qa-check \
+        --csslinter \
+        --jslinter \
         --migration-path "./openwisp_radius/migrations"
 
 echo ''
