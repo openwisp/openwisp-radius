@@ -43,13 +43,23 @@ jobs:
         id: deps
         run: |
           sudo apt update -qq
-          sudo apt-get -qq -y install xmlsec1 gettext
+          sudo apt-get -qq -y install xmlsec1 gettext \
+              sqlite3 \
+              fping \
+              gdal-bin \
+              libproj-dev \
+              libgeos-dev \
+              libspatialite-dev \
+              spatialite-bin \
+              libsqlite3-mod-spatialite
           sudo npm install -g jslint stylelint jshint
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
           pip install ${{ matrix.django-version }}
-          sudo npm install -g jslint
+
+      - name: Start InfluxDB and Redis container
+        run: docker-compose up -d influxdb redis
 
       - name: QA checks
         run: |

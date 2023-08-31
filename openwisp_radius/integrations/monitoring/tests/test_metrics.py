@@ -81,7 +81,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     @patch('logging.Logger.warning')
     def test_post_save_organization_user(self, *args):
         user = self._create_user()
-        self._create_registered_user(user=user)
+        self._create_registered_user(user=user, method='')
         self._create_org_user(user=user)
         self.assertEqual(
             self.metric_model.objects.filter(
@@ -185,9 +185,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         options['called_station_id'] = '00:00:00:00:00:00'
         options['unique_id'] = '117'
         with self.subTest('Test session is not closed'):
-            with patch.object(
-                f'{TASK_PATH}.post_save_registereduser.delay'
-            ) as mocked_task:
+            with patch(f'{TASK_PATH}.post_save_registereduser.delay') as mocked_task:
                 rad_acc = self._create_radius_accounting(**options)
                 self.assertEqual(rad_acc.stop_time, None)
             mocked_task.assert_not_called()
@@ -206,7 +204,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 ' Skipping radius_acc metric writing!'
             )
 
-        self._create_registered_user(user=user, method='')
+        self._create_registered_user(user=user)
         options['unique_id'] = '119'
         mocked_logger.reset_mock()
 
