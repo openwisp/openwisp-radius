@@ -20,6 +20,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
+from phonenumbers import PhoneNumberType, phonenumberutil
 from rest_framework import serializers
 from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
@@ -436,6 +437,14 @@ class RegisterSerializer(
             if not self.is_prefix_allowed(phone_number, mobile_prefixes):
                 raise serializers.ValidationError(
                     _('This international mobile prefix is not allowed.')
+                )
+            phone_number_type = phonenumberutil.number_type(phone_number)
+            allowed_types = [PhoneNumberType.MOBILE]
+            if app_settings.ALLOW_FIXED_LINE_OR_MOBILE:
+                allowed_types.append(PhoneNumberType.FIXED_LINE_OR_MOBILE)
+            if phone_number_type not in allowed_types:
+                raise serializers.ValidationError(
+                    _('Only mobile phone numbers are allowed.')
                 )
             if User.objects.filter(phone_number=phone_number).exists():
                 raise serializers.ValidationError(

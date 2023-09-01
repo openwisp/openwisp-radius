@@ -120,6 +120,56 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertIn('email', r.data)
         self.assertIn('phone_number', r.data)
 
+    def test_fixed_line_number_for_registration(self):
+        self.assertEqual(User.objects.count(), 0)
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            {
+                'username': self._test_email,
+                'email': self._test_email,
+                'password1': 'password',
+                'password2': 'password',
+                'phone_number': '+3903031234',
+                'method': 'mobile_phone',
+            },
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('phone_number', r.data)
+        self.assertEqual(
+            str(r.data['phone_number'][0]), 'Only mobile phone numbers are allowed.'
+        )
+
+    def test_fixed_line_or_phone_number_for_registration(self):
+        radius_settings = self.default_org.radius_settings
+        radius_settings.allowed_mobile_prefixes = '+1'
+        radius_settings.full_clean()
+        radius_settings.save()
+        url = reverse('radius:rest_register', args=[self.default_org.slug])
+        data = {
+            'username': 'test2@test.org',
+            'email': 'test2@test.org',
+            'password1': 'password',
+            'password2': 'password',
+            'phone_number': '+1 779 5106 s991',
+            'method': 'mobile_phone',
+        }
+        with self.subTest('Test ALLOW_FIXED_LINE_OR_MOBILE is set to False'):
+            with mock.patch.object(app_settings, 'ALLOW_FIXED_LINE_OR_MOBILE', False):
+                response = self.client.post(url, data)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    str(response.data['phone_number'][0]),
+                    'Only mobile phone numbers are allowed.',
+                )
+                self.assertEqual(User.objects.count(), 0)
+
+        with self.subTest('Test ALLOW_FIXED_LINE_OR_MOBILE is set to True'):
+            with mock.patch.object(app_settings, 'ALLOW_FIXED_LINE_OR_MOBILE', True):
+                response = self.client.post(url, data)
+                self.assertEqual(response.status_code, 201)
+                self.assertEqual(User.objects.count(), 1)
+
     def test_create_phone_token_401(self):
         url = reverse('radius:phone_token_create', args=[self.default_org.slug])
         r = self.client.post(url)
@@ -588,14 +638,14 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
         with self.subTest('test create user with number allowed at org level'):
             radius_settings = self.default_org.radius_settings
-            radius_settings.allowed_mobile_prefixes = '+1'
+            radius_settings.allowed_mobile_prefixes = '+91'
             radius_settings.full_clean()
             radius_settings.save()
             user_param.update(
                 {
                     'email': 'test1@email.com',
                     'username': 'test1',
-                    'phone_number': '+1 7795 106991',
+                    'phone_number': '+91 9878457878',
                 }
             )
             r = self.client.post(url, user_param)
