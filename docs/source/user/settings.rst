@@ -426,7 +426,6 @@ This can cause issues in regions where fixed line and mobile phone numbers
  uses the same pattern (e.g. USA). Setting the value to ``True``
 would make phone number type checking less strict.
 
-
 ``OPENWISP_RADIUS_SMS_COOLDOWN``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
