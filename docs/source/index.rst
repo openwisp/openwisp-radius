@@ -59,6 +59,7 @@ that are common in WiFi and ISP deployments.
    /user/social_login
    /user/saml
    /user/change_of_authorization
+   /user/radius_monitoring
    /user/api
    /developer/signals
    /developer/how_to_extend
