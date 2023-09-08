@@ -40,6 +40,7 @@ OpenWISP architecture.
     user/saml.rst
     user/enforcing_limits.rst
     user/change_of_authorization.rst
+    user/radius_monitoring
     user/management_commands.rst
     user/rest-api.rst
     user/settings.rst

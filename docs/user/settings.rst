@@ -690,6 +690,8 @@ verification method. The following choices are available by default:
     **Disclaimer:** these are just suggestions on possible configurations
     of OpenWISP RADIUS and must not be considered as legal advice.
 
+.. _openwisp_radius_register_registration_method:
+
 Adding support for more registration/verification methods
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
