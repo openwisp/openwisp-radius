@@ -39,6 +39,14 @@ class CreateDeviceMonitoringMixin(object):
     def metric_model(self):
         return load_model('monitoring', 'Metric')
 
+    @property
+    def location_model(self):
+        return load_model('geo', 'Location')
+
+    @property
+    def object_location_model(self):
+        return load_model('geo', 'DeviceLocation')
+
     def _create_device(self, **kwargs):
         options = dict(
             name='default.test.device',
@@ -53,3 +61,24 @@ class CreateDeviceMonitoringMixin(object):
         d.full_clean()
         d.save()
         return d
+
+    def _create_location(self, **kwargs):
+        options = dict(
+            name='test-location',
+            address='Via del Corso, Roma, Italia',
+            geometry='SRID=4326;POINT (12.512124 41.898903)',
+            type='outdoor',
+        )
+        options.update(kwargs)
+        location = self.location_model(**options)
+        location.full_clean()
+        location.save()
+        return location
+
+    def _create_device_location(self, **kwargs):
+        options = dict()
+        options.update(kwargs)
+        device_location = self.object_location_model(**options)
+        device_location.full_clean()
+        device_location.save()
+        return device_location

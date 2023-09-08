@@ -130,6 +130,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         user = self._create_user()
         reg_user = self._create_registered_user(user=user)
         device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
         options = _RADACCT.copy()
         options.update(
             {
@@ -154,7 +158,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 extra_tags={
                     'called_station_id': device.mac_address,
                     'calling_station_id': '00:00:00:00:00:00',
-                    'location_id': None,
+                    'location_id': str(device_loc.location.id),
                     'method': reg_user.method,
                     'organization_id': str(self.default_org.id),
                 },
@@ -178,7 +182,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
     @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
     @patch('logging.Logger.warning')
-    def post_save_radiusaccounting_edge_cases(
+    def test_post_save_radiusaccounting_edge_cases(
         self, mocked_logger, mocked_metric_write, *args
     ):
         options = _RADACCT.copy()
