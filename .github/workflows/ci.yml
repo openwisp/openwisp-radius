@@ -57,6 +57,7 @@ jobs:
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
           pip install ${{ matrix.django-version }}
+          pip install --force-reinstall --upgrade --no-cache-dir --no-deps https://github.com/openwisp/openwisp-utils/tarball/dashboard-chart-filter
 
       - name: Start InfluxDB and Redis container
         run: docker-compose up -d influxdb redis
