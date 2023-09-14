@@ -5,6 +5,9 @@ OpenWISP RADIUS includes an optional Django sub-app that adds integration with
 `OpenWISP Monitoring <https://github.com/openwisp/openwisp-monitoring#openwisp-monitoring>`_
 to provide RADIUS metrics.
 
+.. image:: /images/radius-dashboard-charts.png
+   :alt: RADIUS session dashboard charts
+
 RADIUS metrics
 ==============
 
