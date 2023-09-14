@@ -58,8 +58,8 @@ that are common in WiFi and ISP deployments.
    /user/registration
    /user/social_login
    /user/saml
-   /user/change_of_authorization
    /user/radius_monitoring
+   /user/change_of_authorization
    /user/api
    /developer/signals
    /developer/how_to_extend
