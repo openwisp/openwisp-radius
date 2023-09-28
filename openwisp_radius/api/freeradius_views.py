@@ -112,6 +112,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
     def _radius_token_authenticate(self, request):
         if request.data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
             return
+
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
         username = request.data.get('username') or request.query_params.get('username')
@@ -119,6 +120,26 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         if cached_orgid:
             return self._check_client_ip_and_return(request, cached_orgid)
         else:
+
+            MACAUTH_ROAMING = True
+            mac_allowed = False
+            logger.warn(f'{username} and {len(username)}')
+            if MACAUTH_ROAMING and username and len(username) == 17:
+
+                open_session = RadiusAccounting.objects.filter(
+                    calling_station_id=username, stop_time=None
+                    # TODO: check ORG? HOW
+                ).first()
+
+                logger.warn(f'open_session: {open_session}')
+
+                if open_session:
+                    logger.warn(f'found open session: {open_session.__dict__}')
+                    username = open_session.username
+                    mac_allowed = True
+                    request.data['username'] = username
+            request._mac_allowed = mac_allowed
+
             try:
                 radtoken = RadiusToken.objects.get(
                     user=auth_backend.get_users(username).first()
@@ -216,7 +237,10 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
         password = serializer.validated_data.get('password')
-        user = self.get_user(request, username)
+
+        logger.warn(f'DEBUG: {username}')
+
+        user = self.get_user(request, username, password)
         if user and self.authenticate_user(request, user, password):
             data, status = self.get_replies(user, organization_id=request.auth)
             return Response(data, status=status)
@@ -225,10 +249,40 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         else:
             return Response(None, status=200)
 
-    def get_user(self, request, username):
+    # def _radius_token_authenticate(self, request):
+    #     MACAUTH_ROAMING = True
+    #     mac_allowed = False
+    #     username = request.data.get('username')
+    #     password = request.data.get('password')
+    #     if MACAUTH_ROAMING and username == password:
+    #         open_session = RadiusAccounting.objects.filter(
+    #             calling_station_id=username, stop_time=None,
+    #             organization_id=request.auth
+    #         ).first()
+    #         if open_session:
+    #             logger.warn(f'found open session: {open_session.__dict__}')
+    #             username = open_session.username
+    #             mac_allowed = True
+    #             request.data['username'] = username
+    #             request.data['password'] = password
+    #     request._mac_allowed = mac_allowed
+    #     return super()._radius_token_authenticate(request)
+
+    def get_user(self, request, username, password):
         """
         return user or ``None``
         """
+        # MACAUTH_ROAMING = True
+        # mac_allowed = False
+        # if MACAUTH_ROAMING and username == password:
+        #     open_session = RadiusAccounting.objects.filter(
+        #         calling_station_id=username, stop_time=None,
+        #         organization_id=request.auth
+        #     ).first()
+        #     if open_session:
+        #         logger.warn(f'found open session: {open_session.__dict__}')
+        #         username = open_session.username
+        #         mac_allowed = True
         conditions = self._get_user_query_conditions(request)
         try:
             user = auth_backend.get_users(username).filter(conditions)[0]
@@ -356,7 +410,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         can be overridden to implement more complex checks
         """
         return bool(
-            user.check_password(password)
+            getattr(request, '_mac_allowed', False)
+            or user.check_password(password)
             or self.check_user_token(request, user, password)
         )
 
