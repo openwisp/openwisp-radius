@@ -64,7 +64,6 @@ jobs:
         run: |
           pip install -e .[saml,openvpn_status]
           pip install ${{ matrix.django-version }}
-          pip install --force-reinstall --upgrade --no-cache-dir --no-deps https://github.com/openwisp/openwisp-utils/tarball/dashboard-chart-filter
 
       - name: QA checks
         run: |
