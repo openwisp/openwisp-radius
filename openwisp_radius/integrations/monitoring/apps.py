@@ -78,10 +78,10 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                     },
                     'aggregate': {
                         'download_traffic': Round(
-                            Cast(Sum('input_octets'), models.FloatField()) / 10**9, 1
+                            Cast(Sum('input_octets'), models.FloatField()) / 10**9
                         ),
                         'upload_traffic': Round(
-                            Cast(Sum('output_octets'), models.FloatField()) / 10**9, 1
+                            Cast(Sum('output_octets'), models.FloatField()) / 10**9
                         ),
                     },
                 },
