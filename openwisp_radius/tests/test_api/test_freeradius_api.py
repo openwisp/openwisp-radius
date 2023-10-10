@@ -32,6 +32,7 @@ RadiusGroupReply = load_model('RadiusGroupReply')
 RegisteredUser = load_model('RegisteredUser')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
+OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
 _AUTH_TYPE_ACCEPT_RESPONSE = {
@@ -1633,6 +1634,7 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
 
 class TestClientIpApi(ApiTokenMixin, BaseTestCase):
     def setUp(self):
+        super().setUp()
         self._get_org_user()
         self.params = {'username': 'tester', 'password': 'tester'}
         self.fail_msg = (
@@ -1667,6 +1669,27 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         with self.subTest('Cache Deleted'):
             cache.clear()
             authorize_and_assert(11, ['127.0.0.1', '192.0.2.0'])
+
+    def test_rt_cache_authorize_different_organization(self):
+        """
+        Ensure the rt cache is updated when the user
+        authenticates to a different organization
+        """
+        orguser = self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        self._authorize_user(password=rad_token)
+        self.assertEqual(
+            cache.get(f'rt-{orguser.user.username}'), str(orguser.organization_id)
+        )
+        org2 = Organization.objects.get(slug='default')
+        ou = OrganizationUser(organization=org2, user=orguser.user)
+        ou.full_clean()
+        ou.save()
+        rad_token = self._login_and_obtain_auth_token(organization=org2)
+        rt = RadiusToken.objects.get(key=rad_token)
+        self.assertEqual(rt.organization, org2)
+        self._authorize_user(password=rad_token)
+        self.assertEqual(cache.get(f'rt-{orguser.user.username}'), str(org2.id))
 
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse('radius:authorize'), self.params)

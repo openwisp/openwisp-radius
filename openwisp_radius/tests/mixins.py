@@ -191,9 +191,13 @@ class ApiTokenMixin(BasePostParamsMixin):
             {'username': username, 'password': password},
         )
 
-    def _login_and_obtain_auth_token(self, username='tester', password='tester'):
+    def _login_and_obtain_auth_token(
+        self, username='tester', password='tester', organization=None
+    ):
+        if not organization:
+            organization = self.default_org
         login_payload = {'username': username, 'password': password}
-        login_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
+        login_url = reverse('radius:user_auth_token', args=[organization.slug])
         login_response = self.client.post(login_url, data=login_payload)
         return login_response.json()['radius_user_token']
 
