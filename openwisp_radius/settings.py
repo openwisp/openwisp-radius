@@ -55,6 +55,7 @@ SOCIAL_REGISTRATION_CONFIGURED = 'allauth.socialaccount' in getattr(
 SOCIAL_REGISTRATION_ENABLED = get_settings_value('SOCIAL_REGISTRATION_ENABLED', False)
 SAML_REGISTRATION_CONFIGURED = 'djangosaml2' in getattr(settings, 'INSTALLED_APPS', [])
 SAML_REGISTRATION_ENABLED = get_settings_value('SAML_REGISTRATION_ENABLED', False)
+MAC_ADDR_ROAMING_ENABLED = get_settings_value('MAC_ADDR_ROAMING_ENABLED', False)
 SAML_REGISTRATION_METHOD_LABEL = get_settings_value(
     'SAML_REGISTRATION_METHOD_LABEL', _('Single Sign-On (SAML)')
 )

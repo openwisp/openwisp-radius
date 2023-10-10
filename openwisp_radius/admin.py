@@ -552,6 +552,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     'registration_enabled',
                     'saml_registration_enabled',
                     'social_registration_enabled',
+                    'mac_addr_roaming_enabled',
                     'needs_identity_verification',
                     'first_name',
                     'last_name',

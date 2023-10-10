@@ -148,6 +148,9 @@ _REGISTRATION_ENABLED_HELP_TEXT = _(
 _SAML_REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration using SAML should be enabled or not'
 )
+_MAC_ADDR_ROAMING_ENABLED_HELP_TEXT = _(
+    'Whether the MAC address roaming should be enabled or not.'
+)
 _SOCIAL_REGISTRATION_ENABLED_HELP_TEXT = _(
     'Whether the registration using social applications should be enabled or not'
 )
@@ -1201,6 +1204,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
         verbose_name=_('SAML registration enabled'),
         fallback=app_settings.SAML_REGISTRATION_ENABLED,
+    )
+    mac_addr_roaming_enabled = FallbackBooleanChoiceField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_MAC_ADDR_ROAMING_ENABLED_HELP_TEXT,
+        verbose_name=_('MAC address roaming enabled'),
+        fallback=app_settings.MAC_ADDR_ROAMING_ENABLED,
     )
     social_registration_enabled = FallbackBooleanChoiceField(
         null=True,

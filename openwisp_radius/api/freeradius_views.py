@@ -1,6 +1,7 @@
 import ipaddress
 import logging
 import math
+import re
 
 import drf_link_header_pagination
 import swapper
@@ -12,6 +13,7 @@ from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from ipware import get_client_ip
+from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import (
     AuthenticationFailed,
@@ -37,6 +39,9 @@ from .serializers import (
 )
 from .utils import IDVerificationHelper
 
+RE_MAC_ADDR = re.compile(
+    u'^{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}'.format(u'[a-f0-9]{2}'), re.I
+)
 _TOKEN_AUTH_FAILED = _('Token authentication failed')
 # Accounting-On and Accounting-Off are not implemented and
 # hence  ignored right now - may be implemented in the future
@@ -100,46 +105,49 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                     'settings.py is not a valid IP address. '
                     'Please contact administrator.'
                 ).format(ip=ip)
-                logger.warning(invalid_addr_message)
                 raise AuthenticationFailed(invalid_addr_message)
         message = _(
             'Request rejected: Client IP address ({client_ip}) is not in '
             'the list of IP addresses allowed to consume the freeradius API.'
         ).format(client_ip=client_ip)
-        logger.warning(message)
         raise AuthenticationFailed(message)
 
-    def _radius_token_authenticate(self, request):
-        if request.data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
-            return
+    def _handle_mac_address_authentication(self, username, request):
+        if not username or not RE_MAC_ADDR.search(username):
+            # Username is either None or not a MAC addresss
+            return username, request
+        calling_station_id = RE_MAC_ADDR.match(username)[0]
+        # Get the most recent open session for the roaming user
+        open_session = (
+            RadiusAccounting.objects.select_related('organization__radius_settings')
+            .filter(calling_station_id=calling_station_id, stop_time=None)
+            .order_by('-start_time')
+            .first()
+        )
+        if (
+            not open_session
+            or not open_session.organization.radius_settings.get_setting(
+                'mac_addr_roaming_enabled'
+            )
+        ):
+            return None, None
+        username = open_session.username
+        if hasattr(request.data, '_mutable'):
+            request.data._mutable = True
+        request.data['username'] = username
+        if hasattr(request.data, '_mutable'):
+            request.data._mutable = False
+        request._mac_allowed = True
+        return username, request
 
+    def _radius_token_authenticate(self, username, request):
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
-        username = request.data.get('username') or request.query_params.get('username')
         cached_orgid = cache.get(f'rt-{username}')
         if cached_orgid:
-            return self._check_client_ip_and_return(request, cached_orgid)
+            values = self._check_client_ip_and_return(request, cached_orgid)
+            return values
         else:
-
-            MACAUTH_ROAMING = True
-            mac_allowed = False
-            logger.warn(f'{username} and {len(username)}')
-            if MACAUTH_ROAMING and username and len(username) == 17:
-
-                open_session = RadiusAccounting.objects.filter(
-                    calling_station_id=username, stop_time=None
-                    # TODO: check ORG? HOW
-                ).first()
-
-                logger.warn(f'open_session: {open_session}')
-
-                if open_session:
-                    logger.warn(f'found open session: {open_session.__dict__}')
-                    username = open_session.username
-                    mac_allowed = True
-                    request.data['username'] = username
-            request._mac_allowed = mac_allowed
-
             try:
                 radtoken = RadiusToken.objects.get(
                     user=auth_backend.get_users(username).first()
@@ -152,7 +160,6 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                     )
                 else:
                     message = _('username field is required.')
-                logger.warning(message)
                 raise NotAuthenticated(message)
             org_uuid = str(radtoken.organization_id)
             cache.set(f'rt-{username}', org_uuid, 86400)
@@ -162,7 +169,25 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
         if not uuid and not token:
-            return self._radius_token_authenticate(request)
+            if request.data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
+                return
+            username = request.data.get('username') or request.query_params.get(
+                'username'
+            )
+            username, request = self._handle_mac_address_authentication(
+                username, request
+            )
+            if username is None and request is None:
+                # When using MAC auth roaming, the "username" attribute contains the MAC
+                # address (calling_station_id). When the user connects the first time,
+                # since it doesn't have any open session, the mac address authorization
+                # will fail, in order to avoid filling the log with failed mac address
+                # authorization requests we return "None" here
+                # (instead of raising "AuthenticationFailed").
+                # freeradius will take care of rejecting the authorization if no
+                # explicit "Auth-Type: Accept" is returned
+                return
+            return self._radius_token_authenticate(username, request)
         if not uuid or not token:
             raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         # check cache first
@@ -237,9 +262,6 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
         password = serializer.validated_data.get('password')
-
-        logger.warn(f'DEBUG: {username}')
-
         user = self.get_user(request, username, password)
         if user and self.authenticate_user(request, user, password):
             data, status = self.get_replies(user, organization_id=request.auth)
@@ -249,40 +271,10 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         else:
             return Response(None, status=200)
 
-    # def _radius_token_authenticate(self, request):
-    #     MACAUTH_ROAMING = True
-    #     mac_allowed = False
-    #     username = request.data.get('username')
-    #     password = request.data.get('password')
-    #     if MACAUTH_ROAMING and username == password:
-    #         open_session = RadiusAccounting.objects.filter(
-    #             calling_station_id=username, stop_time=None,
-    #             organization_id=request.auth
-    #         ).first()
-    #         if open_session:
-    #             logger.warn(f'found open session: {open_session.__dict__}')
-    #             username = open_session.username
-    #             mac_allowed = True
-    #             request.data['username'] = username
-    #             request.data['password'] = password
-    #     request._mac_allowed = mac_allowed
-    #     return super()._radius_token_authenticate(request)
-
     def get_user(self, request, username, password):
         """
         return user or ``None``
         """
-        # MACAUTH_ROAMING = True
-        # mac_allowed = False
-        # if MACAUTH_ROAMING and username == password:
-        #     open_session = RadiusAccounting.objects.filter(
-        #         calling_station_id=username, stop_time=None,
-        #         organization_id=request.auth
-        #     ).first()
-        #     if open_session:
-        #         logger.warn(f'found open session: {open_session.__dict__}')
-        #         username = open_session.username
-        #         mac_allowed = True
         conditions = self._get_user_query_conditions(request)
         try:
             user = auth_backend.get_users(username).filter(conditions)[0]
@@ -482,6 +474,8 @@ class AccountingView(ListCreateAPIView):
         does not return any JSON response so that freeradius will avoid
         processing the response without generating warnings
         """
+        if request.user.is_anonymous and request.auth is None:
+            return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
         if data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
             return Response(None)
@@ -558,6 +552,8 @@ class PostAuthView(CreateAPIView):
         Returns an empty response body in order to instruct
         FreeRADIUS to avoid processing the response body.
         """
+        if request.user.is_anonymous and request.auth is None:
+            return Response(status=status.HTTP_200_OK)
         response = super().post(request, *args, **kwargs)
         response.data = None
         return response

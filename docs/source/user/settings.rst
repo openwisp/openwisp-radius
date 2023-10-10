@@ -603,6 +603,30 @@ via the organization radius settings section of the admin interface.
 
 .. _openwisp_radius_needs_identity_verification:
 
+``OPENWISP_RADIUS_MAC_ADDR_ROAMING_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+Indicates whether MAC address roaming is supported.
+When this setting is enabled (i.e. ``True``),
+MAC address roaming is enabled for all organizations.
+
+**This setting can be overridden in individual organizations
+via the admin interface**, by going to *Organizations*
+then edit a specific organization and scroll down to
+*"Organization RADIUS settings"*, as shown in the screenshot below.
+
+.. image:: /images/mac-address-roaming.png
+   :alt: Organization MAC Address Roaming settings
+
+.. note::
+
+    We recommend using the override via the admin interface only when there
+    are special organizations which need a different configuration, otherwise,
+    if all the organization use the same configuration, we recommend
+    changing the global setting.
+
 ``OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
