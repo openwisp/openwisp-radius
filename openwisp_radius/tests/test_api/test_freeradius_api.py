@@ -1466,6 +1466,224 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(len(response.json()), 0)
 
 
+class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTestCase):
+    _test_email = 'test@openwisp.org'
+
+    def setUp(self):
+        cache.clear()
+        logging.disable(logging.WARNING)
+        super().setUp()
+
+    def test_mac_addr_roaming_authorize_view(self):
+        acct_post_data = self.acct_post_data
+        acct_post_data['username'] = 'tester'
+        acct_post_data['calling_station_id'] = '00-11-22-33-44-55'
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+
+        with self.subTest('Test user does not have an open session'):
+            response = self._authorize_user(
+                username=acct_post_data['calling_station_id'],
+                password=acct_post_data['calling_station_id'],
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+
+        self._create_radius_accounting(**acct_post_data)
+
+        with self.subTest('Test mac address roaming is disabled'):
+            response = self._authorize_user(
+                username=acct_post_data['calling_station_id'],
+                password=acct_post_data['calling_station_id'],
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
+        with self.subTest(
+            'Test user has open session and mac address roaming is enabled'
+        ):
+            response = self._authorize_user(
+                username=acct_post_data['calling_station_id'],
+                password=acct_post_data['calling_station_id'],
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    'control:Auth-Type': 'Accept',
+                    'Session-Timeout': 10539,
+                    'ChilliSpot-Max-Total-Octets': 1487813647,
+                },
+            )
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=False)
+
+    def test_mac_addr_roaming_accounting_view(self):
+        acct_post_data = self.acct_post_data
+        acct_post_data['username'] = 'tester'
+        acct_post_data['calling_station_id'] = '00-11-22-33-44-55'
+        payload = acct_post_data.copy()
+        payload.update(
+            {
+                'unique_id': '119',
+                'username': payload['calling_station_id'],
+                'status_type': 'Start',
+                'nas_ip_address': '172.16.64.92',
+                'called_station_id': '66:55:44:33:22:11:hostname',
+            }
+        )
+
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+
+        with self.subTest('Test user does not have an open session'):
+            response = response = self.client.post(
+                self._acct_url,
+                data=json.dumps(payload),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+
+        self._create_radius_accounting(update_time=now(), **acct_post_data)
+
+        with self.subTest('Test mac address roaming is disabled'):
+            response = response = self.client.post(
+                self._acct_url,
+                data=json.dumps(payload),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
+        with self.subTest(
+            'Test user has open session and mac address roaming is enabled'
+        ):
+            response = response = self.client.post(
+                self._acct_url,
+                data=json.dumps(payload),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(
+                response.data,
+                None,
+            )
+            self.assertEqual(
+                RadiusAccounting.objects.filter(username='tester').count(), 2
+            )
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username='tester',
+                    stop_time=None,
+                    nas_ip_address=payload['nas_ip_address'],
+                    called_station_id=payload['called_station_id'],
+                ).count(),
+                1,
+            )
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username='tester',
+                    stop_time__isnull=False,
+                    nas_ip_address=acct_post_data['nas_ip_address'],
+                    called_station_id=acct_post_data['called_station_id'],
+                ).count(),
+                1,
+            )
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=False)
+
+    def test_emulate_roaming(self):
+        """
+        This tests emulates all the FreeRADIUS requests that are made
+        when user is roaming.
+        """
+        self._get_org_user()
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
+
+        rad_token = self._login_and_obtain_auth_token()
+        # Authorize to the first AP with username and radius token
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                'control:Auth-Type': 'Accept',
+                'Session-Timeout': 10800,
+                'ChilliSpot-Max-Total-Octets': 3000000000,
+            },
+        )
+        # Start accounting session with first AP
+        payload = self._acct_initial_data.copy()
+        payload.update(
+            {
+                'username': 'tester',
+                'called_station_id': '11:22:33:44:55:66',
+                'calling_station_id': 'AA:BB:CC:DD:EE:FF',
+                'status_type': 'Start',
+            }
+        )
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            RadiusAccounting.objects.filter(
+                username='tester',
+                stop_time=None,
+                called_station_id=payload['called_station_id'],
+                calling_station_id=payload['calling_station_id'],
+            ).count(),
+            1,
+        )
+        # The automatic closing of session uses the value of the
+        # update_time field when closing old session.
+        RadiusAccounting.objects.update(update_time=now())
+
+        # User has moved to AP2 and the captive portal performs MAC auth
+        response = self._authorize_user(
+            username=payload['calling_station_id'],
+            password=payload['calling_station_id'],
+        )
+        self.assertEqual(response.status_code, 200)
+        # Start accounting session with the second AP
+        payload.update(
+            {
+                'session_id': '73',
+                'unique_id': '73',
+                'called_station_id': '11:22:33:44:55:67',
+                'username': payload['calling_station_id'],
+            }
+        )
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(RadiusAccounting.objects.filter(username='tester').count(), 2)
+        self.assertEqual(
+            RadiusAccounting.objects.filter(
+                username='tester',
+                stop_time=None,
+                called_station_id=payload['called_station_id'],
+                calling_station_id=payload['calling_station_id'],
+            ).count(),
+            1,
+        )
+        # Accounting session with the first AP is closed
+        self.assertEqual(
+            RadiusAccounting.objects.filter(
+                username='tester',
+                stop_time__isnull=True,
+                called_station_id=payload['called_station_id'],
+                calling_station_id='AA:BB:CC:DD:EE:FF',
+            ).count(),
+            1,
+        )
+
+
 class TestApiReject(ApiTokenMixin, BaseTestCase):
     @classmethod
     def setUpClass(cls):

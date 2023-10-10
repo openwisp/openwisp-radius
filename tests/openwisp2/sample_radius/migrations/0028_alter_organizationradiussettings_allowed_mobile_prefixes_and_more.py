@@ -244,6 +244,18 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
+            model_name='organizationradiussettings',
+            name='mac_addr_roaming_enabled',
+            field=openwisp_utils.fields.FallbackBooleanChoiceField(
+                blank=True,
+                default=None,
+                fallback=False,
+                help_text='Whether the MAC address roaming should be enabled or not.',
+                null=True,
+                verbose_name='MAC address roaming enabled',
+            ),
+        ),
+        migrations.AddField(
             model_name="organizationradiussettings",
             name="sms_cooldown",
             field=openwisp_utils.fields.FallbackPositiveIntegerField(
