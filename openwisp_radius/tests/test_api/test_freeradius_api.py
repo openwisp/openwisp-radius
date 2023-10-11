@@ -1293,15 +1293,17 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         item = response.data[0]
         self.assertEqual(parser.parse(item['stop_time']), ra.stop_time)
 
+    @freeze_time('2023-10-25T22:14:09+01:00')
     def test_accounting_filter_is_open(self):
         data1 = self.acct_post_data
         data1.update(dict(stop_time=None, unique_id='99144d60'))
-        self._create_radius_accounting(**data1)
+        ra = self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        data2.update(
-            dict(stop_time='2018-03-02T00:43:24.020460+01:00', unique_id='85144d60')
-        )
-        ra = self._create_radius_accounting(**data2)
+        data2.update(dict(unique_id='85144d60'))
+        self._create_radius_accounting(**data2)
+        # The old session gets closed automatically, fetch the
+        # updated object from the database.
+        ra.refresh_from_db(fields=['stop_time'])
         response = self.client.get(
             f'{self._acct_url}?is_open=true',
             HTTP_AUTHORIZATION=self.auth_header,
@@ -1545,7 +1547,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, None)
 
-        self._create_radius_accounting(update_time=now(), **acct_post_data)
+        self._create_radius_accounting(**acct_post_data)
 
         with self.subTest('Test mac address roaming is disabled'):
             response = response = self.client.post(
