@@ -5,6 +5,7 @@ import logging
 
 from celery.exceptions import OperationalError
 from django.db import transaction
+from django.utils.timezone import now
 
 from openwisp_radius.tasks import send_login_email
 
@@ -100,21 +101,23 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
     if not created or not instance.called_station_id:
         return
     RadiusAccounting = load_model('RadiusAccounting')
-    closed_session = []
+    closed_sessions = []
     open_sessions = RadiusAccounting.objects.exclude(
         unique_id=instance.unique_id
     ).filter(
         stop_time__isnull=True,
-        called_station_id=instance.called_station_id,
         calling_station_id=instance.calling_station_id,
         username=instance.username,
     )
     for session in open_sessions:
-        session.stop_time = session.update_time
+        session.stop_time = session.update_time or now()
         session.terminate_cause = 'Session-Timeout'
-        closed_session.append(session)
+        closed_sessions.append(session)
+    # avoid bulk update if not necessary
+    if not closed_sessions:
+        return
     RadiusAccounting.objects.bulk_update(
-        closed_session, fields=['stop_time', 'terminate_cause']
+        closed_sessions, fields=['stop_time', 'terminate_cause']
     )
 
 

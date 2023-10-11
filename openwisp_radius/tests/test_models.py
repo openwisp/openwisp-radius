@@ -149,19 +149,6 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             self.assertEqual(radiusaccounting1.stop_time, radiusaccounting1.update_time)
             self.assertEqual(radiusaccounting2.stop_time, None)
 
-        with self.subTest('Test different called_session_id'):
-            self.assertEqual(
-                RadiusAccounting.objects.filter(stop_time__isnull=True).count(), 1
-            )
-            radiusaccounting_options['called_station_id'] = 'AA-AA-AA-AA-AA-0B'
-            self._create_radius_accounting(
-                unique_id='113', **radiusaccounting_options, update_time=timezone.now()
-            )
-            radiusaccounting2.refresh_from_db()
-            self.assertEqual(RadiusAccounting.objects.filter(stop_time=None).count(), 2)
-            self.assertEqual(radiusaccounting2.terminate_cause, None)
-            self.assertEqual(radiusaccounting2.stop_time, None)
-
     @capture_any_output()
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
