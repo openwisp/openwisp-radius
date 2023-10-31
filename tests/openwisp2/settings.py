@@ -263,6 +263,16 @@ CELERY_BEAT_SCHEDULE = {
         'args': [365],
         'relative': True,
     },
+    'unverify_inactive_users': {
+        'task': 'openwisp_radius.tasks.unverify_inactive_users',
+        'schedule': crontab(hour=1, minute=30),
+        'relative': True,
+    },
+    'delete_inactive_users': {
+        'task': 'openwisp_radius.tasks.delete_inactive_users',
+        'schedule': crontab(hour=1, minute=50),
+        'relative': True,
+    },
 }
 
 SENDSMS_BACKEND = 'sendsms.backends.console.SmsBackend'

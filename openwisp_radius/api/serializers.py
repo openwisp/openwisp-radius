@@ -621,6 +621,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
         source='registered_user.method',
         allow_null=True,
     )
+    password_expired = serializers.BooleanField(source='has_password_expired')
     radius_user_token = serializers.CharField(source='radius_token.key', default=None)
 
     class Meta:
@@ -636,5 +637,6 @@ class RadiusUserSerializer(serializers.ModelSerializer):
             'is_active',
             'is_verified',
             'method',
+            'password_expired',
             'radius_user_token',
         ]

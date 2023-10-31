@@ -308,6 +308,29 @@ Specifies the datetime format of OpenVPN management status parser used by the
 :ref:`convert_called_station_id <convert_called_station_id>`
 command.
 
+``OPENWISP_RADIUS_UNVERIFY_INACTIVE_USERS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``0`` (disabled)
+
+Number of days from user's ``last_login`` after which the
+user will be flagged as *unverified*.
+
+When set to ``0``, the feature would be disabled and the user will
+not be flagged as *unverified*.
+
+``OPENWISP_RADIUS_DELETE_INACTIVE_USERS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``540`` (18 months)
+
+Number of days from user's ``last_login`` after which the
+user will be deleted.
+
+When set to ``0``, the feature would be disabled and the user will
+not be deleted.
+
+
 API and user token related settings
 ===================================
 

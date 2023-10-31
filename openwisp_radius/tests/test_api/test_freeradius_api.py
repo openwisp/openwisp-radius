@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now
+from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output, catch_signal
@@ -251,6 +251,14 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    @mock.patch('openwisp_users.settings.USER_PASSWORD_EXPIRATION', 30)
+    def test_authorize_password_expired(self):
+        self._get_org_user()
+        User.objects.update(password_updated=now() - timedelta(days=60))
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertNotEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+        self.assertEqual(response.data, None)
 
     def test_authorize_failed(self):
         response = self._authorize_user(

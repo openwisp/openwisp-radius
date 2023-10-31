@@ -404,8 +404,13 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         """
         return bool(
             getattr(request, '_mac_allowed', False)
-            or user.check_password(password)
-            or self.check_user_token(request, user, password)
+            or (
+                not user.has_password_expired()
+                and (
+                    user.check_password(password)
+                    or self.check_user_token(request, user, password)
+                )
+            )
         )
 
     def check_user_token(self, request, user, password):
