@@ -38,7 +38,7 @@ setup(
         (
             'openwisp-users '
             '@ https://github.com/openwisp/openwisp-users/tarball/'
-            'master'
+            'issues/359-password-expiration'
         ),
         (
             'openwisp-utils[rest,celery] @ '
