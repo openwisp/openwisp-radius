@@ -15,7 +15,6 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
-from . import settings as app_settings
 from .radclient.client import RadClient
 from .utils import load_model
 
@@ -58,26 +57,14 @@ def delete_unverified_users(older_than_days=1, exclude_methods=''):
 
 @shared_task
 def unverify_inactive_users():
-    if not app_settings.UNVERIFY_INACTIVE_USERS:
-        return
     RegisteredUser = load_model('RegisteredUser')
-    RegisteredUser.objects.filter(
-        user__is_staff=False,
-        user__last_login__lt=timezone.now()
-        - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),
-    ).update(is_verified=False)
+    RegisteredUser.unverify_inactive_users()
 
 
 @shared_task
 def delete_inactive_users():
-    if not app_settings.DELETE_INACTIVE_USERS:
-        return
-    User = get_user_model()
-    User.objects.filter(
-        is_staff=False,
-        last_login__lt=timezone.now()
-        - timedelta(days=app_settings.DELETE_INACTIVE_USERS),
-    ).delete()
+    RegisteredUser = load_model('RegisteredUser')
+    RegisteredUser.delete_inactive_users()
 
 
 @shared_task
