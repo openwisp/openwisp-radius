@@ -7,6 +7,7 @@ import drf_link_header_pagination
 import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.db import IntegrityError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
@@ -491,7 +492,12 @@ class AccountingView(ListCreateAPIView):
                     return Response(None)
                 raise error
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
-            serializer.create(acct_data)
+            try:
+                serializer.create(acct_data)
+            # on large systems using mac auth roaming this could happen
+            except IntegrityError:
+                logger.info(f'Ignoring duplicate session {acct_data}')
+                return Response(None, status=200)
             headers = self.get_success_headers(serializer.data)
             self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None, status=201, headers=headers)

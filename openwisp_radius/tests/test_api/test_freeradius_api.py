@@ -9,6 +9,7 @@ from dateutil import parser
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now
@@ -696,6 +697,24 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
+
+    @freeze_time(START_DATE)
+    @capture_any_output()
+    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    @mock.patch(
+        'openwisp_radius.api.serializers.RadiusAccountingSerializer.create',
+        side_effect=IntegrityError,
+    )
+    def test_accounting_start_integrity_error(self, create, send_login_email):
+        data = self.acct_post_data
+        data['status_type'] = 'Start'
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        create.assert_called_once()
+        send_login_email.assert_not_called()
 
     @mock.patch(
         'openwisp_radius.receivers.send_login_email.delay', side_effect=OperationalError
