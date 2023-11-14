@@ -37,8 +37,7 @@ setup(
     install_requires=[
         (
             'openwisp-users '
-            '@ https://github.com/openwisp/openwisp-users/tarball/'
-            'issues/359-password-expiration'
+            '@ https://github.com/openwisp/openwisp-users/tarball/master'
         ),
         (
             'openwisp-utils[rest,celery] @ '
