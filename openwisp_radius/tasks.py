@@ -56,6 +56,18 @@ def delete_unverified_users(older_than_days=1, exclude_methods=''):
 
 
 @shared_task
+def unverify_inactive_users():
+    RegisteredUser = load_model('RegisteredUser')
+    RegisteredUser.unverify_inactive_users()
+
+
+@shared_task
+def delete_inactive_users():
+    RegisteredUser = load_model('RegisteredUser')
+    RegisteredUser.delete_inactive_users()
+
+
+@shared_task
 def convert_called_station_id(unique_id=None):
     management.call_command('convert_called_station_id', unique_id=unique_id)
 

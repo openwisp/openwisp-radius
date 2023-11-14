@@ -328,6 +328,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     'location': user.location,
                     'is_active': user.is_active,
                     'is_verified': user.registered_user.is_verified,
+                    'password_expired': user.has_password_expired(),
                     'method': user.registered_user.method,
                     'radius_user_token': user.radius_token.key,
                 },
@@ -348,6 +349,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     'is_active': admin.is_active,
                     'is_verified': None,
                     'method': None,
+                    'password_expired': False,
                     'radius_user_token': None,
                 },
             )

@@ -13,6 +13,7 @@ from django.utils.timezone import now
 from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
 
+from .. import settings as app_settings
 from ..utils import load_model
 from . import _RADACCT, FileMixin
 from .mixins import BaseTestCase
@@ -242,3 +243,40 @@ class TestTasks(FileMixin, BaseTestCase):
                 'have any OpenWISP RADIUS settings configured'
             )
             translation_activate.assert_not_called()
+
+    @mock.patch.object(app_settings, 'UNVERIFY_INACTIVE_USERS', 30)
+    def test_unverify_inactive_users(self, *args):
+        today = now()
+        admin = self._create_admin(last_login=today - timedelta(days=90))
+        user1 = self._create_org_user().user
+        user2 = self._create_org_user(
+            user=self._create_user(username='user2', email='user2@example.com')
+        ).user
+        User.objects.filter(id=user1.id).update(last_login=today)
+        User.objects.filter(id=user2.id).update(last_login=today - timedelta(days=60))
+        RegisteredUser.objects.create(user=admin, is_verified=True)
+        RegisteredUser.objects.create(user=user1, is_verified=True)
+        RegisteredUser.objects.create(user=user2, is_verified=True)
+
+        tasks.unverify_inactive_users.delay()
+        admin.refresh_from_db()
+        user1.refresh_from_db()
+        user2.refresh_from_db()
+        self.assertEqual(admin.registered_user.is_verified, True)
+        self.assertEqual(user1.registered_user.is_verified, True)
+        self.assertEqual(user2.registered_user.is_verified, False)
+
+    @mock.patch.object(app_settings, 'DELETE_INACTIVE_USERS', 30)
+    def test_delete_inactive_users(self, *args):
+        today = now()
+        admin = self._create_admin(last_login=today - timedelta(days=90))
+        user1 = self._create_org_user().user
+        user2 = self._create_org_user(
+            user=self._create_user(username='user2', email='user2@example.com')
+        ).user
+        User.objects.filter(id=user1.id).update(last_login=today)
+        User.objects.filter(id=user2.id).update(last_login=today - timedelta(days=60))
+
+        tasks.delete_inactive_users.delay()
+        self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
+        self.assertEqual(User.objects.filter(id__in=[user2.id]).count(), 0)

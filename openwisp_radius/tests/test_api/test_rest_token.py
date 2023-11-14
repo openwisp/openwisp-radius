@@ -3,7 +3,7 @@ from unittest import mock
 import swapper
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from django.utils.timezone import localtime
+from django.utils.timezone import localtime, now, timedelta
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 
@@ -45,6 +45,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('is_verified', response.data)
         self.assertIn('method', response.data)
         self.assertIn('radius_user_token', response.data)
+        return response
 
     def test_user_auth_token_200(self):
         org_user = self._get_org_user()
@@ -278,6 +279,13 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 401)
         self.assertFalse(response.data['is_active'])
 
+    @mock.patch('openwisp_users.settings.USER_PASSWORD_EXPIRATION', 30)
+    def test_user_auth_token_password_expired(self):
+        self._get_org_user()
+        User.objects.update(password_updated=now() - timedelta(days=60))
+        response = self._user_auth_token_helper('tester')
+        self.assertEqual(response.data['password_expired'], True)
+
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):
@@ -337,6 +345,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertIn('is_verified', response.data)
         self.assertIn('method', response.data)
         self.assertIn('radius_user_token', response.data)
+        return response
 
     def test_validate_auth_token_with_active_user(self):
         user = self._get_user_with_org()
@@ -384,3 +393,10 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         admin.refresh_from_db()
         self.assertIsNotNone(admin.last_login)
         self.assertEqual(localtime(admin.last_login).isoformat(), _TEST_DATE)
+
+    @mock.patch('openwisp_users.settings.USER_PASSWORD_EXPIRATION', 30)
+    def test_validate_auth_token_password_expired(self):
+        user = self._get_org_user().user
+        User.objects.update(password_updated=now() - timedelta(days=60))
+        response = self._test_validate_auth_token_helper(user)
+        self.assertEqual(response.data['password_expired'], True)

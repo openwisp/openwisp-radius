@@ -1560,3 +1560,23 @@ class AbstractRegisteredUser(models.Model):
         abstract = True
         verbose_name = _('Registration Information')
         verbose_name_plural = verbose_name
+
+    @classmethod
+    def unverify_inactive_users(cls):
+        if not app_settings.UNVERIFY_INACTIVE_USERS:
+            return
+        cls.objects.filter(
+            user__is_staff=False,
+            user__last_login__lt=timezone.now()
+            - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),
+        ).update(is_verified=False)
+
+    @classmethod
+    def delete_inactive_users(cls):
+        if not app_settings.DELETE_INACTIVE_USERS:
+            return
+        User.objects.filter(
+            is_staff=False,
+            last_login__lt=timezone.now()
+            - timedelta(days=app_settings.DELETE_INACTIVE_USERS),
+        ).delete()

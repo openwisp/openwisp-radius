@@ -197,6 +197,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    'password_updated',
+                    models.DateField(
+                        blank=True, null=True, verbose_name="password updated"
+                    ),
+                ),
+                (
                     'notes',
                     models.TextField(
                         blank=True,

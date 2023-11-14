@@ -33,6 +33,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         params.pop('_password', None)
         params.pop('bio', None)
         params.pop('last_login', None)
+        params.pop('password_updated', None)
         params.pop('birth_date', None)
         params = self._additional_params_pop(params)
         params.update(self._get_user_edit_form_inline_params(user, org))
