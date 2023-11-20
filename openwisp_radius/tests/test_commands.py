@@ -153,7 +153,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
     @capture_stdout()
-    def test_delete_old_users_command(self):
+    def test_delete_old_radiusbatch_users(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
             organization=self.default_org.slug,
