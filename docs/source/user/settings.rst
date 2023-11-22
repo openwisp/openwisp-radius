@@ -449,26 +449,6 @@ This can cause issues in regions where fixed line and mobile phone numbers
  uses the same pattern (e.g. USA). Setting the value to ``True``
 would make phone number type checking less strict.
 
-``OPENWISP_RADIUS_SMS_COOLDOWN``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``30``
-
-This setting is used to specify time (in seconds) a user needs to wait before
-re-requesting a SMS token.
-
-For example:
-
-.. code-block:: python
-
-    OPENWISP_RADIUS_SMS_COOLDOWN = 60
-
-.. note::
-
-    This setting is applicable only for organizations
-    which have :ref:`enabled the SMS verification option
-    <openwisp_radius_sms_verification_enabled>`.
-
 .. _openwisp_radius_optional_registration_fields:
 
 ``OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS``
@@ -992,6 +972,13 @@ The length of the SMS token.
 **Default**: ``'sha256'``
 
 The hashing algorithm used to generate the numeric code.
+
+``OPENWISP_RADIUS_SMS_COOLDOWN``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``30``
+
+Seconds users needs to wait before being able to request a new SMS token.
 
 ``OPENWISP_RADIUS_SMS_TOKEN_MAX_ATTEMPTS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
