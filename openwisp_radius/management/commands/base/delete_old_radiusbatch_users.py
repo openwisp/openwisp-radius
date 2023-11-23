@@ -9,7 +9,7 @@ from ....utils import load_model
 RadiusBatch = load_model('RadiusBatch')
 
 
-class BaseDeleteOldUsersCommand(BaseCommand):
+class BaseDeleteOldRadiusBatchUsersCommand(BaseCommand):
     help = 'Deactivating users added in batches which have expired'
 
     def add_arguments(self, parser):

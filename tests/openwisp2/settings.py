@@ -239,8 +239,8 @@ CELERY_BEAT_SCHEDULE = {
         'args': None,
         'relative': True,
     },
-    'delete_old_users': {
-        'task': 'openwisp_radius.tasks.delete_old_users',
+    'delete_old_radiusbatch_users': {
+        'task': 'openwisp_radius.tasks.delete_old_radiusbatch_users',
         'schedule': crontab(hour=0, minute=10),
         'args': [365],
         'relative': True,
