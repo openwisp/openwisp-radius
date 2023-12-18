@@ -60,6 +60,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
 from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
@@ -80,6 +81,8 @@ PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+RadiusUserGroup = load_model('RadiusUserGroup')
+RadiusGroupCheck = load_model('RadiusGroupCheck')
 auth_backend = UsersAuthenticationBackend()
 
 
@@ -442,6 +445,29 @@ class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
 
 
 user_accounting = UserAccountingView.as_view()
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Returns the user's RADIUS usage and limit for the organization.
+        It executes the relevant counters and returns exhausted values.
+        """,
+    ),
+)
+class UserRadiusUsageView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    queryset = User.objects.none()
+    serializer_class = UserRadiusUsageSerializer
+
+    def get_object(self):
+        return self.request.user
+
+
+user_radius_usage = UserRadiusUsageView.as_view()
 
 
 class PasswordChangeView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordChangeView):

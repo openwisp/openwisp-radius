@@ -204,3 +204,29 @@ def get_organization_radius_settings(organization, radius_setting):
         raise APIException(
             _('Could not complete operation because of an internal misconfiguration')
         )
+
+
+def get_group_checks(group):
+    """
+    Retrieves a dictionary of checks for the given group.
+
+    Parameters:
+        group (Group): The group object for which to retrieve the checks.
+
+    Returns:
+        dict: A dictionary of group checks with the attribute as the key and
+        the corresponding group check object as the value.
+
+    Used to query the DB for group checks only once
+    instead of once per each counter in use.
+    """
+
+    if not app_settings.COUNTERS:
+        return
+
+    check_attributes = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys()
+    group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
+    result = {}
+    for group_check in group_checks:
+        result[group_check.attribute] = group_check
+    return result

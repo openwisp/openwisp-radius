@@ -50,6 +50,11 @@ def get_api_urls(api_views=None):
                 api_views.user_accounting,
                 name='user_accounting',
             ),
+            path(
+                'radius/organization/<slug:slug>/account/usage/',
+                api_views.user_radius_usage,
+                name='user_radius_usage',
+            ),
             # generate new sms phone token
             path(
                 'radius/organization/<slug:slug>/account/phone/token/',

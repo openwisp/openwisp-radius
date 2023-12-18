@@ -60,6 +60,15 @@ class BaseCounter(ABC):
             f'organization_id={self.organization_id})'
         )
 
+    @classmethod
+    def get_attribute_type(self):
+        check_name = self.check_name.lower()
+        if 'traffic' in check_name:
+            return 'bytes'
+        elif 'session' in check_name:
+            return 'seconds'
+        return app_settings.RADIUS_ATTRIBUTES_TYPE_MAP.get(self.check_name, None)
+
     def get_reset_timestamps(self):
         try:
             return resets[self.reset](self.user)

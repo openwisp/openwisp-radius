@@ -220,13 +220,17 @@ try:
 except KeyError as e:  # pragma: no cover
     raise ImproperlyConfigured(str(e))
 
+RADIUS_ATTRIBUTES_TYPE_MAP = get_settings_value('RADIUS_ATTRIBUTES_TYPE_MAP', {})
+
 COUNTERS = []
+CHECK_ATTRIBUTE_COUNTERS_MAP = {}
 for counter_path in _counters:
     try:
         counter_class = import_string(counter_path)
     except ImportError as e:  # pragma: no cover
         raise ImproperlyConfigured(str(e))
     COUNTERS.append(counter_class)
+    CHECK_ATTRIBUTE_COUNTERS_MAP[counter_class.check_name] = counter_class
 
 
 # Extend the EXPORT_USERS_COMMAND_CONFIG[fields]

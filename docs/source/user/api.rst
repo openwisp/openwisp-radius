@@ -656,6 +656,24 @@ in the URL.
 
 Responds only to **GET**.
 
+.. _radius_usage_api_view:
+
+User Radius Usage
+-----------------
+
+**Requires the user auth token (Bearer Token)**.
+
+Returns the radius usage of the logged-in user and the organization specified
+in the URL.
+
+It executes the relevant RADIUS counters and returns the exhausted values.
+
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/account/usage/
+
+Responds only to **GET**.
+
 Create SMS token
 ----------------
 

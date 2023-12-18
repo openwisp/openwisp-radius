@@ -825,6 +825,25 @@ can consume.
 It should be changed according to the NAS software in use, for example,
 if using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
 
+``OPENWISP_RADIUS_RADIUS_ATTRIBUTES_TYPE_MAP``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``{}``
+
+Used by :ref:`User Radius Usage API <radius_usage_api_view>`,
+it stores mapping of RADIUS attributes to the unit of value
+enforced by the attribute, e.g. ``bytes`` for traffic counters and
+``seconds`` for session time counters.
+
+In the following example, the setting is configured to return ``bytes``
+type in the API response for ``ChilliSpot-Max-Input-Octets`` attribute:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_RADIUS_ATTRIBUTES_TYPE_MAP = {
+        'ChilliSpot-Max-Input-Octets': 'bytes'
+    }
+
 .. _social_login_settings:
 
 Social Login related settings

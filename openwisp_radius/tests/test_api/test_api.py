@@ -21,7 +21,10 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from openwisp_radius.api.serializers import RadiusUserSerializer
+from openwisp_radius.api.serializers import (
+    RadiusUserSerializer,
+    UserGroupCheckSerializer,
+)
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ... import settings as app_settings
@@ -1008,3 +1011,138 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(r.status_code, 201)
             self.assertIn('key', r.data)
+
+    def test_user_radius_usage_view(self):
+        auth_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
+        usage_url = reverse('radius:user_radius_usage', args=[self.default_org.slug])
+        self._get_org_user()
+        response = self.client.post(
+            auth_url, {'username': 'tester', 'password': 'tester'}
+        )
+        authorization = f'Bearer {response.data["key"]}'
+        self.assertEqual(response.status_code, 200)
+        with self.subTest('Test user has not used any data'):
+            response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('checks', response.data)
+            checks = response.data['checks']
+            self.assertDictEqual(
+                dict(checks[0]),
+                {
+                    'attribute': 'Max-Daily-Session',
+                    'op': ':=',
+                    'value': '10800',
+                    'result': 0,
+                    'type': 'seconds',
+                },
+            )
+            self.assertDictEqual(
+                dict(checks[1]),
+                {
+                    'attribute': 'Max-Daily-Session-Traffic',
+                    'op': ':=',
+                    'value': '3000000000',
+                    'result': 0,
+                    'type': 'bytes',
+                },
+            )
+
+        stop_time = '2018-03-02T11:43:24.020460+01:00'
+        data1 = self.acct_post_data
+        data1.update(
+            dict(
+                session_id='35000006',
+                unique_id='75058e50',
+                input_octets=1000000000,
+                output_octets=1000000000,
+                username='tester',
+                stop_time=stop_time,
+                organization=self.default_org,
+            )
+        )
+        self._create_radius_accounting(**data1)
+
+        with self.subTest('Test user consumed some data'):
+            response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('checks', response.data)
+            checks = response.data['checks']
+            self.assertDictEqual(
+                dict(checks[0]),
+                {
+                    'attribute': 'Max-Daily-Session',
+                    'op': ':=',
+                    'value': '10800',
+                    'result': 261,
+                    'type': 'seconds',
+                },
+            )
+            self.assertDictEqual(
+                dict(checks[1]),
+                {
+                    'attribute': 'Max-Daily-Session-Traffic',
+                    'op': ':=',
+                    'value': '3000000000',
+                    'result': 2000000000,
+                    'type': 'bytes',
+                },
+            )
+
+        data2 = self.acct_post_data
+        data2.update(
+            dict(
+                session_id='40111116',
+                unique_id='12234f69',
+                input_octets=500000000,
+                output_octets=500000000,
+                username='tester',
+            )
+        )
+        self._create_radius_accounting(**data2)
+
+        with self.subTest('Test user exhausted limits'):
+            response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('checks', response.data)
+            checks = response.data['checks']
+            self.assertDictEqual(
+                dict(checks[0]),
+                {
+                    'attribute': 'Max-Daily-Session',
+                    'op': ':=',
+                    'value': '10800',
+                    'result': 522,
+                    'type': 'seconds',
+                },
+            )
+            self.assertDictEqual(
+                dict(checks[1]),
+                {
+                    'attribute': 'Max-Daily-Session-Traffic',
+                    'op': ':=',
+                    'value': '3000000000',
+                    'result': 3000000000,
+                    'type': 'bytes',
+                },
+            )
+
+    def test_user_group_check_serializer_counter_does_not_exist(self):
+        group = self._create_radius_group(name='group name')
+        group_check = self._create_radius_groupcheck(
+            attribute='ChilliSpot-Max-Input-Octets',
+            op=':=',
+            value='2000000000',
+            group=group,
+            groupname=group.name,
+        )
+        serializer = UserGroupCheckSerializer(group_check)
+        self.assertDictEqual(
+            serializer.data,
+            {
+                'attribute': 'ChilliSpot-Max-Input-Octets',
+                'op': ':=',
+                'result': None,
+                'type': None,
+                'value': '2000000000',
+            },
+        )
