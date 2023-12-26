@@ -261,7 +261,7 @@ Add and modify the following lines accordingly:
     # This command deletes users that have expired (and should have
     # been deactivated by deactivate_expired_users) for more than
     # 18 months (which is the default duration)
-    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_users
+    30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_radiusbatch_users
 
 Be sure to replace ``<virtualenv_path>`` with the absolute path to the Python
 virtual environment.

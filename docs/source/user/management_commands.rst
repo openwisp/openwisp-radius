@@ -75,15 +75,15 @@ This command deactivates expired user accounts which were created temporarily
 
     ./manage.py deactivate_expired_users
 
-``delete_old_users``
---------------------
+``delete_old_radiusbatch_users``
+--------------------------------
 
 This command deletes users that have expired (and should have been deactivated by
 ``deactivate_expired_users``) for more than the specified ``<duration_in_months>``.
 
 .. code-block:: shell
 
-    ./manage.py delete_old_users --older-than-months <duration_in_months>
+    ./manage.py delete_old_radiusbatch_users --older-than-months <duration_in_months>
 
 Note that the default duration is set to 18 months.
 
