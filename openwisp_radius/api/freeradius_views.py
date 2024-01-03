@@ -32,7 +32,7 @@ from .. import settings as app_settings
 from ..counters.base import BaseCounter
 from ..counters.exceptions import MaxQuotaReached, SkipCheck
 from ..signals import radius_accounting_success
-from ..utils import load_model
+from ..utils import get_group_checks, get_user_group, load_model
 from .serializers import (
     AuthorizeSerializer,
     RadiusAccountingSerializer,
@@ -296,13 +296,13 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         Returns user group replies and executes counter checks
         """
         data = self.accept_attributes.copy()
-        user_group = self.get_user_group(user, organization_id)
+        user_group = get_user_group(user, organization_id)
 
         if user_group:
             for reply in self.get_group_replies(user_group.group):
                 data.update({reply.attribute: {'op': reply.op, 'value': reply.value}})
 
-            group_checks = self.get_group_checks(user_group.group)
+            group_checks = get_group_checks(user_group.group)
 
             for counter in app_settings.COUNTERS:
                 group_check = group_checks.get(counter.check_name)
@@ -346,34 +346,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             )
             return math.inf
 
-    def get_user_group(self, user, organization_id):
-        return (
-            user.radiususergroup_set.filter(group__organization_id=organization_id)
-            .select_related('group')
-            .order_by('priority')
-            .first()
-        )
-
     def get_group_replies(self, group):
         return group.radiusgroupreply_set.all()
-
-    def get_group_checks(self, group):
-        """
-        Used to query the DB for group checks only once
-        instead of once per each counter in use.
-        """
-        if not app_settings.COUNTERS:
-            return
-
-        check_attributes = []
-        for counter in app_settings.COUNTERS:
-            check_attributes.append(counter.check_name)
-
-        group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
-        result = {}
-        for group_check in group_checks:
-            result[group_check.attribute] = group_check
-        return result
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)

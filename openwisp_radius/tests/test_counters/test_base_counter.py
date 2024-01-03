@@ -1,10 +1,12 @@
 from datetime import datetime
+from unittest.mock import patch
 
 from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output
 
-from ...counters.base import BaseCounter
+from ... import settings as app_settings
+from ...counters.base import BaseCounter, BaseDailyCounter, BaseMontlhyTrafficCounter
 from ...counters.exceptions import SkipCheck
 from ...counters.resets import resets
 from ...utils import load_model
@@ -86,3 +88,14 @@ class TestBaseCounter(TestCounterMixin, BaseTestCase):
             self.assertEqual(start, 0)
             self.assertEqual(str(datetime.fromtimestamp(start)), '1970-01-01 00:00:00')
             self.assertIsNone(end)
+
+    @patch.object(
+        app_settings, 'RADIUS_ATTRIBUTES_TYPE_MAP', {'Max-Input-Octets': 'bytes'}
+    )
+    def test_get_attribute_type(self):
+        class MaxInputOctetsCounter(BaseDailyCounter):
+            check_name = 'Max-Input-Octets'
+
+        self.assertEqual(BaseDailyCounter.get_attribute_type(), 'seconds')
+        self.assertEqual(BaseMontlhyTrafficCounter.get_attribute_type(), 'bytes')
+        self.assertEqual(MaxInputOctetsCounter.get_attribute_type(), 'bytes')

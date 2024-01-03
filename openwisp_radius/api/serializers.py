@@ -16,6 +16,7 @@ from django.contrib.auth.models import Group
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -32,8 +33,14 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
+from ..counters.exceptions import MaxQuotaReached, SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
-from ..utils import get_organization_radius_settings, load_model
+from ..utils import (
+    get_group_checks,
+    get_organization_radius_settings,
+    get_user_group,
+    load_model,
+)
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 logger = logging.getLogger(__name__)
@@ -42,6 +49,8 @@ RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
+RadiusGroupCheck = load_model('RadiusGroupCheck')
+RadiusUserGroup = load_model('RadiusUserGroup')
 RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 Organization = swapper.load_model('openwisp_users', 'Organization')
@@ -264,6 +273,50 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         model = RadiusAccounting
         fields = '__all__'
         read_only_fields = ('organization',)
+
+
+class UserGroupCheckSerializer(serializers.ModelSerializer):
+    result = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RadiusGroupCheck
+        fields = ('attribute', 'op', 'value', 'result', 'type')
+
+    def get_result(self, obj):
+        try:
+            counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
+            remaining = counter(
+                user=self.context['user'],
+                group=self.context['group'],
+                group_check=obj,
+            ).check()
+            return int(obj.value) - remaining
+        except MaxQuotaReached:
+            return int(obj.value)
+        except (SkipCheck, ValueError, KeyError):
+            return None
+
+    def get_type(self, obj):
+        try:
+            counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
+        except KeyError:
+            return None
+        else:
+            return counter.get_attribute_type()
+
+
+class UserRadiusUsageSerializer(serializers.Serializer):
+    def to_representation(self, obj):
+        organization = self.context['view'].organization
+        user_group = get_user_group(obj, organization.pk)
+        if not user_group:
+            raise Http404
+        group_checks = get_group_checks(user_group.group).values()
+        checks_data = UserGroupCheckSerializer(
+            group_checks, many=True, context={'user': obj, 'group': user_group.group}
+        ).data
+        return {'checks': checks_data}
 
 
 class GroupSerializer(serializers.ModelSerializer):
