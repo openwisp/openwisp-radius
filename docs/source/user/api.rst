@@ -666,7 +666,8 @@ User Radius Usage
 Returns the radius usage of the logged-in user and the organization specified
 in the URL.
 
-It executes the relevant RADIUS counters and returns the exhausted values.
+It executes the relevant RADIUS counters and returns information that
+shows how much time and/or traffic the user has consumed.
 
 .. code-block:: text
 

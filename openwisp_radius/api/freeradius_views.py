@@ -32,7 +32,7 @@ from .. import settings as app_settings
 from ..counters.base import BaseCounter
 from ..counters.exceptions import MaxQuotaReached, SkipCheck
 from ..signals import radius_accounting_success
-from ..utils import get_group_checks, load_model
+from ..utils import get_group_checks, get_user_group, load_model
 from .serializers import (
     AuthorizeSerializer,
     RadiusAccountingSerializer,
@@ -296,7 +296,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         Returns user group replies and executes counter checks
         """
         data = self.accept_attributes.copy()
-        user_group = self.get_user_group(user, organization_id)
+        user_group = get_user_group(user, organization_id)
 
         if user_group:
             for reply in self.get_group_replies(user_group.group):
@@ -345,14 +345,6 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 'cannot be converted to integer.'
             )
             return math.inf
-
-    def get_user_group(self, user, organization_id):
-        return (
-            user.radiususergroup_set.filter(group__organization_id=organization_id)
-            .select_related('group')
-            .order_by('priority')
-            .first()
-        )
 
     def get_group_replies(self, group):
         return group.radiusgroupreply_set.all()

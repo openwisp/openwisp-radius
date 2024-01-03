@@ -206,6 +206,27 @@ def get_organization_radius_settings(organization, radius_setting):
         )
 
 
+def get_user_group(user, organization_id):
+    """
+    Retrieves the first user group for a given user and organization_id based
+    on RadiusUserGroup.priority.
+
+    Args:
+        user (User): The user for which to retrieve the group.
+        organization_id (uuid): The ID of the organization.
+
+    Returns:
+        UserGroup or None: The user group associated with the user and organization ID,
+        or None if no group is found.
+    """
+    return (
+        user.radiususergroup_set.filter(group__organization_id=organization_id)
+        .select_related('group')
+        .order_by('priority')
+        .first()
+    )
+
+
 def get_group_checks(group):
     """
     Retrieves a dictionary of checks for the given group.

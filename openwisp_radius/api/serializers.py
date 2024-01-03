@@ -16,6 +16,7 @@ from django.contrib.auth.models import Group
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -26,7 +27,6 @@ from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
 )
 from rest_framework.fields import empty
-from rest_framework.generics import get_object_or_404
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -35,7 +35,12 @@ from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..counters.exceptions import MaxQuotaReached, SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
-from ..utils import get_group_checks, get_organization_radius_settings, load_model
+from ..utils import (
+    get_group_checks,
+    get_organization_radius_settings,
+    get_user_group,
+    load_model,
+)
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 logger = logging.getLogger(__name__)
@@ -304,9 +309,9 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
 class UserRadiusUsageSerializer(serializers.Serializer):
     def to_representation(self, obj):
         organization = self.context['view'].organization
-        user_group = get_object_or_404(
-            RadiusUserGroup, group__organization=organization, user=obj
-        )
+        user_group = get_user_group(obj, organization.pk)
+        if not user_group:
+            raise Http404
         group_checks = get_group_checks(user_group.group).values()
         checks_data = UserGroupCheckSerializer(
             group_checks, many=True, context={'user': obj, 'group': user_group.group}

@@ -453,7 +453,8 @@ user_accounting = UserAccountingView.as_view()
         operation_description="""
         **Requires the user auth token (Bearer Token).**
         Returns the user's RADIUS usage and limit for the organization.
-        It executes the relevant counters and returns exhausted values.
+        It executes the relevant counters and returns returns information that
+        shows how much time and/or traffic the user has consumed.
         """,
     ),
 )

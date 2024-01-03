@@ -35,6 +35,7 @@ from .test_freeradius_api import AcctMixin
 User = get_user_model()
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+RadiusUserGroup = load_model('RadiusUserGroup')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
@@ -1125,6 +1126,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     'type': 'bytes',
                 },
             )
+
+        with self.subTest('Test user does not have RadiusUserGroup'):
+            RadiusUserGroup.objects.all().delete()
+            response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
+            self.assertEqual(response.status_code, 404)
 
     def test_user_group_check_serializer_counter_does_not_exist(self):
         group = self._create_radius_group(name='group name')
