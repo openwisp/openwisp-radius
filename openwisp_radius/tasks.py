@@ -16,7 +16,7 @@ from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
 from .radclient.client import RadClient
-from .utils import load_model
+from .utils import get_one_time_login_url, load_model
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ def convert_called_station_id(unique_id=None):
 @shared_task(base=OpenwispCeleryTask)
 def send_login_email(accounting_data):
     from allauth.account.models import EmailAddress
-    from sesame.utils import get_query_string
 
     Organization = swapper.load_model('openwisp_users', 'Organization')
     username = accounting_data.get('username', None)
@@ -83,21 +82,6 @@ def send_login_email(accounting_data):
     organization = Organization.objects.select_related('radius_settings').get(
         id=org_uuid
     )
-
-    try:
-        org_radius_settings = organization.radius_settings
-    except ObjectDoesNotExist:
-        logger.warning(
-            f'Organization "{organization.name}" does not '
-            'have any OpenWISP RADIUS settings configured'
-        )
-        return
-
-    login_url = org_radius_settings.login_url
-    if not login_url:
-        logger.debug(f'login_url is not defined for {organization.name} organization')
-        return
-
     try:
         user = (
             EmailAddress.objects.select_related('user')
@@ -107,14 +91,12 @@ def send_login_email(accounting_data):
     except ObjectDoesNotExist:
         logger.warning(f'user with username "{username}" does not exists')
         return
-    if not user.is_member(organization):
-        logger.warning(
-            f'user with username "{username}" is not member of "{organization.name}"'
-        )
+
+    one_time_login_url = get_one_time_login_url(user, organization)
+    if not one_time_login_url:
         return
 
     with translation.override(user.language):
-        one_time_login_url = login_url + get_query_string(user)
         subject = _('New WiFi session started')
         context = {
             'user': user,

@@ -113,19 +113,32 @@ class TestTasks(FileMixin, BaseTestCase):
         self.assertEqual(User.objects.count(), 0)
 
     @mock.patch('openwisp_radius.tasks.logger')
+    @mock.patch('openwisp_radius.utils.logger')
     @mock.patch('django.utils.translation.activate')
-    # @capture_stdout()
-    def test_send_login_email(self, translation_activate, logger):
+    def test_send_login_email(self, translation_activate, utils_logger, task_logger):
         accounting_data = _RADACCT.copy()
         organization = self._get_org()
         accounting_data['organization'] = organization.id
         total_mails = len(mail.outbox)
+        radius_settings = organization.radius_settings
+
+        with self.subTest('do not send email if username is invalid'):
+            tasks.send_login_email.delay(accounting_data)
+            self.assertEqual(len(mail.outbox), total_mails)
+            username = accounting_data.get('username')
+            task_logger.warning.assert_called_with(
+                f'user with username "{username}" does not exists'
+            )
+
+        user = self._get_user()
+        accounting_data['username'] = user.username
+
         with self.subTest(
             'do not send mail if login_url does not exists for the organization'
         ):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.debug.assert_called_with(
+            utils_logger.debug.assert_called_with(
                 f'login_url is not defined for {organization.name} organization'
             )
             translation_activate.assert_not_called()
@@ -135,22 +148,10 @@ class TestTasks(FileMixin, BaseTestCase):
         radius_settings.save(update_fields=['login_url'])
         total_mails = len(mail.outbox)
 
-        with self.subTest('do not send email if username is invalid'):
-            tasks.send_login_email.delay(accounting_data)
-            self.assertEqual(len(mail.outbox), total_mails)
-            username = accounting_data.get('username')
-            logger.warning.assert_called_with(
-                f'user with username "{username}" does not exists'
-            )
-
-        logger.reset_mock()
-        user = self._get_user()
-        accounting_data['username'] = user.username
-
         with self.subTest('do not send mail if user is not a member of organization'):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.warning.assert_called_with(
+            utils_logger.warning.assert_called_with(
                 f'user with username "{user.username}" is '
                 f'not member of "{organization.name}"'
             )
@@ -238,7 +239,7 @@ class TestTasks(FileMixin, BaseTestCase):
             organization.radius_settings.delete()
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails)
-            logger.warning.assert_called_with(
+            utils_logger.warning.assert_called_with(
                 f'Organization "{organization.name}" does not '
                 'have any OpenWISP RADIUS settings configured'
             )
