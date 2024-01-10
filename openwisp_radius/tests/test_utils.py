@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.test import override_settings
 
-from ..utils import find_available_username, validate_csvfile
+from ..utils import find_available_username, get_one_time_login_url, validate_csvfile
 from . import FileMixin
 from .mixins import BaseTestCase
 
@@ -32,3 +33,8 @@ class TestUtils(FileMixin, BaseTestCase):
         with self.assertRaises(ValidationError) as error:
             validate_csvfile(open(improper_csv_path, 'rt'))
         self.assertTrue('Improper CSV format' in error.exception.message)
+
+    @override_settings(AUTHENTICATION_BACKENDS=[])
+    def test_get_one_time_login_url(self):
+        login_url = get_one_time_login_url(None, None)
+        self.assertEqual(login_url, None)

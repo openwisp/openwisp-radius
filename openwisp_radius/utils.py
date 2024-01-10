@@ -251,3 +251,33 @@ def get_group_checks(group):
     for group_check in group_checks:
         result[group_check.attribute] = group_check
     return result
+
+
+def get_one_time_login_url(user, organization):
+    if 'sesame.backends.ModelBackend' not in getattr(
+        settings, 'AUTHENTICATION_BACKENDS', []
+    ):
+        return
+    from sesame.utils import get_query_string
+
+    try:
+        org_radius_settings = organization.radius_settings
+    except ObjectDoesNotExist:
+        logger.warning(
+            f'Organization "{organization.name}" does not '
+            'have any OpenWISP RADIUS settings configured'
+        )
+        return
+
+    login_url = org_radius_settings.login_url
+    if not login_url:
+        logger.debug(f'login_url is not defined for {organization.name} organization')
+        return
+
+    if not user.is_member(organization):
+        logger.warning(
+            f'user with username "{user}" is not member of "{organization.name}"'
+        )
+        return
+
+    return login_url + get_query_string(user)
