@@ -975,14 +975,34 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
             )
         mocked_logger.reset_mock()
 
-        self._create_nas(
-            name='127.0.0.1',
+        nas = self._create_nas(
+            name='NAS',
             organization=org,
             short_name='test',
             type='Virtual',
             secret='testing123',
         )
 
+        with self.subTest('Test NAS name does not contain IP network'):
+            perform_change_of_authorization(
+                user_id=user.id,
+                old_group_id=user_group.id,
+                new_group_id=power_user_group.id,
+            )
+            self.assertEqual(
+                mocked_logger.call_args_list[0][0][0],
+                f'Failed to parse NAS IP network for "{nas.id}" object. Skipping!',
+            )
+            self.assertEqual(
+                mocked_logger.call_args_list[1][0][0],
+                f'Failed to find RADIUS secret for "{session.unique_id}"'
+                ' RadiusAccounting object. Skipping CoA operation'
+                ' for this session.',
+            )
+        mocked_logger.reset_mock()
+
+        nas.name = '127.0.0.1'
+        nas.save()
         with self.subTest('Test RadClient encountered error while sending CoA packet'):
             perform_change_of_authorization(
                 user_id=user.id,
@@ -1026,8 +1046,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         mocked_radclient.assert_called_with(
             {
                 'User-Name': user.username,
-                'Max-Daily-Session': '',
-                'Max-Daily-Session-Traffic': '',
+                'Session-Timeout': '',
+                'ChilliSpot-Max-Total-Octets': '',
             }
         )
         rad_acct.refresh_from_db()
@@ -1042,8 +1062,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         mocked_radclient.assert_called_with(
             {
                 'User-Name': user.username,
-                'Max-Daily-Session': '10800',
-                'Max-Daily-Session-Traffic': '3000000000',
+                'Session-Timeout': '10800',
+                'ChilliSpot-Max-Total-Octets': '3000000000',
             }
         )
         rad_acct.refresh_from_db()
