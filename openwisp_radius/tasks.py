@@ -15,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
+from . import settings as app_settings
 from .radclient.client import RadClient
 from .utils import get_one_time_login_url, load_model
 
@@ -128,17 +129,28 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             'name', 'secret'
         )
         for nas in qs.iterator():
-            if ipaddress.ip_address(rad_acct.nas_ip_address) in ipaddress.ip_network(
-                nas.name
-            ):
-                return nas.secret
+            try:
+                if ipaddress.ip_address(
+                    rad_acct.nas_ip_address
+                ) in ipaddress.ip_network(nas.name):
+                    return nas.secret
+            except ValueError:
+                logger.warning(
+                    f'Failed to parse NAS IP network for "{nas.id}" object. Skipping!'
+                )
+
+    def get_radius_reply_name(check):
+        try:
+            return app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute].reply_name
+        except KeyError:
+            return check.attribute
 
     def get_radius_attributes():
         attributes = {}
         rad_group_checks = RadiusGroupCheck.objects.filter(group_id=new_group_id)
         if rad_group_checks:
             for check in rad_group_checks:
-                attributes[check.attribute] = f'{check.value}'
+                attributes[get_radius_reply_name(check)] = f'{check.value}'
         elif (
             not rad_group_checks
             and RadiusGroup.objects.filter(id=new_group_id).exists()
@@ -147,7 +159,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             # Unset attributes set by the previous group.
             rad_group_checks = RadiusGroupCheck.objects.filter(group_id=old_group_id)
             for check in rad_group_checks:
-                attributes[check.attribute] = ''
+                attributes[get_radius_reply_name(check)] = ''
         return attributes
 
     try:
