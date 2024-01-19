@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+isort .
+black -S .
+
+if which stylelint > /dev/null; then
+  stylelint $(find . -type f -name "*.css") --fix
+else
+  echo "SKIPPED CSS FILES: Please install stylelint"
+fi

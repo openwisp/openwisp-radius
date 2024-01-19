@@ -1,0 +1,8 @@
+#!/Users/nayakdivyanshu/openwisp-radius/myenv/bin/python3.11
+# -*- coding: utf-8 -*-
+import re
+import sys
+from openwisp_utils.qa import check_migration_name
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(check_migration_name())
