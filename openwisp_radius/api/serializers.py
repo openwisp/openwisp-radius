@@ -120,7 +120,7 @@ class RadiusPostAuthSerializer(serializers.ModelSerializer):
         allow_blank=True,
         style={'input_type': 'password'},
     )
-    called_station_id = serializers.CharField(required=False, allow_blank=True)
+    called_station_id = serializers.CharField(required=False, allow_blank=True,max_length=50)
     calling_station_id = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
