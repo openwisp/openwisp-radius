@@ -54,7 +54,7 @@ setup(
         'pyrad~=2.4',
     ],
     extras_require={
-        'saml': ['djangosaml2~=1.5.0'],
+        'saml': ['djangosaml2~=1.9.1'],
         'openvpn_status': ['openvpn-status~=0.2.1'],
     },
     classifiers=[
