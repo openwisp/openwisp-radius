@@ -139,7 +139,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             {
                 'unique_id': '117',
                 'username': user.username,
-                'called_station_id': device.mac_address,
+                'called_station_id': device.mac_address.replace('-', ':').upper(),
                 'calling_station_id': '00:00:00:00:00:00',
                 'input_octets': '8000000000',
                 'output_octets': '9000000000',

@@ -105,7 +105,10 @@ def post_save_radiusaccounting(
         device = (
             Device.objects.select_related('devicelocation')
             .only('id', 'devicelocation__location_id')
-            .get(mac_address=called_station_id, organization_id=organization_id)
+            .get(
+                mac_address__iexact=called_station_id.replace('-', ':'),
+                organization_id=organization_id,
+            )
         )
     except Device.DoesNotExist:
         logger.warning(
