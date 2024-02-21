@@ -593,7 +593,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_postauth_called_station_id_validation(self):
         payload = {
             'called_station_id': 'C0-4A-00-EE-D1-0D:' + 'B' * 46
-        }  # taking a >50 char value of calling_station_id
+        }  # taking a >50 char value of called_station_id
         response = self.client.post(
             reverse('radius:postauth'), payload, HTTP_AUTHORIZATION=self.auth_header
         )
