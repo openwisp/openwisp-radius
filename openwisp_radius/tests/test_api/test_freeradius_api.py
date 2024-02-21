@@ -590,6 +590,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         self.assertEqual(response.status_code, 400)
 
+    def test_postauth_called_station_id_validation(self):
+        payload = {
+            'called_station_id': 'C0-4A-00-EE-D1-0D:' + 'B' * 46
+        }  # taking a >50 char value of calling_station_id
+        response = self.client.post(
+            reverse('radius:postauth'), payload, HTTP_AUTHORIZATION=self.auth_header
+        )
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        self.assertEqual(response.status_code, 400)
+
     @capture_any_output()
     def test_postauth_no_token_403(self):
         response = self.client.post(reverse('radius:postauth'), {'username': 'tester'})
