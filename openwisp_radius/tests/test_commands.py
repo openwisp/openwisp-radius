@@ -153,7 +153,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
     @capture_stdout()
-    def test_delete_old_users_command(self):
+    def test_delete_old_radiusbatch_users_command(self):
         path = self._get_path('static/test_batch.csv')
         options = dict(
             organization=self.default_org.slug,
@@ -172,9 +172,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         )
         self._call_command('batch_add_users', **options)
         self.assertEqual(get_user_model().objects.all().count(), 6)
-        call_command('delete_old_users')
+        call_command('delete_old_radiusbatch_users')
         self.assertEqual(get_user_model().objects.all().count(), 3)
-        call_command('delete_old_users', older_than_months=12)
+        call_command('delete_old_radiusbatch_users', older_than_months=12)
         self.assertEqual(get_user_model().objects.all().count(), 0)
 
     @capture_stdout()
