@@ -48,8 +48,10 @@ def set_default_group_handler(sender, instance, created, **kwargs):
                 ug = RadiusUserGroup(user=instance.user, group=queryset.first())
                 ug.full_clean()
                 ug.save()
-            except IntegrityError:
-                logger.warning("An error occurred while setting the default group")
+            except IntegrityError as e:
+                logger.warning(
+                    f'An error occurred while setting the default group: {e}'
+                )
 
 
 def create_default_groups_handler(sender, instance, created, **kwargs):
