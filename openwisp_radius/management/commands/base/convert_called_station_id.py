@@ -16,6 +16,7 @@ RE_VIRTUAL_ADDR_MAC = re.compile(
 )
 TELNET_CONNECTION_TIMEOUT = 30  # In seconds
 
+
 RadiusAccounting = load_model('RadiusAccounting')
 
 
@@ -81,17 +82,12 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     def _get_called_station_setting(self, radius_session):
         try:
             organization = radius_session.organization
-            if str(organization.id) in app_settings.CALLED_STATION_IDS:
-                return {
-                    str(organization.id): app_settings.CALLED_STATION_IDS[
-                        str(organization.id)
-                    ]
-                }
+            org_id = str(organization.id)
+            if org_id in app_settings.CALLED_STATION_IDS:
+                return {org_id: app_settings.CALLED_STATION_IDS[org_id]}
             # organization slug is maintained for backward compatibility
             # but will removed in future versions
-            return {
-                organization.slug: app_settings.CALLED_STATION_IDS[organization.slug]
-            }
+            return {org_id: app_settings.CALLED_STATION_IDS[organization.slug]}
         except KeyError:
             logger.error(
                 'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting '
@@ -133,7 +129,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                 qs = [input_radius_session]
             else:
                 qs = RadiusAccounting.objects.filter(
-                    organization__slug=org,
+                    organization_id=org,
                     called_station_id__in=config['unconverted_ids'],
                     stop_time__isnull=True,
                 ).iterator()

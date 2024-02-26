@@ -323,7 +323,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         app_settings,
         'CALLED_STATION_IDS',
         {
-            'test-org': {
+            '1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1': {
                 'openvpn_config': [
                     {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
                 ],
@@ -333,12 +333,17 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     )
     @patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @patch('openwisp_radius.tasks.convert_called_station_id')
-    def test_convert_called_station_id_command(self, *args):
+    def test_convert_called_station_id_command_with_org_id(self, *args):
+        org = self._create_org(
+            id='1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1',
+            name='command test',
+            slug='command-test',
+        )
         options = _RADACCT.copy()
         options['calling_station_id'] = str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix))
         options['called_station_id'] = 'AA-AA-AA-AA-AA-0A'
         options['unique_id'] = '117'
-        options['organization'] = self._get_org()
+        options['organization'] = org
         radius_acc = self._create_radius_accounting(**options)
 
         with self.subTest('Test telnet connection error'):
@@ -396,7 +401,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             ), patch('logging.Logger.info') as mocked_logger:
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
-                    'No routing information found for "test-org" organization'
+                    f'No routing information found for "{org.id}" organization'
                 )
 
         with self.subTest('Test client common name does not contain a MAC address'):
@@ -478,3 +483,32 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(
                 radius_acc.called_station_id, rad_options['called_station_id']
             )
+
+    @capture_any_output()
+    @patch.object(
+        app_settings,
+        'CALLED_STATION_IDS',
+        {
+            'test-org': {
+                'openvpn_config': [
+                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+                ],
+                'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
+            }
+        },
+    )
+    @patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
+    @patch('openwisp_radius.tasks.convert_called_station_id')
+    def test_convert_called_station_id_command_with_slug(self, *args):
+        options = _RADACCT.copy()
+        options['calling_station_id'] = str(EUI('bb:bb:bb:bb:bb:0b', dialect=mac_unix))
+        options['called_station_id'] = 'AA-AA-AA-AA-AA-0A'
+        options['unique_id'] = '117'
+        options['organization'] = self._get_org()
+        radius_acc = self._create_radius_accounting(**options)
+
+        with self.subTest('Test ideal condition'):
+            with self._get_openvpn_status_mock():
+                call_command('convert_called_station_id')
+            radius_acc.refresh_from_db()
+            self.assertEqual(radius_acc.called_station_id, 'CC-CC-CC-CC-CC-0C')
