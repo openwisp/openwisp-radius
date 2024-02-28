@@ -1,6 +1,7 @@
 import logging
 import re
 import telnetlib
+from uuid import UUID
 
 import openvpn_status
 from django.core.management import BaseCommand
@@ -15,6 +16,7 @@ RE_VIRTUAL_ADDR_MAC = re.compile(
     u'^{0}:{0}:{0}:{0}:{0}:{0}'.format(u'[a-f0-9]{2}'), re.I
 )
 TELNET_CONNECTION_TIMEOUT = 30  # In seconds
+
 
 RadiusAccounting = load_model('RadiusAccounting')
 
@@ -81,30 +83,40 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     def _get_called_station_setting(self, radius_session):
         try:
             organization = radius_session.organization
-            if str(organization.id) in app_settings.CALLED_STATION_IDS:
-                return {
-                    str(organization.id): app_settings.CALLED_STATION_IDS[
-                        str(organization.id)
-                    ]
-                }
+            org_id = str(organization.id)
+            if org_id in app_settings.CALLED_STATION_IDS:
+                return {org_id: app_settings.CALLED_STATION_IDS[org_id]}
             # organization slug is maintained for backward compatibility
             # but will removed in future versions
-            return {
-                organization.slug: app_settings.CALLED_STATION_IDS[organization.slug]
-            }
+            return {org_id: app_settings.CALLED_STATION_IDS[organization.slug]}
         except KeyError:
             logger.error(
                 'OPENWISP_RADIUS_CALLED_STATION_IDS does not contain setting '
                 f'for "{radius_session.organization.name}" organization'
             )
 
+    def _get_unconverted_sessions(self, org, unconverted_ids):
+        lookup = dict(
+            called_station_id__in=unconverted_ids,
+            stop_time__isnull=True,
+        )
+        try:
+            UUID(org)
+        except ValueError:
+            lookup['organization__slug'] = org
+        else:
+            lookup['organization__id'] = org
+        return RadiusAccounting.objects.filter(**lookup).iterator()
+
     def add_arguments(self, parser):
         parser.add_argument('--unique_id', action='store', type=str, default='')
 
     def handle(self, *args, **options):
         unique_id = options.get('unique_id')
+        # command run for all sessions
         if not unique_id:
             called_station_id_setting = app_settings.CALLED_STATION_IDS
+        # command run for specific session
         else:
             input_radius_session = self._get_radius_session(unique_id)
             if not input_radius_session:
@@ -132,11 +144,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             if unique_id:
                 qs = [input_radius_session]
             else:
-                qs = RadiusAccounting.objects.filter(
-                    organization__slug=org,
-                    called_station_id__in=config['unconverted_ids'],
-                    stop_time__isnull=True,
-                ).iterator()
+                qs = self._get_unconverted_sessions(org, config['unconverted_ids'])
             for radius_session in qs:
                 try:
                     common_name = routing_dict[
