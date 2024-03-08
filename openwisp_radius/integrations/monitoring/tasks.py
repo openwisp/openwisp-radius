@@ -101,6 +101,7 @@ def post_save_radiusaccounting(
         return
     else:
         registration_method = clean_registration_method(registration_method)
+
     try:
         device = (
             Device.objects.select_related('devicelocation')
@@ -116,19 +117,23 @@ def post_save_radiusaccounting(
             f' and organization "{organization_id}".'
             ' Skipping radius_acc metric writing!'
         )
-        return
-    device_id = str(device.id)
-    if hasattr(device, 'devicelocation'):
-        location_id = str(device.devicelocation.location_id)
-    else:
+        object_id = None
+        content_type = None
         location_id = None
+    else:
+        object_id = str(device.id)
+        content_type = ContentType.objects.get_for_model(Device)
+        if hasattr(device, 'devicelocation'):
+            location_id = str(device.devicelocation.location_id)
+        else:
+            location_id = None
 
     metric, created = Metric._get_or_create(
         configuration='radius_acc',
         name='RADIUS Accounting',
         key='radius_acc',
-        object_id=device_id,
-        content_type=ContentType.objects.get_for_model(Device),
+        object_id=object_id,
+        content_type=content_type,
         extra_tags={
             'organization_id': organization_id,
             'method': registration_method,
@@ -137,6 +142,7 @@ def post_save_radiusaccounting(
             'location_id': location_id,
         },
     )
+    print('===========================================')
     metric.write(
         input_octets,
         extra_values={
@@ -144,7 +150,7 @@ def post_save_radiusaccounting(
             'username': sha1_hash(username),
         },
     )
-    if created:
+    if created and object_id:
         for configuration in metric.config_dict['charts'].keys():
             chart = Chart(metric=metric, configuration=configuration)
             chart.full_clean()
