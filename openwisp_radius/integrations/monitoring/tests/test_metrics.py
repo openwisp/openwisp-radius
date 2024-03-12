@@ -7,6 +7,7 @@ from swapper import load_model
 from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
+from ..migrations import create_general_metrics
 from .mixins import CreateDeviceMonitoringMixin
 
 TASK_PATH = 'openwisp_radius.integrations.monitoring.tasks'
@@ -180,6 +181,82 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points['traces'][0][1][-1], 1)
         self.assertEqual(points['summary'], {'mobile_phone': 1})
 
+    @patch('logging.Logger.warning')
+    def test_post_save_radius_accounting(self, mocked_logger):
+        """
+        This test checks that radius accounting metric is created
+        even if the device could not be found with the called_station_id.
+        This scenario can happen on an installations which uses the
+        convert_called_station_id feature, but it is not configured
+        properly leaving all called_station_id unconverted.
+        """
+        user = self._create_user()
+        reg_user = self._create_registered_user(user=user)
+        options = _RADACCT.copy()
+        options.update(
+            {
+                'unique_id': '117',
+                'username': user.username,
+                'called_station_id': '11:22:33:44:55:66',
+                'calling_station_id': '00:00:00:00:00:00',
+                'input_octets': '8000000000',
+                'output_octets': '9000000000',
+            }
+        )
+        options['stop_time'] = options['start_time']
+        # Remove calls for user registration from mocked logger
+        mocked_logger.reset_mock()
+
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration='radius_acc',
+                name='RADIUS Accounting',
+                key='radius_acc',
+                object_id=None,
+                content_type=None,
+                extra_tags={
+                    'called_station_id': '11:22:33:44:55:66',
+                    'calling_station_id': '00:00:00:00:00:00',
+                    'location_id': None,
+                    'method': reg_user.method,
+                    'organization_id': str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+        # The TransactionTestCase truncates all the data after each test.
+        # The general metrics and charts which are created by migrations
+        # get deleted after each test. Therefore, we create them again here.
+        create_general_metrics(None, None)
+        metric = self.metric_model.objects.filter(configuration='radius_acc').first()
+        # A dedicated chart for this metric was not created since the
+        # related device was not identified by the called_station_id.
+        # The data however can be retrieved from the general charts.
+        self.assertEqual(metric.chart_set.count(), 0)
+        general_traffic_chart = self.chart_model.objects.get(
+            configuration='gen_rad_traffic'
+        )
+        points = general_traffic_chart.read()
+        self.assertEqual(points['traces'][0][0], 'download')
+        self.assertEqual(points['traces'][0][1][-1], 8)
+        self.assertEqual(points['traces'][1][0], 'upload')
+        self.assertEqual(points['traces'][1][1][-1], 9)
+        self.assertEqual(points['summary'], {'upload': 9, 'download': 8})
+
+        general_session_chart = self.chart_model.objects.get(
+            configuration='gen_rad_session'
+        )
+        points = general_session_chart.read()
+        self.assertEqual(points['traces'][0][0], 'mobile_phone')
+        self.assertEqual(points['traces'][0][1][-1], 1)
+        self.assertEqual(points['summary'], {'mobile_phone': 1})
+        mocked_logger.assert_called_once_with(
+            f'Device object not found with MAC "{options["called_station_id"]}"'
+            f' and organization "{self.default_org.id}".'
+            ' The metric will be written without a related object!'
+        )
+
     @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
     @patch('logging.Logger.warning')
     def test_post_save_radiusaccounting_edge_cases(
@@ -205,17 +282,5 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertNotEqual(rad_acc.stop_time, None)
             mocked_logger.assert_called_once_with(
                 f'RegisteredUser object not found for "{user.username}".'
-                ' Skipping radius_acc metric writing!'
-            )
-
-        self._create_registered_user(user=user)
-        options['unique_id'] = '119'
-        mocked_logger.reset_mock()
-
-        with self.subTest('Test Device with called_station_id does not exist'):
-            self._create_radius_accounting(**options)
-            mocked_logger.assert_called_once_with(
-                f'Device object not found with MAC "{options["called_station_id"]}"'
-                f' and organization "{self.default_org.id}".'
                 ' Skipping radius_acc metric writing!'
             )
