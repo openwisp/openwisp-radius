@@ -40,6 +40,10 @@ class CreateDeviceMonitoringMixin(object):
         return load_model('monitoring', 'Metric')
 
     @property
+    def chart_model(self):
+        return load_model('monitoring', 'Chart')
+
+    @property
     def location_model(self):
         return load_model('geo', 'Location')
 

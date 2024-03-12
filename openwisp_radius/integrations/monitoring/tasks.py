@@ -115,7 +115,7 @@ def post_save_radiusaccounting(
         logger.warning(
             f'Device object not found with MAC "{called_station_id}"'
             f' and organization "{organization_id}".'
-            ' Skipping radius_acc metric writing!'
+            ' The metric will be written without a related object!'
         )
         object_id = None
         content_type = None
@@ -142,7 +142,6 @@ def post_save_radiusaccounting(
             'location_id': location_id,
         },
     )
-    print('===========================================')
     metric.write(
         input_octets,
         extra_values={
@@ -150,7 +149,11 @@ def post_save_radiusaccounting(
             'username': sha1_hash(username),
         },
     )
-    if created and object_id:
+    if not object_id:
+        # Adding a chart requires all parameters of extra_tags to be present.
+        # A chart cannot be created without object_id and content_type.
+        return
+    if created:
         for configuration in metric.config_dict['charts'].keys():
             chart = Chart(metric=metric, configuration=configuration)
             chart.full_clean()
