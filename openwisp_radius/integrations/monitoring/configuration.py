@@ -41,13 +41,15 @@ user_singups_chart_config = {
         'organization_id': '',
     },
     'colors': [
-        '#3A3335',
-        '#FDF0D5',
-        '#C6D8D3',
-        '#F0544F',
-        '#D81E5B',
-        '#048A81',
-        '#343E8A',
+        DEFAULT_COLORS[7],
+        '#8C564B',
+        '#17BECF',
+        '#9467BD',
+        '#D62728',
+        '#E377C2',
+        '#1F77B4',
+        '#2CA02C',
+        '#BCBD22',
     ],
 }
 
