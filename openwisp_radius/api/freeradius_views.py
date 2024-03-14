@@ -323,6 +323,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 except Exception as e:
                     logger.exception(f'Got exception "{e}" while executing {counter}')
                     continue
+                if remaining is None:
+                    continue
                 # send remaining value in RADIUS reply, if needed.
                 # This emulates the implementation of sqlcounter in freeradius
                 # which sends the reply message only if the value is smaller

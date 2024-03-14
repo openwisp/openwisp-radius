@@ -493,9 +493,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 }
                 self.assertEqual(response.data, expected)
 
+        original_reply_value = reply.value
         with self.subTest('incorrect reply value'):
             reply.value = 'broken'
-            reply.save()
+            reply.save(update_fields=['value'])
             mocked_check.return_value = 1200
             with mock.patch.object(freeradius_api_logger, 'warning') as mocked_warning:
                 response = self._authorize_user(auth_header=self.auth_header)
@@ -508,6 +509,18 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             expected['Session-Timeout'] = 10800
             expected['ChilliSpot-Max-Total-Octets'] = 3000000000
             self.assertEqual(response.data, expected)
+        reply.value = original_reply_value
+        reply.save(update_fields=['value'])
+
+        with self.subTest('remaining is None'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = None
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
+                del expected['ChilliSpot-Max-Total-Octets']
+                self.assertEqual(response.data, expected)
 
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
