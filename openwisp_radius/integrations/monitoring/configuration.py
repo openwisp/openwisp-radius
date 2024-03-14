@@ -28,11 +28,12 @@ user_singups_chart_config = {
     'description': _('Daily user registration grouped by registration method'),
     'summary_labels': user_signups_chart_summary_labels,
     'order': 240,
+    'filter__all__': True,
     'unit': '',
     'calculate_total': True,
     'query': {
         'influxdb': (
-            "SELECT COUNT(DISTINCT(user_id)) FROM "
+            "SELECT SUM(count) FROM "
             " {key} WHERE time >= '{time}' {end_date} {organization_id}"
             " GROUP BY time(1d), method"
         )
@@ -53,18 +54,16 @@ user_singups_chart_config = {
     ],
 }
 
-cumulative_user_singups_chart_config = deepcopy(user_singups_chart_config)
-cumulative_user_singups_chart_config['query']['influxdb'] = (
-    "SELECT CUMULATIVE_SUM(COUNT(DISTINCT(user_id))) FROM "
+total_user_singups_chart_config = deepcopy(user_singups_chart_config)
+total_user_singups_chart_config['query']['influxdb'] = (
+    "SELECT LAST(count) FROM "
     " {key} WHERE time >= '{time}' {end_date} {organization_id}"
     " GROUP BY time(1d), method"
 )
-cumulative_user_singups_chart_config['summary_query'] = {
-    'influxdb': user_singups_chart_config['query']['influxdb']
-}
-cumulative_user_singups_chart_config['title'] = _('Total Registered Users')
-cumulative_user_singups_chart_config['label'] = _('Total Registered Users')
-cumulative_user_singups_chart_config['order'] = 241
+total_user_singups_chart_config['title'] = _('Total Registered Users')
+total_user_singups_chart_config['label'] = _('Total Registered Users')
+total_user_singups_chart_config['filter__all__'] = True
+total_user_singups_chart_config['order'] = 241
 
 
 RADIUS_METRICS = {
@@ -72,10 +71,18 @@ RADIUS_METRICS = {
         'label': _('User Registration'),
         'name': 'User Registration',
         'key': 'user_signups',
-        'field_name': 'user_id',
+        'field_name': 'count',
         'charts': {
             'user_signups': user_singups_chart_config,
-            'tot_user_signups': cumulative_user_singups_chart_config,
+        },
+    },
+    'tot_user_signups': {
+        'label': _('Total User Registration'),
+        'name': 'Total User Registration',
+        'key': 'tot_user_signups',
+        'field_name': 'count',
+        'charts': {
+            'tot_user_signups': total_user_singups_chart_config,
         },
     },
     'radius_acc': {

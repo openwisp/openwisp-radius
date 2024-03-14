@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import timedelta
 
 from celery.schedules import crontab
 
@@ -381,6 +382,16 @@ if os.environ.get('MONITORING_INTEGRATION', False):
             }
         }
     DATABASES['default']['ENGINE'] = 'openwisp_utils.db.backends.spatialite'
+    CELERY_BEAT_SCHEDULE.update(
+        {
+            'write_user_registration_metrics': {
+                'task': 'openwisp_radius.integrations.monitoring.tasks.write_user_registration_metrics',
+                'schedule': timedelta(hours=1),
+                'args': None,
+                'relative': True,
+            }
+        }
+    )
 
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')

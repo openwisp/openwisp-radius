@@ -110,26 +110,10 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                 _register_chart_configuration_choice(chart_key, chart_config)
 
     def connect_signal_receivers(self):
-        from .receivers import (
-            post_save_organizationuser,
-            post_save_radiusaccounting,
-            post_save_registereduser,
-        )
+        from .receivers import post_save_radiusaccounting
 
-        OrganizationUser = load_model('openwisp_users', 'OrganizationUser')
-        RegisteredUser = load_model('openwisp_radius', 'RegisteredUser')
         RadiusAccounting = load_model('openwisp_radius', 'RadiusAccounting')
 
-        post_save.connect(
-            post_save_organizationuser,
-            sender=OrganizationUser,
-            dispatch_uid='post_save_organizationuser_user_signup_metric',
-        )
-        post_save.connect(
-            post_save_registereduser,
-            sender=RegisteredUser,
-            dispatch_uid='post_save_registereduser_user_signup_metric',
-        )
         post_save.connect(
             post_save_radiusaccounting,
             sender=RadiusAccounting,
