@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import tag
 from swapper import load_model
@@ -8,11 +9,13 @@ from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
 from ..migrations import create_general_metrics
+from ..tasks import write_user_registration_metrics
 from .mixins import CreateDeviceMonitoringMixin
 
 TASK_PATH = 'openwisp_radius.integrations.monitoring.tasks'
 
 RegisteredUser = load_model('openwisp_radius', 'RegisteredUser')
+User = get_user_model()
 
 
 @tag('radius_monitoring')
@@ -26,105 +29,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         reg_user.full_clean()
         reg_user.save()
         return reg_user
-
-    @patch('logging.Logger.warning')
-    def test_post_save_registered_user(self, *args):
-        user = self._create_user()
-        org1 = self._create_org(name='org1')
-        org2 = self._create_org(name='org2')
-        self._create_org_user(user=user, organization=org1)
-        self._create_org_user(user=user, organization=org2)
-        self._create_registered_user(user=user)
-        self.assertEqual(
-            self.metric_model.objects.filter(
-                configuration='user_signups',
-                name='User SignUps',
-                key='user_signups',
-                object_id=None,
-                content_type=None,
-            ).count(),
-            1,
-        )
-        metric = self.metric_model.objects.filter(key='user_signups').first()
-        points = metric.read()
-        # The query performs DISTINCT on the username field,
-        # therefore the read() method returns only one point.
-        self.assertEqual(len(points), 1)
-        # Assert username field is hashed
-        self.assertNotEqual(points[0]['user_id'], str(user.id))
-
-    @patch('openwisp_monitoring.monitoring.models.Metric.write')
-    @patch('logging.Logger.warning')
-    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
-    def test_post_save_registered_user_edge_cases(
-        self, mocked_metric_batch_write, mocked_logger, *args
-    ):
-        user = self._create_user()
-
-        with self.subTest('Test organization user does not exist'):
-            reg_user = self._create_registered_user(user=user)
-            mocked_logger.assert_called_once_with(
-                f'"{user.id}" is not a member of any organization.'
-                ' Skipping user_signup metric writing!'
-            )
-            mocked_metric_batch_write.assert_not_called()
-
-        self._create_org_user(user=user)
-
-        with self.subTest('Test saving an existing RegisteredUser object'):
-            with patch(f'{TASK_PATH}.post_save_registereduser.delay') as mocked_task:
-                reg_user.is_verified = True
-                reg_user.full_clean()
-                reg_user.save()
-            mocked_task.assert_not_called()
-            mocked_metric_batch_write.assert_not_called()
-
-    @patch('logging.Logger.warning')
-    def test_post_save_organization_user(self, *args):
-        user = self._create_user()
-        self._create_registered_user(user=user, method='')
-        self._create_org_user(user=user)
-        self.assertEqual(
-            self.metric_model.objects.filter(
-                configuration='user_signups',
-                name='User SignUps',
-                key='user_signups',
-                object_id=None,
-                content_type=None,
-            ).count(),
-            1,
-        )
-        metric = self.metric_model.objects.filter(key='user_signups').first()
-        points = metric.read()
-        self.assertEqual(len(points), 1)
-        # Assert username field is hashed
-        self.assertNotEqual(points[0]['user_id'], str(user.id))
-
-    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
-    @patch('logging.Logger.warning')
-    @patch('openwisp_monitoring.monitoring.models.Metric.write')
-    def test_post_save_organization_user_edge_cases(
-        self, mocked_metric_write, mocked_logger, *args
-    ):
-        user = self._create_user()
-
-        with self.subTest('Test registered user does not exist'):
-            org_user = self._create_org_user(user=user)
-            mocked_logger.assert_called_once_with(
-                f'RegisteredUser object not found for "{user.id}".'
-                ' Skipping user_signup metric writing!'
-            )
-            mocked_metric_write.assert_not_called()
-
-        self._create_registered_user(user=user)
-
-        with self.subTest('Test saving an existing RegisteredUser object'):
-            with patch(f'{TASK_PATH}.post_save_organizationuser.delay') as mocked_task:
-                org_user.is_admin = True
-                org_user.full_clean()
-                org_user.save()
-            mocked_task.assert_not_called()
-            mocked_metric_write.assert_not_called()
 
     @patch('logging.Logger.warning')
     def test_post_save_radiusaccounting(self, *args):
@@ -182,7 +86,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points['summary'], {'mobile_phone': 1})
 
     @patch('logging.Logger.warning')
-    def test_post_save_radius_accounting(self, mocked_logger):
+    def test_post_save_radius_accounting_device_not_found(self, mocked_logger):
         """
         This test checks that radius accounting metric is created
         even if the device could not be found with the called_station_id.
@@ -257,30 +161,111 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ' The metric will be written without a related object!'
         )
 
-    @patch('openwisp_monitoring.monitoring.models.Metric.batch_write')
-    @patch('logging.Logger.warning')
-    def test_post_save_radiusaccounting_edge_cases(
-        self, mocked_logger, mocked_metric_write, *args
-    ):
-        options = _RADACCT.copy()
-        options['called_station_id'] = '00:00:00:00:00:00'
-        options['unique_id'] = '117'
-        with self.subTest('Test session is not closed'):
-            with patch(f'{TASK_PATH}.post_save_registereduser.delay') as mocked_task:
-                rad_acc = self._create_radius_accounting(**options)
-                self.assertEqual(rad_acc.stop_time, None)
-            mocked_task.assert_not_called()
-            mocked_metric_write.assert_not_called()
+    def test_write_user_registration_metrics(self):
+        def _read_chart(chart, **kwargs):
+            return chart.read(
+                additional_query_kwargs={'additional_params': kwargs},
+            )
 
-        user = self._create_user()
-        options['username'] = user.username
-        options['unique_id'] = '118'
-        options['stop_time'] = options['start_time']
+        create_general_metrics(None, None)
+        org = self._get_org()
+        user_signup_metric = self.metric_model.objects.get(key='user_signups')
+        total_user_signup_metric = self.metric_model.objects.get(key='tot_user_signups')
+        with self.subTest(
+            'User does not has OrganizationUser and RegisteredUser object'
+        ):
+            self._get_admin()
+            write_user_registration_metrics.delay()
 
-        with self.subTest('Test RegisteredUser object does not exist'):
-            rad_acc = self._create_radius_accounting(**options)
-            self.assertNotEqual(rad_acc.stop_time, None)
-            mocked_logger.assert_called_once_with(
-                f'RegisteredUser object not found for "{user.username}".'
-                ' Skipping radius_acc metric writing!'
+            user_signup_chart = user_signup_metric.chart_set.first()
+            all_points = _read_chart(user_signup_chart, organization_id=['__all__'])
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            self.assertEqual(len(org_points['traces']), 0)
+
+            total_user_signup_chart = total_user_signup_metric.chart_set.first()
+            all_points = _read_chart(
+                total_user_signup_chart, organization_id=['__all__']
+            )
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+            org_points = _read_chart(
+                total_user_signup_chart, organization_id=[str(org.id)]
+            )
+            self.assertEqual(len(org_points['traces']), 0)
+
+        self.metric_model.post_delete_receiver(user_signup_metric)
+        self.metric_model.post_delete_receiver(total_user_signup_metric)
+        User.objects.all().delete()
+
+        with self.subTest('User has OrganizationUser but no RegisteredUser object'):
+            user = self._create_org_user(organization=org).user
+            write_user_registration_metrics.delay()
+
+            user_signup_chart = user_signup_metric.chart_set.first()
+            all_points = _read_chart(user_signup_chart, organization_id=['__all__'])
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+
+            total_user_signup_chart = total_user_signup_metric.chart_set.first()
+            all_points = _read_chart(
+                total_user_signup_chart, organization_id=['__all__']
+            )
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+            org_points = _read_chart(
+                total_user_signup_chart, organization_id=[str(org.id)]
+            )
+            self.assertEqual(all_points['traces'][0][0], 'unspecified')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(all_points['summary'], {'unspecified': 1})
+
+        self.metric_model.post_delete_receiver(user_signup_metric)
+        self.metric_model.post_delete_receiver(total_user_signup_metric)
+
+        with self.subTest(
+            'Test user has both OrganizationUser and RegisteredUser object'
+        ):
+            self._create_registered_user(user=user)
+            write_user_registration_metrics.delay()
+
+            user_signup_chart = user_signup_metric.chart_set.first()
+            all_points = _read_chart(user_signup_chart, organization_id=['__all__'])
+            self.assertEqual(all_points['traces'][0][0], 'mobile_phone')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(
+                all_points['summary'], {'mobile_phone': 1, 'unspecified': 0}
+            )
+            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            self.assertEqual(all_points['traces'][0][0], 'mobile_phone')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(
+                all_points['summary'], {'mobile_phone': 1, 'unspecified': 0}
+            )
+
+            total_user_signup_chart = total_user_signup_metric.chart_set.first()
+            org_points = _read_chart(
+                total_user_signup_chart, organization_id=['__all__']
+            )
+            self.assertEqual(org_points['traces'][0][0], 'mobile_phone')
+            self.assertEqual(org_points['traces'][0][1][-1], 1)
+            self.assertEqual(
+                org_points['summary'], {'mobile_phone': 1, 'unspecified': 0}
+            )
+            org_points = _read_chart(
+                total_user_signup_chart, organization_id=[str(org.id)]
+            )
+            self.assertEqual(all_points['traces'][0][0], 'mobile_phone')
+            self.assertEqual(all_points['traces'][0][1][-1], 1)
+            self.assertEqual(
+                all_points['summary'], {'mobile_phone': 1, 'unspecified': 0}
             )

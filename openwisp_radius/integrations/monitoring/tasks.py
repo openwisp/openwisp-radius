@@ -2,15 +2,20 @@ import hashlib
 import logging
 
 from celery import shared_task
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count
+from django.utils import timezone
 from swapper import load_model
 
 Metric = load_model('monitoring', 'Metric')
 Chart = load_model('monitoring', 'Chart')
 RegisteredUser = load_model('openwisp_radius', 'RegisteredUser')
+RadiusAccounting = load_model('openwisp_radius', 'RadiusAccounting')
 OrganizationUser = load_model('openwisp_users', 'OrganizationUser')
 Device = load_model('config', 'Device')
 DeviceLocation = load_model('geo', 'Location')
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -27,57 +32,149 @@ def clean_registration_method(method):
     return method
 
 
-@shared_task
-def post_save_registereduser(user_id, registration_method):
-    metric_data = []
-    org_query = OrganizationUser.objects.filter(user_id=user_id).values_list(
-        'organization_id', flat=True
-    )
-    if not org_query:
-        logger.warning(
-            f'"{user_id}" is not a member of any organization.'
-            ' Skipping user_signup metric writing!'
-        )
-        return
-    registration_method = clean_registration_method(registration_method)
-    for org_id in org_query:
-        metric, _ = Metric._get_or_create(
-            configuration='user_signups',
-            name='User SignUps',
-            key='user_signups',
-            object_id=None,
-            content_type=None,
-            extra_tags={
-                'organization_id': str(org_id),
-                'method': registration_method,
-            },
-        )
-        metric_data.append((metric, {'value': sha1_hash(str(user_id))}))
-    Metric.batch_write(metric_data)
-
-
-@shared_task
-def post_save_organizationuser(user_id, organization_id):
-    try:
-        registration_method = (
-            RegisteredUser.objects.only('method').get(user_id=user_id).method
-        )
-    except RegisteredUser.DoesNotExist:
-        logger.warning(
-            f'RegisteredUser object not found for "{user_id}".'
-            ' Skipping user_signup metric writing!'
-        )
-        return
-    registration_method = clean_registration_method(registration_method)
+def _get_user_signup_metric(organization_id, registration_method):
     metric, _ = Metric._get_or_create(
         configuration='user_signups',
         name='User SignUps',
         key='user_signups',
         object_id=None,
         content_type=None,
-        extra_tags={'organization_id': organization_id, 'method': registration_method},
+        extra_tags={
+            'organization_id': str(organization_id),
+            'method': registration_method,
+        },
     )
-    metric.write(sha1_hash(str(user_id)))
+    return metric
+
+
+def _get_total_user_signup_metric(organization_id, registration_method):
+    metric, _ = Metric._get_or_create(
+        configuration='tot_user_signups',
+        name='Total User SignUps',
+        key='tot_user_signups',
+        object_id=None,
+        content_type=None,
+        extra_tags={
+            'organization_id': str(organization_id),
+            'method': registration_method,
+        },
+    )
+    return metric
+
+
+def _write_user_signup_metric_for_all(metric_key):
+    metric_data = []
+    start_time = timezone.now() - timezone.timedelta(hours=1)
+    end_time = timezone.now()
+    if metric_key == 'user_signups':
+        get_metric_func = _get_user_signup_metric
+    else:
+        get_metric_func = _get_total_user_signup_metric
+    # Get the total number of registered users
+    registered_user_query = RegisteredUser.objects
+    if metric_key == 'user_signups':
+        registered_user_query = registered_user_query.filter(
+            user__date_joined__gt=start_time,
+            user__date_joined__lte=end_time,
+        )
+    total_registered_users = dict(
+        registered_user_query.values_list('method').annotate(
+            count=Count('user', distinct=True)
+        )
+    )
+    # Some manually created users, like superuser may not have a
+    # RegisteredUser object. We would could them with "unspecified" method
+    users_without_registereduser_query = User.objects.filter(
+        registered_user__isnull=True
+    )
+    if metric_key == 'user_signups':
+        users_without_registereduser_query = users_without_registereduser_query.filter(
+            date_joined__gt=start_time,
+            date_joined__lte=end_time,
+        )
+    users_without_registereduser = users_without_registereduser_query.count()
+
+    # Add the number of users which do not have a related RegisteredUser
+    # to the number of users which registered using "unspecified" method.
+    try:
+        total_registered_users[''] = (
+            total_registered_users[''] + users_without_registereduser
+        )
+    except KeyError:
+        total_registered_users[''] = users_without_registereduser
+
+    for method, count in total_registered_users.items():
+        method = clean_registration_method(method)
+        metric = get_metric_func(organization_id='__all__', registration_method=method)
+        metric_data.append((metric, {'value': count}))
+    Metric.batch_write(metric_data)
+
+
+def _write_user_signup_metrics_for_orgs(metric_key):
+    metric_data = []
+    start_time = timezone.now() - timezone.timedelta(hours=1)
+    end_time = timezone.now()
+    if metric_key == 'user_signups':
+        get_metric_func = _get_user_signup_metric
+    else:
+        get_metric_func = _get_total_user_signup_metric
+
+    # Get the registration data for the past hour.
+    # The query returns a tuple of organization_id, registration_method and
+    # count of users who registered with that organization and method.
+    registered_users_query = RegisteredUser.objects
+    if metric_key == 'user_signups':
+        registered_users_query = registered_users_query.filter(
+            user__openwisp_users_organizationuser__created__gt=start_time,
+            user__openwisp_users_organizationuser__created__lte=end_time,
+        )
+    registered_users = registered_users_query.values_list(
+        'user__openwisp_users_organizationuser__organization_id', 'method'
+    ).annotate(count=Count('user_id', distinct=True))
+
+    # There could be users which were manually created (e.g. superuser)
+    # which do not have related RegisteredUser object. Add the count
+    # of such users with the "unspecified" method.
+    users_without_registereduser_query = OrganizationUser.objects.filter(
+        user__registered_user__isnull=True
+    )
+    if metric_key == 'user_signups':
+        users_without_registereduser_query = users_without_registereduser_query.filter(
+            created__gt=start_time, created__lte=end_time
+        )
+    users_without_registereduser = dict(
+        users_without_registereduser_query.values_list('organization_id').annotate(
+            count=Count('user_id', distinct=True)
+        )
+    )
+
+    for org_id, registration_method, count in registered_users:
+        registration_method = clean_registration_method(registration_method)
+        if registration_method == 'unspecified':
+            count += users_without_registereduser.get(org_id, 0)
+        metric = get_metric_func(
+            organization_id=org_id, registration_method=registration_method
+        )
+        metric_data.append((metric, {'value': count}))
+    Metric.batch_write(metric_data)
+
+
+@shared_task
+def write_user_registration_metrics():
+    """
+    This task is expected to be executed hourly.
+
+    This task writes user registration metrics to the InfluxDB.
+    It writes to the following metrics:
+        - User Signups: This shows the number of new users who
+            have registered using different methods
+        - Total User Signups: This shows the total number of
+            users registered using different methods
+    """
+    _write_user_signup_metric_for_all(metric_key='user_signups')
+    _write_user_signup_metric_for_all(metric_key='tot_user_signups')
+    _write_user_signup_metrics_for_orgs(metric_key='user_signups')
+    _write_user_signup_metrics_for_orgs(metric_key='tot_user_signups')
 
 
 @shared_task

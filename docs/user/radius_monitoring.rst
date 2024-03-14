@@ -19,11 +19,11 @@ RADIUS metrics
 
 This chart shows number of users signed up using different registration methods.
 
-2. Cumulative user registrations
+2. Total user registrations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. image:: /images/total-user-registration-chart.png
-   :alt: Cumulative user registration chart
+   :alt: Total user registration chart
 
 This chart shows total users registered using different registration methods
 in the system on a given date.
