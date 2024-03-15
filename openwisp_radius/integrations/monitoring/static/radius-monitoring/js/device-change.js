@@ -8,6 +8,9 @@
             // RADIUS sessions tab should not appear on Device add page.
             return;
         }
+        // Move the "RADIUS Sessions" tab after the "Credentials" tab.
+        $('ul.tabs li.credentials').after($('ul.tabs li.radius-sessions'));
+
         const deviceMac = encodeURIComponent($('#id_mac_address').val()),
             apiEndpoint = `${radiusAccountingApiEndpoint}?called_station_id=${deviceMac}`;
 
