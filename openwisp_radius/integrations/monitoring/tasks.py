@@ -71,7 +71,9 @@ def _write_user_signup_metric_for_all(metric_key):
     else:
         get_metric_func = _get_total_user_signup_metric
     # Get the total number of registered users
-    registered_user_query = RegisteredUser.objects
+    registered_user_query = RegisteredUser.objects.exclude(
+        user__date_joined__gt=end_time,
+    )
     if metric_key == 'user_signups':
         registered_user_query = registered_user_query.filter(
             user__date_joined__gt=start_time,
@@ -122,7 +124,10 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # Get the registration data for the past hour.
     # The query returns a tuple of organization_id, registration_method and
     # count of users who registered with that organization and method.
-    registered_users_query = RegisteredUser.objects
+    registered_users_query = RegisteredUser.objects.exclude(
+        user__openwisp_users_organizationuser__created__gt=end_time,
+    )
+
     if metric_key == 'user_signups':
         registered_users_query = registered_users_query.filter(
             user__openwisp_users_organizationuser__created__gt=start_time,
