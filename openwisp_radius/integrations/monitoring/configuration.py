@@ -28,7 +28,7 @@ user_singups_chart_config = {
     'description': _('Daily user registration grouped by registration method'),
     'summary_labels': user_signups_chart_summary_labels,
     'order': 240,
-    'filter__all__': True,
+    '__all__': True,
     'unit': '',
     'calculate_total': True,
     'query': {

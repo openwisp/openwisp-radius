@@ -9,7 +9,6 @@ from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
 from ..migrations import create_general_metrics
-from ..tasks import write_user_registration_metrics
 from .mixins import CreateDeviceMonitoringMixin
 
 TASK_PATH = 'openwisp_radius.integrations.monitoring.tasks'
@@ -162,6 +161,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     def test_write_user_registration_metrics(self):
+        from ..tasks import write_user_registration_metrics
+
         def _read_chart(chart, **kwargs):
             return chart.read(
                 additional_query_kwargs={'additional_params': kwargs},
