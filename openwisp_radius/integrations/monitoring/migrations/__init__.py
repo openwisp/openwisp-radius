@@ -21,6 +21,19 @@ def create_general_metrics(apps, schema_editor):
             chart.save()
 
     metric, created = Metric._get_or_create(
+        configuration='tot_user_signups',
+        name='Total User SignUps',
+        key='tot_user_signups',
+        object_id=None,
+        content_type=None,
+    )
+    if created:
+        for configuration in metric.config_dict['charts'].keys():
+            chart = Chart(metric=metric, configuration=configuration)
+            chart.full_clean()
+            chart.save()
+
+    metric, created = Metric._get_or_create(
         configuration='gen_radius_acc',
         name='RADIUS Accounting',
         key='radius_acc',
