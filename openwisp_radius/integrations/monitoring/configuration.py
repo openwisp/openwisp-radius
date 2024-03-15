@@ -35,7 +35,7 @@ user_singups_chart_config = {
         'influxdb': (
             "SELECT SUM(count) FROM "
             " {key} WHERE time >= '{time}' {end_date} {organization_id}"
-            " GROUP BY time(1d), method"
+            " GROUP BY time(1d), method FILL(linear)"
         )
     },
     'query_default_param': {
@@ -58,7 +58,7 @@ total_user_singups_chart_config = deepcopy(user_singups_chart_config)
 total_user_singups_chart_config['query']['influxdb'] = (
     "SELECT LAST(count) FROM "
     " {key} WHERE time >= '{time}' {end_date} {organization_id}"
-    " GROUP BY time(1d), method"
+    " GROUP BY time(1d), method FILL(linear)"
 )
 total_user_singups_chart_config['title'] = _('Total Registered Users')
 total_user_singups_chart_config['label'] = _('Total Registered Users')
