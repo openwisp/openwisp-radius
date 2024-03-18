@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.test import tag
 from swapper import load_model
 
@@ -168,6 +169,12 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 additional_query_kwargs={'additional_params': kwargs},
             )
 
+        # The TransactionTestCase truncates all the data after each test.
+        # The general metrics and charts which are created by migrations
+        # get deleted after each test. Therefore, we create them again here.
+        # The "Metric._get_metric" caches the metric, this interferes with
+        # create_general_metrics, hence we clear the cache here.
+        cache.clear()
         create_general_metrics(None, None)
         org = self._get_org()
         user_signup_metric = self.metric_model.objects.get(key='user_signups')
