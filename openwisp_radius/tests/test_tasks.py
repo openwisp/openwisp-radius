@@ -270,14 +270,21 @@ class TestTasks(FileMixin, BaseTestCase):
     @mock.patch.object(app_settings, 'DELETE_INACTIVE_USERS', 30)
     def test_delete_inactive_users(self, *args):
         today = now()
-        admin = self._create_admin(last_login=today - timedelta(days=90))
+        inactive_date = today - timedelta(days=60)
+        admin = self._create_admin(last_login=inactive_date)
         user1 = self._create_org_user().user
         user2 = self._create_org_user(
             user=self._create_user(username='user2', email='user2@example.com')
         ).user
+        user3 = self._create_org_user(
+            user=self._create_user(username='user3', email='user3@example.com')
+        ).user
         User.objects.filter(id=user1.id).update(last_login=today)
-        User.objects.filter(id=user2.id).update(last_login=today - timedelta(days=60))
+        User.objects.filter(id=user2.id).update(last_login=inactive_date)
+        User.objects.filter(id=user3.id).update(
+            last_login=None, date_joined=inactive_date
+        )
 
         tasks.delete_inactive_users.delay()
         self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
-        self.assertEqual(User.objects.filter(id__in=[user2.id]).count(), 0)
+        self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
