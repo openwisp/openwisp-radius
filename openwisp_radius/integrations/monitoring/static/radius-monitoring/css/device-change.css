@@ -6,6 +6,19 @@
   text-align: center;
   margin: 5px;
 }
+#radius-sessions fieldset.module {
+  overflow-x: auto;
+}
+#radius-sessions .loader {
+  width: 4em;
+  height: 4em;
+}
+#device-radius-sessions-table thead th {
+  text-align: center;
+}
 #radius-session-tbody strong {
   color: green;
+}
+#radius-session-tbody tr td p {
+  white-space: nowrap;
 }

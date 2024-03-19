@@ -9,7 +9,8 @@ Therefore, RadiusAccounting inline is added using HTML and JS.
 {% endcomment %}
 {% if not add %}
 <div class="js-inline-admin-formset inline-group" id="radius-sessions">
-    <div id="no-session-msg"><h3>{% trans "There are no RADIUS sessions for this device." %}</h3></div>
+    <div class="loader"></div>
+    <div id="no-session-msg" class="hide"><h3>{% trans "There are no RADIUS sessions for this device." %}</h3></div>
     <div class="tabular inline-related">
         <fieldset class="module">.
             <h2>{% trans "RADIUS Sessions" %}</h2>
@@ -19,7 +20,7 @@ Therefore, RadiusAccounting inline is added using HTML and JS.
                     <th>{% trans "username" %}</th>
                     <th>{% trans "input octets" %}</th>
                     <th>{% trans "ouput octets" %}</th>
-                    <th>{% trans "called station ID" %}</th>
+                    <th>{% trans "calling station ID" %}</th>
                     <th>{% trans "start time" %}</th>
                     <th>{% trans "stop time" %}</th>
                 </thead>
