@@ -1208,6 +1208,8 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 output_octets=1513075509,
                 username='tester',
                 organization=org1,
+                calling_station_id='11:22:33:44:55:66',
+                called_station_id='AA:BB:CC:DD:EE:FF',
             )
         )
         self._create_radius_accounting(**data1)
@@ -1220,6 +1222,8 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 output_octets=1613176609,
                 username='tester',
                 organization=org1,
+                calling_station_id='11-22-33-44-55-66',
+                called_station_id='AA-BB-CC-DD-EE-FF',
             )
         )
         self._create_radius_accounting(**data2)
@@ -1266,6 +1270,45 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(response.data[0]['unique_id'], data3['unique_id'])
             self.assertEqual(response.data[1]['unique_id'], data2['unique_id'])
             self.assertEqual(response.data[2]['unique_id'], data1['unique_id'])
+
+        with self.subTest('Test filtering with called_station_id'):
+            response = self.client.get(path, {'called_station_id': 'AA-BB-CC-DD-EE-FF'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(response.data[0]['called_station_id'], 'AA-BB-CC-DD-EE-FF')
+            self.assertEqual(response.data[1]['called_station_id'], 'AA:BB:CC:DD:EE:FF')
+
+            response = self.client.get(path, {'called_station_id': 'AA:BB:CC:DD:EE:FF'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(response.data[0]['called_station_id'], 'AA-BB-CC-DD-EE-FF')
+            self.assertEqual(response.data[1]['called_station_id'], 'AA:BB:CC:DD:EE:FF')
+
+        with self.subTest('Test filtering with calling_station_id'):
+            response = self.client.get(
+                path, {'calling_station_id': '11-22-33-44-55-66'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                response.data[0]['calling_station_id'], '11-22-33-44-55-66'
+            )
+            self.assertEqual(
+                response.data[1]['calling_station_id'], '11:22:33:44:55:66'
+            )
+
+            response = self.client.get(
+                path, {'calling_station_id': '11:22:33:44:55:66'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                response.data[0]['calling_station_id'], '11-22-33-44-55-66'
+            )
+            self.assertEqual(
+                response.data[1]['calling_station_id'], '11:22:33:44:55:66'
+            )
+
 
 del BaseTestCase
 del BaseTransactionTestCase

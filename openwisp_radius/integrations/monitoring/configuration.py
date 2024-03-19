@@ -9,7 +9,7 @@ user_signups_chart_traces = {'total': 'lines'}
 user_signups_chart_order = ['total']
 user_signups_chart_summary_labels = [_('Total new users')]
 
-for (method, label) in REGISTRATION_METHOD_CHOICES:
+for method, label in REGISTRATION_METHOD_CHOICES:
     if method == '':
         method = 'unspecified'
     user_signups_chart_traces[method] = 'stackedbar'
