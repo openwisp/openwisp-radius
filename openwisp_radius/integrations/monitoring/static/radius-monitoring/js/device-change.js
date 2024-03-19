@@ -37,18 +37,24 @@
                 },
                 crossDomain: true,
                 beforeSend: function() {
-                    $('#loading-overlay').show();
+                    $('#radius-sessions .loader').show();
                 },
                 complete: function () {
-                    $('#loading-overlay').fadeOut(250);
+                    $('#radius-sessions .loader').hide();
                 },
                 success: function (response) {
                     if (response.length === 0) {
+                        $('#no-session-msg').show();
                         return;
                     }
-                    $('#no-session-msg').hide();
-                    $('#device-radius-sessions-table').show();
-                    $('#view-all-radius-session-wrapper').show();
+                    // The called_station_id in the response is in the format accepted by
+                    // RadiusAccountingAdmin. This ensures that we use the same format for
+                    // filtering the RadiusAccountingAdmin table, avoiding any problem with
+                    // different formats of MAC address in the backend.
+                    let called_station_id = response[0].called_station_id,
+                        radiusAccountingAdminUrl = `${radiusAccountingAdminPath}?called_station_id=${encodeURIComponent(called_station_id)}`;
+                    $('#view-all-radius-session-wrapper a').attr('href', radiusAccountingAdminUrl);
+
                     response.forEach(element => {
                         element.start_time = getFormattedDateTimeString(element.start_time);
                         if (!element.stop_time) {
@@ -62,12 +68,15 @@
                                 <td><p>${element.username}</p></td>
                                 <td><p>${element.input_octets}</p></td>
                                 <td><p>${element.output_octets}</p></td>
-                                <td><p>${element.called_station_id}</p></td>
+                                <td><p>${element.calling_station_id}</p></td>
                                 <td><p>${element.start_time}</p></td>
                                 <td><p>${element.stop_time}</p></td>
                             </tr>`
                         );
                     });
+                    $('#no-session-msg').hide();
+                    $('#device-radius-sessions-table').show();
+                    $('#view-all-radius-session-wrapper').show();
                 }
             });
         }
@@ -82,6 +91,5 @@
                 tabId: window.location.hash,
             });
         }
-        $('#view-all-radius-session-wrapper a').attr('href', `${radiusAccountingAdminPath}?called_station_id=${deviceMac}`);
     });
 }(django.jQuery));
