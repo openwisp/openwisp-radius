@@ -13,7 +13,8 @@
   width: 4em;
   height: 4em;
 }
-#device-radius-sessions-table thead th {
+#device-radius-sessions-table thead th,
+#device-radius-sessions-table tbody td {
   text-align: center;
 }
 #radius-session-tbody strong {
