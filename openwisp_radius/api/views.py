@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
@@ -805,7 +806,26 @@ change_phone_number = ChangePhoneNumberView.as_view()
 
 
 class RadiusAccountingFilter(AccountingFilter):
-    called_station_id = CharFilter(field_name='called_station_id', lookup_expr='iexact')
+    called_station_id = CharFilter(
+        field_name='called_station_id', method='filter_mac_address'
+    )
+    calling_station_id = CharFilter(
+        field_name='calling_station_id', method='filter_mac_address'
+    )
+
+    def filter_mac_address(self, queryset, name, value):
+        """
+        The input MAC address in any of these two formats:
+            - AA-BB-CC-DD-EE-FF (quadrants separated by hyphen)
+            - AA:BB:CC:DD:EE:FF (quadrants separated by colon)
+        The below lookup ensures that the filtering is
+        case-insensitive and works across different formats.
+        """
+        lookup = f'{name}__iexact'
+        return queryset.filter(
+            Q(**{lookup: value.replace(':', '-')})
+            | Q(**{lookup: value.replace('-', ':')})
+        )
 
 
 @method_decorator(
