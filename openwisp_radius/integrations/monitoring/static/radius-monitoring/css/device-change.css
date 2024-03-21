@@ -2,20 +2,12 @@
   text-align: center;
   margin-bottom: 20px;
 }
-#view-all-radius-session-wrapper {
-  text-align: center;
-  margin: 5px;
-}
-#radius-sessions fieldset.module {
+#radius-sessions .tabular.inline-related {
   overflow-x: auto;
 }
 #radius-sessions .loader {
   width: 4em;
   height: 4em;
-}
-#device-radius-sessions-table thead th,
-#device-radius-sessions-table tbody td {
-  text-align: center;
 }
 #radius-session-tbody strong {
   color: green;

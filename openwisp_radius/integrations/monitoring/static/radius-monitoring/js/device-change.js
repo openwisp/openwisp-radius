@@ -18,9 +18,8 @@
             // Strip the timezone from the dateTimeString.
             // This is done to show the time in server's timezone
             // because RadiusAccounting admin also shows the time in server's timezone.
-            let strippedDateTime = new Date(dateTimeString.substring(0, dateTimeString.lastIndexOf('-'))),
-                formattedDate = strippedDateTime.strftime('%d %b %Y, %I:%M %p');
-            return formattedDate.replace(/AM/g, 'a.m.').replace(/PM/g, 'p.m.');
+            let strippedDateTime = new Date(dateTimeString.substring(0, dateTimeString.lastIndexOf('-')));
+            return strippedDateTime.toLocaleString();
         }
 
         function fetchRadiusSessions() {
@@ -55,7 +54,7 @@
                         radiusAccountingAdminUrl = `${radiusAccountingAdminPath}?called_station_id=${encodeURIComponent(called_station_id)}`;
                     $('#view-all-radius-session-wrapper a').attr('href', radiusAccountingAdminUrl);
 
-                    response.forEach(element => {
+                    response.forEach((element, index) => {
                         element.start_time = getFormattedDateTimeString(element.start_time);
                         if (!element.stop_time) {
                             element.stop_time = `<strong>${onlineMsg}</strong>`;
@@ -63,14 +62,15 @@
                             element.stop_time = getFormattedDateTimeString(element.stop_time);
                         }
                         $('#radius-session-tbody').append(
-                            `<tr>
-                                <td><p>${element.session_id}</p></td>
-                                <td><p>${element.username}</p></td>
-                                <td><p>${element.input_octets}</p></td>
-                                <td><p>${element.output_octets}</p></td>
-                                <td><p>${element.calling_station_id}</p></td>
-                                <td><p>${element.start_time}</p></td>
-                                <td><p>${element.stop_time}</p></td>
+                            `<tr class="form-row has_original dynamic-radiussession_set" id="radiussession_set-${index}">
+                                <td class="original"></td>
+                                <td class="field-session_id"><p>${element.session_id}</p></td>
+                                <td class="field-username"><p>${element.username}</p></td>
+                                <td class="field-input_octets"><p>${element.input_octets}</p></td>
+                                <td class="field-output_octets"><p>${element.output_octets}</p></td>
+                                <td class="field-calling_station_id"><p>${element.calling_station_id}</p></td>
+                                <td class="field-start_time"><p>${element.start_time}</p></td>
+                                <td class="field-stop_time"><p>${element.stop_time}</p></td>
                             </tr>`
                         );
                     });
