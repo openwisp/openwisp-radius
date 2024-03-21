@@ -8,8 +8,8 @@ from .utils import load_model
 REGISTRATION_METHOD_CHOICES = [
     ('', 'Unspecified'),
     ('manual', _('Manually created')),
-    ('email', _('Email (No Identity Verification)')),
-    ('mobile_phone', _('Mobile phone verification')),
+    ('email', _('Email')),
+    ('mobile_phone', _('Mobile phone')),
 ]
 
 AUTHORIZE_UNVERIFIED = []

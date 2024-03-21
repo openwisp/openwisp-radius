@@ -1,0 +1,7 @@
+{
+    "unused": true,
+    "esversion": 6,
+    "curly": true,
+    "strict": "global",
+    "browser": true
+}
