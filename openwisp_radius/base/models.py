@@ -1565,7 +1565,10 @@ class AbstractRegisteredUser(models.Model):
     def unverify_inactive_users(cls):
         if not app_settings.UNVERIFY_INACTIVE_USERS:
             return
-        cls.objects.filter(
+        # Exclude users who have unspecified, manual, or email
+        # registration method because such users don't have an option
+        # to re-verify. See https://github.com/openwisp/openwisp-radius/issues/517
+        cls.objects.exclude(method__in=['', 'manual', 'email']).filter(
             user__is_staff=False,
             user__last_login__lt=timezone.now()
             - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),
@@ -1575,8 +1578,16 @@ class AbstractRegisteredUser(models.Model):
     def delete_inactive_users(cls):
         if not app_settings.DELETE_INACTIVE_USERS:
             return
+        cutoff_date = timezone.now() - timedelta(
+            days=app_settings.DELETE_INACTIVE_USERS
+        )
         User.objects.filter(
-            is_staff=False,
-            last_login__lt=timezone.now()
-            - timedelta(days=app_settings.DELETE_INACTIVE_USERS),
+            Q(is_staff=False)
+            & (
+                Q(last_login__lt=cutoff_date)
+                |
+                # There could be manually created users which never logged in.
+                # We use the "date_joined" field for such users.
+                Q(last_login__isnull=True, date_joined__lt=cutoff_date)
+            )
         ).delete()

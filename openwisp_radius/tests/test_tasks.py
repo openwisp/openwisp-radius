@@ -247,37 +247,92 @@ class TestTasks(FileMixin, BaseTestCase):
 
     @mock.patch.object(app_settings, 'UNVERIFY_INACTIVE_USERS', 30)
     def test_unverify_inactive_users(self, *args):
+        """
+        Checks that inactive users are unverified after the days
+        configured in OPENWISP_RADIUS_UNVERIFY_INACTIVE_USERS setting,
+        here 30 days.
+
+        Only non-staff users that do not have unspecified(''), manual
+        and email registration methods are considered.
+        """
         today = now()
         admin = self._create_admin(last_login=today - timedelta(days=90))
-        user1 = self._create_org_user().user
-        user2 = self._create_org_user(
-            user=self._create_user(username='user2', email='user2@example.com')
+        active_user = self._create_org_user().user
+        unspecified_user = self._create_org_user(
+            user=self._create_user(
+                username='unspecified_user', email='unspecified_user@example.com'
+            )
         ).user
-        User.objects.filter(id=user1.id).update(last_login=today)
-        User.objects.filter(id=user2.id).update(last_login=today - timedelta(days=60))
+        manually_registered_user = self._create_org_user(
+            user=self._create_user(
+                username='manually_registered_user',
+                email='manually_registered_user@example.com',
+            )
+        ).user
+        email_registered_user = self._create_org_user(
+            user=self._create_user(
+                username='email_registered_user',
+                email='email_registered_user@example.com',
+            )
+        ).user
+        mobile_registered_user = self._create_org_user(
+            user=self._create_user(
+                username='mobile_registered_user',
+                email='mobile_registered_user@example.com',
+            )
+        ).user
+
+        User.objects.filter(id=active_user.id).update(last_login=today)
+        User.objects.exclude(id=active_user.id).update(
+            last_login=today - timedelta(days=60)
+        )
         RegisteredUser.objects.create(user=admin, is_verified=True)
-        RegisteredUser.objects.create(user=user1, is_verified=True)
-        RegisteredUser.objects.create(user=user2, is_verified=True)
+        RegisteredUser.objects.create(user=active_user, is_verified=True)
+        RegisteredUser.objects.create(
+            user=unspecified_user, method='', is_verified=True
+        )
+        RegisteredUser.objects.create(
+            user=manually_registered_user, method='manual', is_verified=True
+        )
+        RegisteredUser.objects.create(
+            user=email_registered_user, method='email', is_verified=True
+        )
+        RegisteredUser.objects.create(
+            user=mobile_registered_user, method='mobile_phone', is_verified=True
+        )
 
         tasks.unverify_inactive_users.delay()
         admin.refresh_from_db()
-        user1.refresh_from_db()
-        user2.refresh_from_db()
+        active_user.refresh_from_db()
+        unspecified_user.refresh_from_db()
+        manually_registered_user.refresh_from_db()
+        email_registered_user.refresh_from_db()
+        mobile_registered_user.refresh_from_db()
         self.assertEqual(admin.registered_user.is_verified, True)
-        self.assertEqual(user1.registered_user.is_verified, True)
-        self.assertEqual(user2.registered_user.is_verified, False)
+        self.assertEqual(active_user.registered_user.is_verified, True)
+        self.assertEqual(unspecified_user.registered_user.is_verified, True)
+        self.assertEqual(manually_registered_user.registered_user.is_verified, True)
+        self.assertEqual(email_registered_user.registered_user.is_verified, True)
+        self.assertEqual(mobile_registered_user.registered_user.is_verified, False)
 
     @mock.patch.object(app_settings, 'DELETE_INACTIVE_USERS', 30)
     def test_delete_inactive_users(self, *args):
         today = now()
-        admin = self._create_admin(last_login=today - timedelta(days=90))
+        inactive_date = today - timedelta(days=60)
+        admin = self._create_admin(last_login=inactive_date)
         user1 = self._create_org_user().user
         user2 = self._create_org_user(
             user=self._create_user(username='user2', email='user2@example.com')
         ).user
+        user3 = self._create_org_user(
+            user=self._create_user(username='user3', email='user3@example.com')
+        ).user
         User.objects.filter(id=user1.id).update(last_login=today)
-        User.objects.filter(id=user2.id).update(last_login=today - timedelta(days=60))
+        User.objects.filter(id=user2.id).update(last_login=inactive_date)
+        User.objects.filter(id=user3.id).update(
+            last_login=None, date_joined=inactive_date
+        )
 
         tasks.delete_inactive_users.delay()
         self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
-        self.assertEqual(User.objects.filter(id__in=[user2.id]).count(), 0)
+        self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
