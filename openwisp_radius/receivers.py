@@ -5,6 +5,7 @@ import logging
 
 from celery.exceptions import OperationalError
 from django.db import transaction
+from django.db.utils import IntegrityError
 from django.utils.timezone import now
 
 from openwisp_radius.tasks import send_login_email
@@ -43,9 +44,14 @@ def set_default_group_handler(sender, instance, created, **kwargs):
                 group__organization_id=instance.organization_id
             ).exists()
         ):
-            ug = RadiusUserGroup(user=instance.user, group=queryset.first())
-            ug.full_clean()
-            ug.save()
+            try:
+                ug = RadiusUserGroup(user=instance.user, group=queryset.first())
+                ug.full_clean()
+                ug.save()
+            except IntegrityError as e:
+                logger.warning(
+                    f'An error occurred while setting the default group: {e}'
+                )
 
 
 def create_default_groups_handler(sender, instance, created, **kwargs):
