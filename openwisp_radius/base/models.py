@@ -1590,4 +1590,4 @@ class AbstractRegisteredUser(models.Model):
                 # We use the "date_joined" field for such users.
                 Q(last_login__isnull=True, date_joined__lt=cutoff_date)
             )
-        ).only('id', 'last_login', 'date_joined', 'is_staff').delete()
+        ).delete()
