@@ -12,27 +12,31 @@ Therefore, RadiusAccounting inline is added using HTML and JS.
     <div class="loader"></div>
     <div id="no-session-msg" class="hide"><h3>{% trans "There are no RADIUS sessions for this device." %}</h3></div>
     <div class="tabular inline-related">
-        <fieldset class="module">.
+        <fieldset class="module">
             <h2>{% trans "RADIUS Sessions" %}</h2>
             <table id="device-radius-sessions-table" class="hide">
                 <thead>
-                    <th>{% trans "session ID" %}</th>
-                    <th>{% trans "username" %}</th>
-                    <th>{% trans "input octets" %}</th>
-                    <th>{% trans "ouput octets" %}</th>
-                    <th>{% trans "calling station ID" %}</th>
-                    <th>{% trans "start time" %}</th>
-                    <th>{% trans "stop time" %}</th>
+                    <th class="original"></th>
+                    <th class="column-session_id">{% trans "session ID" %}</th>
+                    <th class="column-username">{% trans "username" %}</th>
+                    <th class="column-input_octets">{% trans "input octets" %}</th>
+                    <th class="column-output_octets">{% trans "ouput octets" %}</th>
+                    <th class="column-calling_station_id">{% trans "calling station ID" %}</th>
+                    <th class="column-start_time">{% trans "start time" %}</th>
+                    <th class="column-stop_time">{% trans "stop time" %}</th>
                 </thead>
                 <tbody id="radius-session-tbody"></tbody>
             </table>
         </fieldset>
-    <div id="view-all-radius-session-wrapper" class="hide"><a class="button">{% trans "View all RADIUS Sessions" %}</a></div>
+        <div id="view-all-radius-session-wrapper" class="inline-quick-link-container hide">
+            <a class="button">{% trans "View all RADIUS Sessions" %}</a>
+        </div>
     </div>
 </div>
 <script>
     const radiusAccountingApiEndpoint = "{{ radius_accounting_api_endpoint }}";
     const radiusAccountingAdminPath = "{{ radius_accounting }}";
+    const djangoLocale = "{{ LANGUAGE_CODE }}";
 </script>
 {% endif %}
 {% endblock %}

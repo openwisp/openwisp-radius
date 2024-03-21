@@ -85,6 +85,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points['traces'][0][1][-1], 1)
         self.assertEqual(points['summary'], {'mobile_phone': 1})
 
+    @patch('openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting')
+    def test_post_save_radiusaccouting_open_session(self, mocked_task):
+        radius_options = _RADACCT.copy()
+        radius_options['unique_id'] = '117'
+        session = self._create_radius_accounting(**radius_options)
+        self.assertEqual(session.stop_time, None)
+        mocked_task.assert_not_called()
+
     @patch('logging.Logger.warning')
     def test_post_save_radius_accounting_device_not_found(self, mocked_logger):
         """
