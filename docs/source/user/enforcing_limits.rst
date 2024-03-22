@@ -169,4 +169,6 @@ requirements are:
   the one used in the ``BaseCounter`` class;
 - the class must have a ``check`` method which doesn't need any required argument
   and returns the remaining counter value or raises ``MaxQuotaReached`` if
-  the limit has been reached and the authorization should be rejected.
+  the limit has been reached and the authorization should be rejected;
+  This method may return ``None`` if no additional RADIUS attribute
+  needs to be added to the response.

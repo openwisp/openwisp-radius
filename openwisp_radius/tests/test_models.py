@@ -77,7 +77,10 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         radiusaccounting.framed_ipv6_prefix = 'invalid ipv6_prefix'
         self.assertRaises(ValidationError, radiusaccounting.full_clean)
 
-    def convert_called_station_id_tests(self):
+    def _run_convert_called_station_id_tests(self):
+        """
+        Reused by other tests below.
+        """
         radiusaccounting_options = _RADACCT.copy()
         radiusaccounting_options.update(
             {
@@ -161,7 +164,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             'CALLED_STATION_IDS',
             called_station_ids,
         ):
-            self.convert_called_station_id_tests()
+            self._run_convert_called_station_id_tests()
 
     @capture_any_output()
     @mock.patch.object(
@@ -172,7 +175,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     @mock.patch.object(app_settings, 'OPENVPN_DATETIME_FORMAT', u'%Y-%m-%d %H:%M:%S')
     @mock.patch.object(app_settings, 'CONVERT_CALLED_STATION_ON_CREATE', True)
     def test_convert_called_station_id_with_organization_slug(self, *args, **kwargs):
-        self.convert_called_station_id_tests()
+        self._run_convert_called_station_id_tests()
 
 
 class TestRadiusCheck(BaseTestCase):
