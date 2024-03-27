@@ -104,7 +104,7 @@ class TestSqliteCounters(TestCounterMixin, BaseTestCase):
         opts = self._get_kwargs('Max-Daily-Session-Traffic')
         counter = DailyTrafficCounter(**opts)
         self.assertEqual(counter.check_name, 'Max-Daily-Session-Traffic')
-        self.assertEqual(counter.reply_name, 'ChilliSpot-Max-Total-Octets')
+        self.assertEqual(counter.reply_name, 'CoovaChilli-Max-Total-Octets')
 
     def test_monthly_traffic_counter_with_sessions(self):
         rg = RadiusGroup.objects.filter(name='test-org-users').first()

@@ -1050,7 +1050,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
             {
                 'User-Name': user.username,
                 'Session-Timeout': '',
-                'ChilliSpot-Max-Total-Octets': '',
+                'CoovaChilli-Max-Total-Octets': '',
             }
         )
         rad_acct.refresh_from_db()
@@ -1066,7 +1066,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
             {
                 'User-Name': user.username,
                 'Session-Timeout': '10800',
-                'ChilliSpot-Max-Total-Octets': '3000000000',
+                'CoovaChilli-Max-Total-Octets': '3000000000',
             }
         )
         rad_acct.refresh_from_db()

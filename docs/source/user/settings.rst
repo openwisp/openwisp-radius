@@ -814,7 +814,7 @@ which users having the default ``users`` radius group assigned can consume.
 ``OPENWISP_RADIUS_TRAFFIC_COUNTER_REPLY_NAME``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``ChilliSpot-Max-Total-Octets``
+**Default**: ``CoovaChilli-Max-Total-Octets``
 
 Used by :ref:`daily_traffic_counter`,
 it indicates the reply attribute which is returned to the NAS

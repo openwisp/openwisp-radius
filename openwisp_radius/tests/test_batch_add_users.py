@@ -136,7 +136,7 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
             {
                 'control:Auth-Type': 'Accept',
                 'Session-Timeout': 10800,
-                'ChilliSpot-Max-Total-Octets': 3000000000,
+                'CoovaChilli-Max-Total-Octets': 3000000000,
             },
         )
         self.assertEqual(user.registered_user.is_verified, True)

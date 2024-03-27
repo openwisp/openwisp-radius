@@ -38,7 +38,7 @@ OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 START_DATE = '2019-04-20T22:14:09+01:00'
 _AUTH_TYPE_ACCEPT_RESPONSE = {
     'control:Auth-Type': 'Accept',
-    'ChilliSpot-Max-Total-Octets': 3000000000,
+    'CoovaChilli-Max-Total-Octets': 3000000000,
     'Session-Timeout': 10800,
 }
 _AUTH_TYPE_REJECT_RESPONSE = {'control:Auth-Type': 'Reject'}
@@ -469,7 +469,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
                 expected['Session-Timeout'] = 1200
-                expected['ChilliSpot-Max-Total-Octets'] = 1200
+                expected['CoovaChilli-Max-Total-Octets'] = 1200
                 self.assertEqual(response.data, expected)
 
         with self.subTest('remaining higher than reply'):
@@ -507,7 +507,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
             expected['Session-Timeout'] = 10800
-            expected['ChilliSpot-Max-Total-Octets'] = 3000000000
+            expected['CoovaChilli-Max-Total-Octets'] = 3000000000
             self.assertEqual(response.data, expected)
         reply.value = original_reply_value
         reply.save(update_fields=['value'])
@@ -519,7 +519,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 self.assertEqual(mocked_check.call_count, 2)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
                 expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
-                del expected['ChilliSpot-Max-Total-Octets']
+                del expected['CoovaChilli-Max-Total-Octets']
                 self.assertEqual(response.data, expected)
 
     def test_postauth_accept_201(self):
@@ -1555,7 +1555,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTestCase):
                 {
                     'control:Auth-Type': 'Accept',
                     'Session-Timeout': 10539,
-                    'ChilliSpot-Max-Total-Octets': 1487813647,
+                    'CoovaChilli-Max-Total-Octets': 1487813647,
                 },
             )
         OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=False)
@@ -1652,7 +1652,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTestCase):
             {
                 'control:Auth-Type': 'Accept',
                 'Session-Timeout': 10800,
-                'ChilliSpot-Max-Total-Octets': 3000000000,
+                'CoovaChilli-Max-Total-Octets': 3000000000,
             },
         )
         # Start accounting session with first AP

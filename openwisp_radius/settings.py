@@ -180,7 +180,7 @@ TRAFFIC_COUNTER_CHECK_NAME = get_settings_value(
     'TRAFFIC_COUNTER_CHECK_NAME', 'Max-Daily-Session-Traffic'
 )
 TRAFFIC_COUNTER_REPLY_NAME = get_settings_value(
-    'TRAFFIC_COUNTER_REPLY_NAME', 'ChilliSpot-Max-Total-Octets'
+    'TRAFFIC_COUNTER_REPLY_NAME', 'CoovaChilli-Max-Total-Octets'
 )
 RADCLIENT_ATTRIBUTE_DICTIONARIES = get_settings_value(
     'RADCLIENT_ATTRIBUTE_DICTIONARIES', []
