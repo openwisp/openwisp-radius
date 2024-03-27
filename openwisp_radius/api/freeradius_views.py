@@ -304,14 +304,15 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             group_checks = get_group_checks(user_group.group)
 
-            for counter in app_settings.COUNTERS:
-                group_check = group_checks.get(counter.check_name)
+            for Counter in app_settings.COUNTERS:
+                group_check = group_checks.get(Counter.check_name)
                 if not group_check:
                     continue
                 try:
-                    remaining = counter(
+                    counter = Counter(
                         user=user, group=user_group.group, group_check=group_check
-                    ).check()
+                    )
+                    remaining = counter.check()
                 except SkipCheck:
                     continue
                 # if max is reached send access rejected + reply message
@@ -325,14 +326,15 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                     continue
                 if remaining is None:
                     continue
+                reply_name = counter.reply_name
                 # send remaining value in RADIUS reply, if needed.
                 # This emulates the implementation of sqlcounter in freeradius
                 # which sends the reply message only if the value is smaller
                 # than what was defined to a previous reply message
-                if counter.reply_name not in data or remaining < self._get_reply_value(
+                if reply_name not in data or remaining < self._get_reply_value(
                     data, counter
                 ):
-                    data[counter.reply_name] = remaining
+                    data[reply_name] = remaining
 
         return data, self.accept_status
 

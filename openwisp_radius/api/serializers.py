@@ -285,12 +285,15 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
 
     def get_result(self, obj):
         try:
-            counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
-            remaining = counter(
+            Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
+            counter = Counter(
                 user=self.context['user'],
                 group=self.context['group'],
                 group_check=obj,
-            ).check()
+            )
+            # Python can handle 64 bit numbers and
+            # hence we don't need to display Gigawords
+            remaining = counter.check(gigawords=False)
             return int(obj.value) - remaining
         except MaxQuotaReached:
             return int(obj.value)

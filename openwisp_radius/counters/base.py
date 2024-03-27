@@ -43,6 +43,7 @@ class BaseCounter(ABC):
     # sqlcounter module, now we can translate it with gettext
     # or customize it (in new counter classes) if needed
     reply_message = _('Your maximum daily usage time has been reached')
+    gigawords = False
 
     def __init__(self, user, group, group_check):
         self.user = user
@@ -92,7 +93,7 @@ class BaseCounter(ABC):
         # or if nothing is returned (no sessions present), return zero
         return row[0] or 0
 
-    def check(self):
+    def check(self, gigawords=gigawords):
         if not self.group_check:
             raise SkipCheck(
                 message=(

@@ -141,18 +141,24 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
                     f'Failed to parse NAS IP network for "{nas.id}" object. Skipping!'
                 )
 
-    def get_radius_reply_name(check):
+    def get_radius_reply_name_and_value(user, check):
+        Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute]
+        counter = Counter(user=user, group=check.group, group_check=check)
         try:
-            return app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute].reply_name
+            value = counter.check()
+            return counter.reply_name, value
         except KeyError:
-            return check.attribute
+            return check.attribute, check.value
+        except Exception as e:
+            logger.exception(f'Got {e} while CoA for counter {Counter}')
 
-    def get_radius_attributes():
+    def get_radius_attributes(user):
         attributes = {}
         rad_group_checks = RadiusGroupCheck.objects.filter(group_id=new_group_id)
         if rad_group_checks:
             for check in rad_group_checks:
-                attributes[get_radius_reply_name(check)] = f'{check.value}'
+                reply_name, value = get_radius_reply_name_and_value(user, check)
+                attributes[reply_name] = f'{value}'
         elif (
             not rad_group_checks
             and RadiusGroup.objects.filter(id=new_group_id).exists()
@@ -161,7 +167,8 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             # Unset attributes set by the previous group.
             rad_group_checks = RadiusGroupCheck.objects.filter(group_id=old_group_id)
             for check in rad_group_checks:
-                attributes[get_radius_reply_name(check)] = ''
+                reply_name, _ = get_radius_reply_name_and_value(user, check)
+                attributes[reply_name] = ''
         return attributes
 
     try:
@@ -171,7 +178,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             f'Failed to find user with "{user_id}" ID. Skipping CoA operation.'
         )
         return
-    # Check is user has open RadiusAccounting sessions
+    # Check if user has open RadiusAccounting sessions
     open_sessions = RadiusAccounting.objects.filter(
         username=user.username, stop_time__isnull=True
     ).select_related('organization', 'organization__radius_settings')
@@ -190,7 +197,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
         )
         return
     else:
-        attributes = get_radius_attributes()
+        attributes = get_radius_attributes(user)
 
     attributes['User-Name'] = user.username
     updated_sessions = []
