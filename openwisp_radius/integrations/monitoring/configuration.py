@@ -112,7 +112,7 @@ RADIUS_METRICS = {
                     _('Total upload traffic'),
                 ],
                 'unit': 'adaptive_prefix+B',
-                'order': 241,
+                'order': 221,
                 'query': {
                     'influxdb': (
                         "SELECT SUM(output_octets) / 1000000000 AS upload, "
@@ -142,7 +142,7 @@ RADIUS_METRICS = {
                 ),
                 'summary_labels': user_signups_chart_summary_labels,
                 'unit': '',
-                'order': 242,
+                'order': 222,
                 'query': {
                     'influxdb': (
                         "SELECT COUNT(DISTINCT(username)) FROM {key} "
