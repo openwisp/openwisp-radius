@@ -4,13 +4,11 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.monitoring.configuration import DEFAULT_COLORS
 
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
-from openwisp_radius.settings import SAML_REGISTRATION_METHOD_LABEL
 
 user_signups_chart_traces = {'total': 'lines'}
 user_signups_chart_order = ['total']
 user_signups_chart_trace_labels = {
     'total': _('Total'),
-    'saml': SAML_REGISTRATION_METHOD_LABEL,
 }
 user_signups_chart_summary_labels = [_('Total new users')]
 
@@ -21,6 +19,7 @@ for method, label in REGISTRATION_METHOD_CHOICES:
     user_signups_chart_summary_labels.append(
         _('New %(label)s users' % {"label": label})
     )
+    user_signups_chart_trace_labels[method] = label
     user_signups_chart_order.append(method)
 
 
