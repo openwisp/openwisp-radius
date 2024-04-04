@@ -4,9 +4,14 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.monitoring.configuration import DEFAULT_COLORS
 
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
+from openwisp_radius.settings import SAML_REGISTRATION_METHOD_LABEL
 
 user_signups_chart_traces = {'total': 'lines'}
 user_signups_chart_order = ['total']
+user_signups_chart_trace_labels = {
+    'total': _('Total'),
+    'saml': SAML_REGISTRATION_METHOD_LABEL,
+}
 user_signups_chart_summary_labels = [_('Total new users')]
 
 for method, label in REGISTRATION_METHOD_CHOICES:
@@ -27,6 +32,7 @@ user_singups_chart_config = {
     'label': _('User Registration'),
     'description': _('Daily user registration grouped by registration method'),
     'summary_labels': user_signups_chart_summary_labels,
+    'trace_labels': user_signups_chart_trace_labels,
     'order': 240,
     '__all__': True,
     'unit': '',
@@ -141,6 +147,7 @@ RADIUS_METRICS = {
                     'RADIUS Network traffic (total, download and upload).'
                 ),
                 'summary_labels': user_signups_chart_summary_labels,
+                'trace_labels': user_signups_chart_trace_labels,
                 'unit': '',
                 'order': 222,
                 'query': {
@@ -219,6 +226,7 @@ RADIUS_METRICS = {
                     'RADIUS Network traffic (total, download and upload).'
                 ),
                 'summary_labels': user_signups_chart_summary_labels,
+                'trace_labels': user_signups_chart_trace_labels,
                 'unit': '',
                 'order': 243,
                 'query': {
