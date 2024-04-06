@@ -992,6 +992,41 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    def test_accounting_stop_empty_octets(self):
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        data = self.acct_post_data
+        data.update(
+            dict(
+                input_octets=9900909,
+                output_octets=1513075509,
+            )
+        )
+        ra = self._create_radius_accounting(**data)
+        ra.refresh_from_db()
+        start_time = ra.start_time
+        data = self.acct_post_data
+        data.update(
+            {
+                'status_type': 'Stop',
+                'terminate_cause': '',
+                'input_octets': '',
+                'output_octets': '',
+            }
+        )
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        ra.refresh_from_db()
+        self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+        self.assertEqual(ra.stop_time.timetuple(), now().timetuple())
+        self.assertEqual(ra.start_time, start_time)
+        self.assertEqual(ra.input_octets, 9900909)
+        self.assertEqual(ra.output_octets, 1513075509)
+        self.assertEqual(ra.session_time, 261)
+
+    @freeze_time(START_DATE)
     @capture_any_output()
     def test_accounting_stop_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)

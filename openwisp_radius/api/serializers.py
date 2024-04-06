@@ -151,13 +151,13 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     framed_ipv6_address = serializers.IPAddressField(
         required=False, allow_blank=True, protocol='IPv6'
     )
-    session_time = serializers.IntegerField(required=False, default=0)
+    session_time = serializers.IntegerField(required=False)
     stop_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
-    input_octets = serializers.IntegerField(required=False, default=0)
-    output_octets = serializers.IntegerField(required=False, default=0)
-    # this is needed otherwise serialize will ignore status_type from accounting packet
-    # as it's not a model field
+    input_octets = serializers.IntegerField(required=False)
+    output_octets = serializers.IntegerField(required=False)
+    # this is needed otherwise serializer will ignore status_type
+    # from the accounting request because it's not a model field
     status_type = serializers.ChoiceField(
         write_only=True, required=True, choices=STATUS_TYPE_CHOICES
     )
@@ -191,9 +191,24 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             raise error
 
     def run_validation(self, data):
+        """
+        Custom validation to handle empty strings in:
+            - session_time
+            - input_octets
+            - output_octets
+        """
         for field in ['session_time', 'input_octets', 'output_octets']:
-            if data.get('status_type', None) == 'Start' and data[field] == '':
+            # missing data in accounting start,
+            # let's set zero as default value
+            if data.get('status_type', None) == 'Start' and data.get(field) == '':
                 data[field] = 0
+            # missing data in accounting stop,
+            # let's remove the empty string to
+            # prevent the API from failing
+            # the existing values stored in previous
+            # interim-updates won't be changed
+            if data.get('status_type', None) == 'Stop' and data.get(field) == '':
+                del data[field]
         return super().run_validation(data)
 
     def validate(self, data):
