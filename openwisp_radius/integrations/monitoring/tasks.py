@@ -198,9 +198,9 @@ def post_save_radiusaccounting(
     except RegisteredUser.DoesNotExist:
         logger.warning(
             f'RegisteredUser object not found for "{username}".'
-            ' Skipping radius_acc metric writing!'
+            ' The metric will be written with "unspecified" registration method!'
         )
-        return
+        registration_method = 'unspecified'
     else:
         registration_method = clean_registration_method(registration_method)
 

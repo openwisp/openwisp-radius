@@ -169,6 +169,80 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ' The metric will be written without a related object!'
         )
 
+    @patch('logging.Logger.warning')
+    def test_post_save_radius_accounting_registereduser_not_found(self, mocked_logger):
+        """
+        This test checks that radius accounting metric is created
+        even if the RegisteredUser object could not be found for the user.
+        This scenario can happen on an installations which do not require
+        users to signup to access the internet/
+        """
+        user = self._create_user()
+        device = self._create_device()
+        options = _RADACCT.copy()
+        options.update(
+            {
+                'unique_id': '117',
+                'username': user.username,
+                'called_station_id': device.mac_address.replace('-', ':').upper(),
+                'calling_station_id': '00:00:00:00:00:00',
+                'input_octets': '8000000000',
+                'output_octets': '9000000000',
+            }
+        )
+        options['stop_time'] = options['start_time']
+        # Remove calls for user registration from mocked logger
+        mocked_logger.reset_mock()
+
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration='radius_acc',
+                name='RADIUS Accounting',
+                key='radius_acc',
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    'called_station_id': device.mac_address,
+                    'calling_station_id': '00:00:00:00:00:00',
+                    'location_id': None,
+                    'method': 'unspecified',
+                    'organization_id': str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+        # The TransactionTestCase truncates all the data after each test.
+        # The general metrics and charts which are created by migrations
+        # get deleted after each test. Therefore, we create them again here.
+        create_general_metrics(None, None)
+        metric = self.metric_model.objects.filter(configuration='radius_acc').first()
+        # A dedicated chart for this metric was not created since the
+        # related device was not identified by the called_station_id.
+        # The data however can be retrieved from the general charts.
+        self.assertEqual(metric.chart_set.count(), 2)
+        general_traffic_chart = self.chart_model.objects.get(
+            configuration='gen_rad_traffic'
+        )
+        points = general_traffic_chart.read()
+        self.assertEqual(points['traces'][0][0], 'download')
+        self.assertEqual(points['traces'][0][1][-1], 8)
+        self.assertEqual(points['traces'][1][0], 'upload')
+        self.assertEqual(points['traces'][1][1][-1], 9)
+        self.assertEqual(points['summary'], {'upload': 9, 'download': 8})
+
+        general_session_chart = self.chart_model.objects.get(
+            configuration='gen_rad_session'
+        )
+        points = general_session_chart.read()
+        self.assertEqual(points['traces'][0][0], 'unspecified')
+        self.assertEqual(points['traces'][0][1][-1], 1)
+        self.assertEqual(points['summary'], {'unspecified': 1})
+        mocked_logger.assert_called_once_with(
+            f'RegisteredUser object not found for "{user.username}".'
+            ' The metric will be written with "unspecified" registration method!'
+        )
+
     def test_write_user_registration_metrics(self):
         from ..tasks import write_user_registration_metrics
 
