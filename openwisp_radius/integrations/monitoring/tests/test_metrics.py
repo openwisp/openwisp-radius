@@ -169,7 +169,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ' The metric will be written without a related object!'
         )
 
-    @patch('logging.Logger.warning')
+    @patch('logging.Logger.info')
     def test_post_save_radius_accounting_registereduser_not_found(self, mocked_logger):
         """
         This test checks that radius accounting metric is created
@@ -179,6 +179,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         """
         user = self._create_user()
         device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
         options = _RADACCT.copy()
         options.update(
             {
@@ -191,8 +195,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             }
         )
         options['stop_time'] = options['start_time']
-        # Remove calls for user registration from mocked logger
-        mocked_logger.reset_mock()
 
         self._create_radius_accounting(**options)
         self.assertEqual(
@@ -205,36 +207,24 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 extra_tags={
                     'called_station_id': device.mac_address,
                     'calling_station_id': '00:00:00:00:00:00',
-                    'location_id': None,
+                    'location_id': str(device_loc.location.id),
                     'method': 'unspecified',
                     'organization_id': str(self.default_org.id),
                 },
             ).count(),
             1,
         )
-        # The TransactionTestCase truncates all the data after each test.
-        # The general metrics and charts which are created by migrations
-        # get deleted after each test. Therefore, we create them again here.
-        create_general_metrics(None, None)
         metric = self.metric_model.objects.filter(configuration='radius_acc').first()
-        # A dedicated chart for this metric was not created since the
-        # related device was not identified by the called_station_id.
-        # The data however can be retrieved from the general charts.
-        self.assertEqual(metric.chart_set.count(), 2)
-        general_traffic_chart = self.chart_model.objects.get(
-            configuration='gen_rad_traffic'
-        )
-        points = general_traffic_chart.read()
+        traffic_chart = metric.chart_set.get(configuration='radius_traffic')
+        points = traffic_chart.read()
         self.assertEqual(points['traces'][0][0], 'download')
         self.assertEqual(points['traces'][0][1][-1], 8)
         self.assertEqual(points['traces'][1][0], 'upload')
         self.assertEqual(points['traces'][1][1][-1], 9)
         self.assertEqual(points['summary'], {'upload': 9, 'download': 8})
 
-        general_session_chart = self.chart_model.objects.get(
-            configuration='gen_rad_session'
-        )
-        points = general_session_chart.read()
+        session_chart = metric.chart_set.get(configuration='rad_session')
+        points = session_chart.read()
         self.assertEqual(points['traces'][0][0], 'unspecified')
         self.assertEqual(points['traces'][0][1][-1], 1)
         self.assertEqual(points['summary'], {'unspecified': 1})

@@ -196,7 +196,7 @@ def post_save_radiusaccounting(
             RegisteredUser.objects.only('method').get(user__username=username).method
         )
     except RegisteredUser.DoesNotExist:
-        logger.warning(
+        logger.info(
             f'RegisteredUser object not found for "{username}".'
             ' The metric will be written with "unspecified" registration method!'
         )
