@@ -27,9 +27,9 @@ user_singups_chart_config = {
     'type': 'stackedbar+lines',
     'trace_type': user_signups_chart_traces,
     'trace_order': user_signups_chart_order,
-    'title': _('User Registration'),
-    'label': _('User Registration'),
-    'description': _('Daily user registration grouped by registration method'),
+    'title': _('User Registrations'),
+    'label': _('User Registrations'),
+    'description': _('Daily user registrations grouped by registration method'),
     'summary_labels': user_signups_chart_summary_labels,
     'trace_labels': user_signups_chart_trace_labels,
     'order': 240,
@@ -73,8 +73,8 @@ total_user_singups_chart_config['order'] = 241
 
 RADIUS_METRICS = {
     'user_signups': {
-        'label': _('User Registration'),
-        'name': 'User Registration',
+        'label': _('User Registrations'),
+        'name': 'User Registrations',
         'key': 'user_signups',
         'field_name': 'count',
         'charts': {
@@ -82,8 +82,8 @@ RADIUS_METRICS = {
         },
     },
     'tot_user_signups': {
-        'label': _('Total User Registration'),
-        'name': 'Total User Registration',
+        'label': _('Total User Registrations'),
+        'name': 'Total User Registrations',
         'key': 'tot_user_signups',
         'field_name': 'count',
         'charts': {
@@ -140,8 +140,8 @@ RADIUS_METRICS = {
                 'fill': 'none',
                 'trace_type': user_signups_chart_traces,
                 'trace_order': user_signups_chart_order,
-                'title': _('Unique RADIUS Session Count'),
-                'label': _('RADIUS Session Count'),
+                'title': _('Unique RADIUS Sessions'),
+                'label': _('Unique RADIUS Sessions'),
                 'description': _(
                     'RADIUS Network traffic (total, download and upload).'
                 ),
@@ -183,7 +183,7 @@ RADIUS_METRICS = {
                     'total': 'lines',
                 },
                 'trace_order': ['total', 'download', 'upload'],
-                'title': _('Total RADIUS Sessions Traffic'),
+                'title': _('Traffic of RADIUS Sessions'),
                 'label': _('General RADIUS Traffic'),
                 'description': _(
                     'RADIUS Network traffic (total, download and upload).'
@@ -219,8 +219,8 @@ RADIUS_METRICS = {
                 'fill': 'none',
                 'trace_type': user_signups_chart_traces,
                 'trace_order': user_signups_chart_order,
-                'title': _('Unique RADIUS Session Count'),
-                'label': _('General RADIUS Session Count'),
+                'title': _('Unique RADIUS Sessions'),
+                'label': _('General RADIUS Sessions'),
                 'description': _(
                     'RADIUS Network traffic (total, download and upload).'
                 ),
