@@ -40,7 +40,7 @@ user_singups_chart_config = {
         'influxdb': (
             "SELECT SUM(count) FROM "
             " {key} WHERE time >= '{time}' {end_date} {organization_id}"
-            " GROUP BY time(1d), method FILL(linear)"
+            " GROUP BY time(1d), method"
         )
     },
     'query_default_param': {
