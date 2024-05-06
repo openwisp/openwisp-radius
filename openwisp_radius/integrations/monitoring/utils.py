@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta
 
 from django.utils import timezone
@@ -21,3 +22,15 @@ def get_datetime_filter_start_date():
 def get_datetime_filter_stop_date():
     stop_date = timezone.localdate() + timedelta(days=1)
     return _get_formatted_datetime_string(stop_date)
+
+
+def sha1_hash(input_string):
+    sha1 = hashlib.sha1()
+    sha1.update(input_string.encode('utf-8'))
+    return sha1.hexdigest()
+
+
+def clean_registration_method(method):
+    if method == '':
+        method = 'unspecified'
+    return method

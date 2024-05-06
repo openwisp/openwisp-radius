@@ -10,6 +10,7 @@ from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
 from ..migrations import create_general_metrics
+from ..utils import sha1_hash
 from .mixins import CreateDeviceMonitoringMixin
 
 TASK_PATH = 'openwisp_radius.integrations.monitoring.tasks'
@@ -62,7 +63,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 content_type=ContentType.objects.get_for_model(self.device_model),
                 extra_tags={
                     'called_station_id': device.mac_address,
-                    'calling_station_id': '00:00:00:00:00:00',
+                    'calling_station_id': sha1_hash('00:00:00:00:00:00'),
                     'location_id': str(device_loc.location.id),
                     'method': reg_user.method,
                     'organization_id': str(self.default_org.id),
@@ -129,7 +130,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 content_type=None,
                 extra_tags={
                     'called_station_id': '11:22:33:44:55:66',
-                    'calling_station_id': '00:00:00:00:00:00',
+                    'calling_station_id': sha1_hash('00:00:00:00:00:00'),
                     'location_id': None,
                     'method': reg_user.method,
                     'organization_id': str(self.default_org.id),
@@ -206,7 +207,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 content_type=ContentType.objects.get_for_model(self.device_model),
                 extra_tags={
                     'called_station_id': device.mac_address,
-                    'calling_station_id': '00:00:00:00:00:00',
+                    'calling_station_id': sha1_hash('00:00:00:00:00:00'),
                     'location_id': str(device_loc.location.id),
                     'method': 'unspecified',
                     'organization_id': str(self.default_org.id),

@@ -1,4 +1,3 @@
-import hashlib
 import logging
 
 from celery import shared_task
@@ -7,6 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from django.utils import timezone
 from swapper import load_model
+
+from .utils import clean_registration_method, sha1_hash
 
 Metric = load_model('monitoring', 'Metric')
 Chart = load_model('monitoring', 'Chart')
@@ -18,18 +19,6 @@ DeviceLocation = load_model('geo', 'Location')
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
-
-
-def sha1_hash(input_string):
-    sha1 = hashlib.sha1()
-    sha1.update(input_string.encode('utf-8'))
-    return sha1.hexdigest()
-
-
-def clean_registration_method(method):
-    if method == '':
-        method = 'unspecified'
-    return method
 
 
 def _get_user_signup_metric(organization_id, registration_method):
@@ -239,7 +228,7 @@ def post_save_radiusaccounting(
         extra_tags={
             'organization_id': organization_id,
             'method': registration_method,
-            'calling_station_id': calling_station_id,
+            'calling_station_id': sha1_hash(calling_station_id),
             'called_station_id': called_station_id,
             'location_id': location_id,
         },
