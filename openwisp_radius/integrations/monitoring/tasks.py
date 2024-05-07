@@ -3,10 +3,11 @@ import logging
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 from swapper import load_model
 
+from . import settings as app_settings
 from .utils import clean_registration_method, sha1_hash
 
 Metric = load_model('monitoring', 'Metric')
@@ -192,15 +193,16 @@ def post_save_radiusaccounting(
         registration_method = 'unspecified'
     else:
         registration_method = clean_registration_method(registration_method)
-
+    device_lookup = Q(mac_address__iexact=called_station_id.replace('-', ':'))
+    if app_settings.DEVICE_LOOKUP_IGNORE_ORGANIZATION:
+        organization_id = None
+    else:
+        device_lookup &= Q(organization_id=organization_id)
     try:
         device = (
             Device.objects.select_related('devicelocation')
             .only('id', 'devicelocation__location_id')
-            .get(
-                mac_address__iexact=called_station_id.replace('-', ':'),
-                organization_id=organization_id,
-            )
+            .get(device_lookup)
         )
     except Device.DoesNotExist:
         logger.warning(

@@ -95,6 +95,97 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         mocked_task.assert_not_called()
 
     @patch('logging.Logger.warning')
+    def test_post_save_radius_accounting_device_lookup_ignore_organization(
+        self, mocked_logger
+    ):
+        """
+        This test ensures that the metric is written with the device's MAC address
+        when the OPENWISP_RADIUS_MONITORING_DEVICE_LOOKUP_IGNORE_ORGANIZATION is
+        set to True, even if the RadiusAccounting session and the related device
+        have different organizations.
+        """
+        from .. import settings as app_settings
+
+        user = self._create_user()
+        reg_user = self._create_registered_user(user=user)
+        org2 = self._get_org('org2')
+        device = self._create_device(organization=org2)
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                'unique_id': '117',
+                'username': user.username,
+                'called_station_id': device.mac_address.replace('-', ':').upper(),
+                'calling_station_id': '00:00:00:00:00:00',
+                'input_octets': '8000000000',
+                'output_octets': '9000000000',
+            }
+        )
+        options['stop_time'] = options['start_time']
+        device_metric_qs = self.metric_model.objects.filter(
+            configuration='radius_acc',
+            name='RADIUS Accounting',
+            key='radius_acc',
+            object_id=str(device.id),
+            content_type=ContentType.objects.get_for_model(self.device_model),
+            extra_tags={
+                'called_station_id': device.mac_address,
+                'calling_station_id': sha1_hash('00:00:00:00:00:00'),
+                'location_id': str(device_loc.location.id),
+                'method': reg_user.method,
+                'organization_id': None,
+            },
+        )
+
+        with self.subTest('Test DEVICE_LOOKUP_IGNORE_ORGANIZATION is set to False'):
+            with patch.object(app_settings, 'DEVICE_LOOKUP_IGNORE_ORGANIZATION', False):
+                self._create_radius_accounting(**options)
+            self.assertEqual(
+                device_metric_qs.count(),
+                0,
+            )
+            # The metric is created without the device_id
+            self.assertEqual(
+                self.metric_model.objects.filter(
+                    configuration='radius_acc',
+                    name='RADIUS Accounting',
+                    key='radius_acc',
+                    object_id=None,
+                    content_type=None,
+                    extra_tags={
+                        'called_station_id': device.mac_address,
+                        'calling_station_id': sha1_hash('00:00:00:00:00:00'),
+                        'location_id': None,
+                        'method': reg_user.method,
+                        'organization_id': str(self.default_org.id),
+                    },
+                ).count(),
+                1,
+            )
+
+        with self.subTest('Test DEVICE_LOOKUP_IGNORE_ORGANIZATION is set to True'):
+            with patch.object(app_settings, 'DEVICE_LOOKUP_IGNORE_ORGANIZATION', True):
+                options['unique_id'] = '118'
+                self._create_radius_accounting(**options)
+            self.assertEqual(
+                device_metric_qs.count(),
+                1,
+            )
+            metric = device_metric_qs.first()
+            self.assertEqual(metric.extra_tags['organization_id'], None)
+            traffic_chart = metric.chart_set.get(configuration='radius_traffic')
+            points = traffic_chart.read()
+            self.assertEqual(points['traces'][0][0], 'download')
+            self.assertEqual(points['traces'][0][1][-1], 8)
+            self.assertEqual(points['traces'][1][0], 'upload')
+            self.assertEqual(points['traces'][1][1][-1], 9)
+            self.assertEqual(points['summary'], {'upload': 9, 'download': 8})
+
+    @patch('logging.Logger.warning')
     def test_post_save_radius_accounting_device_not_found(self, mocked_logger):
         """
         This test checks that radius accounting metric is created

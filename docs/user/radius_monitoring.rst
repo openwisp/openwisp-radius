@@ -1,3 +1,5 @@
+.. _integration_with_openwisp_monitoring:
+
 Integration with OpenWISP Monitoring
 ------------------------------------
 
@@ -20,7 +22,7 @@ RADIUS metrics
 This chart shows number of users signed up using different registration methods.
 
 2. Total user registrations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. image:: /images/total-user-registration-chart.png
    :alt: Total user registration chart

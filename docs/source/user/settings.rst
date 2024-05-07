@@ -1044,3 +1044,24 @@ the default value is translated in other languages. If the value is
 customized the translations will not work, so if you need this message
 to be translated in different languages you should either not change the
 default value or prepare the additional translations.
+
+OpenWISP Monitoring integration related settings
+================================================
+
+.. note::
+
+    This settings are only used if you have enabled the
+    :ref:`integration_with_openwisp_monitoring`.
+
+``OPENWISP_RADIUS_MONITORING_DEVICE_LOOKUP_IGNORE_ORGANIZATION``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``False``
+
+The monitoring integration performs a database lookup for the related
+device using the ``called_station_id`` attribute from the RADIUS session.
+If this is set to ``True``, the integration will disable the filtering of
+devices by organization of the RADIUS session.
+
+This is useful when multiple organizations share the same captive portal
+and the device's organization and RADIUS session organization are different.
