@@ -194,7 +194,7 @@ def post_save_radiusaccounting(
     else:
         registration_method = clean_registration_method(registration_method)
     device_lookup = Q(mac_address__iexact=called_station_id.replace('-', ':'))
-    if app_settings.DEVICE_LOOKUP_IGNORE_ORGANIZATION:
+    if app_settings.SHARED_ACCOUNTING:
         organization_id = None
     else:
         device_lookup &= Q(organization_id=organization_id)

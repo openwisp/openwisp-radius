@@ -1053,8 +1053,8 @@ OpenWISP Monitoring integration related settings
     This settings are only used if you have enabled the
     :ref:`integration_with_openwisp_monitoring`.
 
-``OPENWISP_RADIUS_MONITORING_DEVICE_LOOKUP_IGNORE_ORGANIZATION``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_MONITORING_SHARED_ACCOUNTING``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``False``
 

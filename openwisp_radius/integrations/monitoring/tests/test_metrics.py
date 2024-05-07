@@ -95,12 +95,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         mocked_task.assert_not_called()
 
     @patch('logging.Logger.warning')
-    def test_post_save_radius_accounting_device_lookup_ignore_organization(
-        self, mocked_logger
-    ):
+    def test_post_save_radius_accounting_shared_accounting(self, mocked_logger):
         """
         This test ensures that the metric is written with the device's MAC address
-        when the OPENWISP_RADIUS_MONITORING_DEVICE_LOOKUP_IGNORE_ORGANIZATION is
+        when the OPENWISP_RADIUS_MONITORING_SHARED_ACCOUNTING is
         set to True, even if the RadiusAccounting session and the related device
         have different organizations.
         """
@@ -141,8 +139,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             },
         )
 
-        with self.subTest('Test DEVICE_LOOKUP_IGNORE_ORGANIZATION is set to False'):
-            with patch.object(app_settings, 'DEVICE_LOOKUP_IGNORE_ORGANIZATION', False):
+        with self.subTest('Test SHARED_ACCOUNTING is set to False'):
+            with patch.object(app_settings, 'SHARED_ACCOUNTING', False):
                 self._create_radius_accounting(**options)
             self.assertEqual(
                 device_metric_qs.count(),
@@ -167,8 +165,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 1,
             )
 
-        with self.subTest('Test DEVICE_LOOKUP_IGNORE_ORGANIZATION is set to True'):
-            with patch.object(app_settings, 'DEVICE_LOOKUP_IGNORE_ORGANIZATION', True):
+        with self.subTest('Test SHARED_ACCOUNTING is set to True'):
+            with patch.object(app_settings, 'SHARED_ACCOUNTING', True):
                 options['unique_id'] = '118'
                 self._create_radius_accounting(**options)
             self.assertEqual(
