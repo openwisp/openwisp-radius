@@ -180,6 +180,7 @@ def post_save_radiusaccounting(
     output_octets,
     calling_station_id,
     called_station_id,
+    time=None,
 ):
     try:
         registration_method = (
@@ -221,13 +222,6 @@ def post_save_radiusaccounting(
             location_id = str(device.devicelocation.location_id)
         else:
             location_id = None
-        # Give preference to the organization_id of the device
-        # over RadiusAccounting object.
-        # This would also handle the case when SHARED_ACCOUNTING is enabled,
-        # and write the metric with the same organization_id as the device.
-        # If SHARED_ACCOUNTING is disabled, the organization_id of
-        # Device and RadiusAccounting would be same.
-        organization_id = str(device.organization_id)
 
     metric, created = Metric._get_or_create(
         configuration='radius_acc',
@@ -249,6 +243,7 @@ def post_save_radiusaccounting(
             'output_octets': output_octets,
             'username': sha1_hash(username),
         },
+        time=time,
     )
     if not object_id:
         # Adding a chart requires all parameters of extra_tags to be present.
