@@ -135,7 +135,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 'calling_station_id': sha1_hash('00:00:00:00:00:00'),
                 'location_id': str(device_loc.location.id),
                 'method': reg_user.method,
-                'organization_id': None,
+                'organization_id': str(device.organization_id),
             },
         )
 
@@ -174,7 +174,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 1,
             )
             metric = device_metric_qs.first()
-            self.assertEqual(metric.extra_tags['organization_id'], None)
+            self.assertEqual(
+                metric.extra_tags['organization_id'], str(device.organization_id)
+            )
             traffic_chart = metric.chart_set.get(configuration='radius_traffic')
             points = traffic_chart.read()
             self.assertEqual(points['traces'][0][0], 'download')

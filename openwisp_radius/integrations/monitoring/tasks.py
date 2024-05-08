@@ -194,14 +194,13 @@ def post_save_radiusaccounting(
     else:
         registration_method = clean_registration_method(registration_method)
     device_lookup = Q(mac_address__iexact=called_station_id.replace('-', ':'))
-    if app_settings.SHARED_ACCOUNTING:
-        organization_id = None
-    else:
+    # Do not use organization_id for device lookup if shared accounting is enabled
+    if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
     try:
         device = (
             Device.objects.select_related('devicelocation')
-            .only('id', 'devicelocation__location_id')
+            .only('id', 'organization_id', 'devicelocation__location_id')
             .get(device_lookup)
         )
     except Device.DoesNotExist:
@@ -213,6 +212,8 @@ def post_save_radiusaccounting(
         object_id = None
         content_type = None
         location_id = None
+        if app_settings.SHARED_ACCOUNTING:
+            organization_id = None
     else:
         object_id = str(device.id)
         content_type = ContentType.objects.get_for_model(Device)
@@ -220,6 +221,13 @@ def post_save_radiusaccounting(
             location_id = str(device.devicelocation.location_id)
         else:
             location_id = None
+        # Give preference to the organization_id of the device
+        # over RadiusAccounting object.
+        # This would also handle the case when SHARED_ACCOUNTING is enabled,
+        # and write the metric with the same organization_id as the device.
+        # If SHARED_ACCOUNTING is disabled, the organization_id of
+        # Device and RadiusAccounting would be same.
+        organization_id = str(device.organization_id)
 
     metric, created = Metric._get_or_create(
         configuration='radius_acc',
