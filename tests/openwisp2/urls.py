@@ -46,3 +46,14 @@ urlpatterns = [
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += staticfiles_urlpatterns()
+
+if os.environ.get('MONITORING_INTEGRATION'):
+    urlpatterns = [
+        path('', include('openwisp_controller.urls')),
+        path('', include('openwisp_monitoring.urls')),
+    ] + urlpatterns
+
+if settings.DEBUG and 'debug_toolbar' in settings.INSTALLED_APPS:
+    import debug_toolbar
+
+    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))
