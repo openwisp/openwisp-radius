@@ -79,11 +79,8 @@ BATCH_PDF_TEMPLATE = get_settings_value(
 BATCH_MAIL_MESSAGE = get_settings_value(
     'BATCH_MAIL_MESSAGE', 'username: {}, password: {}'
 )
-PASSWORD_RESET_URLS = {
-    # fallback in case the specific org page is not defined
-    '__all__': 'https://{site}/{organization}/password/reset/confirm/{uid}/{token}',
-    # use the uuid because the slug can change
-}
+OPENWISP_RADIUS_PASSWORD_RESET_URLS  = {}
+
 PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
 DEFAULT_PASSWORD_RESET_URL = get_default_password_reset_url(PASSWORD_RESET_URLS)
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
