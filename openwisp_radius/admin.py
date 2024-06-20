@@ -207,6 +207,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     list_filter = (MultitenantOrgFilter,)
     inlines = [RadiusGroupCheckInline, RadiusGroupReplyInline]
     select_related = ('organization',)
+    actions = ['delete_selected_groups']
 
     def get_group_name(self, obj):
         return obj.name.replace(f'{obj.organization.slug}-', '')
@@ -218,6 +219,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
             return False
         return super().has_delete_permission(request, obj)
 
+    @admin.action(permissions=['delete'])
     def delete_selected_groups(self, request, queryset):
         if self.get_default_queryset(request, queryset).exists():
             msg = _(
@@ -240,15 +242,11 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
             )
         return None
 
-    delete_selected_groups.allowed_permissions = ('delete',)
-
     def get_actions(self, request):
         actions = super().get_actions(request)
         if 'delete_selected' in actions:
             del actions['delete_selected']
         return actions
-
-    actions = ['delete_selected_groups']
 
     def get_default_queryset(self, request, queryset):
         """overridable"""
@@ -361,6 +359,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         MultitenantOrgFilter,
     ]
     search_fields = ['name']
+    actions = ['delete_selected_batches']
     form = RadiusBatchForm
     help_text = {
         'text': _(
@@ -455,13 +454,13 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             del actions['delete_selected']
         return actions
 
-    actions = ['delete_selected_batches']
-
+    @admin.action(description=_('Delete selected batches'), permissions=['delete'])
     def delete_selected_batches(self, request, queryset):
         for obj in queryset:
             obj.delete()
-
-    delete_selected_batches.short_description = _('Delete selected batches')
+        self.message_user(
+            request, 'Successfully deleted selected batches.', level=messages.SUCCESS
+        )
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
