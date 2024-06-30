@@ -174,7 +174,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(get_user_model().objects.all().count(), 6)
         call_command('delete_old_radiusbatch_users')
         self.assertEqual(get_user_model().objects.all().count(), 3)
-        call_command('delete_old_radiusbatch_users', older_than_months=12)
+        call_command('delete_old_radiusbatch_users', older_than_days=365)
         self.assertEqual(get_user_model().objects.all().count(), 0)
 
     @capture_stdout()

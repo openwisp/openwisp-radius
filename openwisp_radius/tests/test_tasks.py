@@ -70,7 +70,7 @@ class TestTasks(FileMixin, BaseTestCase):
     def test_delete_old_radiusbatch_users(self):
         self._get_expired_user_from_radius_batch()
         self.assertEqual(User.objects.all().count(), 1)
-        result = tasks.delete_old_radiusbatch_users.delay(1)
+        result = tasks.delete_old_radiusbatch_users.delay(30)
         self.assertTrue(result.successful())
         self.assertEqual(User.objects.all().count(), 0)
 
