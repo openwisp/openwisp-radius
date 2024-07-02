@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
-from openwisp_utils.tests import capture_any_output
+from openwisp_utils.tests import AdminActionPermTestMixin, capture_any_output
 
 from .. import settings as app_settings
 from ..base.models import _GET_IP_LIST_HELP_TEXT
@@ -46,6 +46,7 @@ PASSWORD_RESET_URL = app_settings.DEFAULT_PASSWORD_RESET_URL
 
 
 class TestAdmin(
+    AdminActionPermTestMixin,
     BaseTestCase,
     FileMixin,
     CallCommandMixin,
@@ -382,6 +383,27 @@ class TestAdmin(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(User.objects.count() - n, 0)
 
+    def test_delete_selected_batches_action_perms(self):
+        org = self._get_org()
+        user = self._create_user(is_staff=True)
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        batch = self._create_radius_batch(
+            organization=org,
+            name='test',
+            strategy='prefix',
+            prefix='test-prefix4',
+            expiration_date='1998-01-28',
+        )
+        self._test_action_permission(
+            path=reverse(f'admin:{self.app_label}_radiusbatch_changelist'),
+            action='delete_selected_batches',
+            user=user,
+            obj=batch,
+            message='Successfully deleted selected batches.',
+            required_perms=['delete'],
+            extra_payload={'_selected_action': [batch.id]},
+        )
+
     def test_radius_batch_csv_help_text(self):
         add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         response = self.client.get(add_url)
@@ -682,6 +704,20 @@ class TestAdmin(
         )
         self.assertNotContains(response, 'error')
         self.assertEqual(rg.filter(organization=org, default=False).count(), 0)
+
+    def test_delete_selected_groups_action_perms(self):
+        org = self._get_org()
+        user = self._create_user(is_staff=True)
+        self._create_org_user(user=user, organization=org, is_admin=True)
+        group = RadiusGroup.objects.get(organization=org, default=False)
+        self._test_action_permission(
+            path=reverse(f'admin:{self.app_label}_radiusgroup_changelist'),
+            action='delete_selected_groups',
+            user=user,
+            obj=group,
+            message='Successfully deleted 1 group.',
+            required_perms=['delete'],
+        )
 
     def test_batch_user_creation_form(self):
         url = reverse(f'admin:{self.app_label}_radiusbatch_add')
