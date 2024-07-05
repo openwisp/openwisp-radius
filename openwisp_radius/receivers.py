@@ -31,12 +31,10 @@ def send_email_on_new_accounting_handler(sender, accounting_data, view, **kwargs
 
 
 def set_default_group_handler(sender, instance, created, **kwargs):
-    if created:
-        RadiusGroup = load_model('RadiusGroup')
-        RadiusUserGroup = load_model('RadiusUserGroup')
-        queryset = RadiusGroup.objects.filter(
-            default=True, organization_id=instance.organization_id
-        )
+    if not created:
+        return
+
+    def _set_default_group():
         if (
             queryset.exists()
             and not instance.user.radiususergroup_set.filter(
@@ -46,6 +44,14 @@ def set_default_group_handler(sender, instance, created, **kwargs):
             ug = RadiusUserGroup(user=instance.user, group=queryset.first())
             ug.full_clean()
             ug.save()
+
+    RadiusGroup = load_model('RadiusGroup')
+    RadiusUserGroup = load_model('RadiusUserGroup')
+    queryset = RadiusGroup.objects.filter(
+        default=True, organization_id=instance.organization_id
+    )
+
+    transaction.on_commit(_set_default_group)
 
 
 def create_default_groups_handler(sender, instance, created, **kwargs):
