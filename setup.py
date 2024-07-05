@@ -37,7 +37,8 @@ setup(
     install_requires=[
         (
             'openwisp-users '
-            '@ https://github.com/openwisp/openwisp-users/tarball/master'
+            '@ https://github.com/openwisp/openwisp-users/tarball/'
+            'improve-test-basic-user-integration'
         ),
         (
             'openwisp-utils[rest,celery] @ '
