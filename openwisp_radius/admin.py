@@ -479,6 +479,50 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
 
 # Inlines for UserAdmin & OrganizationAdmin
+class RadiusUserGroupInlineFormset(forms.BaseInlineFormSet):
+    def save(self, commit=True):
+        """
+        This function overrides the default save method of the formset.
+        It removes the default RadiusUserGroup from the formset data to avoid
+        IntegrityError when adding OrganizationUser and the default
+        RadiusUserGroup simultaneously.
+
+        The issue arises because the 'set_default_group_handler' receiver is
+        triggered when the OrganizationUser is created, causing an integrity
+        error when both the OrganizationUser and the default RadiusUserGroup
+        are created in the same transaction.
+
+        By removing the default RadiusUserGroup from the formset data, we ensure
+        that the IntegrityError is avoided.
+        """
+        is_data_modified = False
+
+        # Loop through each instance in the cleaned_data
+        for index, instance in enumerate(self.cleaned_data):
+            # If the instance is not marked for deletion and the RadiusUserGroup
+            # already exists, then remove the instance from the formset.
+            if (
+                not instance['DELETE']
+                and RadiusUserGroup.objects.filter(
+                    user=instance['user'], group=instance['group']
+                ).exists()
+            ):
+                for field in ['id', 'user', 'group', 'priority', 'DELETE']:
+                    self.data.pop(f'radiususergroup_set-{index}-{field}', None)
+                is_data_modified = True
+                total_forms = int(self.data['radiususergroup_set-TOTAL_FORMS'])
+                self.data['radiususergroup_set-TOTAL_FORMS'] = total_forms - 1
+
+        # If there were any changes to the formset data, re-clean the data
+        if is_data_modified:
+            del self.forms
+            del self.management_form
+            self.cleaned_data
+
+        # Save the formset data
+        return super().save(commit=commit)
+
+
 class RadiusUserGroupInline(StackedInline):
     model = RadiusUserGroup
     exclude = ['username', 'groupname', 'created', 'modified']
@@ -487,6 +531,7 @@ class RadiusUserGroupInline(StackedInline):
     verbose_name = _('radius user group')
     verbose_name_plural = _('radius user groups')
     extra = 0
+    formset = RadiusUserGroupInlineFormset
 
 
 class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
