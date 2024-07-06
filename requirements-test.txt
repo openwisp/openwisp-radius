@@ -3,9 +3,13 @@ djangorestframework-simplejwt
 django-cors-headers>=2.5.2
 packaging
 openwisp-sphinx-theme~=1.0.0
-freezegun
+freezegun~=1.1.0
 django-extensions
 openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master
 pylinkvalidator
 lxml~=4.9.1
 cssselect~=1.1.0
+openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/tarball/master
+django-redis~=5.2.0
+mock-ssh-server~=0.9.0
+channels_redis~=4.1.0

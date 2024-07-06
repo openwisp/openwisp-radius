@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
@@ -18,7 +19,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import CharFilter, DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
@@ -41,6 +42,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
+from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -801,3 +803,46 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
 
 
 change_phone_number = ChangePhoneNumberView.as_view()
+
+
+class RadiusAccountingFilter(AccountingFilter):
+    called_station_id = CharFilter(
+        field_name='called_station_id', method='filter_mac_address'
+    )
+    calling_station_id = CharFilter(
+        field_name='calling_station_id', method='filter_mac_address'
+    )
+
+    def filter_mac_address(self, queryset, name, value):
+        """
+        The input MAC address in any of these two formats:
+            - AA-BB-CC-DD-EE-FF (quadrants separated by hyphen)
+            - AA:BB:CC:DD:EE:FF (quadrants separated by colon)
+        The below lookup ensures that the filtering is
+        case-insensitive and works across different formats.
+        """
+        lookup = f'{name}__iexact'
+        return queryset.filter(
+            Q(**{lookup: value.replace(':', '-')})
+            | Q(**{lookup: value.replace('-', ':')})
+        )
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns all RADIUS sessions of user managed organizations.
+        """,
+    ),
+)
+class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListAPIView):
+    throttle_scrope = 'radius_accounting_list'
+    serializer_class = RadiusAccountingSerializer
+    pagination_class = AccountingViewPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RadiusAccountingFilter
+    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+
+
+radius_accounting = RadiusAccountingView.as_view()

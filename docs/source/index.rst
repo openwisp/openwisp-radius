@@ -58,6 +58,7 @@ that are common in WiFi and ISP deployments.
    /user/registration
    /user/social_login
    /user/saml
+   /user/radius_monitoring
    /user/change_of_authorization
    /user/api
    /developer/signals
