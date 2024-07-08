@@ -23,7 +23,7 @@ from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
-from ..mixins import ApiTokenMixin, BaseTestCase
+from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
 RadiusToken = load_model('RadiusToken')
@@ -83,14 +83,23 @@ class AcctMixin(object):
         data.update(self._acct_post_data.copy())
         return data
 
+    def setUp(self):
+        cache.clear()
+        super().setUp()
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        logging.disable(logging.WARNING)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        logging.disable(logging.NOTSET)
+
 
 class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     _test_email = 'test@openwisp.org'
-
-    def setUp(self):
-        cache.clear()
-        logging.disable(logging.WARNING)
-        super().setUp()
 
     def test_invalid_token(self):
         self._get_org_user()
@@ -135,122 +144,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data['detail'], 'username field is required.')
 
-    def test_authorize_200(self):
-        self._get_org_user()
-        response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    def _test_authorize_with_user_auth_helper(self, username, password):
-        r = self._authorize_user(
-            username=username, password=password, auth_header=self.auth_header
-        )
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
     def _test_authorize_without_auth_helper(self, username, password):
         r = self._authorize_user(username=username, password=password)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    @capture_any_output()
-    def test_authorize_with_user_auth(self):
-        user = self._create_user(
-            username='tester2',
-            email='tester2@gmail.com',
-            phone_number='+237675679232',
-            password='tester',
-        )
-
-        self._create_org_user(organization=self._get_org(), user=user)
-
-        with self.subTest('Test authorize with username'):
-            self._test_authorize_with_user_auth_helper(user.username, 'tester')
-
-        with self.subTest('Test authorize with email'):
-            self._test_authorize_with_user_auth_helper(user.email, 'tester')
-
-        with self.subTest('Test authorize with phone_number'):
-            self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
-
-        with self.subTest('Test authorization failure'):
-            r = self._authorize_user('thisuserdoesnotexist', 'tester', self.auth_header)
-            self.assertEqual(r.status_code, 200)
-            self.assertEqual(r.data, None)
-
-    @capture_any_output()
-    def test_authorize_without_user_auth(self):
-        user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
-        )
-        self._create_org_user(organization=self._get_org(), user=user)
-        with self.subTest('Test authorize with username'):
-            self._test_authorize_with_user_auth_helper('tester', 'tester')
-
-        with self.subTest('Test authorize with email'):
-            self._test_authorize_with_user_auth_helper('tester@gmail.com', 'tester')
-
-        with self.subTest('Test authorize with phone_number'):
-            self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
-
-        with self.subTest('Test authorization failure'):
-            r = self._authorize_user('thisuserdoesnotexist', 'tester')
-            self.assertEqual(r.status_code, 403)
-            self.assertEqual(
-                r.data['detail'],
-                (
-                    'Radius token does not exist. Obtain a new radius token or provide '
-                    'the organization UUID and API token.'
-                ),
-            )
-
-    def test_authorize_user_with_email_as_username(self):
-        user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
-        )
-        user1 = self._create_user(
-            username='tester@gmail.com',
-            email='tester1@gmail.com',
-            phone_number='+237675679232',
-            password='tester1',
-        )
-        self._create_org_user(organization=self._get_org(), user=user)
-        self._create_org_user(organization=self._get_org(), user=user1)
-
-        self._test_authorize_with_user_auth_helper(user.email, 'tester')
-
-    def test_authorize_user_with_phone_number_as_username(self):
-        user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
-        )
-        user1 = self._create_user(
-            username='+237675679231',
-            email='tester1@gmail.com',
-            phone_number='+237675679232',
-            password='tester1',
-        )
-        self._create_org_user(organization=self._get_org(), user=user)
-        self._create_org_user(organization=self._get_org(), user=user1)
-
-        self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
-
-    def test_authorize_200_querystring(self):
-        self._get_org_user()
-        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
-        response = self.client.post(
-            post_url, {'username': 'tester', 'password': 'tester'}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @mock.patch('openwisp_users.settings.USER_PASSWORD_EXPIRATION', 30)
     def test_authorize_password_expired(self):
@@ -285,50 +182,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
-    def test_authorize_radius_token_200(self):
-        self._get_org_user()
-        rad_token = self._login_and_obtain_auth_token()
-        response = self._authorize_user(password=rad_token)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    def test_authorize_with_password_after_radius_token_expires(self):
-        self.test_authorize_radius_token_200()
-        self.assertFalse(RadiusToken.objects.get(user__username='tester').can_auth)
-        response = self._authorize_user()
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    def test_user_auth_token_disposed_after_auth(self):
-        self._get_org_user()
-        rad_token = self._login_and_obtain_auth_token()
-        # Success but disable radius_token for authorization
-        response = self._authorize_user(password=rad_token)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-        # Ensure cannot authorize with radius_token
-        response = self._authorize_user(password=rad_token)
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.data)
-        # Ensure can authorize with password
-        response = self._authorize_user()
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    def test_user_auth_token_obtain_auth_token_renew(self):
-        self._get_org_user()
-        rad_token = self._login_and_obtain_auth_token()
-        # Authorization works
-        response = self._authorize_user(password=rad_token)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-        # Renew and authorize again
-        second_rad_token = self._login_and_obtain_auth_token()
-        response = self._authorize_user(password=second_rad_token)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-        self.assertEqual(response.status_code, 200)
-        self.assertNotEqual(rad_token, second_rad_token)
-
     def test_authorize_multiple_org_interaction(self):
         self._get_org_user()
         self._login_and_obtain_auth_token()
@@ -351,24 +204,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
-    @mock.patch.object(registration, 'AUTHORIZE_UNVERIFIED', ['mobile_phone'])
-    def test_authorize_unverified_user_with_special_method(self):
-        org_user = self._get_org_user()
-        reg_user = RegisteredUser(
-            user=org_user.user, method='mobile_phone', is_verified=False
-        )
-        reg_user.full_clean()
-        reg_user.save()
-        org_settings = OrganizationRadiusSettings.objects.get(
-            organization=self._get_org()
-        )
-        org_settings.needs_identity_verification = True
-        org_settings.save()
-        with self.assertNumQueries(9):
-            response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
     def test_authorize_radius_token_unverified_user(self):
         user = self._get_org_user()
         org_settings = OrganizationRadiusSettings.objects.get(
@@ -381,146 +216,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data={'username': 'tester', 'password': 'tester'},
         )
         self.assertEqual(response.status_code, 401)
-
-    def test_authorize_200_with_replies(self):
-        user = self._get_org_user().user
-        rug = user.radiususergroup_set.first()
-        reply1 = RadiusGroupReply(
-            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
-        )
-        reply1.full_clean()
-        reply1.save()
-        reply2 = RadiusGroupReply(
-            group=rug.group, attribute='Idle-Timeout', op='=', value='500'
-        )
-        reply2.full_clean()
-        reply2.save()
-        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
-        response = self.client.post(
-            post_url, {'username': 'tester', 'password': 'tester'}
-        )
-        self.assertEqual(response.status_code, 200)
-        expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-        expected.update(
-            {
-                'Session-Timeout': {'op': '=', 'value': '3600'},
-                'Idle-Timeout': {'op': '=', 'value': '500'},
-            }
-        )
-        self.assertEqual(
-            response.data,
-            expected,
-        )
-
-    @capture_any_output()
-    def test_authorize_counters_exception_handling(self):
-        self._get_org_user()
-        truncated_accept_response = {'control:Auth-Type': 'Accept'}
-
-        with self.subTest('SkipCheck'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.side_effect = SkipCheck(
-                    message='Skip test',
-                    level='error',
-                    logger=logging,
-                )
-                response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, 2)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.data, truncated_accept_response)
-
-        with self.subTest('MaxQuotaReached'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.side_effect = MaxQuotaReached(
-                    message='MaxQuotaReached',
-                    level='info',
-                    logger=logging,
-                    reply_message='reply MaxQuotaReached',
-                )
-                response = self._authorize_user(auth_header=self.auth_header)
-                mocked_check.assert_called_once()
-                self.assertEqual(response.status_code, 200)
-                expected = _AUTH_TYPE_REJECT_RESPONSE.copy()
-                expected['Reply-Message'] = 'reply MaxQuotaReached'
-                self.assertEqual(response.data, expected)
-
-        with self.subTest('Unexpected exception'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.side_effect = ValueError('Unexpected error')
-                response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, 2)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.data, truncated_accept_response)
-
-    def test_authorize_counters_reply_interaction(self):
-        user = self._get_org_user().user
-        rug = user.radiususergroup_set.first()
-        reply = RadiusGroupReply(
-            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
-        )
-        reply.full_clean()
-        reply.save()
-
-        with self.subTest('remaining lower than reply'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.return_value = 1200
-                response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, 2)
-                self.assertEqual(response.status_code, 200)
-                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = 1200
-                expected['CoovaChilli-Max-Total-Octets'] = 1200
-                self.assertEqual(response.data, expected)
-
-        with self.subTest('remaining higher than reply'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.return_value = 3000000000
-                response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, 2)
-                self.assertEqual(response.status_code, 200)
-                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
-                self.assertEqual(response.data, expected)
-
-        with self.subTest('Counters disabled'):
-            with mock.patch.object(app_settings, 'COUNTERS', []):
-                with self.assertNumQueries(6):
-                    response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(response.status_code, 200)
-                expected = {
-                    'control:Auth-Type': 'Accept',
-                    'Session-Timeout': {'op': '=', 'value': '3600'},
-                }
-                self.assertEqual(response.data, expected)
-
-        original_reply_value = reply.value
-        with self.subTest('incorrect reply value'):
-            reply.value = 'broken'
-            reply.save(update_fields=['value'])
-            mocked_check.return_value = 1200
-            with mock.patch.object(freeradius_api_logger, 'warning') as mocked_warning:
-                response = self._authorize_user(auth_header=self.auth_header)
-                mocked_warning.assert_called_once_with(
-                    'Session-Timeout value ("broken") cannot be converted to integer.'
-                )
-            self.assertEqual(mocked_check.call_count, 2)
-            self.assertEqual(response.status_code, 200)
-            expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-            expected['Session-Timeout'] = 10800
-            expected['CoovaChilli-Max-Total-Octets'] = 3000000000
-            self.assertEqual(response.data, expected)
-        reply.value = original_reply_value
-        reply.save(update_fields=['value'])
-
-        with self.subTest('remaining is None'):
-            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.return_value = None
-                response = self._authorize_user(auth_header=self.auth_header)
-                self.assertEqual(mocked_check.call_count, 2)
-                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
-                del expected['CoovaChilli-Max-Total-Octets']
-                self.assertEqual(response.data, expected)
 
     def test_postauth_accept_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -1543,13 +1238,328 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(len(response.json()), 0)
 
 
-class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTestCase):
-    _test_email = 'test@openwisp.org'
+class TestTransactionFreeradiusApi(
+    AcctMixin,
+    ApiTokenMixin,
+    BaseTransactionTestCase,
+):
+    def test_authorize_200_with_replies(self):
+        user = self._get_org_user().user
+        rug = user.radiususergroup_set.first()
+        reply1 = RadiusGroupReply(
+            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+        )
+        reply1.full_clean()
+        reply1.save()
+        reply2 = RadiusGroupReply(
+            group=rug.group, attribute='Idle-Timeout', op='=', value='500'
+        )
+        reply2.full_clean()
+        reply2.save()
+        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        response = self.client.post(
+            post_url, {'username': 'tester', 'password': 'tester'}
+        )
+        self.assertEqual(response.status_code, 200)
+        expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+        expected.update(
+            {
+                'Session-Timeout': {'op': '=', 'value': '3600'},
+                'Idle-Timeout': {'op': '=', 'value': '500'},
+            }
+        )
+        self.assertEqual(
+            response.data,
+            expected,
+        )
 
-    def setUp(self):
-        cache.clear()
-        logging.disable(logging.WARNING)
-        super().setUp()
+    def test_authorize_counters_reply_interaction(self):
+        user = self._get_org_user().user
+        rug = user.radiususergroup_set.first()
+        reply = RadiusGroupReply(
+            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+        )
+        reply.full_clean()
+        reply.save()
+
+        with self.subTest('remaining lower than reply'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = 1200
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = 1200
+                expected['CoovaChilli-Max-Total-Octets'] = 1200
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('remaining higher than reply'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = 3000000000
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('Counters disabled'):
+            with mock.patch.object(app_settings, 'COUNTERS', []):
+                with self.assertNumQueries(6):
+                    response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(response.status_code, 200)
+                expected = {
+                    'control:Auth-Type': 'Accept',
+                    'Session-Timeout': {'op': '=', 'value': '3600'},
+                }
+                self.assertEqual(response.data, expected)
+
+        original_reply_value = reply.value
+        with self.subTest('incorrect reply value'):
+            reply.value = 'broken'
+            reply.save(update_fields=['value'])
+            mocked_check.return_value = 1200
+            with mock.patch.object(freeradius_api_logger, 'warning') as mocked_warning:
+                response = self._authorize_user(auth_header=self.auth_header)
+                mocked_warning.assert_called_once_with(
+                    'Session-Timeout value ("broken") cannot be converted to integer.'
+                )
+            self.assertEqual(mocked_check.call_count, 2)
+            self.assertEqual(response.status_code, 200)
+            expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+            expected['Session-Timeout'] = 10800
+            expected['CoovaChilli-Max-Total-Octets'] = 3000000000
+            self.assertEqual(response.data, expected)
+        reply.value = original_reply_value
+        reply.save(update_fields=['value'])
+
+        with self.subTest('remaining is None'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.return_value = None
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
+                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
+                del expected['CoovaChilli-Max-Total-Octets']
+                self.assertEqual(response.data, expected)
+
+    def test_authorize_200(self):
+        self._get_org_user()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    def test_authorize_200_querystring(self):
+        self._get_org_user()
+        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        response = self.client.post(
+            post_url, {'username': 'tester', 'password': 'tester'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    @capture_any_output()
+    def test_authorize_counters_exception_handling(self):
+        self._get_org_user()
+        truncated_accept_response = {'control:Auth-Type': 'Accept'}
+
+        with self.subTest('SkipCheck'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = SkipCheck(
+                    message='Skip test',
+                    level='error',
+                    logger=logging,
+                )
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, truncated_accept_response)
+
+        with self.subTest('MaxQuotaReached'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = MaxQuotaReached(
+                    message='MaxQuotaReached',
+                    level='info',
+                    logger=logging,
+                    reply_message='reply MaxQuotaReached',
+                )
+                response = self._authorize_user(auth_header=self.auth_header)
+                mocked_check.assert_called_once()
+                self.assertEqual(response.status_code, 200)
+                expected = _AUTH_TYPE_REJECT_RESPONSE.copy()
+                expected['Reply-Message'] = 'reply MaxQuotaReached'
+                self.assertEqual(response.data, expected)
+
+        with self.subTest('Unexpected exception'):
+            with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
+                mocked_check.side_effect = ValueError('Unexpected error')
+                response = self._authorize_user(auth_header=self.auth_header)
+                self.assertEqual(mocked_check.call_count, 2)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, truncated_accept_response)
+
+    def test_authorize_radius_token_200(self):
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    @mock.patch.object(registration, 'AUTHORIZE_UNVERIFIED', ['mobile_phone'])
+    def test_authorize_unverified_user_with_special_method(self):
+        org_user = self._get_org_user()
+        reg_user = RegisteredUser(
+            user=org_user.user, method='mobile_phone', is_verified=False
+        )
+        reg_user.full_clean()
+        reg_user.save()
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        with self.assertNumQueries(9):
+            response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    def _test_authorize_with_user_auth_helper(self, username, password):
+        r = self._authorize_user(
+            username=username, password=password, auth_header=self.auth_header
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    def test_authorize_user_with_email_as_username(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+        user1 = self._create_user(
+            username='tester@gmail.com',
+            email='tester1@gmail.com',
+            phone_number='+237675679232',
+            password='tester1',
+        )
+        self._create_org_user(organization=self._get_org(), user=user)
+        self._create_org_user(organization=self._get_org(), user=user1)
+
+        self._test_authorize_with_user_auth_helper(user.email, 'tester')
+
+    def test_authorize_user_with_phone_number_as_username(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+        user1 = self._create_user(
+            username='+237675679231',
+            email='tester1@gmail.com',
+            phone_number='+237675679232',
+            password='tester1',
+        )
+        self._create_org_user(organization=self._get_org(), user=user)
+        self._create_org_user(organization=self._get_org(), user=user1)
+
+        self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+
+    def test_authorize_with_password_after_radius_token_expires(self):
+        self.test_authorize_radius_token_200()
+        self.assertFalse(RadiusToken.objects.get(user__username='tester').can_auth)
+        response = self._authorize_user()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    @capture_any_output()
+    def test_authorize_with_user_auth(self):
+        user = self._create_user(
+            username='tester2',
+            email='tester2@gmail.com',
+            phone_number='+237675679232',
+            password='tester',
+        )
+
+        self._create_org_user(organization=self._get_org(), user=user)
+
+        with self.subTest('Test authorize with username'):
+            self._test_authorize_with_user_auth_helper(user.username, 'tester')
+
+        with self.subTest('Test authorize with email'):
+            self._test_authorize_with_user_auth_helper(user.email, 'tester')
+
+        with self.subTest('Test authorize with phone_number'):
+            self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester', self.auth_header)
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.data, None)
+
+    @capture_any_output()
+    def test_authorize_without_user_auth(self):
+        user = self._create_user(
+            username='tester',
+            email='tester@gmail.com',
+            phone_number='+237675679231',
+            password='tester',
+        )
+        self._create_org_user(organization=self._get_org(), user=user)
+        with self.subTest('Test authorize with username'):
+            self._test_authorize_with_user_auth_helper('tester', 'tester')
+
+        with self.subTest('Test authorize with email'):
+            self._test_authorize_with_user_auth_helper('tester@gmail.com', 'tester')
+
+        with self.subTest('Test authorize with phone_number'):
+            self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
+
+        with self.subTest('Test authorization failure'):
+            r = self._authorize_user('thisuserdoesnotexist', 'tester')
+            self.assertEqual(r.status_code, 403)
+            self.assertEqual(
+                r.data['detail'],
+                (
+                    'Radius token does not exist. Obtain a new radius token or provide '
+                    'the organization UUID and API token.'
+                ),
+            )
+
+    def test_user_auth_token_disposed_after_auth(self):
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        # Success but disable radius_token for authorization
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+        # Ensure cannot authorize with radius_token
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+        # Ensure can authorize with password
+        response = self._authorize_user()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    def test_user_auth_token_obtain_auth_token_renew(self):
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        # Authorization works
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+        # Renew and authorize again
+        second_rad_token = self._login_and_obtain_auth_token()
+        response = self._authorize_user(password=second_rad_token)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(rad_token, second_rad_token)
+
+
+class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
+    _test_email = 'test@openwisp.org'
 
     def test_mac_addr_roaming_authorize_view(self):
         acct_post_data = self.acct_post_data
@@ -1927,20 +1937,83 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
         user.delete()
 
 
-class TestClientIpApi(ApiTokenMixin, BaseTestCase):
+class TestClientIpApiMixin(object):
+    freeradius_hosts_path = 'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS'
+    fail_msg = (
+        'Request rejected: Client IP address (127.0.0.1) is not in '
+        'the list of IP addresses allowed to consume the freeradius API.'
+    )
+
     def setUp(self):
         super().setUp()
         self._get_org_user()
         self.params = {'username': 'tester', 'password': 'tester'}
-        self.fail_msg = (
-            'Request rejected: Client IP address (127.0.0.1) is not in '
-            'the list of IP addresses allowed to consume the freeradius API.'
-        )
-        self.freeradius_hosts_path = 'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS'
         self.client.post(
             reverse('radius:user_auth_token', args=[self._get_org().slug]), self.params
         )
 
+
+class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
+    def test_rt_cache_authorize_different_organization(self):
+        """
+        Ensure the rt cache is updated when the user
+        authenticates to a different organization
+        """
+        orguser = self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        self._authorize_user(password=rad_token)
+        self.assertEqual(
+            cache.get(f'rt-{orguser.user.username}'), str(orguser.organization_id)
+        )
+        org2 = Organization.objects.get(slug='default')
+        ou = OrganizationUser(organization=org2, user=orguser.user)
+        ou.full_clean()
+        ou.save()
+        rad_token = self._login_and_obtain_auth_token(organization=org2)
+        rt = RadiusToken.objects.get(key=rad_token)
+        self.assertEqual(rt.organization, org2)
+        self._authorize_user(password=rad_token)
+        self.assertEqual(cache.get(f'rt-{orguser.user.username}'), str(org2.id))
+
+    @capture_any_output()
+    def test_ip_from_setting_invalid(self):
+        org = self._get_org()
+        cache.delete(f'ip-{org.pk}')
+        test_fail_msg = (
+            'Request rejected: (localhost) in organization settings or '
+            'settings.py is not a valid IP address. Please contact administrator.'
+        )
+        with mock.patch(
+            'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', ['localhost']
+        ), mock.patch.object(
+            OrganizationRadiusSettings._meta.get_field('freeradius_allowed_hosts'),
+            'from_db_value',
+            return_value='localhost',
+        ):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], test_fail_msg)
+
+    @capture_any_output()
+    def test_ip_from_radsetting_invalid(self):
+        test_fail_msg = (
+            'Request rejected: (127.0.0.500) in organization settings or '
+            'settings.py is not a valid IP address. Please contact administrator.'
+        )
+        radsetting = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        radsetting.freeradius_allowed_hosts = '127.0.0.500'
+        radsetting.save()
+        with mock.patch(self.freeradius_hosts_path, []):
+            response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data['detail'], test_fail_msg)
+
+
+class TestTransactionClientIpApi(
+    TestClientIpApiMixin, ApiTokenMixin, BaseTransactionTestCase
+):
     def test_cache(self):
         def authorize_and_assert(numOfQueries, ip_list):
             with self.assertNumQueries(numOfQueries):
@@ -1965,51 +2038,6 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
             cache.clear()
             authorize_and_assert(11, ['127.0.0.1', '192.0.2.0'])
 
-    def test_rt_cache_authorize_different_organization(self):
-        """
-        Ensure the rt cache is updated when the user
-        authenticates to a different organization
-        """
-        orguser = self._get_org_user()
-        rad_token = self._login_and_obtain_auth_token()
-        self._authorize_user(password=rad_token)
-        self.assertEqual(
-            cache.get(f'rt-{orguser.user.username}'), str(orguser.organization_id)
-        )
-        org2 = Organization.objects.get(slug='default')
-        ou = OrganizationUser(organization=org2, user=orguser.user)
-        ou.full_clean()
-        ou.save()
-        rad_token = self._login_and_obtain_auth_token(organization=org2)
-        rt = RadiusToken.objects.get(key=rad_token)
-        self.assertEqual(rt.organization, org2)
-        self._authorize_user(password=rad_token)
-        self.assertEqual(cache.get(f'rt-{orguser.user.username}'), str(org2.id))
-
-    def test_ip_from_setting_valid(self):
-        response = self.client.post(reverse('radius:authorize'), self.params)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    @capture_any_output()
-    def test_ip_from_setting_invalid(self):
-        org = self._get_org()
-        cache.delete(f'ip-{org.pk}')
-        test_fail_msg = (
-            'Request rejected: (localhost) in organization settings or '
-            'settings.py is not a valid IP address. Please contact administrator.'
-        )
-        with mock.patch(
-            'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', ['localhost']
-        ), mock.patch.object(
-            OrganizationRadiusSettings._meta.get_field('freeradius_allowed_hosts'),
-            'from_db_value',
-            return_value='localhost',
-        ):
-            response = self.client.post(reverse('radius:authorize'), self.params)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], test_fail_msg)
-
     def test_ip_from_radsetting_valid(self):
         with mock.patch(self.freeradius_hosts_path, []):
             radsetting = OrganizationRadiusSettings.objects.get(
@@ -2021,21 +2049,10 @@ class TestClientIpApi(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @capture_any_output()
-    def test_ip_from_radsetting_invalid(self):
-        test_fail_msg = (
-            'Request rejected: (127.0.0.500) in organization settings or '
-            'settings.py is not a valid IP address. Please contact administrator.'
-        )
-        radsetting = OrganizationRadiusSettings.objects.get(
-            organization=self._get_org()
-        )
-        radsetting.freeradius_allowed_hosts = '127.0.0.500'
-        radsetting.save()
-        with mock.patch(self.freeradius_hosts_path, []):
-            response = self.client.post(reverse('radius:authorize'), self.params)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], test_fail_msg)
+    def test_ip_from_setting_valid(self):
+        response = self.client.post(reverse('radius:authorize'), self.params)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @capture_any_output()
     def test_ip_from_radsetting_not_exist(self):
@@ -2143,3 +2160,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
             self.assertIn('sms_sender', e.message_dict)
         else:
             self.fail('ValidationError not raised')
+
+
+del BaseTestCase
+del BaseTransactionTestCase

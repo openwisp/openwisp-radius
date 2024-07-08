@@ -6,7 +6,7 @@ from ...counters.sqlite.daily_counter import DailyCounter
 from ...counters.sqlite.daily_traffic_counter import DailyTrafficCounter
 from ...counters.sqlite.monthly_traffic_counter import MonthlyTrafficCounter
 from ...utils import load_model
-from ..mixins import BaseTestCase
+from ..mixins import BaseTransactionTestCase
 from .utils import TestCounterMixin, _acct_data
 
 RadiusAccounting = load_model('RadiusAccounting')
@@ -14,7 +14,7 @@ RadiusGroup = load_model('RadiusGroup')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 
 
-class TestSqliteCounters(TestCounterMixin, BaseTestCase):
+class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
     def test_time_counter_repr(self):
         opts = self._get_kwargs('Max-Daily-Session')
         counter = DailyCounter(**opts)
@@ -122,3 +122,6 @@ class TestSqliteCounters(TestCounterMixin, BaseTestCase):
         traffic = int(acct['input_octets']) + int(acct['output_octets'])
         expected = int(opts['group_check'].value) - traffic
         self.assertEqual(counter.check(), expected)
+
+
+del BaseTransactionTestCase
