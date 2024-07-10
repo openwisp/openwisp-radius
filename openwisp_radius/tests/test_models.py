@@ -513,28 +513,6 @@ class TestRadiusGroup(BaseTestCase):
         RadiusGroup.objects.all().delete()  # won't trigger ValidationError
         self._create_radius_group(name='test')
 
-    def test_new_user_default_group(self):
-        user = get_user_model()(username='test', email='test@test.org', password='test')
-        user.full_clean()
-        user.save()
-        self._create_org_user(user=user)
-        user.refresh_from_db()
-        usergroup_set = user.radiususergroup_set.all()
-        self.assertEqual(usergroup_set.count(), 1)
-        ug = usergroup_set.first()
-        self.assertTrue(ug.group.default)
-        return user
-
-    def test_user_multiple_orgs_default_group(self):
-        user = self.test_new_user_default_group()
-        new_org = self._create_org(name='org2', slug='org2')
-        self._create_org_user(user=user, organization=new_org)
-        usergroup_set = user.radiususergroup_set.all()
-        self.assertEqual(usergroup_set.count(), 2)
-        new_ug = usergroup_set.filter(group__organization_id=new_org.pk).first()
-        self.assertIsNotNone(new_ug)
-        self.assertTrue(new_ug.group.default)
-
     def test_groupcheck_auto_name(self):
         g = self._create_radius_group(name='test', description='test')
         c = self._create_radius_groupcheck(
@@ -725,6 +703,30 @@ class TestRadiusGroup(BaseTestCase):
                 )
             else:
                 self.fail('ValidationError not raised')
+
+
+class TestTransactionRadiusGroup(BaseTransactionTestCase):
+    def test_new_user_default_group(self):
+        user = get_user_model()(username='test', email='test@test.org', password='test')
+        user.full_clean()
+        user.save()
+        self._create_org_user(user=user)
+        user.refresh_from_db()
+        usergroup_set = user.radiususergroup_set.all()
+        self.assertEqual(usergroup_set.count(), 1)
+        ug = usergroup_set.first()
+        self.assertTrue(ug.group.default)
+        return user
+
+    def test_user_multiple_orgs_default_group(self):
+        user = self.test_new_user_default_group()
+        new_org = self._create_org(name='org2', slug='org2')
+        self._create_org_user(user=user, organization=new_org)
+        usergroup_set = user.radiususergroup_set.all()
+        self.assertEqual(usergroup_set.count(), 2)
+        new_ug = usergroup_set.filter(group__organization_id=new_org.pk).first()
+        self.assertIsNotNone(new_ug)
+        self.assertTrue(new_ug.group.default)
 
 
 class TestRadiusBatch(BaseTestCase):
@@ -1095,3 +1097,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         user_radiususergroup.group = power_user_group
         user_radiususergroup.save()
         mocked_radclient.assert_not_called()
+
+
+del BaseTestCase
+del BaseTransactionTestCase

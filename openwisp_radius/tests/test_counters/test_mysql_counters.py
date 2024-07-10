@@ -5,13 +5,13 @@ from ...counters.mysql.monthly_traffic_counter import (
     MonthlyTrafficCounter,
 )
 from ...utils import load_model
-from ..mixins import BaseTestCase
+from ..mixins import BaseTransactionTestCase
 from .utils import TestCounterMixin
 
 RadiusAccounting = load_model('RadiusAccounting')
 
 
-class TestMysqlCounters(TestCounterMixin, BaseTestCase):
+class TestMysqlCounters(TestCounterMixin, BaseTransactionTestCase):
     def test_time_counter_repr(self):
         opts = self._get_kwargs('Max-Daily-Session')
         counter = DailyCounter(**opts)
@@ -50,3 +50,6 @@ class TestMysqlCounters(TestCounterMixin, BaseTestCase):
                 f'organization_id={counter.organization_id})'
             )
             self.assertEqual(repr(counter), expected)
+
+
+del BaseTransactionTestCase
