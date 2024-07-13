@@ -45,7 +45,7 @@ setup(
         ),
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
-        'weasyprint~=59.0',
+        'weasyprint~=61.0',
         'pydyf~=0.10.0',  # remove this once we upgrade wasyprint
         'dj-rest-auth~=4.0.1',
         'django-sendsms~=0.5.0',
