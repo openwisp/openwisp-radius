@@ -1117,6 +1117,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         _('SMS Cooldown'),
         blank=True,
         null=True,
+        default=None,
         help_text=_(
             'Time period a user will have to wait before requesting'
             ' another SMS token (in seconds).'
@@ -1136,7 +1137,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_GET_IP_LIST_HELP_TEXT,
-        default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+        default=None,
         fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
     )
     coa_enabled = FallbackBooleanChoiceField(
@@ -1151,7 +1152,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
-        default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+        default=None,
         fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
     first_name = FallbackCharChoiceField(
@@ -1238,7 +1239,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         blank=True,
         max_length=200,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
-        default=DEFAULT_PASSWORD_RESET_URL,
+        default=None,
         fallback=DEFAULT_PASSWORD_RESET_URL,
         validators=[password_reset_url_validator],
     )
