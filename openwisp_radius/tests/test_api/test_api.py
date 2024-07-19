@@ -29,7 +29,7 @@ from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ... import settings as app_settings
 from ...utils import load_model
-from ..mixins import ApiTokenMixin, BaseTestCase
+from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 from .test_freeradius_api import AcctMixin
 
 User = get_user_model()
@@ -1013,6 +1013,29 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(r.status_code, 201)
             self.assertIn('key', r.data)
 
+    def test_user_group_check_serializer_counter_does_not_exist(self):
+        group = self._create_radius_group(name='group name')
+        group_check = self._create_radius_groupcheck(
+            attribute='ChilliSpot-Max-Input-Octets',
+            op=':=',
+            value='2000000000',
+            group=group,
+            groupname=group.name,
+        )
+        serializer = UserGroupCheckSerializer(group_check)
+        self.assertDictEqual(
+            serializer.data,
+            {
+                'attribute': 'ChilliSpot-Max-Input-Octets',
+                'op': ':=',
+                'result': None,
+                'type': None,
+                'value': '2000000000',
+            },
+        )
+
+
+class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_user_radius_usage_view(self):
         auth_url = reverse('radius:user_auth_token', args=[self.default_org.slug])
         usage_url = reverse('radius:user_radius_usage', args=[self.default_org.slug])
@@ -1132,23 +1155,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
             self.assertEqual(response.status_code, 404)
 
-    def test_user_group_check_serializer_counter_does_not_exist(self):
-        group = self._create_radius_group(name='group name')
-        group_check = self._create_radius_groupcheck(
-            attribute='ChilliSpot-Max-Input-Octets',
-            op=':=',
-            value='2000000000',
-            group=group,
-            groupname=group.name,
-        )
-        serializer = UserGroupCheckSerializer(group_check)
-        self.assertDictEqual(
-            serializer.data,
-            {
-                'attribute': 'ChilliSpot-Max-Input-Octets',
-                'op': ':=',
-                'result': None,
-                'type': None,
-                'value': '2000000000',
-            },
-        )
+
+del BaseTestCase
+del BaseTransactionTestCase

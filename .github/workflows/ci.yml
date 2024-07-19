@@ -1,5 +1,5 @@
 ---
-name: OpenWISP Radius CI Build
+name: OpenWISP RADIUS CI Build
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     name: Python==${{ matrix.python-version }} | ${{ matrix.django-version }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -41,46 +41,41 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install python dependencies
+      - name: Install Dependencies
+        id: deps
         run: |
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
-
-      - name: Install npm dependencies
-        run: sudo npm install -g jslint
-
-      - name: Install openwisp-radius
-        run: |
           pip install -e .[saml,openvpn_status]
           pip install ${{ matrix.django-version }}
+          sudo npm install -g jslint
 
       - name: QA checks
         run: |
           ./run-qa-checks
 
       - name: Tests
+        if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |
           coverage run --source=openwisp_radius runtests.py
           # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
-          SAMPLE_APP=1 ./runtests.py --parallel --keepdb > /dev/null 2>&1 || ./runtests.py --keepdb
+          SAMPLE_APP=1 ./runtests.py --parallel --keepdb > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py --keepdb
+          coverage xml
 
       - name: Upload Coverage
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: |
-            python-${{ matrix.python-version }}-${{ matrix.django-version }}
-          COVERALLS_PARALLEL: true
+        if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel: true
+          format: cobertura
+          flag-name: python-${{ matrix.env.env }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   coveralls:
-    name: Finish Coveralls
     needs: build
     runs-on: ubuntu-latest
-    container: python:3-slim
     steps:
-      - name: Finished
-        run: |
-          pip3 install --upgrade coveralls
-          coveralls --finish
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true

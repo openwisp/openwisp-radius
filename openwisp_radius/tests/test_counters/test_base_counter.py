@@ -10,13 +10,13 @@ from ...counters.base import BaseCounter, BaseDailyCounter, BaseMontlhyTrafficCo
 from ...counters.exceptions import SkipCheck
 from ...counters.resets import resets
 from ...utils import load_model
-from ..mixins import BaseTestCase
+from ..mixins import BaseTransactionTestCase
 from .utils import TestCounterMixin
 
 RadiusAccounting = load_model('RadiusAccounting')
 
 
-class TestBaseCounter(TestCounterMixin, BaseTestCase):
+class TestBaseCounter(TestCounterMixin, BaseTransactionTestCase):
     @capture_any_output()
     def test_wrong_reset_time(self):
         class BrokenCounter(BaseCounter):
@@ -99,3 +99,6 @@ class TestBaseCounter(TestCounterMixin, BaseTestCase):
         self.assertEqual(BaseDailyCounter.get_attribute_type(), 'seconds')
         self.assertEqual(BaseMontlhyTrafficCounter.get_attribute_type(), 'bytes')
         self.assertEqual(MaxInputOctetsCounter.get_attribute_type(), 'bytes')
+
+
+del BaseTransactionTestCase
