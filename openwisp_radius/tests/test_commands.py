@@ -171,10 +171,21 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             name='test1',
         )
         self._call_command('batch_add_users', **options)
-        self.assertEqual(get_user_model().objects.all().count(), 6)
+        path = self._get_path('static/test_batch_users.csv')
+        expiration_date = (now() - timedelta(days=10)).strftime('%d-%m-%Y')
+        options = dict(
+            organization=self.default_org.slug,
+            file=path,
+            expiration=expiration_date,
+            name='test2',
+        )
+        self._call_command('batch_add_users', **options)
+        self.assertEqual(get_user_model().objects.all().count(), 9)
         call_command('delete_old_radiusbatch_users')
+        self.assertEqual(get_user_model().objects.all().count(), 6)
+        call_command('delete_old_radiusbatch_users', older_than_months=12)
         self.assertEqual(get_user_model().objects.all().count(), 3)
-        call_command('delete_old_radiusbatch_users', older_than_days=365)
+        call_command('delete_old_radiusbatch_users', older_than_days=9)
         self.assertEqual(get_user_model().objects.all().count(), 0)
 
     @capture_stdout()
