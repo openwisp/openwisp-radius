@@ -43,7 +43,9 @@ def deactivate_expired_users():
 
 
 @shared_task
-def delete_old_radiusbatch_users(older_than_days=365):
+def delete_old_radiusbatch_users(
+    older_than_days=30 * app_settings.BATCH_DELETE_EXPIRED,
+):
     management.call_command(
         'delete_old_radiusbatch_users', older_than_days=older_than_days
     )
