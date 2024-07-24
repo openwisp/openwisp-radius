@@ -15,12 +15,16 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test saml_registration_enabled set to True'):
             org.radius_settings.saml_registration_enabled = True
+            org.radius_settings.save(update_fields=['saml_registration_enabled'])
+            org.radius_settings.refresh_from_db(fields=['saml_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'), True
             )
 
         with self.subTest('Test saml_registration_enabled set to False'):
             org.radius_settings.saml_registration_enabled = False
+            org.radius_settings.save(update_fields=['saml_registration_enabled'])
+            org.radius_settings.refresh_from_db(fields=['saml_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'),
                 False,
@@ -28,6 +32,8 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test saml_registration_enabled set to None'):
             org.radius_settings.saml_registration_enabled = None
+            org.radius_settings.save(update_fields=['saml_registration_enabled'])
+            org.radius_settings.refresh_from_db(fields=['saml_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'saml_registration_enabled'),
                 app_settings.SAML_REGISTRATION_ENABLED,

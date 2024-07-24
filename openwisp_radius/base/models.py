@@ -998,7 +998,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         RegisteredUser = swapper.load_model('openwisp_radius', 'RegisteredUser')
         user.save()
         registered_user = RegisteredUser(user=user, method='manual')
-        if self.organization.radius_settings.get_setting('needs_identity_verification'):
+        if self.organization.radius_settings.needs_identity_verification:
             registered_user.is_verified = True
         registered_user.save()
         self.users.add(user)
@@ -1267,7 +1267,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         return mobile_prefixes
 
     def clean(self):
-        if self.get_setting('sms_verification') and not self.sms_sender:
+        if self.sms_verification and not self.sms_sender:
             raise ValidationError(
                 {
                     'sms_sender': _(
@@ -1358,13 +1358,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                     )
                 }
             )
-
-    def get_setting(self, field_name):
-        value = getattr(self, field_name)
-        field = self._meta.get_field(field_name)
-        if value is None and hasattr(field, 'fallback'):
-            return field.fallback
-        return value
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)
@@ -1470,7 +1463,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
                 )
             )
         org_radius_settings = org_user.organization.radius_settings
-        message = _(org_radius_settings.get_setting('sms_message')).format(
+        message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
         )
         sms_message = SmsMessage(

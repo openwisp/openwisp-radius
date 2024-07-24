@@ -202,7 +202,7 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
     attributes['User-Name'] = user.username
     updated_sessions = []
     for session in open_sessions:
-        if not session.organization.radius_settings.get_setting('coa_enabled'):
+        if not session.organization.radius_settings.coa_enabled:
             continue
         radsecret = get_radsecret_from_radacct(session)
         if not radsecret:

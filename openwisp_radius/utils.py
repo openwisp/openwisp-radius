@@ -196,7 +196,7 @@ def update_user_related_records(sender, instance, created, **kwargs):
 
 def get_organization_radius_settings(organization, radius_setting):
     try:
-        return organization.radius_settings.get_setting(radius_setting)
+        return getattr(organization.radius_settings, radius_setting)
     except ObjectDoesNotExist:
         logger.exception(
             f'Got exception while accessing radius_settings for {organization.name}'

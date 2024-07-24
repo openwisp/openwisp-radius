@@ -127,9 +127,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         )
         if (
             not open_session
-            or not open_session.organization.radius_settings.get_setting(
-                'mac_addr_roaming_enabled'
-            )
+            or not open_session.organization.radius_settings.mac_addr_roaming_enabled
         ):
             return None, None
         username = open_session.username
