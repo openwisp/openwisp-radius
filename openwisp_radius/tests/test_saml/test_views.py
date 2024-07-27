@@ -3,6 +3,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
@@ -71,6 +72,8 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(User.objects.count(), 1)
         user_id = self.client.session[SESSION_KEY]
         user = User.objects.get(id=user_id)
+        email = EmailAddress.objects.filter(user=user)
+        self.assertEqual(email.count(), 1)
         self.assertEqual(user.username, 'org_user@example.com')
         self.assertEqual(OrganizationUser.objects.count(), 1)
         org_user = OrganizationUser.objects.get(user_id=user_id)
