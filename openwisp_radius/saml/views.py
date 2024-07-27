@@ -2,6 +2,7 @@ import logging
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import logout
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
@@ -66,6 +67,22 @@ class AssertionConsumerServiceView(
         try:
             user.registered_user
         except ObjectDoesNotExist:
+            email = None
+            uid_is_email = 'email' in getattr(
+                settings, 'SAML_ATTRIBUTE_MAPPING', {}
+            ).get('uid', ())
+            if uid_is_email:
+                email = session_info['name_id'].text
+            if email is None:
+                email = session_info['ava'].get('email', [None])[0]
+            if email:
+                user.email = email
+                user.save()
+                email_address = EmailAddress.objects.create(
+                    user=user, email=email, verified=True, primary=True
+                )
+                email_address.save()
+
             registered_user = RegisteredUser(
                 user=user, method='saml', is_verified=app_settings.SAML_IS_VERIFIED
             )
