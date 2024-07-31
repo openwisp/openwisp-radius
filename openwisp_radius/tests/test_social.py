@@ -142,8 +142,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to True'):
             org.radius_settings.social_registration_enabled = True
-            org.radius_settings.save(update_fields=['social_registration_enabled'])
-            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 True,
@@ -151,8 +149,6 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to False'):
             org.radius_settings.social_registration_enabled = False
-            org.radius_settings.save(update_fields=['social_registration_enabled'])
-            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 False,

@@ -17,16 +17,12 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test registration enabled set to True'):
             org.radius_settings.registration_enabled = True
-            org.radius_settings.save(update_fields=['registration_enabled'])
-            org.radius_settings.refresh_from_db(fields=['registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'), True
             )
 
         with self.subTest('Test registration enabled set to False'):
             org.radius_settings.registration_enabled = False
-            org.radius_settings.save(update_fields=['registration_enabled'])
-            org.radius_settings.refresh_from_db(fields=['registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'registration_enabled'), False
             )
@@ -56,16 +52,12 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test sms verification enabled set to True'):
             org.radius_settings.sms_verification = True
-            org.radius_settings.save(update_fields=['sms_verification'])
-            org.radius_settings.refresh_from_db(fields=['sms_verification'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'), True
             )
 
         with self.subTest('Test sms verification enabled set to False'):
             org.radius_settings.sms_verification = False
-            org.radius_settings.save(update_fields=['sms_verification'])
-            org.radius_settings.refresh_from_db(fields=['sms_verification'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'sms_verification'), False
             )
