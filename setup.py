@@ -51,7 +51,7 @@ setup(
         'django-sendsms~=0.5.0',
         'jsonfield~=3.1.0',
         'django-private-storage~=3.1.0',
-        'django-ipware~=5.0.0',
+        'django-ipware~=7.0.1',
         'pyrad~=2.4',
     ],
     extras_require={
