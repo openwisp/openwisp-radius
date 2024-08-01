@@ -1,7 +1,0 @@
-[run]
-omit =
-    /*/test*
-    /tests
-    /*/__init__.py
-    /setup.py
-    /*/migrations/*

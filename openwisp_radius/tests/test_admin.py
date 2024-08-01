@@ -53,7 +53,6 @@ class TestAdmin(
     PostParamsMixin,
     TestMultitenantAdminMixin,
 ):
-
     app_label = 'openwisp_radius'
     app_label_users = 'openwisp_users'
 

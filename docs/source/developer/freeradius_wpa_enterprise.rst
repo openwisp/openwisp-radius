@@ -1,33 +1,30 @@
-=================================================================
 Freeradius Setup for WPA Enterprise (EAP-TTLS-PAP) authentication
 =================================================================
 
-This guide explains how to install and configure
-`freeradius 3 <https://freeradius.org>`_
-in order to make it work with
-`OpenWISP RADIUS <https://github.com/openwisp/openwisp-radius/>`_
-for WPA Enterprise EAP-TTLS-PAP authentication.
+This guide explains how to install and configure `freeradius 3
+<https://freeradius.org>`_ in order to make it work with `OpenWISP RADIUS
+<https://github.com/openwisp/openwisp-radius/>`_ for WPA Enterprise
+EAP-TTLS-PAP authentication.
 
-The setup will allow users to authenticate via WiFi WPA Enterprise networks
-using their personal username and password of their django user accounts.
-Users can either be created manually via the admin interface,
-:ref:`generated <generating_users>`,
-:ref:`imported from CSV <importing_users>`,
-or can self register through a web page which makes use of the
-:ref:`registration REST API <user_registration>`
-(like `openwisp-wifi-login-pages
+The setup will allow users to authenticate via WiFi WPA Enterprise
+networks using their personal username and password of their django user
+accounts. Users can either be created manually via the admin interface,
+:ref:`generated <generating_users>`, :ref:`imported from CSV
+<importing_users>`, or can self register through a web page which makes
+use of the :ref:`registration REST API <user_registration>` (like
+`openwisp-wifi-login-pages
 <https://github.com/openwisp/openwisp-wifi-login-pages>`_).
 
 Prerequisites
 -------------
 
-Execute the steps explained in the following sections
-of the :ref:`freeradius guide for captive portal authentication
+Execute the steps explained in the following sections of the
+:ref:`freeradius guide for captive portal authentication
 <freeradius_setup_for_captive_portal>`:
 
- * How to install freeradius 3
- * Enable the configured modules
- * Configure the REST module
+    - How to install freeradius 3
+    - Enable the configured modules
+    - Configure the REST module
 
 Then proceed with the rest of the document.
 
@@ -37,10 +34,10 @@ Freeradius configuration
 .. _freeradius_site_wpa_enterprise:
 
 Configure the sites
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Main sites
-~~~~~~~~~~
+++++++++++
 
 In this scenario it is necessary to set up one FreeRADIUS site for each
 organization you want to support, each FreeRADIUS instance will therefore
@@ -49,10 +46,10 @@ and a related inner tunnel configuration.
 
 Let's create the site for an hypotethical organization called org-A.
 
-Don't forget to substitute the occurrences of
-``<org_uuid>`` and ``<org_radius_api_token>`` with
-the UUID & Radius API token of each organization, refer to the section
-:ref:`organization_uuid_token` for finding these values.
+Don't forget to substitute the occurrences of ``<org_uuid>`` and
+``<org_radius_api_token>`` with the UUID & Radius API token of each
+organization, refer to the section :ref:`organization_uuid_token` for
+finding these values.
 
 .. code-block:: ini
 
@@ -119,7 +116,8 @@ the UUID & Radius API token of each organization, refer to the section
         }
     }
 
-Please also ensure that ``acct_unique`` is present in the ``pre-accounting`` section:
+Please also ensure that ``acct_unique`` is present in the
+``pre-accounting`` section:
 
 .. code-block:: ini
 
@@ -130,7 +128,7 @@ Please also ensure that ``acct_unique`` is present in the ``pre-accounting`` sec
     }
 
 Inner tunnels
-~~~~~~~~~~~~~
++++++++++++++
 
 You will need to set up one inner tunnel for each organization too.
 
@@ -192,11 +190,13 @@ Following the example for a hypotetical organization named org-A:
     }
 
 Configure the EAP modules
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
+
     Keep in mind these are basic sample configurations, once you get it
-    working feel free to tweak it to make it more secure and fully featured.
+    working feel free to tweak it to make it more secure and fully
+    featured.
 
 You will need to set up one EAP module instance for each organization too.
 
@@ -246,10 +246,10 @@ Following the example for a hypotetical organization named org-A:
 Repeating the steps for more organizations
 ------------------------------------------
 
-Let's say you don't have only the hypotetical org-A in your system
-but more organizations, in that case you simply have to repeat
-the steps explained in the previous sections, substituting the occurrences
-of org-A with the names of the other organizations.
+Let's say you don't have only the hypotetical org-A in your system but
+more organizations, in that case you simply have to repeat the steps
+explained in the previous sections, substituting the occurrences of org-A
+with the names of the other organizations.
 
 So if you have an organization named ACME Systems, copy the files and
 substitute the occurrences ``org_a`` with ``acme_systems``.
@@ -257,9 +257,9 @@ substitute the occurrences ``org_a`` with ``acme_systems``.
 Final steps
 -----------
 
-Once the configurations are ready, you should
-:ref:`restart freeradius <restart_freeradius>`
-and :ref:`then test/troubleshoot/debug your setup <debugging>`.
+Once the configurations are ready, you should :ref:`restart freeradius
+<restart_freeradius>` and :ref:`then test/troubleshoot/debug your setup
+<debugging>`.
 
 Implementing other EAP scenarios
 --------------------------------
@@ -268,11 +268,10 @@ Implementing other setups like EAP-TLS requires additional development
 effort.
 
 `OpenWISP Controller <https://github.com/openwisp/openwisp-controller>`_
-already supports x509 certificates, so it would be
-a matter of integrating the
-`django-x509 <https://github.com/openwisp/django-x509>`_
-module into OpenWISP RADIUS and then implement mechanisms for the users
-to securely download their certificates.
+already supports x509 certificates, so it would be a matter of integrating
+the `django-x509 <https://github.com/openwisp/django-x509>`_ module into
+OpenWISP RADIUS and then implement mechanisms for the users to securely
+download their certificates.
 
-If you're interested in this feature, let us know via the
-:ref:`support channels <support>`.
+If you're interested in this feature, let us know via the :ref:`support
+channels <support>`.

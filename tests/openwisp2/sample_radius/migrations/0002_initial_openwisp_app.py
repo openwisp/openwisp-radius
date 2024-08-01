@@ -25,7 +25,6 @@ from openwisp_radius.settings import CSV_URL_PATH, RADIUS_API_BASEURL
 
 
 class Migration(migrations.Migration):
-
     nas_model = swapper.get_model_name('openwisp_radius', 'Nas')
     model_app_label = swapper.split(nas_model)[0]
     dependencies = [

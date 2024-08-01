@@ -31,11 +31,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Install system libraries
-        run: |
-          sudo apt update
-          sudo apt-get -qq -y install xmlsec1 gettext
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -44,6 +39,8 @@ jobs:
       - name: Install Dependencies
         id: deps
         run: |
+          sudo apt update -qq
+          sudo apt-get -qq -y install xmlsec1 gettext
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
@@ -57,9 +54,10 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |
-          coverage run --source=openwisp_radius runtests.py
+          coverage run runtests.py --parallel
           # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
-          SAMPLE_APP=1 ./runtests.py --parallel --keepdb > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py --keepdb
+          SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
+          coverage combine
           coverage xml
 
       - name: Upload Coverage

@@ -7,7 +7,6 @@ from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0021_organizationradiussettings_registration_enabled'),
     ]

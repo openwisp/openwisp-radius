@@ -6,7 +6,6 @@ import openwisp_radius.base.validators
 
 
 class Migration(migrations.Migration):
-
     dependencies = [('openwisp_radius', '0005_radiustoken')]
 
     operations = [

@@ -1,11 +1,11 @@
 .. _support:
 
-=======
 Support
 =======
 
-The OpenWISP community is very active and offers best effort support through the official
-`OpenWISP Support Channels <https://openwisp.org/support.html>`_.
+The OpenWISP community is very active and offers best effort support
+through the official `OpenWISP Support Channels
+<https://openwisp.org/support.html>`_.
 
 .. raw:: html
 

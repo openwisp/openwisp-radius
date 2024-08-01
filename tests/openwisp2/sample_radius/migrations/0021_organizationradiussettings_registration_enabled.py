@@ -5,7 +5,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0020_added_optional_registration_fields'),
     ]

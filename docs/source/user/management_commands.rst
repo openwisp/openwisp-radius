@@ -1,6 +1,5 @@
 .. _management_commands:
 
-===================
 Management commands
 ===================
 
@@ -14,7 +13,8 @@ Example usage:
     cd tests/
     ./manage.py <command> <args>
 
-In this page we list the management commands currently available in **openwisp-radius**.
+In this page we list the management commands currently available in
+**openwisp-radius**.
 
 ``delete_old_radacct``
 ----------------------
@@ -49,8 +49,8 @@ For example:
 ``cleanup_stale_radacct``
 -------------------------
 
-This command closes stale RADIUS sessions that have remained open for
-the number of specified ``<days>``.
+This command closes stale RADIUS sessions that have remained open for the
+number of specified ``<days>``.
 
 .. code-block:: shell
 
@@ -66,10 +66,12 @@ For example:
 ----------------------------
 
 .. note::
-  :ref:`Find out more about this feature in its dedicated page <generating_users>`
 
-This command deactivates expired user accounts which were created temporarily
-(eg: for en event) and have an expiration date set.
+    :ref:`Find out more about this feature in its dedicated page
+    <generating_users>`
+
+This command deactivates expired user accounts which were created
+temporarily (eg: for en event) and have an expiration date set.
 
 .. code-block:: shell
 
@@ -78,8 +80,9 @@ This command deactivates expired user accounts which were created temporarily
 ``delete_old_radiusbatch_users``
 --------------------------------
 
-This command deletes users that have expired (and should have been deactivated by
-``deactivate_expired_users``) for more than the specified ``<duration_in_months>``.
+This command deletes users that have expired (and should have been
+deactivated by ``deactivate_expired_users``) for more than the specified
+``<duration_in_months>``.
 
 .. code-block:: shell
 
@@ -90,11 +93,11 @@ Note that the default duration is set to 18 months.
 ``delete_unverified_users``
 ---------------------------
 
-This command deletes unverified users that have been registered for
-more than specified duration and have no associated radius session.
-This feature is needed to delete users who have registered but never
-completed the verification process.
-**Staff users will not be deleted by this management command.**
+This command deletes unverified users that have been registered for more
+than specified duration and have no associated radius session. This
+feature is needed to delete users who have registered but never completed
+the verification process. **Staff users will not be deleted by this
+management command.**
 
 .. code-block:: shell
 
@@ -102,8 +105,9 @@ completed the verification process.
 
 Note that the default duration is set to 1 day.
 
-It is also possible to exclude users that have registered using specified methods.
-You can specify multiple methods separated by comma(`,`). Following is an example:
+It is also possible to exclude users that have registered using specified
+methods. You can specify multiple methods separated by comma(`,`).
+Following is an example:
 
 .. code-block:: shell
 
@@ -112,59 +116,77 @@ You can specify multiple methods separated by comma(`,`). Following is an exampl
 ``upgrade_from_django_freeradius``
 ----------------------------------
 
-If you are upgrading from `django-freeradius <https://github.com/openwisp/django-freeradius>`_
-to openwisp-radius, there is an easy migration script that will import your freeradius
-database, sites, social website account users, users & groups to openwisp-radius instance::
+If you are upgrading from `django-freeradius
+<https://github.com/openwisp/django-freeradius>`_ to openwisp-radius,
+there is an easy migration script that will import your freeradius
+database, sites, social website account users, users & groups to
+openwisp-radius instance:
+
+::
 
     ./manage.py upgrade_from_django_freeradius
 
 The management command accepts an argument ``--backup``, that you can pass
-to give the location of the backup files, by default it looks in the ``tests/``
-directory, eg::
+to give the location of the backup files, by default it looks in the
+``tests/`` directory, eg:
+
+::
 
     ./manage.py upgrade_from_django_freeradius --backup /home/user/django_freeradius/
 
-The management command accepts another argument ``--organization``, if you want to
-import data to a specific organization, you can give its UUID for the same,
-by default the data is added to the first found organization, eg::
+The management command accepts another argument ``--organization``, if you
+want to import data to a specific organization, you can give its UUID for
+the same, by default the data is added to the first found organization,
+eg:
+
+::
 
     ./manage.py upgrade_from_django_freeradius --organization 900856da-c89a-412d-8fee-45a9c763ca0b
 
 .. note::
-    You can follow the `tutorial to migrate database from django-freeradius <https://github.com/openwisp/django-freeradius/blob/master/README.rst>`_.
+
+    You can follow the `tutorial to migrate database from
+    django-freeradius
+    <https://github.com/openwisp/django-freeradius/blob/master/README.rst>`_.
 
 .. warning::
-    It is not possible to export user credential data for radiusbatch created using prefix, please manually preserve the PDF files if you want to access the data in the future.
+
+    It is not possible to export user credential data for radiusbatch
+    created using prefix, please manually preserve the PDF files if you
+    want to access the data in the future.
 
 .. _convert_called_station_id:
 
 ``convert_called_station_id``
 -----------------------------
 
-If an installation uses a centralized captive portal, the value of "Called Station ID" of
-RADIUS Sessions will always show the MAC address of the captive portal instead of the access points.
+If an installation uses a centralized captive portal, the value of "Called
+Station ID" of RADIUS Sessions will always show the MAC address of the
+captive portal instead of the access points.
 
-This command will update the "Called Station ID" to reflect the MAC address of the access points
-using information from OpenVPN. It requires installing ``openvpn_status``,
-which can be installed using the following command
+This command will update the "Called Station ID" to reflect the MAC
+address of the access points using information from OpenVPN. It requires
+installing ``openvpn_status``, which can be installed using the following
+command
 
 .. code-block:: shell
 
     pip install openwisp-radius[openvpn_status]
 
 In order to work, this command requires to be configured via the
-:ref:`OPENWISP_RADIUS_CALLED_STATION_IDS <openwisp_radius_called_station_ids>` setting.
+:ref:`OPENWISP_RADIUS_CALLED_STATION_IDS
+<openwisp_radius_called_station_ids>` setting.
 
 Use the following command if you want to perform this operation for all
-RADIUS sessions that meet criteria of ``OPENWISP_RADIUS_CALLED_STATION_IDS``
-setting.
+RADIUS sessions that meet criteria of
+``OPENWISP_RADIUS_CALLED_STATION_IDS`` setting.
 
 .. code-block:: shell
 
     ./manage.py convert_called_station_id
 
-You can also convert the "Called Station ID" of a particular RADIUS session by
-replacing session's ``unique_id`` in the following command:
+You can also convert the "Called Station ID" of a particular RADIUS
+session by replacing session's ``unique_id`` in the following command:
 
 .. code-block:: shell
 
@@ -172,14 +194,15 @@ replacing session's ``unique_id`` in the following command:
 
 .. note::
 
-    If you encounter ``ParseError`` for datetime data, you can set the datetime format
-    of the parser using :ref:`OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT <openwisp_radius_openvpn_datetime_format>`
-    setting.
+    If you encounter ``ParseError`` for datetime data, you can set the
+    datetime format of the parser using
+    :ref:`OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT
+    <openwisp_radius_openvpn_datetime_format>` setting.
 
 .. note::
 
-    ``convert_called_station_id`` command will only operate on open RADIUS sessions,
-    i.e. the "stop_time" field is None.
+    ``convert_called_station_id`` command will only operate on open RADIUS
+    sessions, i.e. the "stop_time" field is None.
 
     But if you are converting a single RADIUS session, it will operate on
     it even if the session is closed.

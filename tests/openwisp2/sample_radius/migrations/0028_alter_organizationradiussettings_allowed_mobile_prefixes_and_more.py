@@ -8,7 +8,6 @@ from openwisp_radius import settings as app_settings
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0027_remove_check_customizations'),
     ]

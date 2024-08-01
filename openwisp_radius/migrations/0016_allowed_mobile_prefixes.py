@@ -6,7 +6,6 @@ from openwisp_radius.base.models import _GET_MOBILE_PREFIX_HELP_TEXT
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0015_freeradius_allowed_hosts'),
     ]

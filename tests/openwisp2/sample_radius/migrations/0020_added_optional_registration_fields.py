@@ -6,7 +6,6 @@ from openwisp_radius.base.models import _GET_OPTIONAL_FIELDS_HELP_TEXT
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0005_phonetoken_phone_number'),
     ]

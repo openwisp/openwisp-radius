@@ -13,7 +13,6 @@ from .. import settings as app_settings
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0009_radbatch_user_credentials_field'),
     ]

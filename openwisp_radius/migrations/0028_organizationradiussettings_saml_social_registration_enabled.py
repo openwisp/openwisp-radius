@@ -5,7 +5,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0027_password_reset_url_org_settings'),
     ]
