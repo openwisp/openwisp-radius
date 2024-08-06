@@ -6,7 +6,6 @@ import openwisp_utils.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("openwisp_radius", "0034_organizationradiussettings_coa_enabled"),
     ]

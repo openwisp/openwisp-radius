@@ -1,25 +1,29 @@
-=====
 Setup
 =====
 
 Try the demo
 ------------
 
-**Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
+**Need a quick overview?** `Try the OpenWISP Demo
+<https://openwisp.org/demo.html>`_.
 
 Deploy it in production
 -----------------------
 
-An automated installer is available at
-`ansible-openwisp2 <https://github.com/openwisp/ansible-openwisp2#enabling-the-radius-module>`_.
+An automated installer is available at `ansible-openwisp2
+<https://github.com/openwisp/ansible-openwisp2#enabling-the-radius-module>`_.
 
 Create a virtual environment
 ----------------------------
 
-Please use a `python virtual environment <https://docs.python.org/3/library/venv.html>`_.
-It keeps everybody on the same page, helps reproducing bugs and resolving problems.
+Please use a `python virtual environment
+<https://docs.python.org/3/library/venv.html>`_. It keeps everybody on the
+same page, helps reproducing bugs and resolving problems.
 
-We highly suggest to use **virtualenvwrapper**, please refer to the official `virtualenvwrapper installation page <https://virtualenvwrapper.readthedocs.io/en/latest/install.html>`_ and come back here when ready to proceed.
+We highly suggest to use **virtualenvwrapper**, please refer to the
+official `virtualenvwrapper installation page
+<https://virtualenvwrapper.readthedocs.io/en/latest/install.html>`_ and
+come back here when ready to proceed.
 
 .. code-block:: shell
 
@@ -27,17 +31,22 @@ We highly suggest to use **virtualenvwrapper**, please refer to the official `vi
     mkvirtualenv radius
 
 .. note::
-    If you encounter an error like ``Python could not import the module virtualenvwrapper``,
-    add ``VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3`` and run ``source virtualenvwrapper.sh`` again :)
+
+    If you encounter an error like ``Python could not import the module
+    virtualenvwrapper``, add ``VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3``
+    and run ``source virtualenvwrapper.sh`` again :)
 
 Install required system packages
 --------------------------------
 
 Install packages required by Weasyprint for your OS:
 
- - `Linux <https://weasyprint.readthedocs.io/en/stable/install.html#linux>`_
- - `MacOS <https://weasyprint.readthedocs.io/en/stable/install.html#macos>`_
- - `Windows <https://weasyprint.readthedocs.io/en/stable/install.html#windows>`_
+    - `Linux
+      <https://weasyprint.readthedocs.io/en/stable/install.html#linux>`_
+    - `MacOS
+      <https://weasyprint.readthedocs.io/en/stable/install.html#macos>`_
+    - `Windows
+      <https://weasyprint.readthedocs.io/en/stable/install.html#windows>`_
 
 Install stable version from pypi
 --------------------------------
@@ -86,78 +95,80 @@ If you want to contribute, install your cloned fork:
 Setup (integrate in an existing django project)
 -----------------------------------------------
 
-The ``settings.py`` file of your project should have at least the following
-modules listed ``INSTALLED_APPS``:
+The ``settings.py`` file of your project should have at least the
+following modules listed ``INSTALLED_APPS``:
 
 .. code-block:: python
 
     INSTALLED_APPS = [
-        'django.contrib.auth',
-        'django.contrib.contenttypes',
-        'django.contrib.sessions',
-        'django.contrib.messages',
-        'django.contrib.staticfiles',
-        'django.contrib.humanize',
+        "django.contrib.auth",
+        "django.contrib.contenttypes",
+        "django.contrib.sessions",
+        "django.contrib.messages",
+        "django.contrib.staticfiles",
+        "django.contrib.humanize",
         # openwisp admin theme
-        'openwisp_utils.admin_theme',
+        "openwisp_utils.admin_theme",
         # all-auth
-        'django.contrib.sites',
-        'allauth',
-        'allauth.account',
+        "django.contrib.sites",
+        "allauth",
+        "allauth.account",
         # admin
-        'django.contrib.admin',
+        "django.contrib.admin",
         # rest framework
-        'rest_framework',
-        'django_filters',
+        "rest_framework",
+        "django_filters",
         # registration
-        'rest_framework.authtoken',
-        'dj_rest_auth',
-        'dj_rest_auth.registration',
+        "rest_framework.authtoken",
+        "dj_rest_auth",
+        "dj_rest_auth.registration",
         # openwisp radius
-        'openwisp_radius',
-        'openwisp_users',
-        'private_storage',
-        'drf_yasg',
+        "openwisp_radius",
+        "openwisp_users",
+        "private_storage",
+        "drf_yasg",
     ]
 
-These modules are optional, add them only if you need the
-:ref:`social login <social_login>` feature:
+These modules are optional, add them only if you need the :ref:`social
+login <social_login>` feature:
 
 .. code-block:: python
 
     INSTALLED_APPS += [
         # social login
-        'allauth.socialaccount',
-        'allauth.socialaccount.providers.facebook',
-        'allauth.socialaccount.providers.google',
+        "allauth.socialaccount",
+        "allauth.socialaccount.providers.facebook",
+        "allauth.socialaccount.providers.google",
     ]
 
 Add media locations in ``settings.py``:
 
 .. code-block:: python
 
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, "private")
 
-Also, add ``AUTH_USER_MODEL``, ``AUTHENTICATION_BACKENDS`` and ``SITE_ID`` to
-your ``settings.py``:
+Also, add ``AUTH_USER_MODEL``, ``AUTHENTICATION_BACKENDS`` and ``SITE_ID``
+to your ``settings.py``:
 
 .. code-block:: python
 
-    AUTH_USER_MODEL = 'openwisp_users.User'
+    AUTH_USER_MODEL = "openwisp_users.User"
     SITE_ID = 1
     AUTHENTICATION_BACKENDS = (
-        'openwisp_users.backends.UsersAuthenticationBackend',
+        "openwisp_users.backends.UsersAuthenticationBackend",
     )
 
-Add allowed freeradius hosts  in ``settings.py``:
+Add allowed freeradius hosts in ``settings.py``:
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ['127.0.0.1']
+    OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ["127.0.0.1"]
 
 .. note::
-    Read more about :ref:`freeradius allowed hosts in settings page <openwisp_radius_freeradius_allowed_hosts>`.
+
+    Read more about :ref:`freeradius allowed hosts in settings page
+    <openwisp_radius_freeradius_allowed_hosts>`.
 
 Add the URLs to your main ``urls.py``:
 
@@ -167,14 +178,13 @@ Add the URLs to your main ``urls.py``:
 
     urlpatterns = [
         # ... other urls in your project ...
-
         # django admin interface urls
-        path('admin/', admin.site.urls),
+        path("admin/", admin.site.urls),
         # openwisp-radius urls
-        path('api/v1/', include('openwisp_utils.api.urls')),
-        path('api/v1/', include('openwisp_users.api.urls')),
-        path('accounts/', include('openwisp_users.accounts.urls')),
-        path('', include('openwisp_radius.urls'))
+        path("api/v1/", include("openwisp_utils.api.urls")),
+        path("api/v1/", include("openwisp_users.api.urls")),
+        path("accounts/", include("openwisp_users.accounts.urls")),
+        path("", include("openwisp_radius.urls")),
     ]
 
 Then run:
@@ -188,14 +198,14 @@ Then run:
 Migrating an existing freeradius database
 -----------------------------------------
 
-If you already have a freeradius 3 database with the default schema, you should
-be able to use it with openwisp-radius (and extended apps) easily:
+If you already have a freeradius 3 database with the default schema, you
+should be able to use it with openwisp-radius (and extended apps) easily:
 
 1. first of all, back up your existing database;
 2. configure django to connect to your existing database;
-3. fake the first migration (which only replicates the default freeradius schema)
-   and then launch the rest of migrations normally, see the examples below to
-   see how to do this.
+3. fake the first migration (which only replicates the default freeradius
+   schema) and then launch the rest of migrations normally, see the
+   examples below to see how to do this.
 
 .. code-block:: shell
 
@@ -205,35 +215,40 @@ be able to use it with openwisp-radius (and extended apps) easily:
 Automated periodic tasks
 ------------------------
 
-Some periodic commands are required in production environments to enable certain
-features and facilitate database cleanup.
-There are two ways to automate these tasks:
+Some periodic commands are required in production environments to enable
+certain features and facilitate database cleanup. There are two ways to
+automate these tasks:
 
 1. Celery-beat (Recommended Method)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. You need to create a `celery configuration file as it's created in example file <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/celery.py>`_.
-
+1. You need to create a `celery configuration file as it's created in
+   example file
+   <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/celery.py>`_.
 2. Add celery to ``__init__.py`` of your project:
 
 .. code-block:: python
 
     from .celery import app as celery_app
 
-    __all__ = ['celery_app']
+    __all__ = ["celery_app"]
 
-3. In the settings.py, `configure the CELERY_BEAT_SCHEDULE <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_. Some celery tasks take an argument, for instance
-``365`` is given here for ``delete_old_radacct`` in the example settings.
-These arguments are passed to their respective management commands. More information about these parameters can be
-found at the `management commands page <../user/management_commands.html>`_.
+3. In the settings.py, `configure the CELERY_BEAT_SCHEDULE
+<https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_.
+Some celery tasks take an argument, for instance ``365`` is given here for
+``delete_old_radacct`` in the example settings. These arguments are passed
+to their respective management commands. More information about these
+parameters can be found at the `management commands page
+<../user/management_commands.html>`_.
 
 .. note::
-    Celery tasks do not start with django server and need to be
-    started seperately, please read about running `celery and
-    celery-beat <./setup.html#celery-usage>`_ tasks.
+
+    Celery tasks do not start with django server and need to be started
+    seperately, please read about running `celery and celery-beat
+    <./setup.html#celery-usage>`_ tasks.
 
 2. Crontab (Legacy Method)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Edit the crontab with:
 
@@ -263,14 +278,14 @@ Add and modify the following lines accordingly:
     # 18 months (which is the default duration)
     30 04 * * * <virtualenv_path>/bin/python <full/path/to>/manage.py delete_old_radiusbatch_users
 
-Be sure to replace ``<virtualenv_path>`` with the absolute path to the Python
-virtual environment.
+Be sure to replace ``<virtualenv_path>`` with the absolute path to the
+Python virtual environment.
 
 Also, change ``<full/path/to>`` to the directory where ``manage.py`` is.
 
 To get the absolute path to ``manage.py`` when openwisp-radius is
-installed for development, navigate to the base directory of
-the cloned fork. Then, run:
+installed for development, navigate to the base directory of the cloned
+fork. Then, run:
 
 .. code-block:: shell
 
@@ -278,8 +293,9 @@ the cloned fork. Then, run:
     pwd
 
 .. note::
-    More information can be found at the
-    :ref:`management commands page <management_commands>`.
+
+    More information can be found at the :ref:`management commands page
+    <management_commands>`.
 
 .. _installing_for_development:
 
@@ -305,7 +321,9 @@ Install mysqlclient:
     sudo apt install libmysqlclient-dev libssl-dev
 
 .. note::
-    If you are on Debian 10 or 9 you may need to install ``default-libmysqlclient-dev`` instead
+
+    If you are on Debian 10 or 9 you may need to install
+    ``default-libmysqlclient-dev`` instead
 
 Install xmlsec1:
 
@@ -317,7 +335,7 @@ Install your forked repo:
 
 .. code-block:: shell
 
-    git clone git://github.com/<your_username>/openwisp-radius
+    git clone git://github.com/<your_username>/openwisp-radius
     cd openwisp-radius/
     pip install -e .[saml,openvpn_status]
 
@@ -354,15 +372,17 @@ Run tests with:
 Celery Usage
 ------------
 
-To run celery, you need to start redis-server. You can `install redis on your machine
-<https://redis.io/download>`_ or `install docker <https://docs.docker.com/get-docker/>`_
-and run redis inside docker container:
+To run celery, you need to start redis-server. You can `install redis on
+your machine <https://redis.io/download>`_ or `install docker
+<https://docs.docker.com/get-docker/>`_ and run redis inside docker
+container:
 
 .. code-block:: shell
 
     docker run -p 6379:6379 --name openwisp-redis -d redis:alpine
 
-Run celery (it is recommended to use a tool like supervisord in production):
+Run celery (it is recommended to use a tool like supervisord in
+production):
 
 .. code-block:: shell
 

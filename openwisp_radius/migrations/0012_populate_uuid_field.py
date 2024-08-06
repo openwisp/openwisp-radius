@@ -6,7 +6,6 @@ from . import popluate_uuids
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0011_add_null_uuid_field'),
     ]

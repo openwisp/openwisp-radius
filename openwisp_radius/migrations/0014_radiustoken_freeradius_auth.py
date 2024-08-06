@@ -8,7 +8,6 @@ from . import delete_old_radius_token
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0013_remove_null_uuid_field'),
     ]

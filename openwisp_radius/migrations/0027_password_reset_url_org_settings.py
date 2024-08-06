@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0026_login_status_url_org_settings'),
     ]

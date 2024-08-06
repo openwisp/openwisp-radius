@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0021_radius_user_group_unique_together'),
     ]

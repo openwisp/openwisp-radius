@@ -6,7 +6,6 @@ from openwisp_radius.base.models import _GET_MOBILE_PREFIX_HELP_TEXT
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0003_default_groups_and_permissions'),
     ]

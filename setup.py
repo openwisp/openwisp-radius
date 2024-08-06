@@ -59,7 +59,7 @@ setup(
         'openvpn_status': ['openvpn-status~=0.2.1'],
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable ',
         'Environment :: Web Environment',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: System :: Networking',

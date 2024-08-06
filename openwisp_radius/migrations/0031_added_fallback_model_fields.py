@@ -8,7 +8,6 @@ from .. import settings as app_settings
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('openwisp_radius', '0030_remove_radiuscheck_notes'),
     ]

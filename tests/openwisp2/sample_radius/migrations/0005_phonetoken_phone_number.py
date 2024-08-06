@@ -5,7 +5,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sample_radius', '0004_allowed_mobile_prefixes'),
     ]

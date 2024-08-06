@@ -1,15 +1,15 @@
-=========================
 Captive portal mock views
 =========================
 
 The development environment of openwisp-radius provides two URLs that mock
 the behavior of a captive portal, these URLs can be used when testing
-frontend applications like
-`openwisp-wifi-login-pages <https://github.com/openwisp/openwisp-wifi-login-pages>`_
-during development.
+frontend applications like `openwisp-wifi-login-pages
+<https://github.com/openwisp/openwisp-wifi-login-pages>`_ during
+development.
 
 .. note::
-   These views are meant to be used just for development and testing.
+
+    These views are meant to be used just for development and testing.
 
 Captive Portal Login Mock View
 ------------------------------
@@ -17,12 +17,12 @@ Captive Portal Login Mock View
 - **URL**: ``http://localhost:8000/captive-portal-mock/login/``.
 - **POST fields**: ``auth_pass`` or ``password``.
 
-This view looks for ``auth_pass`` or ``password`` in the POST request data,
-and if it finds anything will try to look for any ``RadiusToken`` instance
-having its key equal to this value, and if it does find one, it makes a
-``POST`` request to accouting view to create the radius session related to
-the user to which the radius token belongs, provided there's no other open
-session for the same user.
+This view looks for ``auth_pass`` or ``password`` in the POST request
+data, and if it finds anything will try to look for any ``RadiusToken``
+instance having its key equal to this value, and if it does find one, it
+makes a ``POST`` request to accouting view to create the radius session
+related to the user to which the radius token belongs, provided there's no
+other open session for the same user.
 
 Captive Portal Logout Mock View
 -------------------------------
