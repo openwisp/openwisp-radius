@@ -4,6 +4,8 @@ from django.db import migrations
 
 import openwisp_utils.fields
 
+from .. import settings as app_settings
+
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -16,7 +18,7 @@ class Migration(migrations.Migration):
             name="sms_cooldown",
             field=openwisp_utils.fields.FallbackPositiveIntegerField(
                 blank=True,
-                fallback=30,
+                fallback=app_settings.SMS_COOLDOWN,
                 help_text=(
                     "Time period a user will have to wait before"
                     " requesting another SMS token (in seconds)."
