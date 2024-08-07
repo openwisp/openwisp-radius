@@ -46,7 +46,6 @@ def clean_fallback_fields(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         (
             'openwisp_radius',

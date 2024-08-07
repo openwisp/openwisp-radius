@@ -9,7 +9,6 @@ from .. import settings as app_settings
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("openwisp_radius", "0036_organizationradiussettings_mac_addr_roaming_enabled"),
     ]
