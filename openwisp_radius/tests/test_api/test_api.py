@@ -27,7 +27,6 @@ from openwisp_radius.api.serializers import (
 )
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
-from ... import settings as app_settings
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 from .test_freeradius_api import AcctMixin
@@ -358,17 +357,29 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
             )
 
+    # The fallback value is set on project startup, hence it also requires mocking.
     @mock.patch.object(
-        app_settings,
-        'OPTIONAL_REGISTRATION_FIELDS',
-        {
-            'first_name': 'disabled',
-            'last_name': 'allowed',
-            'birth_date': 'disabled',
-            'location': 'mandatory',
-        },
+        OrganizationRadiusSettings._meta.get_field('first_name'),
+        'fallback',
+        'disabled',
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('last_name'),
+        'fallback',
+        'allowed',
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('birth_date'),
+        'fallback',
+        'disabled',
+    )
+    @mock.patch.object(
+        OrganizationRadiusSettings._meta.get_field('location'),
+        'fallback',
+        'mandatory',
     )
     def test_optional_fields_registration(self):
+        self.default_org.radius_settings.refresh_from_db()
         self._superuser_login()
         url = reverse('radius:rest_register', args=[self.default_org.slug])
         params = {

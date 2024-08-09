@@ -674,7 +674,7 @@ class TestAdmin(
             # The default value is set on project startup, hence
             # it also requires mocking.
             OrganizationRadiusSettings._meta.get_field('password_reset_url'),
-            'default',
+            'fallback',
             app_settings.DEFAULT_PASSWORD_RESET_URL,
         ):
             response = self.client.get(url)
