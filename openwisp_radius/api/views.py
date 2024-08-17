@@ -630,7 +630,7 @@ class CreatePhoneTokenView(
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({'user': str(e)})
-        org_cooldown = self.organization.radius_settings.get_setting('sms_cooldown')
+        org_cooldown = self.organization.radius_settings.sms_cooldown
         try:
             self.enforce_sms_request_cooldown(org_cooldown, phone_number)
         except SmsAttemptCooldownException as e:

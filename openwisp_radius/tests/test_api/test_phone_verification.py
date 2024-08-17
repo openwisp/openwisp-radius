@@ -252,7 +252,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
             response.data['cooldown'],
-            self.default_org.radius_settings.get_setting('sms_cooldown'),
+            self.default_org.radius_settings.sms_cooldown,
         )
 
         with freeze_time(start_time + timedelta(seconds=15)):
@@ -270,7 +270,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
             response.data['cooldown'],
-            self.default_org.radius_settings.get_setting('sms_cooldown'),
+            self.default_org.radius_settings.sms_cooldown,
         )
 
     @capture_any_output()

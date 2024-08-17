@@ -156,6 +156,8 @@ class TestUtils(BaseTestCase):
 
         with self.subTest('Test social_registration_enabled set to None'):
             org.radius_settings.social_registration_enabled = None
+            org.radius_settings.save(update_fields=['social_registration_enabled'])
+            org.radius_settings.refresh_from_db(fields=['social_registration_enabled'])
             self.assertEqual(
                 get_organization_radius_settings(org, 'social_registration_enabled'),
                 app_settings.SOCIAL_REGISTRATION_ENABLED,
