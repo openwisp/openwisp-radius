@@ -1,5 +1,11 @@
-Available settings
-==================
+Settings
+========
+
+.. include:: /partials/settings-note.rst
+
+.. contents:: **Table of contents**:
+    :depth: 1
+    :local:
 
 Admin related settings
 ----------------------
@@ -123,10 +129,10 @@ It is the number of months after which the expired users are deleted.
 ``OPENWISP_RADIUS_BATCH_PDF_TEMPLATE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is the template used to generate the pdf when users are being generated
+It is the template used to generate the PDF when users are being generated
 using the batch add users feature using the prefix.
 
-The value should be the absolute path to the template of the pdf.
+The value should be the absolute path to the template of the PDF.
 
 ``OPENWISP_RADIUS_EXTRA_NAS_TYPES``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -159,7 +165,7 @@ is on a different host in the private network, the value should be the
 private IP of freeradius host like ``192.0.2.50``. If your freeradius is
 on a public network, please use the public IP of your freeradius instance.
 
-You can use subnets when freeradius is hosted on a variable IP, eg:
+You can use subnets when freeradius is hosted on a variable IP, e.g.:
 
 - ``198.168.0.0/24`` to allow the entire LAN.
 - ``0.0.0.0/0`` to allow any address (useful for development / testing).
@@ -168,7 +174,7 @@ This value can be overridden per organization in the organization change
 page. You can skip setting this option if you intend to set it from
 organization change page for each organization.
 
-.. image:: /images/freeradius_allowed_hosts.png
+.. image:: ../images/freeradius_allowed_hosts.png
     :alt: Organization change page freeradius settings
 
 .. code-block:: python
@@ -182,7 +188,7 @@ organization change page for each organization.
 If this option and organization change page option are both empty, then
 all freeradius API requests for the organization will return ``403``.
 
-.. _coa_enabled_setting:
+.. _radius_coa_enabled_setting:
 
 ``OPENWISP_RADIUS_COA_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,18 +198,18 @@ all freeradius API requests for the organization will return ``403``.
 If set to ``True``, openwisp-radius will update the NAS with the user's
 current RADIUS attributes whenever the ``RadiusGroup`` of user is changed.
 This allow enforcing of rate limits on active RADIUS sessions without
-requiring users to re-authenticate. For more details, :ref:`read the
+requiring users to re-authenticate. For more details, :doc:`read the
 dedicated section for configuring openwisp-radius and NAS for using CoA
 <change_of_authorization>`.
 
 This can be overridden for each organization separately via the
 organization radius settings section of the admin interface.
 
-.. image:: /images/organization_coa_enabled.png
+.. image:: ../images/organization_coa_enabled.png
     :alt: CoA enabled
 
-```RADCLIENT_ATTRIBUTE_DICTIONARIES```
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``RADCLIENT_ATTRIBUTE_DICTIONARIES``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ============ ========
 **type**:    ``list``
@@ -229,7 +235,7 @@ RADIUS attribute mapping.
 ============ ========================
 
 This setting can be used to set the maximum size limit for firmware
-images, eg:
+images, e.g.:
 
 .. code-block:: python
 
@@ -266,7 +272,7 @@ By default, an instance of
 This setting allows to specify the parameters to connect to the different
 OpenVPN management interfaces available for an organization. This setting
 is used by the :ref:`convert_called_station_id
-<convert_called_station_id>` command.
+<radius_convert_called_station_id>` command.
 
 It should contain configuration in following format:
 
@@ -311,7 +317,8 @@ created.
 **Default**: ``u'%a %b %d %H:%M:%S %Y'``
 
 Specifies the datetime format of OpenVPN management status parser used by
-the :ref:`convert_called_station_id <convert_called_station_id>` command.
+the :ref:`convert_called_station_id <radius_convert_called_station_id>`
+command.
 
 ``OPENWISP_RADIUS_UNVERIFY_INACTIVE_USERS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -346,16 +353,16 @@ token.
 
 **Default**: ``None``
 
-Changes the urlconf option of django urls to point the RADIUS API urls to
+Changes the urlconf option of django URLs to point the RADIUS API URLs to
 another installed module, example, ``myapp.urls`` (useful when you have a
-seperate API instance.)
+separate API instance.)
 
 ``OPENWISP_RADIUS_API_BASEURL``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``/`` (points to same server)
 
-If you have a seperate instance of openwisp-radius API on a different
+If you have a separate instance of openwisp-radius API on a different
 domain, you can use this option to change the base of the image download
 URL, this will enable you to point to your API server's domain, example
 value: ``https://myradius.myapp.com``.
@@ -368,6 +375,8 @@ value: ``https://myradius.myapp.com``.
 **Default**: ``True``
 
 Indicates whether the REST API of openwisp-radius is enabled or not.
+
+.. _openwisp_radius_disposable_radius_user_token:
 
 ``OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,11 +397,11 @@ manage to intercept it somehow.
 
 **Default**: ``False``
 
-Indicates wether the :ref:`Authorize API view <authorize>` will return
-``{"control:Auth-Type": "Reject"}`` or not.
+Indicates whether the :ref:`Authorize API view <radius_authorize>` will
+return ``{"control:Auth-Type": "Reject"}`` or not.
 
 Rejecting an authorization request explicitly will prevent freeradius from
-attempting to perform authorization with other mechanisms (eg: radius
+attempting to perform authorization with other mechanisms (e.g.: radius
 checks, LDAP, etc.).
 
 When set to ``False``, if an authorization request fails, the API will
@@ -425,7 +434,7 @@ accounting will be saved as usual.
 
 This setting is used to specify a list of international mobile prefixes
 which should be allowed to register into the system via the :ref:`user
-registration API <user_registration>`.
+registration API <radius_user_registration>`.
 
 That is, only users with phone numbers using the specified international
 prefixes will be allowed to register.
@@ -478,7 +487,7 @@ phone numbers uses the same pattern (e.g. USA). Setting the value to
 This global setting is used to specify if the optional user fields
 (``first_name``, ``last_name``, ``location`` and ``birth_date``) shall be
 disabled (hence ignored), allowed or required in the :ref:`User
-Registration API <user_registration>`.
+Registration API <radius_user_registration>`.
 
 The allowed values are:
 
@@ -511,7 +520,7 @@ needed, by going to ``Home › Users and Organizations › Organizations >
 Edit organization`` and then scrolling down to ``ORGANIZATION RADIUS
 SETTINGS``.
 
-.. image:: /images/optional_fields.png
+.. image:: ../images/optional_fields.png
     :alt: optional field setting
 
 By default the fields at organization level hold a ``NULL`` value, which
@@ -537,9 +546,8 @@ means that the global setting specified in ``settings.py`` will be used.
 A dictionary representing the frontend URLs through which end users can
 complete the password reset operation.
 
-The frontend could be `openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_ or another
-in-house captive page solution.
+The frontend could be :doc:`OpenWISP WiFi Login Pages
+</wifi-login-pages/index>` or another in-house captive page solution.
 
 Keys of the dictionary must be either UUID of organizations or
 ``__all__``, which is the fallback URL that will be used in case there's
@@ -557,13 +565,12 @@ The meaning of the variables in the string is the following:
 - ``{uid}``: uid of the password reset request
 - ``{token}``: token of the password reset request
 
-If you're using `openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_, the
-configuration is fairly simple, in case the nodejs app is installed in the
-same domain of openwisp-radius, you only have to ensure the domain field
-in the main Site object is correct, if instead the nodejs app is deployed
-on a different domain, say ``login.wifiservice.com``, the configuration
-should be simply changed to:
+If you're using :doc:`OpenWISP WiFi Login Pages
+</wifi-login-pages/index>`, the configuration is fairly simple, in case
+the NodeJS app is installed in the same domain of openwisp-radius, you
+only have to ensure the domain field in the main Site object is correct,
+if instead the NodeJS app is deployed on a different domain, say
+``login.wifiservice.com``, the configuration should be simply changed to:
 
 .. code-block:: python
 
@@ -587,7 +594,7 @@ interface**, by going to *Organizations* then edit a specific organization
 and scroll down to *"Organization RADIUS settings"*, as shown in the
 screenshot below.
 
-.. image:: /images/organization_registration_setting.png
+.. image:: ../images/organization_registration_setting.png
     :alt: Organization RADIUS settings
 
 .. note::
@@ -607,7 +614,8 @@ screenshot below.
 .. note::
 
     If you're looking for instructions on how to configure SMS sending,
-    see :ref:`SMS Token Related Settings <sms_token_related_settings>`.
+    see :ref:`SMS Token Related Settings
+    <radius_sms_token_related_settings>`.
 
 If :ref:`Identity verification is required
 <openwisp_radius_needs_identity_verification>`, this setting indicates
@@ -617,7 +625,7 @@ number via SMS.
 This can be overridden for each organization separately via the
 organization radius settings section of the admin interface.
 
-.. image:: /images/organization_sms_verification_setting.png
+.. image:: ../images/organization_sms_verification_setting.png
     :alt: SMS verification enabled
 
 .. _openwisp_radius_needs_identity_verification:
@@ -636,7 +644,7 @@ interface**, by going to *Organizations* then edit a specific organization
 and scroll down to *"Organization RADIUS settings"*, as shown in the
 screenshot below.
 
-.. image:: /images/mac-address-roaming.png
+.. image:: ../images/mac-address-roaming.png
     :alt: Organization MAC Address Roaming settings
 
 .. note::
@@ -663,7 +671,7 @@ verification method. The following choices are available by default:
 - ``email``: Email (No Identity Verification)
 - ``mobile_phone``: Mobile phone number :ref:`verification via SMS
   <openwisp_radius_sms_verification_enabled>`
-- ``social_login``: :ref:`social login feature <social_login>`
+- ``social_login``: :doc:`social login feature <social_login>`
 
 .. note::
 
@@ -673,7 +681,7 @@ verification method. The following choices are available by default:
     SIM card.
 
     Organizations which are required by law to identify their users before
-    allowing them to access the network (eg: ISPs) can restrict users to
+    allowing them to access the network (e.g.: ISPs) can restrict users to
     register only through this method and can configure the system to only
     :ref:`allow international mobile prefixes
     <openwisp_radius_allowed_mobile_prefixes>` of countries which require
@@ -715,7 +723,7 @@ For example:
 
     Pass ``strong_identity`` as ``True`` to to indicate that users who
     register using that method have indirectly verified their identity
-    (eg: :ref:`SMS verification
+    (e.g.: :ref:`SMS verification
     <openwisp_radius_sms_verification_enabled>`, credit card, national ID
     card, etc).
 
@@ -735,8 +743,8 @@ For example:
 
     Payment flows and credit/debit card verification are fully implemented
     in **OpenWISP Subscriptions**, a premium module available only to
-    customers of the :ref:`commercial support offering of OpenWISP
-    <support>`.
+    customers of the `commercial support offering of OpenWISP
+    <https://openwisp.org/support.html>`_.
 
 Email related settings
 ----------------------
@@ -752,7 +760,7 @@ settings explained below.
 
 **Default**: ``Credentials``
 
-It is the subject of the mail to be sent to the users. Eg: ``Login
+It is the subject of the mail to be sent to the users. E.g.: ``Login
 Credentials``.
 
 .. _openwisp_radius_batch_mail_message:
@@ -782,66 +790,66 @@ core settings
 under ``DEFAULT_FROM_EMAIL``. Currently, ``DEFAULT_FROM_EMAIL`` is set to
 to ``webmaster@localhost``.
 
-.. _counter_related_settings:
+.. _radius_counter_related_settings:
 
 Counter related settings
 ------------------------
 
-.. _counters_setting:
+.. _radius_counters_setting:
 
 ``OPENWISP_RADIUS_COUNTERS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: depends on the database backend in use, see :ref:`counters`
-to find out what are the default counters enabled.
+**Default**: depends on the database backend in use, see
+:ref:`radius_counters` to find out what are the default counters enabled.
 
 It's a list of strings, each representing the python path to a counter
 class.
 
 It may be set to an empty list or tuple to disable the counter feature,
-eg:
+e.g.:
 
 .. code-block:: python
 
     OPENWISP_RADIUS_COUNTERS = []
 
 If custom counters have been implemented, this setting should be changed
-to include the new classes, eg:
+to include the new classes, e.g.:
 
 .. code-block:: python
 
     OPENWISP_RADIUS_COUNTERS = [
         # default counters for PostgreSQL, may be removed if not needed
         "openwisp_radius.counters.postgresql.daily_counter.DailyCounter",
-        "openwisp_radius.counters.postgresql.daily_traffic_counter.DailyTrafficCounter",
+        "openwisp_radius.counters.postgresql.radius_daily_traffic_counter.DailyTrafficCounter",
         # custom counters
         "myproject.counters.CustomCounter1",
         "myproject.counters.CustomCounter2",
     ]
 
-.. _traffic_counter_check_name:
+.. _radius_traffic_counter_check_name:
 
 ``OPENWISP_RADIUS_TRAFFIC_COUNTER_CHECK_NAME``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``Max-Daily-Session-Traffic``
 
-Used by :ref:`daily_traffic_counter`, it indicates the check attribute
-which is looked for in the database to find the maximum amount of daily
-traffic which users having the default ``users`` radius group assigned can
-consume.
+Used by :ref:`radius_daily_traffic_counter`, it indicates the check
+attribute which is looked for in the database to find the maximum amount
+of daily traffic which users having the default ``users`` radius group
+assigned can consume.
 
-.. _traffic_counter_reply_name:
+.. _radius_traffic_counter_reply_name:
 
 ``OPENWISP_RADIUS_TRAFFIC_COUNTER_REPLY_NAME``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``CoovaChilli-Max-Total-Octets``
 
-Used by :ref:`daily_traffic_counter`, it indicates the reply attribute
-which is returned to the NAS to indicate how much remaining traffic users
-which users having the default ``users`` radius group assigned can
-consume.
+Used by :ref:`radius_daily_traffic_counter`, it indicates the reply
+attribute which is returned to the NAS to indicate how much remaining
+traffic users which users having the default ``users`` radius group
+assigned can consume.
 
 It should be changed according to the NAS software in use, for example, if
 using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
@@ -865,12 +873,12 @@ type in the API response for ``ChilliSpot-Max-Input-Octets`` attribute:
         "ChilliSpot-Max-Input-Octets": "bytes"
     }
 
-.. _social_login_settings:
+.. _radius_social_login_settings:
 
 Social Login related settings
 -----------------------------
 
-The following settings are related to the :ref:`social login feature
+The following settings are related to the :doc:`social login feature
 <social_login>`.
 
 .. _openwisp_radius_social_registration_enabled:
@@ -889,7 +897,7 @@ interface**, by going to *Organizations* then edit a specific organization
 and scroll down to *"Organization RADIUS settings"*, as shown in the
 screenshot below.
 
-.. image:: /images/organization_social_login_setting.png
+.. image:: ../images/organization_social_login_setting.png
     :alt: Organization social login settings
 
 .. note::
@@ -899,12 +907,12 @@ screenshot below.
     otherwise, if all the organization use the same configuration, we
     recommend changing the global setting.
 
-.. _saml_settings:
+.. _radius_saml_settings:
 
 SAML related settings
 ---------------------
 
-The following settings are related to the :ref:`SAML feature <saml_>`.
+The following settings are related to the :doc:`SAML feature <saml>`.
 
 .. _openwisp_radius_saml_registration_enabled:
 
@@ -922,7 +930,7 @@ interface**, by going to *Organizations* then edit a specific organization
 and scroll down to *"Organization RADIUS settings"*, as shown in the
 screenshot below.
 
-.. image:: /images/organization_saml_setting.png
+.. image:: ../images/organization_saml_setting.png
     :alt: Organization SAML settings
 
 .. note::
@@ -960,10 +968,10 @@ valid identity verifiers.
 
 Allows updating username of a registered user with the value received from
 SAML Identity Provider. Read the :ref:`FAQs in SAML integration
-documentation <preventing_change_in_username_of_registered_user>` for
+documentation <radius_prevent_registered_user_username_change>` for
 details.
 
-.. _sms_token_related_settings:
+.. _radius_sms_token_related_settings:
 
 SMS token related settings
 --------------------------
@@ -985,12 +993,12 @@ used by the system to send SMS messages.
 The list of supported SMS services can be seen in the source code of `the
 django-sendsms backends
 <https://github.com/stefanfoulis/django-sendsms/tree/main/sendsms/backends>`__.
-Adding support for other SMS services can be done by subclassing the
+Adding support for other SMS services can be done by sub-classing the
 ``BaseSmsBackend`` and implement the logic needed to talk to the SMS
 service.
 
 The value of this setting can point to any class on the python path, so
-the backend doesn't have to be necessarily shipped in django-sendsms but
+the backend doesn't have to be necessarily shipped in *django-sendsms* but
 can be deployed in any other location.
 
 ``OPENWISP_RADIUS_SMS_TOKEN_DEFAULT_VALIDITY``

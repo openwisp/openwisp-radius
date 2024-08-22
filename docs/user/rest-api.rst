@@ -1,9 +1,9 @@
-API Documentation
-=================
+REST API Reference
+==================
 
-.. contents:: **Table of Contents**:
-    :backlinks: none
-    :depth: 4
+.. contents:: **Table of contents**:
+    :depth: 2
+    :local:
 
 .. important::
 
@@ -11,33 +11,39 @@ API Documentation
     turned off by setting :ref:`OPENWISP_RADIUS_API <openwisp_radius_api>`
     to ``False``.
 
+.. _radius_live_documentation:
+
 Live documentation
 ------------------
 
-.. image:: /images/swagger_api.png
+.. image:: ../images/swagger_api.png
     :alt: Swagger API Documentation
 
 A general live API documentation (following the OpenAPI specification) at
 ``/api/v1/docs/``.
 
+.. _radius_browsable_web_interface:
+
 Browsable web interface
 -----------------------
 
-.. image:: /images/drf_api_interface.png
+.. image:: ../images/drf_api_interface.png
     :alt: API Interface
 
 Additionally, opening any of the endpoints :ref:`listed below
-<list_of_endpoints>` directly in the browser will show the `browsable API
-interface of Django-REST-Framework
+<radius_rest_endpoints>` directly in the browser will show the `browsable
+API interface of Django-REST-Framework
 <https://www.django-rest-framework.org/topics/browsable-api/>`_, which
 makes it even easier to find out the details of each endpoint.
+
+.. _radius_rest_endpoints:
 
 FreeRADIUS API Endpoints
 ------------------------
 
 The following section is dedicated to API endpoints that are designed to
-be consumed by FreeRADIUS (:ref:`Authorize <authorize>`, :ref:`Post Auth
-<post_auth>`, :ref:`Accounting <accounting>`).
+be consumed by FreeRADIUS (:ref:`Authorize <radius_authorize>`, :ref:`Post
+Auth <radius_post_auth>`, :ref:`Accounting <radius_accounting>`).
 
 .. important::
 
@@ -45,7 +51,7 @@ be consumed by FreeRADIUS (:ref:`Authorize <authorize>`, :ref:`Post Auth
     the :ref:`freeradius allowed hosts list
     <openwisp_radius_freeradius_allowed_hosts>`.
 
-.. _freeradius_api_authentication:
+.. _radius_freeradius_api_authentication:
 
 FreeRADIUS API Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,14 +67,14 @@ Radius User Token
 
 This method relies on the presence of a special token which was obtained
 by the user when authenticating via the :ref:`Obtain Auth Token View
-<login_obtain_user_auth_token>`, this means the user would have to log in
-through something like a web form first.
+<radius_login_obtain_user_auth_token>`, this means the user would have to
+log in through something like a web form first.
 
 The flow works as follows:
 
 1. the user enters credentials in a login form belonging to a specific
    organization and submits, the credentials are then sent to the
-   :ref:`Obtain Auth Token View <login_obtain_user_auth_token>`;
+   :ref:`Obtain Auth Token View <radius_login_obtain_user_auth_token>`;
 2. if credentials are correct, a **radius user token** associated to the
    user and organization is created and returned in the response;
 3. the login page or app must then initiate the HTTP request to the web
@@ -87,13 +93,13 @@ same OpenWISP instance.
 .. note::
 
     By default, ``<radius_token>`` is valid for authentication for one
-    request only and a new ``<radius_token>`` needs to be `obtained for
-    each request <#login-obtain-user-auth-token>`_. However, if
-    `OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN
-    <./settings.html#openwisp-radius-disposable-radius-user-token>`_ is
-    set to ``False``, the ``<radius_token>`` is valid for authentication
-    as long as freeradius accounting ``Stop`` request is not sent or the
-    token is not deleted.
+    request only and a new ``<radius_token>`` needs to be :ref:`obtained
+    for each request <radius_login_obtain_user_auth_token>`. However, if
+    :ref:`OPENWISP_RADIUS_DISPOSABLE_RADIUS_USER_TOKEN
+    <openwisp_radius_disposable_radius_user_token>` is set to ``False``,
+    the ``<radius_token>`` is valid for authentication as long as
+    freeradius accounting ``Stop`` request is not sent or the token is not
+    deleted.
 
 .. warning::
 
@@ -102,7 +108,7 @@ same OpenWISP instance.
     single user account cannot consume services from multiple
     organizations simultaneously.
 
-.. _bearer_token:
+.. _radius_bearer_token:
 
 Bearer token
 ++++++++++++
@@ -110,12 +116,13 @@ Bearer token
 This other method allows to use the system without the need for a user to
 obtain a token first, the drawback is that one FreeRADIUS site has to be
 configured for each organization, the authorization credentials for the
-specific organization is sent in each request, see :ref:`freeradius_site`
-for more information on the FreeRADIUS site configuration.
+specific organization is sent in each request, see
+:ref:`radius_freeradius_site` for more information on the FreeRADIUS site
+configuration.
 
 The (:ref:`Organization UUID and Organization RADIUS token
-<organization_uuid_token>`) are sent in the authorization header of the
-HTTP request in the form of a Bearer token, eg:
+<radius_organization_uuid_token>`) are sent in the authorization header of
+the HTTP request in the form of a Bearer token, e.g.:
 
 .. code-block:: text
 
@@ -126,13 +133,13 @@ HTTP request in the form of a Bearer token, eg:
 This method is recommended if you are using only one organization and you
 have no need nor intention of adding more organizations in the future.
 
-.. _querystring:
+.. _radius_querystring:
 
 Querystring
 +++++++++++
 
 This method is identical to the previous one, but the credentials are sent
-in querystring parameters, eg:
+in querystring parameters, e.g.:
 
 .. code-block:: text
 
@@ -143,7 +150,7 @@ This method is not recommended for production usage, it should be used for
 testing and debugging only (because webservers can include the querystring
 parameters in their logs).
 
-.. _organization_uuid_token:
+.. _radius_organization_uuid_token:
 
 Organization UUID & RADIUS API Token
 ++++++++++++++++++++++++++++++++++++
@@ -152,29 +159,29 @@ You can get (and set) the value of the OpenWISP RADIUS API token in the
 organization configuration page on the OpenWISP dashboard (select your
 organization in ``/admin/openwisp_users/organization/``):
 
-.. image:: /images/token.png
+.. image:: ../images/token.png
     :alt: Organization Radius Token
 
 .. note::
 
     It is highly recommended that you use a hard to guess value, longer
-    than 15 characters containing both letters and numbers. Eg:
+    than 15 characters containing both letters and numbers. E.g.:
     ``165f9a790787fc38e5cc12c1640db2300648d9a2``.
 
 You will also need the UUID of your organization from the organization
 change page (select your organization in
 ``/admin/openwisp_users/organization/``):
 
-.. image:: /images/org_uuid.png
+.. image:: ../images/org_uuid.png
     :alt: Organization UUID
 
-Requests authorizing with :ref:`bearer-token <bearer_token>` or
-:ref:`querystring <querystring>` method **must** contain organization UUID
-& token. If the tokens are missing or invalid, the request will receive a
-``403`` HTTP error.
+Requests authorizing with :ref:`bearer-token <radius_bearer_token>` or
+:ref:`querystring <radius_querystring>` method **must** contain
+organization UUID & token. If the tokens are missing or invalid, the
+request will receive a ``403`` HTTP error.
 
 For information on how to configure FreeRADIUS to send the bearer tokens,
-see :ref:`freeradius_site`.
+see :ref:`radius_freeradius_site`.
 
 API Throttling
 ~~~~~~~~~~~~~~
@@ -207,12 +214,10 @@ The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
 ``second``, ``minute``, ``hour`` or ``day`` as the throttle period,
 setting it to ``None`` will result in no throttling.
 
-.. _list_of_endpoints:
-
 List of Endpoints
 ~~~~~~~~~~~~~~~~~
 
-.. _authorize:
+.. _radius_authorize:
 
 Authorize
 +++++++++
@@ -254,7 +259,7 @@ empty or it can contain an explicit rejection, depending on how the
 :ref:`OPENWISP_RADIUS_API_AUTHORIZE_REJECT
 <openwisp_radius_api_authorize_reject>` setting is configured.
 
-.. _post_auth:
+.. _radius_post_auth:
 
 Post Auth
 +++++++++
@@ -282,7 +287,7 @@ calling_station_id Calling Station ID
 Returns an empty response body in order to instruct FreeRADIUS to avoid
 processing the response body.
 
-.. _accounting:
+.. _radius_accounting:
 
 Accounting
 ++++++++++
@@ -411,15 +416,15 @@ is_open            If stop_time is null
 User API Endpoints
 ------------------
 
-These API endpoints are designed to be used by users (eg: creating an
+These API endpoints are designed to be used by users (e.g.: creating an
 account, changing their password, obtaining access tokens, validating
 their phone number, etc.).
 
 .. note::
 
     The API endpoints described below do not require the
-    :ref:`Organization API Token <organization_uuid_token>` described in
-    the beginning of this document.
+    :ref:`Organization API Token <radius_organization_uuid_token>`
+    described in the beginning of this document.
 
 Some endpoints require the sending of the user API access token sent in
 the form of a "Bearer Token", example:
@@ -432,7 +437,7 @@ the form of a "Bearer Token", example:
 List of Endpoints
 ~~~~~~~~~~~~~~~~~
 
-.. _user_registration:
+.. _radius_user_registration:
 
 User Registration
 +++++++++++++++++
@@ -480,7 +485,7 @@ simple, but can be :ref:`enabled through configuration
 <openwisp_radius_needs_identity_verification>`; if identity verification
 is disabled for a particular org, an empty string will be acceptable.
 
-.. _registering_to_multiple_organizations:
+.. _radius_registering_to_multiple_organizations:
 
 Registering to Multiple Organizations
 .....................................
@@ -501,12 +506,12 @@ in the UI. E.g.:
     }
 
 The existing user can register with a new organization using the
-:ref:`login endpoint <login_obtain_user_auth_token>`. The user will also
-get membership of the new organization only if the organization has
+:ref:`login endpoint <radius_login_obtain_user_auth_token>`. The user will
+also get membership of the new organization only if the organization has
 :ref:`user registration enabled
 <openwisp_radius_registration_api_enabled>`.
 
-.. _reset_password:
+.. _radius_reset_password:
 
 Reset password
 ++++++++++++++
@@ -532,7 +537,7 @@ Confirm reset password
 ++++++++++++++++++++++
 
 Allows users to confirm their reset password after having it requested via
-the :ref:`Reset password <reset_password>` endpoint.
+the :ref:`Reset password <radius_reset_password>` endpoint.
 
 .. code-block:: text
 
@@ -557,7 +562,7 @@ Change password
 **Requires the user auth token (Bearer Token)**.
 
 Allows users to change their password after using the :ref:`Reset password
-<reset_password>` endpoint.
+<radius_reset_password>` endpoint.
 
 .. code-block:: text
 
@@ -575,7 +580,7 @@ new_password     string
 confirm_password string
 ================ ===========
 
-.. _login_obtain_user_auth_token:
+.. _radius_login_obtain_user_auth_token:
 
 Login (Obtain User Auth Token)
 ++++++++++++++++++++++++++++++
@@ -591,16 +596,16 @@ Returns:
 - ``radius_user_token``: the user radius token, which can be used to
   authenticate the user in the captive portal by sending it in place of
   the user password (it will be passed to freeradius which in turn will
-  send it to the :ref:`authorize API endpoint <authorize>` which will
-  recognize the token as the user passsword)
+  send it to the :ref:`authorize API endpoint <radius_authorize>` which
+  will recognize the token as the user password)
 - ``key``: the user API access token, which will be needed to authenticate
-  the user to eventual subsequent API requests (eg: change password)
+  the user to eventual subsequent API requests (e.g.: change password)
 - ``is_active`` if it's ``false`` it means the user has been banned
 - ``is_verified`` when identity verification is enabled, it indicates
   whether the user has completed an indirect identity verification process
   like confirming their mobile phone number
 - ``method`` registration/verification method used by the user to
-  register, eg: ``mobile_phone``, ``social_login``, etc.
+  register, e.g.: ``mobile_phone``, ``social_login``, etc.
 - ``username``
 - ``email``
 - ``phone_number``
@@ -611,14 +616,14 @@ Returns:
 
 If the user account is inactive or unverified the endpoint will send the
 data anyway but using the HTTP status code 401, this way consumers can
-recognize these users and trigger the appropriate response needed (eg:
+recognize these users and trigger the appropriate response needed (e.g.:
 reject them or initiate account verification).
 
 If an existing user account tries to authenticate to an organization of
 which they're not member of, then they would be automatically added as
 members (if registration is enabled for that org). Please refer to
 :ref:`"Registering to Multiple Organizations"
-<registering_to_multiple_organizations>`.
+<radius_registering_to_multiple_organizations>`.
 
 This endpoint updates the user language preference field according to the
 ``Accept-Language`` HTTP header.
@@ -654,8 +659,8 @@ token the rest auth token to validate
 ===== ===============================
 
 The user information is returned in the response (similarly to
-:ref:`Obtain User Auth Token <login_obtain_user_auth_token>`), along with
-the following additional parameter:
+:ref:`Obtain User Auth Token <radius_login_obtain_user_auth_token>`),
+along with the following additional parameter:
 
 - ``response_code``: string indicating whether the result is successful or
   not, to be used for translation.
@@ -738,7 +743,7 @@ Responds only to **GET**.
 
 No parameters required.
 
-.. _verify_validate_sms_token:
+.. _radius_verify_validate_sms_token:
 
 Verify/Validate SMS token
 +++++++++++++++++++++++++
@@ -780,7 +785,7 @@ Change phone number
 Allows users to change their phone number, will flag the user as inactive
 and send them a verification code via SMS. The phone number of the user is
 updated only after this verification code has been :ref:`validated
-<verify_validate_sms_token>`.
+<radius_verify_validate_sms_token>`.
 
 .. code-block:: text
 
@@ -796,13 +801,13 @@ Param        Description
 phone_number string
 ============ ===========
 
-.. _batch_user_creation:
+.. _radius_batch_user_creation:
 
 Batch user creation
 +++++++++++++++++++
 
 This API endpoint allows to use the features described in
-:doc:`/user/importing_users` and :doc:`/user/generating_users`.
+:doc:`importing_users` and :doc:`generating_users`.
 
 .. code-block:: text
 
@@ -811,7 +816,7 @@ This API endpoint allows to use the features described in
 .. note::
 
     This API endpoint allows to use the features described in
-    :doc:`/user/importing_users` and :doc:`/user/generating_users`.
+    :doc:`importing_users` and :doc:`generating_users`.
 
 Responds only to **POST**, used to save a ``RadiusBatch`` instance.
 

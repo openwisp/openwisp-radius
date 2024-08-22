@@ -8,7 +8,7 @@ Change of Authorization (CoA)
     The *Change of Authorization (CoA)* is disabled by default.
 
     In order to enable this feature you have it enable it via :ref:`global
-    setting or from the admin interface <coa_enabled_setting>`.
+    setting or from the admin interface <radius_coa_enabled_setting>`.
 
 The openwisp-radius module supports the Change of Authorization (CoA)
 specification of the RADIUS protocol described in `RFC 5176

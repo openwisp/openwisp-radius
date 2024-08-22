@@ -1,5 +1,3 @@
-.. _importing_users:
-
 Importing users
 ===============
 
@@ -11,17 +9,17 @@ many features included in it such as:
   the batch functions.
 - Set an expiration date: Expiration date can be set for a batch after
   which the users would not able to authenticate to the RADIUS Server.
-- Autogenerate usernames and passwords: The usernames and passwords are
+- Auto-generate usernames and passwords: The usernames and passwords are
   automatically generated if they aren't provided in the csv file.
   Usernames are generated from the email address whereas passwords are
   generated randomly and their lengths can be customized.
-- Passwords are accepted in both cleartext and hash formats from the CSV.
+- Passwords are accepted in both clear-text and hash formats from the CSV.
 - Send mails to users whose passwords have been generated automatically.
 
 This operation can be performed via the admin interface, with a management
 command or via the REST API.
 
-.. _csv_format:
+.. _radius_csv_format:
 
 CSV Format
 ----------
@@ -39,8 +37,8 @@ The hashes are directly stored in the database if they are of the `django
 hash format
 <https://docs.djangoproject.com/en/2.0/topics/auth/passwords/>`_.
 
-For example, a password myPassword123, hashed using salted SHA1 algorithm,
-will look like:
+For example, a password ``myPassword123``, hashed using salted SHA1
+algorithm, will look like:
 
 ::
 
@@ -85,14 +83,14 @@ Using the admin interface
 .. note::
 
     The CSV uploaded must follow the :ref:`CSV format described above
-    <csv_format>`.
+    <radius_csv_format>`.
 
 To generate users from the admin interface, go to ``Home > Batch user
 creation operations > Add`` (URL:
 ``/admin/openwisp_radius/radiusbatch/add``), set ``Strategy`` to ``Import
 from CSV``, choose the CSV file to upload and save.
 
-.. image:: /images/add_users_csv.gif
+.. image:: ../images/add_users_csv.gif
     :alt: Demo: adding users from CSV
 
 Management command: ``batch_add_users``
@@ -116,4 +114,5 @@ This command imports users from a csv file. Usage is as shown below.
 REST API: Batch user creation
 -----------------------------
 
-See :ref:`API documentation: Batch user creation <batch_user_creation>`.
+See :ref:`API documentation: Batch user creation
+<radius_batch_user_creation>`.

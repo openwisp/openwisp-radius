@@ -1,5 +1,3 @@
-.. _saml_:
-
 Single Sign-On (SAML)
 =====================
 
@@ -8,7 +6,7 @@ Single Sign-On (SAML)
     The SAML registration method is disabled by default.
 
     In order to enable this feature you have to follow the :ref:`SAML
-    setup instructions <setup_saml>` below and then activate it via
+    setup instructions <radius_setup_saml>` below and then activate it via
     :ref:`global setting or from the admin interface
     <openwisp_radius_saml_registration_enabled>`.
 
@@ -26,8 +24,9 @@ form: ``username`` should obviously used for the username field, while
 ``token`` should be used for the password field.
 
 The third parameter, ``login_method=saml``, is needed because it allows
-the captive page to remember that the user logged in via SAML, because it
-will need to perform the :ref:`SAML logout <logout>` later on.
+the captive page to remember that the user logged in via SAML. This
+information will be used later on when performing the :ref:`SAML logout
+<radius_saml_logout>`.
 
 The internal REST API of openwisp-radius will recognize the token and
 authorize the user.
@@ -40,24 +39,23 @@ is signing-in with a SSO.
 .. note::
 
     If you're building a public wifi service, we suggest to take a look at
-    `openwisp-wifi-login-pages
-    <https://github.com/openwisp/openwisp-wifi-login-pages>`_, which is
+    :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>`, which is
     built to work with openwisp-radius.
 
-.. _setup_saml:
+.. _radius_setup_saml:
 
 Setup
 -----
 
 Install required system dependencies:
 
-::
+.. code-block:: shell
 
     sudo apt install xmlsec1
 
 Install Python dependencies:
 
-::
+.. code-block:: shell
 
     pip install openwisp-radius[saml]
 
@@ -127,11 +125,11 @@ Substitute ``openwisp2.mywifiproject.com``,
 hostname of your openwisp-radius instance, your captive page and the
 organization slug respectively.
 
-Alternatively, you can take a look at `openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_, which provides
-buttons for Single Sign-On (SAML) by default.
+Alternatively, you can take a look at :doc:`OpenWISP WiFi Login Pages
+</wifi-login-pages/index>`, which provides buttons for Single Sign-On
+(SAML) by default.
 
-.. _logout:
+.. _radius_saml_logout:
 
 Logout
 ------
@@ -139,22 +137,19 @@ Logout
 When logging out a user which logged in via SAML, the captive page should
 also call the SAML logout URL: ``/radius/saml2/logout/``.
 
-The `openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_ app supports
-this with minimal configuration, refer to the `"Configuring SAML Login &
-Logout"
-<https://github.com/openwisp/openwisp-wifi-login-pages#configuring-saml-login--logout>`_
-section.
+The :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>` app
+supports this with minimal configuration, refer to the :doc:`OpenWISP WiFi
+Login Pages </wifi-login-pages/index>` section.
 
 Settings
 --------
 
-See :ref:`SAML related settings <saml_settings>`.
+See :ref:`SAML related settings <radius_saml_settings>`.
 
 FAQs
 ----
 
-.. _preventing_change_in_username_of_registered_user:
+.. _radius_prevent_registered_user_username_change:
 
 Preventing change in username of a registered user
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,7 +164,7 @@ details of the user are updated with the information received from SAML
 Identity Provider.
 
 If a user (who has registered on OpenWISP with a different method from
-SAML) logs into OpenWISP with SAML, then the default behaviour of OpenWISP
+SAML) logs into OpenWISP with SAML, then the default behavior of OpenWISP
 RADIUS prevents updating username of this user. Because, this operation
 could render the user's old credentials useless. If you want to update the
 username in such scenarios with details received from Identity Provider,

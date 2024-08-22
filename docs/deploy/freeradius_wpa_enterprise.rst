@@ -2,25 +2,22 @@ Freeradius Setup for WPA Enterprise (EAP-TTLS-PAP) authentication
 =================================================================
 
 This guide explains how to install and configure `freeradius 3
-<https://freeradius.org>`_ in order to make it work with `OpenWISP RADIUS
-<https://github.com/openwisp/openwisp-radius/>`_ for WPA Enterprise
-EAP-TTLS-PAP authentication.
+<https://freeradius.org>`_ in order to make it work with OpenWISP RADIUS
+for WPA Enterprise EAP-TTLS-PAP authentication.
 
 The setup will allow users to authenticate via WiFi WPA Enterprise
 networks using their personal username and password of their django user
 accounts. Users can either be created manually via the admin interface,
-:ref:`generated <generating_users>`, :ref:`imported from CSV
-<importing_users>`, or can self register through a web page which makes
-use of the :ref:`registration REST API <user_registration>` (like
-`openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_).
+:doc:`generated <../user/generating_users>`, :doc:`imported from CSV
+<../user/importing_users>`, or can self register through a web page which
+makes use of the :ref:`registration REST API <radius_user_registration>`
+(like :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>`).
 
 Prerequisites
 -------------
 
 Execute the steps explained in the following sections of the
-:ref:`freeradius guide for captive portal authentication
-<freeradius_setup_for_captive_portal>`:
+:doc:`freeradius guide for captive portal authentication <freeradius>`:
 
     - How to install freeradius 3
     - Enable the configured modules
@@ -31,7 +28,7 @@ Then proceed with the rest of the document.
 Freeradius configuration
 ------------------------
 
-.. _freeradius_site_wpa_enterprise:
+.. _radius_freeradius_site_wpa_enterprise:
 
 Configure the sites
 ~~~~~~~~~~~~~~~~~~~
@@ -44,12 +41,12 @@ organization you want to support, each FreeRADIUS instance will therefore
 need two dedicated ports, one for authentication and one for accounting
 and a related inner tunnel configuration.
 
-Let's create the site for an hypotethical organization called org-A.
+Let's create the site for an hypothetical organization called org-A.
 
 Don't forget to substitute the occurrences of ``<org_uuid>`` and
 ``<org_radius_api_token>`` with the UUID & Radius API token of each
-organization, refer to the section :ref:`organization_uuid_token` for
-finding these values.
+organization, refer to the section :ref:`radius_organization_uuid_token`
+for finding these values.
 
 .. code-block:: ini
 
@@ -132,7 +129,7 @@ Inner tunnels
 
 You will need to set up one inner tunnel for each organization too.
 
-Following the example for a hypotetical organization named org-A:
+Following the example for a hypothetical organization named org-A:
 
 .. code-block:: ini
 
@@ -200,7 +197,7 @@ Configure the EAP modules
 
 You will need to set up one EAP module instance for each organization too.
 
-Following the example for a hypotetical organization named org-A:
+Following the example for a hypothetical organization named org-A:
 
 .. code-block:: ini
 
@@ -246,7 +243,7 @@ Following the example for a hypotetical organization named org-A:
 Repeating the steps for more organizations
 ------------------------------------------
 
-Let's say you don't have only the hypotetical org-A in your system but
+Let's say you don't have only the hypothetical org-A in your system but
 more organizations, in that case you simply have to repeat the steps
 explained in the previous sections, substituting the occurrences of org-A
 with the names of the other organizations.
@@ -258,8 +255,8 @@ Final steps
 -----------
 
 Once the configurations are ready, you should :ref:`restart freeradius
-<restart_freeradius>` and :ref:`then test/troubleshoot/debug your setup
-<debugging>`.
+<radius_restart_freeradius>` and :ref:`then test/troubleshoot/debug your
+setup <radius_debugging>`.
 
 Implementing other EAP scenarios
 --------------------------------
@@ -273,5 +270,5 @@ the `django-x509 <https://github.com/openwisp/django-x509>`_ module into
 OpenWISP RADIUS and then implement mechanisms for the users to securely
 download their certificates.
 
-If you're interested in this feature, let us know via the :ref:`support
-channels <support>`.
+If you're interested in this feature, let us know via the `support
+channels <https://openwisp.org/support.html>`_.
