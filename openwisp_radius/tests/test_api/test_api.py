@@ -5,6 +5,7 @@ from unittest import mock
 
 import swapper
 from allauth.account.forms import default_token_generator
+from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from dj_rest_auth.tests.utils import (
     override_api_settings as override_dj_rest_auth_settings,
@@ -167,6 +168,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_register_400_duplicate_user(self):
         self.test_register_201()
+        # The duplicate email validation error only triggers
+        # when the same email has been verified by another user.
+        EmailAddress.objects.update(verified=True)
         r = self._register_user(expect_201=False, expect_users=None)
         self.assertEqual(r.status_code, 400)
         self.assertIn('username', r.data)
@@ -174,6 +178,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_register_duplicate_same_org(self):
         self.test_register_201()
+        # The duplicate email validation error only triggers
+        # when the same email has been verified by another user.
+        EmailAddress.objects.update(verified=True)
         response = self._register_user(expect_201=False, expect_users=None)
         self.assertIn('username', response.data)
         self.assertIn('email', response.data)
