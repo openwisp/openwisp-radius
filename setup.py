@@ -39,10 +39,7 @@ setup(
             'openwisp-users '
             '@ https://github.com/openwisp/openwisp-users/tarball/master'
         ),
-        (
-            'openwisp-utils[rest,celery] @ '
-            'https://github.com/openwisp/openwisp-utils/tarball/master'
-        ),
+        'openwisp-utils[rest,celery]~=1.1.0',
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
         'weasyprint~=59.0',
