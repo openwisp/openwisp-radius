@@ -278,7 +278,6 @@ class Migration(migrations.Migration):
             options={
                 'abstract': False,
             },
-            bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.CreateModel(
             name='Group',
@@ -344,7 +343,6 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'organization users',
                 'unique_together': {('user', 'organization')},
             },
-            bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.AddField(
             model_name='organization',
@@ -408,7 +406,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'organization owner',
                 'verbose_name_plural': 'organization owners',
             },
-            bases=(organizations.base.UnicodeMixin, models.Model),
         ),
         migrations.AddField(
             model_name='user',
