@@ -49,15 +49,22 @@ Setup
 
 Install required system dependencies:
 
-.. code-block:: shell
+::
 
     sudo apt install xmlsec1
 
-Install Python dependencies:
+Install the SAML dependencies in the python environment used by OpenWISP:
 
-.. code-block:: shell
+::
+
+    # by default, in instances deployed
+    # via ansible-openwisp2, the python env
+    # is in /opt/openwisp2/env/
+    source /opt/openwisp2/env/bin/activate
 
     pip install openwisp-radius[saml]
+
+.. include:: /partials/settings-note.rst
 
 Ensure your ``settings.py`` looks like the following:
 

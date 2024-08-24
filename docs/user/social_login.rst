@@ -20,7 +20,7 @@ perform the submit action of the login form: ``username`` should obviously
 used for the username field, while ``token`` should be used for the
 password field.
 
-The internal REST API of openwisp-radius will recognize the token and
+The internal REST API of OpenWISP RADIUS will recognize the token and
 authorize the user.
 
 This kind of implementation allows to implement the social login with any
@@ -39,11 +39,18 @@ the user is signing-in with a social network.
 Setup
 -----
 
-Install ``django-allauth``:
+Install ``django-allauth`` in the python environment used by OpenWISP:
 
 ::
 
+    # by default, in instances deployed
+    # via ansible-openwisp2, the python env
+    # is in /opt/openwisp2/env/
+    source /opt/openwisp2/env/bin/activate
+
     pip install django-allauth[socialaccount]
+
+.. include:: /partials/settings-note.rst
 
 Ensure your ``settings.py`` looks like the following (we will show how to
 configure of the Facebook social provider):
