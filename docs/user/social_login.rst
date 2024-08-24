@@ -1,5 +1,3 @@
-.. _social_login:
-
 Social Login
 ============
 
@@ -8,8 +6,8 @@ Social Login
     The social login feature is disabled by default.
 
     In order to enable this feature you have to follow the :ref:`setup
-    instructions <setup_social_login>` below and then activate it via
-    :ref:`global setting or from the admin interface
+    instructions <radius_setup_social_login>` below and then activate it
+    via :ref:`global setting or from the admin interface
     <openwisp_radius_social_registration_enabled>`.
 
 Social login is supported by generating an additional temporary token
@@ -22,7 +20,7 @@ perform the submit action of the login form: ``username`` should obviously
 used for the username field, while ``token`` should be used for the
 password field.
 
-The internal REST API of openwisp-radius will recognize the token and
+The internal REST API of OpenWISP RADIUS will recognize the token and
 authorize the user.
 
 This kind of implementation allows to implement the social login with any
@@ -33,23 +31,29 @@ the user is signing-in with a social network.
 .. note::
 
     If you're building a public wifi service, we suggest to take a look at
-    `openwisp-wifi-login-pages
-    <https://github.com/openwisp/openwisp-wifi-login-pages>`_, which is
+    :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>`, which is
     built to work with openwisp-radius.
 
-.. _setup_social_login:
+.. _radius_setup_social_login:
 
 Setup
 -----
 
-Install ``django-allauth``:
+Install ``django-allauth`` in the python environment used by OpenWISP:
 
 ::
 
-    pip install django-allauth
+    # by default, in instances deployed
+    # via ansible-openwisp2, the python env
+    # is in /opt/openwisp2/env/
+    source /opt/openwisp2/env/bin/activate
+
+    pip install django-allauth[socialaccount]
+
+.. include:: /partials/settings-note.rst
 
 Ensure your ``settings.py`` looks like the following (we will show how to
-configure of the facebook social provider):
+configure of the Facebook social provider):
 
 .. code-block:: python
 
@@ -103,13 +107,13 @@ Configure the social account application
 ----------------------------------------
 
 Refer to the django-allauth documentation to find out `how to complete the
-configuration of a sample facebook login app
-<https://django-allauth.readthedocs.io/en/latest/providers.html#facebook>`_.
+configuration of a sample Facebook login app
+<https://docs.allauth.org/en/latest/socialaccount/providers/facebook.html>`_.
 
 Captive page button example
 ---------------------------
 
-Following the previous example configuration with facebook, in your
+Following the previous example configuration with Facebook, in your
 captive page you will need an HTML button similar to the ones in the
 following examples.
 
@@ -127,11 +131,11 @@ Substitute ``openwisp2.mywifiproject.com``,
 your openwisp-radius instance, your captive page and the organization slug
 respectively.
 
-Alternatively, you can take a look at `openwisp-wifi-login-pages
-<https://github.com/openwisp/openwisp-wifi-login-pages>`_, which provides
-buttons for Facebook, Google and Twitter by default.
+Alternatively, you can take a look at :doc:`OpenWISP WiFi Login Pages
+</wifi-login-pages/index>`, which provides buttons for Facebook, Google
+and Twitter by default.
 
 Settings
 --------
 
-See :ref:`social login related settings <social_login_settings>`.
+See :ref:`social login related settings <radius_social_login_settings>`.

@@ -2,24 +2,6 @@
 
 set -e
 
-echo ''
-echo 'Checking documentation build status'
-./runsphinx-build
-
-PYTHON_VERSION=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-if [[ $PYTHON_VERSION != 3.6 ]]; then
-    # check for broken link
-    # remove condition when 3.6 is dropped
-    python -m http.server 8001 -d docs/build/html/ &>/dev/null &
-    pid=$!
-    sleep 4
-    pylinkvalidate.py http://localhost:8001/
-    kill "${pid}" 2> /dev/null || true
-fi
-
-rm -rf docs/build/
-
-echo ''
 echo 'Check JavaScript Linting'
 jslint ./openwisp_radius/static/openwisp-radius/js/*.js
 

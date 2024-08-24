@@ -1,5 +1,3 @@
-.. _management_commands:
-
 Management commands
 ===================
 
@@ -67,11 +65,12 @@ For example:
 
 .. note::
 
-    :ref:`Find out more about this feature in its dedicated page
+    :doc:`Find out more about this feature in its dedicated page
     <generating_users>`
 
-This command deactivates expired user accounts which were created
-temporarily (eg: for en event) and have an expiration date set.
+This command deactivates expired user accounts which were created with
+batch operation temporarily (e.g.: for en event) and have an expiration
+date set.
 
 .. code-block:: shell
 
@@ -80,15 +79,15 @@ temporarily (eg: for en event) and have an expiration date set.
 ``delete_old_radiusbatch_users``
 --------------------------------
 
-This command deletes users that have expired (and should have been
-deactivated by ``deactivate_expired_users``) for more than the specified
-``<duration_in_months>``.
+This command deletes users created using batch operation that have expired
+(and should have been deactivated by ``deactivate_expired_users``) for
+more than the specified ``<duration_in_months>``.
 
 .. code-block:: shell
 
     ./manage.py delete_old_radiusbatch_users --older-than-months <duration_in_months>
 
-Note that the default duration is set to 18 months.
+Note that the default duration is set to **18 months**.
 
 ``delete_unverified_users``
 ---------------------------
@@ -103,7 +102,7 @@ management command.**
 
     ./manage.py delete_unverified_users --older-than-days <duration_in_days>
 
-Note that the default duration is set to 1 day.
+Note that the default duration is set to **1 day**.
 
 It is also possible to exclude users that have registered using specified
 methods. You can specify multiple methods separated by comma(`,`).
@@ -122,22 +121,22 @@ there is an easy migration script that will import your freeradius
 database, sites, social website account users, users & groups to
 openwisp-radius instance:
 
-::
+.. code-block:: shell
 
     ./manage.py upgrade_from_django_freeradius
 
 The management command accepts an argument ``--backup``, that you can pass
 to give the location of the backup files, by default it looks in the
-``tests/`` directory, eg:
+``tests/`` directory, e.g.:
 
-::
+.. code-block:: shell
 
     ./manage.py upgrade_from_django_freeradius --backup /home/user/django_freeradius/
 
 The management command accepts another argument ``--organization``, if you
 want to import data to a specific organization, you can give its UUID for
 the same, by default the data is added to the first found organization,
-eg:
+e.g.:
 
 ::
 
@@ -151,11 +150,11 @@ eg:
 
 .. warning::
 
-    It is not possible to export user credential data for radiusbatch
+    It is not possible to export user credential data for ``RadiusBatch``
     created using prefix, please manually preserve the PDF files if you
     want to access the data in the future.
 
-.. _convert_called_station_id:
+.. _radius_convert_called_station_id:
 
 ``convert_called_station_id``
 -----------------------------

@@ -1,4 +1,4 @@
-Enforcing session limits
+Enforcing Session Limits
 ========================
 
 The default freeradius schema does not include a table where groups are
@@ -21,7 +21,7 @@ For each group, checks and replies can be specified directly in the edit
 page of a Radius Group (``admin`` > ``groups`` > ``add group`` or ``change
 group``).
 
-Default groups
+Default Groups
 --------------
 
 Some groups are created automatically by **openwisp-radius** during the
@@ -41,9 +41,9 @@ nor it can be flagged as non-default: to set another group as default
 simply check that group as the default one, save and **openwisp-radius**
 will remove the default flag from the old default group.
 
-.. _counters:
+.. _radius_counters:
 
-How limits are enforced: counters
+How Limits are Enforced: Counters
 ---------------------------------
 
 In Freeradius, this kind of feature is implemented with the
@@ -53,10 +53,10 @@ The problem with this FreeRADIUS module is that it doesn't know about
 OpenWISP, so it does not support multi-tenancy. This means that if
 multiple organizations are using the OpenWISP instance, it's possible that
 a user may be an end user of multiple organizations and hence have one
-radius group assigned for each, but the sqlcounter module will not
+radius group assigned for each, but the *sqlcounter* module will not
 understand the right group to choose when enforcing limits, with the
 result that the enforcing of limits will not work as expected, unless one
-FreeRADIUS site with different sqlcounter configurations is created for
+FreeRADIUS site with different *sqlcounter* configurations is created for
 each organization using the system, which is doable but cumbersome to
 maintain.
 
@@ -75,7 +75,7 @@ during a specific day is below the value indicated in the
 time with a ``Session-Timeout`` reply message or rejecting the
 authorization if the limit has been passed.
 
-.. _daily_traffic_counter:
+.. _radius_daily_traffic_counter:
 
 ``DailyTrafficCounter``
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,8 +89,8 @@ has been passed.
 
 The attributes used for the check and or the reply message are
 configurable because it can differ from NAS to NAS, see
-:ref:`traffic_counter_check_name` :ref:`traffic_counter_reply_name` for
-more information.
+:ref:`radius_traffic_counter_check_name`
+:ref:`radius_traffic_counter_reply_name` for more information.
 
 ``MonthlyTrafficCounter``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -103,7 +103,7 @@ remaining octets with a reply message or rejecting the authorization if
 the limit has been passed.
 
 The reply message is configurable because it can differ from NAS to NAS,
-:ref:`traffic_counter_reply_name` for more information.
+:ref:`radius_traffic_counter_reply_name` for more information.
 
 ``MonthlySubscriptionTrafficCounter``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,15 +111,15 @@ The reply message is configurable because it can differ from NAS to NAS,
 .. important::
 
     This counter is not enabled by default. It can be enabled via the
-    :ref:`counter_related_settings`.
+    :ref:`radius_counter_related_settings`.
 
 Same as ``MonthlyTrafficCounter``, but with the difference that the reset
 period depends on the day in which the user subscribed to the service: if
 the user signed up (or their account was created by an admin) on a date
-like November 15 2022, the reset period will start on the 15th day of
+like November 15 2022, the reset period will start on the *15th day* of
 every month.
 
-Database support
+Database Support
 ~~~~~~~~~~~~~~~~
 
 The counters described above are available for PostgreSQL, MySQL, SQLite
@@ -130,15 +130,15 @@ query is executed with raw SQL defined on each class, instead of the
 classic django-ORM approach which is database agnostic.
 
 It was implemented this way to ensure maximum flexibility and adherence to
-the FreeRADIUS sqlcounter implementation.
+the FreeRADIUS *sqlcounter* implementation.
 
 Django Settings
 ~~~~~~~~~~~~~~~
 
 The settings available to control the behavior of counters are described
-in :ref:`counter_related_settings`.
+in :ref:`radius_counter_related_settings`.
 
-Writing custom counter classes
+Writing Custom Counter Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to write custom counter classes to satisfy any need.
@@ -155,7 +155,7 @@ following attributes:
   ``monthly_subscription`` or ``never``;
 - ``sql``: the raw SQL query to execute;
 - ``get_sql_params``: a method which returns a list of the arguments
-  passed to the interpolation of the raw sql query.
+  passed to the interpolation of the raw SQL query.
 
 Please look at the source code of OpenWISP RADIUS to find out more.
 
@@ -165,7 +165,7 @@ Please look at the source code of OpenWISP RADIUS to find out more.
   <https://github.com/openwisp/openwisp-radius/tree/master/openwisp_radius/counters/postgresql>`_
 
 Once the new class is ready, you will need to add it to
-:ref:`counters_setting`.
+:ref:`radius_counters_setting`.
 
 It is also possible to implement a check class in a completely custom
 fashion (that is, not inheriting from ``BaseCounter``), the only

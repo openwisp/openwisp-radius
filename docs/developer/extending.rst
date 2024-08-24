@@ -1,10 +1,12 @@
-Extending openwisp-radius
+Extending OpenWISP RADIUS
 =========================
 
-One of the core values of the OpenWISP project is `Software Reusability
-<http://openwisp.io/docs/general/values.html#software-reusability-means-long-term-sustainability>`_,
-for this reason *openwisp-radius* provides a set of base classes which can
-be imported, extended and reused to create derivative apps.
+.. include:: ../partials/developer-docs.rst
+
+One of the core values of the OpenWISP project is :ref:`Software
+Reusability <values_software_reusability>`, for this reason
+*openwisp-radius* provides a set of base classes which can be imported,
+extended and reused to create derivative apps.
 
 In order to implement your custom version of *openwisp-radius*, you need
 to perform the steps described in this section.
@@ -16,19 +18,17 @@ and the `sample app
 will serve you as source of truth: just replicate and adapt that code to
 get a basic derivative of *openwisp-radius* working.
 
-If you want to add new users fields, please follow the `tutorial to extend
-the openwisp-users
-<https://github.com/openwisp/openwisp-users/#extend-openwisp-users>`_. As
-an example, we have extended *openwisp-users* to *sample_users* app and
-added a field ``social_security_number`` in the `sample_users/models.py
+If you want to add new users fields, please follow the :doc:`tutorial to
+extend the openwisp-users </users/developer/extending>`. As an example, we
+have extended *openwisp-users* to *sample_users* app and added a field
+``social_security_number`` in the `sample_users/models.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_users/models.py>`_.
 
-.. note::
+.. important::
 
-    **Premise**: if you plan on using a customized version of this module,
-    we suggest to start with it since the beginning, because migrating
-    your data from the default module to your extended version may be time
-    consuming.
+    If you plan on using a customized version of this module, we suggest
+    to start with it since the beginning, because migrating your data from
+    the default module to your extended version may be time consuming.
 
 1. Initialize your custom module
 --------------------------------
@@ -41,7 +41,7 @@ A django app is nothing more than a `python package
 of python scripts), in the following examples we'll call this django app
 ``myradius``, but you can name it how you want:
 
-::
+.. code-block:: shell
 
     django-admin startapp myradius
 
@@ -49,6 +49,18 @@ Keep in mind that the command mentioned above must be called from a
 directory which is available in your `PYTHON_PATH
 <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH>`_ so that
 you can then import the result into your project.
+
+2. Install ``openwisp-radius``
+------------------------------
+
+Install (and add to the requirement of your project) openwisp-radius:
+
+.. code-block::
+
+    pip install openwisp-radius
+
+3. Add your App to ``INSTALLED_APPS``
+-------------------------------------
 
 Now you need to add ``myradius`` to ``INSTALLED_APPS`` in your
 ``settings.py``, ensuring also that ``openwisp_radius`` has been removed:
@@ -96,31 +108,7 @@ Now you need to add ``myradius`` to ``INSTALLED_APPS`` in your
         "openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend",  # optional, can be removed if SAML login is not needed
     )
 
-.. important::
-
-    Remember to include your radius app's name before proceeding.
-
-.. note::
-
-    For more information about how to work with django projects and django
-    apps, please refer to the `django documentation
-    <https://docs.djangoproject.com/en/dev/intro/tutorial01/>`_.
-
-2. Install ``openwisp-radius``
-------------------------------
-
-Install (and add to the requirement of your project) openwisp-radius:
-
-::
-
-    pip install openwisp-radius
-
-.. note::
-
-    Use ``pip install openwisp-radius[saml]`` if you intend to use
-    :ref:`Single Sign-On (SAML) <saml_>` feature.
-
-3. Add ``EXTENDED_APPS``
+4. Add ``EXTENDED_APPS``
 ------------------------
 
 Add the following to your ``settings.py``:
@@ -129,7 +117,7 @@ Add the following to your ``settings.py``:
 
     EXTENDED_APPS = ("openwisp_radius",)
 
-4. Add ``openwisp_utils.staticfiles.DependencyFinder``
+5. Add ``openwisp_utils.staticfiles.DependencyFinder``
 ------------------------------------------------------
 
 Add ``openwisp_utils.staticfiles.DependencyFinder`` to
@@ -143,7 +131,7 @@ Add ``openwisp_utils.staticfiles.DependencyFinder`` to
         "openwisp_utils.staticfiles.DependencyFinder",
     ]
 
-5. Add ``openwisp_utils.loaders.DependencyLoader``
+6. Add ``openwisp_utils.loaders.DependencyLoader``
 --------------------------------------------------
 
 Add ``openwisp_utils.loaders.DependencyLoader`` to ``TEMPLATES`` in your
@@ -171,25 +159,20 @@ Add ``openwisp_utils.loaders.DependencyLoader`` to ``TEMPLATES`` in your
         }
     ]
 
-6. Inherit the AppConfig class
+7. Inherit the AppConfig class
 ------------------------------
 
-Please refer to the following files in the sample app of the test project:
-
-- `sample_radius/__init__.py
-  <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/__init__.py>`_
-- `sample_radius/apps.py
-  <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/apps.py>`_
+Refer to the `sample_radius/apps.py
+<https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/apps.py>`_
+file in the sample app of the test project.
 
 You have to replicate and adapt that code in your project.
 
-.. note::
+For more information regarding the concept of ``AppConfig`` please refer
+to the `"Applications" section in the django documentation
+<https://docs.djangoproject.com/en/4.2/ref/applications/>`_.
 
-    For more information regarding the concept of ``AppConfig`` please
-    refer to the `"Applications" section in the django documentation
-    <https://docs.djangoproject.com/en/dev/ref/applications/>`_.
-
-7. Create your custom models
+8. Create your custom models
 ----------------------------
 
 For the purpose of showing an example, we added a simple ``details`` field
@@ -198,13 +181,11 @@ to the `models of the sample app in the test project
 
 You can add fields in a similar way in your ``models.py`` file.
 
-.. note::
+For doubts regarding how to use, extend or develop models please refer to
+the `"Models" section in the django documentation
+<https://docs.djangoproject.com/en/4.2/topics/db/models/>`_.
 
-    For doubts regarding how to use, extend or develop models please refer
-    to the `"Models" section in the django documentation
-    <https://docs.djangoproject.com/en/dev/topics/db/models/>`_.
-
-8. Add swapper configurations
+9. Add swapper configurations
 -----------------------------
 
 Once you have created the models, add the following to your
@@ -235,8 +216,8 @@ Once you have created the models, add the following to your
 
 Substitute ``myradius`` with the name you chose in step 1.
 
-9. Create database migrations
------------------------------
+10. Create database migrations
+------------------------------
 
 Copy the `migration files from the sample_radius's migration folder
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/migrations/>`_.
@@ -244,26 +225,24 @@ Copy the `migration files from the sample_radius's migration folder
 Now, create database migrations as per your custom application's
 requirements:
 
-::
+.. code-block:: shell
 
     ./manage.py makemigrations
 
 If you are starting with a fresh database, you can apply the migrations:
 
-::
+.. code-block:: shell
 
     ./manage.py migrate
 
 However, if you want :ref:`migrate an existing freeradius database please
-read the guide in the setup <migrate_existing_freeradius_db>`.
+read the guide in the setup <radius_migrate_existing_freeradius_db>`.
 
-.. note::
+For more information, refer to the `"Migrations" section in the django
+documentation
+<https://docs.djangoproject.com/en/4.2/topics/migrations/>`_.
 
-    For more information, refer to the `"Migrations" section in the django
-    documentation
-    <https://docs.djangoproject.com/en/dev/topics/migrations/>`_.
-
-10. Create the admin
+11. Create the admin
 --------------------
 
 Refer to the `admin.py file of the sample app
@@ -272,12 +251,10 @@ Refer to the `admin.py file of the sample app
 To introduce changes to the admin, you can do it in two main ways which
 are described below.
 
-.. note::
-
-    For more information regarding how the django admin works, or how it
-    can be customized, please refer to `"The django admin site" section in
-    the django documentation
-    <https://docs.djangoproject.com/en/dev/ref/contrib/admin/>`_.
+For more information regarding how the django admin works, or how it can
+be customized, please refer to `"The django admin site" section in the
+django documentation
+<https://docs.djangoproject.com/en/4.2/ref/contrib/admin/>`_.
 
 1. Monkey patching
 ~~~~~~~~~~~~~~~~~~
@@ -414,7 +391,7 @@ resort to monkey patching, you can proceed as follows:
         pass
         # add your changes here
 
-11. Setup Freeradius API Allowed Hosts
+12. Setup Freeradius API Allowed Hosts
 --------------------------------------
 
 Add allowed freeradius hosts in ``settings.py``:
@@ -423,12 +400,10 @@ Add allowed freeradius hosts in ``settings.py``:
 
     OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ["127.0.0.1"]
 
-.. note::
+Read more about :ref:`freeradius allowed hosts in settings page
+<openwisp_radius_freeradius_allowed_hosts>`.
 
-    Read more about :ref:`freeradius allowed hosts in settings page
-    <openwisp_radius_freeradius_allowed_hosts>`.
-
-12. Setup Periodic tasks
+13. Setup Periodic tasks
 ------------------------
 
 Some periodic commands are required in production environments to enable
@@ -443,22 +418,20 @@ certain features and facilitate database cleanup:
 Some celery tasks take an argument, for instance ``365`` is given here for
 ``delete_old_radacct`` in the example settings. These arguments are passed
 to their respective management commands. More information about these
-parameters can be found at the :ref:`management commands page
-<management_commands>`.
+parameters can be found at the :doc:`management commands page
+<../user/management_commands>`.
 
 3. Add the following in your settings.py file:
 
-   ::
+.. code-block:: python
 
-       CELERY_IMPORTS = ('openwisp_monitoring.device.tasks',)
+    CELERY_IMPORTS = ("openwisp_radius.tasks",)
 
-.. note::
+For more information about the usage of celery in django, please refer to
+the `"First steps with Django" section in the celery documentation
+<https://docs.celeryproject.org/en/master/django/first-steps-with-django.html>`_.
 
-    Celery tasks do not start with django server and need to be started
-    seperately, please read about running :ref:`celery and celery-beat
-    <celery_usage>` tasks.
-
-13. Create root URL configuration
+14. Create root URL configuration
 ---------------------------------
 
 The root ``url.py`` file should have the following paths (please read the
@@ -479,20 +452,17 @@ comments):
         # openwisp-radius urls
         path("accounts/", include("openwisp_users.accounts.urls")),
         path("api/v1/", include("openwisp_utils.api.urls")),
-        # Use only when extending views (dicussed below)
+        # Use only when extending views (discussed below)
         # path('', include((get_urls(api_views, social_views, saml_views), 'radius'), namespace='radius')),
-        path(
-            "", include("openwisp_radius.urls", namespace="radius")
-        ),  # Remove when extending views
+        # Remove when extending views
+        path("", include("openwisp_radius.urls", namespace="radius")),
     ]
 
-.. note::
+For more information about URL configuration in django, please refer to
+the `"URL dispatcher" section in the django documentation
+<https://docs.djangoproject.com/en/4.2/topics/http/urls/>`_.
 
-    For more information about URL configuration in django, please refer
-    to the `"URL dispatcher" section in the django documentation
-    <https://docs.djangoproject.com/en/dev/topics/http/urls/>`_.
-
-14. Import the automated tests
+15. Import the automated tests
 ------------------------------
 
 When developing a custom application based on this module, it's a good
@@ -509,7 +479,7 @@ to find out how to do this.
 
 You can then run tests with:
 
-::
+.. code-block:: shell
 
     # the --parallel flag is optional
     ./manage.py test --parallel myradius
@@ -533,15 +503,13 @@ API views.
 Create a view file as done in `API views.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/api/views.py>`_.
 
-Remember to use these views in root URL configurations in point 11. If you
+Remember to use these views in root URL configurations in point 14. If you
 want only extend the API views and not social views, you can use
 ``get_urls(api_views, None)`` to get social_views from *openwisp_radius*.
 
-.. note::
-
-    For more information about django views, please refer to the `views
-    section in the django documentation
-    <https://docs.djangoproject.com/en/dev/topics/http/views/>`_.
+For more information about django views, please refer to the `views
+section in the django documentation
+<https://docs.djangoproject.com/en/4.2/topics/http/views/>`_.
 
 2. Extending the Social Views
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -554,7 +522,7 @@ social views.
 Create a view file as done in `social views.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/social/views.py>`_.
 
-Remember to use these views in root URL configurations in point 11. If you
+Remember to use these views in root URL configurations in point 14. If you
 want only extend the API views and not social views, you can use
 ``get_urls(api_views, None)`` to get social_views from *openwisp_radius*.
 
@@ -569,13 +537,11 @@ SAML views.
 Create a view file as done in `saml views.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/saml/views.py>`_.
 
-Remember to use these views in root URL configurations in point 11. If you
+Remember to use these views in root URL configurations in point 14. If you
 want only extend the API views and social view but not SAML views, you can
 use ``get_urls(api_views, social_views, None)`` to get saml_views from
 *openwisp_radius*.
 
-.. note::
-
-    For more information about django views, please refer to the `views
-    section in the django documentation
-    <https://docs.djangoproject.com/en/dev/topics/http/views/>`_.
+For more information about django views, please refer to the `views
+section in the django documentation
+<https://docs.djangoproject.com/en/4.2/topics/http/views/>`_.

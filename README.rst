@@ -29,6 +29,8 @@ openwisp-radius
    :target: https://pypi.org/project/black/
    :alt: code style: black
 
+---
+
 **Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
 
 **OpenWISP RADIUS** provides a web interface to a `freeradius <https://freeradius.org/>`_ database,
@@ -45,11 +47,35 @@ It can be used as a standalone application or integrated with the rest of `OpenW
 It can also be used as a `base system or framework on top of which custom tailored solutions can be built
 <https://openwisp-radius.readthedocs.io/en/latest/developer/how_to_extend.html>`_.
 
-- `Documentation <http://openwisp-radius.readthedocs.io/en/latest/>`_
-- `Change log <https://github.com/openwisp/openwisp-radius/blob/master/CHANGES.rst>`_
-- `Support <http://openwisp.org/support.html>`_
-- `Issue Tracker <https://github.com/openwisp/openwisp-radius/issues>`_
-- `License <https://github.com/openwisp/openwisp-radius/blob/master/LICENSE>`_
+Documentation
+-------------
+
+- `Usage documentation <https://openwisp.io/docs/dev/radius/>`_
+- `Developer documentation
+  <https://openwisp.io/docs/dev/radius/developer/>`_
+
+Contributing
+------------
+
+Please refer to the `OpenWISP contributing guidelines
+<http://openwisp.io/docs/developer/contributing.html>`_.
+
+Changelog
+---------
+
+See `CHANGES
+<https://github.com/openwisp/openwisp-radius/blob/master/CHANGES.rst>`_.
+
+License
+-------
+
+See `LICENSE
+<https://github.com/openwisp/openwisp-radius/blob/master/LICENSE>`_.
+
+Support
+-------
+
+See `OpenWISP Support Channels <http://openwisp.org/support.html>`_.
 
 .. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
    :target: http://openwisp.org

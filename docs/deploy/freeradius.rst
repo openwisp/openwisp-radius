@@ -1,12 +1,9 @@
-.. _freeradius_setup_for_captive_portal:
-
 Freeradius Setup for Captive Portal authentication
 ==================================================
 
 This guide explains how to install and configure `freeradius 3
-<https://freeradius.org>`_ in order to make it work with `OpenWISP RADIUS
-<https://github.com/openwisp/openwisp-radius/>`_ for Captive Portal
-authentication.
+<https://freeradius.org>`_ in order to make it work with OpenWISP RADIUS
+for Captive Portal authentication.
 
 The guide is written for debian based systems, other linux distributions
 can work as well but the name of packages and files may be different.
@@ -21,15 +18,14 @@ Coova-Chilli, but other solutions can be used as well.
     need to perform social login or some other kind of Single Sign On
     (SSO).
 
-    The `openwisp-wifi-login-pages
-    <https://github.com/openwisp/openwisp-wifi-login-pages>`_ web app is
-    an open source solution which integrates with OpenWISP RADIUS to
+    The :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>` web app
+    is an open source solution which integrates with OpenWISP RADIUS to
     provide features like self user registration, social login, SSO/SAML
     login, SMS verification, simple username & password login using the
     :ref:`radius_user_token` method.
 
-    For more information see: `openwisp-wifi-login-pages
-    <https://github.com/openwisp/openwisp-wifi-login-pages>`_.
+    For more information see: :doc:`OpenWISP WiFi Login Pages
+    </wifi-login-pages/index>`
 
 How to install freeradius 3
 ---------------------------
@@ -111,7 +107,7 @@ First of all enable the ``rest`` and optionally the ``sql`` module:
     # optional
     ln -s /etc/freeradius/mods-available/sql /etc/freeradius/mods-enabled/sql
 
-.. _configure-rest-module:
+.. _radius_configure_rest_module:
 
 Configure the REST module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -206,16 +202,16 @@ Example configuration using the PostgreSQL database:
     password = "<password>"
     radius_db = "radius"
 
-.. _freeradius_site:
+.. _radius_freeradius_site:
 
 Configure the site
 ~~~~~~~~~~~~~~~~~~
 
 This section explains how to configure the FreeRADIUS site.
 
-Please refer to :ref:`freeradius_api_authentication` to understand the
-different possibilities with which FreeRADIUS can authenticate requests
-going to OpenWISP RADIUS so that OpenWISP RADIUS knows to which
+Please refer to :ref:`radius_freeradius_api_authentication` to understand
+the different possibilities with which FreeRADIUS can authenticate
+requests going to OpenWISP RADIUS so that OpenWISP RADIUS knows to which
 organization each request belongs.
 
 If you are **not** using the method described in :ref:`radius_user_token`,
@@ -225,8 +221,8 @@ you have to do the following:
 - uncomment the line which starts with ``# api_token_header``
 - substitute the occurrences of ``<org_uuid>`` and
   ``<org_radius_api_token>`` with the UUID & RADIUS API token of each
-  organization, refer to the section :ref:`organization_uuid_token` for
-  finding these values.
+  organization, refer to the section :ref:`radius_organization_uuid_token`
+  for finding these values.
 
 If you are deploying a captive portal setup and can use the RADIUS User
 Token method, you can get away with having only one freeradius site for
@@ -281,7 +277,7 @@ Please also ensure that ``acct_unique`` is present in the
         # ...
     }
 
-.. _restart_freeradius:
+.. _radius_restart_freeradius:
 
 Restart freeradius to make the configuration effective
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -300,8 +296,8 @@ In case of errors you can run `freeradius in debug mode
 
 **A common problem, especially during development and testing, is that the
 openwisp-radius application may not be running**, in that case you can
-find out how to run the django development server in the :ref:`Install for
-development <installing_for_development>` section.
+find out how to run the django development server in the
+:doc:`../developer/installation` section.
 
 Also make sure that this server runs on the port specified in
 ``/etc/freeradius/mods-enabled/rest``.
@@ -349,8 +345,8 @@ OpenWISP RADIUS instead uses the FreeRADIUS `rlm_rest
 <https://networkradius.com/doc/current/raddb/mods-available/rest.html>`_
 module in order to take advantage of the built in user management and
 authentication capabilities of Django (for more information about these
-topics see :ref:`configure-rest-module` and `User authentication in Django
-<https://docs.djangoproject.com/en/dev/topics/auth/>`_).
+topics see :ref:`radius_configure_rest_module` and `User authentication in
+Django <https://docs.djangoproject.com/en/dev/topics/auth/>`_).
 
 When migrating from existing FreeRADIUS deployments or in cases where it
 is preferred to use the FreeRADIUS *radcheck* table for storing user
@@ -383,7 +379,7 @@ ensure the ``authorize`` section of your site as follows contains the
         # ...
     }
 
-.. _debugging:
+.. _radius_debugging:
 
 Debugging
 ---------
@@ -417,7 +413,7 @@ You can do this with ``radtest``:
 
 A successful authentication will return similar output:
 
-::
+.. code-block:: text
 
     Sent Access-Request Id 215 from 0.0.0.0:34869 to 127.0.0.1:1812 length 75
         User-Name = "admin"
@@ -430,7 +426,7 @@ A successful authentication will return similar output:
 
 While an unsuccessful one will look like the following:
 
-::
+.. code-block:: text
 
     Sent Access-Request Id 85 from 0.0.0.0:51665 to 127.0.0.1:1812 length 73
         User-Name = "foo"
@@ -461,7 +457,7 @@ Testing accounting
 You can do this with ``radclient``, but first of all you will have to
 create a text file like the following one:
 
-::
+.. code-block:: text
 
     # /tmp/accounting.txt
 
@@ -490,7 +486,7 @@ Then you can call ``radclient``:
 
 You should get the following output:
 
-::
+.. code-block:: text
 
     Sent Accounting-Request Id 83 from 0.0.0.0:51698 to 127.0.0.1:1813 length 154
         Acct-Session-Id = "35000006"
