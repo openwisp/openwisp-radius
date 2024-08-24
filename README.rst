@@ -34,18 +34,18 @@ openwisp-radius
 **Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
 
 **OpenWISP RADIUS** provides a web interface to a `freeradius <https://freeradius.org/>`_ database,
-a rich `REST HTTP API <https://openwisp-radius.readthedocs.io/en/latest/user/api.html>`_
+a rich `REST HTTP API <https://openwisp.io/docs/dev/radius/user/rest-api.html>`_
 and features like
-`user self registration <https://openwisp-radius.readthedocs.io/en/latest/user/registration.html>`_,
-`SMS verification <https://openwisp-radius.readthedocs.io/en/latest/user/api.html?highlight=SMS#create-sms-token>`_,
-`import of users from CSV files <https://openwisp-radius.readthedocs.io/en/latest/user/importing_users.html>`_,
-`generation of new users for events <https://openwisp-radius.readthedocs.io/en/latest/user/generating_users.html>`_,
-`social login <https://openwisp-radius.readthedocs.io/en/latest/user/social_login.html>`_,
+`user self registration <https://openwisp.io/docs/dev/radius/user/registration.html>`_,
+`SMS verification <https://openwisp.io/docs/dev/radius/user/rest-api.html#create-sms-token>`_,
+`import of users from CSV files <https://openwisp.io/docs/dev/radius/user/importing_users.html>`_,
+`generation of new users for events <https://openwisp.io/docs/dev/radius/user/generating_users.html>`_,
+`social login <https://openwisp.io/docs/dev/radius/usersocial_login.html>`_,
 and much more.
 
 It can be used as a standalone application or integrated with the rest of `OpenWISP <https://openwisp.org>`_.
 It can also be used as a `base system or framework on top of which custom tailored solutions can be built
-<https://openwisp-radius.readthedocs.io/en/latest/developer/how_to_extend.html>`_.
+<https://openwisp.io/docs/dev/radius/developer/extending.html>`_.
 
 Documentation
 -------------
