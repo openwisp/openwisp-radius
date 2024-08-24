@@ -3,10 +3,10 @@ Extending OpenWISP RADIUS
 
 .. include:: ../partials/developer-docs.rst
 
-One of the core values of the OpenWISP project is `Software Reusability
-<http://openwisp.io/docs/general/values.html#software-reusability-means-long-term-sustainability>`_,
-for this reason *openwisp-radius* provides a set of base classes which can
-be imported, extended and reused to create derivative apps.
+One of the core values of the OpenWISP project is :ref:`Software
+Reusability <values_software_reusability>`, for this reason
+*openwisp-radius* provides a set of base classes which can be imported,
+extended and reused to create derivative apps.
 
 In order to implement your custom version of *openwisp-radius*, you need
 to perform the steps described in this section.
