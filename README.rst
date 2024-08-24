@@ -40,7 +40,7 @@ and features like
 `SMS verification <https://openwisp.io/docs/dev/radius/user/rest-api.html#create-sms-token>`_,
 `import of users from CSV files <https://openwisp.io/docs/dev/radius/user/importing_users.html>`_,
 `generation of new users for events <https://openwisp.io/docs/dev/radius/user/generating_users.html>`_,
-`social login <https://openwisp.io/docs/dev/radius/usersocial_login.html>`_,
+`social login <https://openwisp.io/docs/dev/radius/user/social_login.html>`_,
 and much more.
 
 It can be used as a standalone application or integrated with the rest of `OpenWISP <https://openwisp.org>`_.
