@@ -628,8 +628,6 @@ organization radius settings section of the admin interface.
 .. image:: ../images/organization_sms_verification_setting.png
     :alt: SMS verification enabled
 
-.. _openwisp_radius_needs_identity_verification:
-
 ``OPENWISP_RADIUS_MAC_ADDR_ROAMING_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -653,6 +651,8 @@ screenshot below.
     there are special organizations which need a different configuration,
     otherwise, if all the organization use the same configuration, we
     recommend changing the global setting.
+
+.. _openwisp_radius_needs_identity_verification:
 
 ``OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
