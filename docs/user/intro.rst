@@ -10,4 +10,5 @@ The RADIUS module provides the following features:
 - :doc:`social_login`
 - :doc:`saml`
 - :doc:`enforcing_limits`
+- :doc:`change_of_authorization`
 - :doc:`rest-api`
