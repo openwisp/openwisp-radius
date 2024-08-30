@@ -413,6 +413,8 @@ stop_time          Stop time (less or equal to)
 is_open            If stop_time is null
 ================== ================================
 
+.. _radius_user_api_endpoints:
+
 User API Endpoints
 ------------------
 

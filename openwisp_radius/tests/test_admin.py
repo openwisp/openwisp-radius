@@ -407,7 +407,7 @@ class TestAdmin(
         add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         response = self.client.get(add_url)
         docs_link = (
-            'https://openwisp-radius.readthedocs.io/en/latest'
+            'Read https://openwisp.io/docs/dev/radius'
             '/user/importing_users.html'
         )
         self.assertContains(response, docs_link)

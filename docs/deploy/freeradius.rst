@@ -381,8 +381,8 @@ ensure the ``authorize`` section of your site as follows contains the
 
 .. _radius_debugging:
 
-Debugging
----------
+Debugging & Troubleshooting
+---------------------------
 
 In this section we will explain how to debug your freeradius instance.
 

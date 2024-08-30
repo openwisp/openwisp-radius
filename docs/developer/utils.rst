@@ -27,6 +27,8 @@ completes successfully, just before the response is returned.
 The ``view`` argument can also be used to access the ``request`` object
 i.e. ``view.request``.
 
+.. _radius_captive_portal_mock_views:
+
 Captive portal mock views
 -------------------------
 

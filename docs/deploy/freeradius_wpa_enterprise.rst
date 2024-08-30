@@ -19,9 +19,9 @@ Prerequisites
 Execute the steps explained in the following sections of the
 :doc:`freeradius guide for captive portal authentication <freeradius>`:
 
-    - How to install freeradius 3
-    - Enable the configured modules
-    - Configure the REST module
+- How to install freeradius 3
+- Enable the configured modules
+- Configure the REST module
 
 Then proceed with the rest of the document.
 
