@@ -2,49 +2,56 @@ openwisp-radius
 ===============
 
 .. image:: https://github.com/openwisp/openwisp-radius/workflows/OpenWISP%20Radius%20CI%20Build/badge.svg?branch=master
-   :target: https://github.com/openwisp/openwisp-radius/actions?query=workflow%3A%22OpenWISP+Radius+CI+Build%22
-   :alt: CI build status
+    :target: https://github.com/openwisp/openwisp-radius/actions?query=workflow%3A%22OpenWISP+Radius+CI+Build%22
+    :alt: CI build status
 
 .. image:: https://coveralls.io/repos/github/openwisp/openwisp-radius/badge.svg?branch=master
-   :target: https://coveralls.io/github/openwisp/openwisp-radius?branch=master
-   :alt: Test Coverage
+    :target: https://coveralls.io/github/openwisp/openwisp-radius?branch=master
+    :alt: Test Coverage
 
 .. image:: https://img.shields.io/librariesio/release/github/openwisp/openwisp-radius
-   :target: https://libraries.io/github/openwisp/openwisp-radius#repository_dependencies
-   :alt: Dependency monitoring
+    :target: https://libraries.io/github/openwisp/openwisp-radius#repository_dependencies
+    :alt: Dependency monitoring
 
 .. image:: https://img.shields.io/gitter/room/nwjs/nw.js.svg
-   :target: https://gitter.im/openwisp/general
-   :alt: Chat
+    :target: https://gitter.im/openwisp/general
+    :alt: Chat
 
 .. image:: https://badge.fury.io/py/openwisp-radius.svg
-   :target: http://badge.fury.io/py/openwisp-radius
-   :alt: Pypi Version
+    :target: http://badge.fury.io/py/openwisp-radius
+    :alt: Pypi Version
 
 .. image:: https://pepy.tech/badge/openwisp-radius
-   :target: https://pepy.tech/project/openwisp-radius
-   :alt: Downloads
+    :target: https://pepy.tech/project/openwisp-radius
+    :alt: Downloads
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-   :target: https://pypi.org/project/black/
-   :alt: code style: black
+    :target: https://pypi.org/project/black/
+    :alt: code style: black
 
 ---
 
-**Need a quick overview?** `Try the OpenWISP Demo <https://openwisp.org/demo.html>`_.
+**Need a quick overview?** `Try the OpenWISP Demo
+<https://openwisp.org/demo.html>`_.
 
-**OpenWISP RADIUS** provides a web interface to a `freeradius <https://freeradius.org/>`_ database,
-a rich `REST HTTP API <https://openwisp.io/docs/dev/radius/user/rest-api.html>`_
-and features like
-`user self registration <https://openwisp.io/docs/dev/radius/user/registration.html>`_,
-`SMS verification <https://openwisp.io/docs/dev/radius/user/rest-api.html#create-sms-token>`_,
-`import of users from CSV files <https://openwisp.io/docs/dev/radius/user/importing_users.html>`_,
-`generation of new users for events <https://openwisp.io/docs/dev/radius/user/generating_users.html>`_,
-`social login <https://openwisp.io/docs/dev/radius/user/social_login.html>`_,
-and much more.
+**OpenWISP RADIUS** provides a web interface to a `freeradius
+<https://freeradius.org/>`_ database, a rich `REST HTTP API
+<https://openwisp.io/docs/dev/radius/user/rest-api.html>`_ and features
+like `user self registration
+<https://openwisp.io/docs/dev/radius/user/registration.html>`_, `SMS
+verification
+<https://openwisp.io/docs/dev/radius/user/rest-api.html#create-sms-token>`_,
+`import of users from CSV files
+<https://openwisp.io/docs/dev/radius/user/importing_users.html>`_,
+`generation of new users for events
+<https://openwisp.io/docs/dev/radius/user/generating_users.html>`_,
+`social login
+<https://openwisp.io/docs/dev/radius/user/social_login.html>`_, and much
+more.
 
-It can be used as a standalone application or integrated with the rest of `OpenWISP <https://openwisp.org>`_.
-It can also be used as a `base system or framework on top of which custom tailored solutions can be built
+It can be used as a standalone application or integrated with the rest of
+`OpenWISP <https://openwisp.org>`_. It can also be used as a `base system
+or framework on top of which custom tailored solutions can be built
 <https://openwisp.io/docs/dev/radius/developer/extending.html>`_.
 
 Documentation
@@ -78,4 +85,4 @@ Support
 See `OpenWISP Support Channels <http://openwisp.org/support.html>`_.
 
 .. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
-   :target: http://openwisp.org
+    :target: http://openwisp.org
