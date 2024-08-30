@@ -59,62 +59,62 @@ Features
 - Allowed freeradius authorize with email or phone number
 - Allowed the usage of subnets in
   `OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-freeradius-allowed-hosts>`_
 - Made the fields containing personal data of users which are exposed in
   the registration API configurable (allowed, mandatory, disabled) via the
   `OPENWISP_RADIUS_OPTIONAL_REGISTRATION_FIELDS setting or the admin
   interface
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-optional-registration-fields>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-optional-registration-fields>`_
 - Allow to disable registration API via the
   `OPENWISP_RADIUS_REGISTRATION_API_ENABLED setting or the admin interface
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-registration-api-enabled>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-registration-api-enabled>`_
 - Added `throttling of API requests
-  <Read https://openwisp.io/docs/dev/radius/user/api.html#api-throttling>`_
+  <https://openwisp.io/docs/dev/radius/user/api.html#api-throttling>`_
 - Added `OPENWISP_RADIUS_API_BASEURL setting
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-api-baseurl>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-api-baseurl>`_
 - Add identity verification feature, configurable via the
   `OPENWISP_RADIUS_NEEDS_IDENTITY_VERIFICATION or via admin interface
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-needs-identity-verification>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-needs-identity-verification>`_
 - Added utilities for implementing `new registration and identity
   verification methods
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#adding-support-for-more-registration-verification-methods>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#adding-support-for-more-registration-verification-methods>`_
 - Added `captive portal mock views
-  <Read https://openwisp.io/docs/dev/radius/developer/captive_portal_mock.html>`_
+  <https://openwisp.io/docs/dev/radius/developer/captive_portal_mock.html>`_
   to ease development and debugging
 - Add possibility to filter users by registration method in the admin
   interface
 - Added SAML registration method to implement `captive portal
   authentication via Single Sign On (SSO)
-  <Read https://openwisp.io/docs/dev/radius/user/saml.html>`_
+  <https://openwisp.io/docs/dev/radius/user/saml.html>`_
 - Added management command and celery task to `delete unverified users
-  <Read https://openwisp.io/docs/dev/radius/user/management_commands.html#delete-unverified-users>`_
+  <https://openwisp.io/docs/dev/radius/user/management_commands.html#delete-unverified-users>`_
 - Added translations of user facing API responses in Italian, German,
   Slovenian and Furlan
 - Added `Convert RADIUS accounting CALLED-STATION-ID feature
-  <Read https://openwisp.io/docs/dev/radius/user/management_commands.html#convert-called-station-id>`_,
+  <https://openwisp.io/docs/dev/radius/user/management_commands.html#convert-called-station-id>`_,
   celery task and management command, with the possibility of triggering
   it on accounting creation (see
   `OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-convert-called-station-on-create>`_)
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-convert-called-station-on-create>`_)
 - Added an `equivalent of the FreeRADIUS sqlcounter feature to the REST
   API
-  <Read https://openwisp.io/docs/dev/radius/user/enforcing_limits.html#how-limits-are-enforced-counters>`_
+  <https://openwisp.io/docs/dev/radius/user/enforcing_limits.html#how-limits-are-enforced-counters>`_
 - Added emission of django signal to FreeRADIUS accounting view:
   `radius_accounting_success
-  <Read https://openwisp.io/docs/dev/radius/developer/signals.html#radius-accounting-success>`_
+  <https://openwisp.io/docs/dev/radius/developer/signals.html#radius-accounting-success>`_
 - Added possibility to send email to the user an they start a new radius
   accounting session
 - Added organization level settings and related admin interface
   functionality to enable/disable SAML and social login:
 
   - `OPENWISP_RADIUS_SAML_REGISTRATION_ENABLED
-    <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-saml-registration-enabled>`_
+    <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-saml-registration-enabled>`_
   - `OPENWISP_RADIUS_SOCIAL_REGISTRATION_ENABLED
-    <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-social-registration-enabled>`_
+    <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-social-registration-enabled>`_
 
 - Added setting to avoid updating username from SAML:
   `OPENWISP_RADIUS_SAML_UPDATES_PRE_EXISTING_USERNAME
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-saml-updates-pre-existing-username>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-saml-updates-pre-existing-username>`_
 
 Changes
 ~~~~~~~
@@ -152,7 +152,7 @@ Other changes
 
 - Moved AccountingView to freeradius endpoints
 - Relaxed default values for the `SMS token settings
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#sms-token-related-settings>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#sms-token-related-settings>`_
 - Switched to new navigation menu and new OpenWISP theme
 - Allowed users to sign up to multiple organizations
 - Update username when phone number is changed if username is equal to the
@@ -168,7 +168,7 @@ Other changes
 - Added validation check to prevent invalid username in batch user
   creation
 - Allowed to set the `Password Reset URL setting
-  <Read https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-password-reset-urls>`_
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-password-reset-urls>`_
   via the admin interface
 - Added soft limits to celery tasks for background operations
 - Generalized the implementation of the fallback model fields which allow

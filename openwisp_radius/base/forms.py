@@ -47,8 +47,7 @@ class RadiusBatchForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if 'csvfile' in self.fields:
             docs_link = (
-                'Read https://openwisp.io/docs/dev/radius'
-                '/user/importing_users.html'
+                'Read https://openwisp.io/docs/dev/radius/user/importing_users.html'
             )
             help_text = f"Refer to the <b><u><a href='{docs_link}'>docs</a></u></b> \
                 for more details on importing users from a CSV"

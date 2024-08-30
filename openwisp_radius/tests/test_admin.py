@@ -406,10 +406,7 @@ class TestAdmin(
     def test_radius_batch_csv_help_text(self):
         add_url = reverse(f'admin:{self.app_label}_radiusbatch_add')
         response = self.client.get(add_url)
-        docs_link = (
-            'Read https://openwisp.io/docs/dev/radius'
-            '/user/importing_users.html'
-        )
+        docs_link = 'Read https://openwisp.io/docs/dev/radius/user/importing_users.html'
         self.assertContains(response, docs_link)
 
     def test_radiususergroup_inline_user(self):
