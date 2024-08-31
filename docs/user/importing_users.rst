@@ -35,7 +35,7 @@ Imported users with hashed passwords
 
 The hashes are directly stored in the database if they are of the `django
 hash format
-<https://docs.djangoproject.com/en/2.0/topics/auth/passwords/>`_.
+<https://docs.djangoproject.com/en/4.2/topics/auth/passwords/>`_.
 
 For example, a password ``myPassword123``, hashed using salted SHA1
 algorithm, will look like:
