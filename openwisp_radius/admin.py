@@ -371,7 +371,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             'giving out the credentials.'
         ),
         'documentation_url': (
-            'Read https://openwisp.io/docs/dev/radius/user/importing_users.html'
+            'https://openwisp.io/docs/dev/radius/user/importing_users.html'
         ),
     }
 
