@@ -39,21 +39,11 @@ the user is signing-in with a social network.
 Setup
 -----
 
-Install ``django-allauth`` in the python environment used by OpenWISP:
-
-::
-
-    # by default, in instances deployed
-    # via ansible-openwisp2, the python env
-    # is in /opt/openwisp2/env/
-    source /opt/openwisp2/env/bin/activate
-
-    pip install django-allauth[socialaccount]
+Ensure the your project ``settings.py`` contains the instructions shown in
+the example below, which shows how to configure the Facebook social login
+provider.
 
 .. include:: /partials/settings-note.rst
-
-Ensure your ``settings.py`` looks like the following (we will show how to
-configure of the Facebook social provider):
 
 .. code-block:: python
 
