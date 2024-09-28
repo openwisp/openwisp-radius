@@ -47,7 +47,7 @@ How Limits are Enforced: Counters
 ---------------------------------
 
 In Freeradius, this kind of feature is implemented with the
-`rml_sqlcounter <https://wiki.freeradius.org/modules/Rlm_sqlcounter>`_.
+`rlm_sqlcounter <https://wiki.freeradius.org/modules/Rlm_sqlcounter>`_.
 
 The problem with this FreeRADIUS module is that it doesn't know about
 OpenWISP, so it does not support multi-tenancy. This means that if
