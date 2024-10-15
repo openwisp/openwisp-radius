@@ -1,10 +1,113 @@
 Change log
 ==========
 
-Version 1.1.0 [Unreleased]
+Version 1.1.0 [2024-11-22]
 --------------------------
 
-Unreleased (Work in progress)
+Features
+~~~~~~~~
+
+- Added integration with `OpenWISP Monitoring
+  <https://openwisp.io/docs/dev/radius/user/radius_monitoring.html>`_ to
+  collect and visualize metrics for user-signups and RADIUS traffic.
+- Added support for `Change of Authorization (CoA)
+  <https://openwisp.io/docs/dev/radius/user/change_of_authorization.html>`_.
+- Added `MonthlyTrafficCounter
+  <https://openwisp.io/docs/dev/radius/user/enforcing_limits.html#monthlytrafficcounter>`_
+  and `MonthlySubscriptionTrafficCounter
+  <https://openwisp.io/docs/dev/radius/user/enforcing_limits.html#monthlysubscriptiontrafficcounter>`_.
+- Added API endpoint to fetch user's latest PhoneToken status.
+- Added `OPENWISP_RADIUS_SMS_COOLDOWN
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-sms-cooldown>`_
+  to configure cooldown time for requesting a new PhoneToken.
+- Extended ``OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG`` to include
+  registration method and verification status.
+- Added MAC address authentication for roaming users.
+- Added `OPENWISP_RADIUS_SMS_MESSAGE_TEMPLATE
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-sms-message-template>`_
+  setting to customize SMS messages.
+- Added `OPENWISP_RADIUS_USER_ADMIN_RADIUSTOKEN_INLINE
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-user-admin-radiustoken-inline>`_
+  setting to display RadiusTokenInline in UserAdmin.
+- Added `OPENWISP_RADIUS_UNVERIFY_INACTIVE_USERS
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-unverify-inactive-users>`_
+  setting to unverify users after a defined period of inactivity.
+- Added `OPENWISP_RADIUS_DELETE_INACTIVE_USERS
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-delete-inactive-users>`_
+  setting to delete inactive users after a specified period.
+- Added API endpoint to return user's RADIUS usage.
+- Supported password expiration feature from openwisp-users.
+- Added initial support for Gigaword RADIUS attributes.
+- Added ``LoginAdditionalInfoView`` to collection additional user details
+  in SAML sign-up flow.
+- Added autocomplete support for filters in the admin interface.
+
+Changes
+~~~~~~~
+
+Backward incompatible changes
++++++++++++++++++++++++++++++
+
+- Renamed ``delete_old_users`` command to
+  ``delete_old_radiusbatch_users``.
+- The `OPENWISP_RADIUS_BATCH_DELETE_EXPIRED
+  <https://openwisp.io/docs/dev/radius/user/settings.html#openwisp-radius-batch-delete-expired>`_
+  setting now expects days instead of months.
+
+Deprecation warnings
+++++++++++++++++++++
+
+- Using the ``default`` key in ``OPENWISP_RADIUS_PASSWORD_RESET_URLS`` is
+  deprecated. Use ``__all__`` instead.
+- Using organization slugs for key in
+  ``OPENWISP_RADIUS_CALLED_STATION_IDS`` are deprecated. Use organization
+  IDs instead.
+- In ``delete_old_radiusbatch_users`` management command, the
+  ``--older-than-months`` option is deprecated. Use ``--older-than-days``
+  instead.
+
+Dependencies
+++++++++++++
+
+- Bumped ``weasyprint~=59.0``.
+- Bumped ``pydyf~=0.10.0``.
+- Bumped ``dj-rest-auth~=6.0.0``.
+- Bumped ``openwisp-utils[rest,celery]~=1.1.1``.
+- Bumped ``openwisp-users~=1.1.0``.
+- Bumped ``django-private-storage~=3.1.0``.
+- Bumped ``django-ipware~=5.0.0``.
+- Bumped ``djangosaml2~=1.9.2``.
+- Added support for Django ``4.1.x`` and ``4.2.x``.
+- Added support for Python ``3.10``.
+- Dropped support for Python ``3.7``.
+- Dropped support for Django ``3.0.x`` and ``3.1.x``.
+
+Other changes
++++++++++++++
+
+- The ``cleanup_stale_radacct`` management command now uses the session's
+  ``update_time`` to determine staleness, falling back to ``start_time``
+  if ``update_time`` is unavailable.
+- Stopped sending login email notifications when accounting framed
+  protocol is ``PPP``.
+- Send login emails only to users with verified email addresses.
+- Grouped SMS features in the organization admin.
+- Allowed counter's check method to return ``None`` to prevent adding a
+  reply to the response.
+- The email received from the IdP in SAML registration will be flagged as
+  verified.
+
+Bugfixes
+~~~~~~~~
+
+- Fixed validation for organization's password reset URLs.
+- Fixed saving ``RadiusCheck`` / ``RadiusReply`` objects without an
+  organization returning a 500 HTTP response.
+- Fixed handling of accounting stop requests with empty octets.
+- Prevented user registration with landline numbers.
+- Ignored `IntegrityError` on duplicate accounting start requests.
+- Removed default values from fallback fields.
+- User need to have required model permissions to perform admin actions.
 
 Version 1.0.2 [2022-12-05]
 --------------------------
