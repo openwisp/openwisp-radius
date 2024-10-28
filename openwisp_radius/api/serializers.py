@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 RadiusPostAuth = load_model('RadiusPostAuth')
 RadiusAccounting = load_model('RadiusAccounting')
+RadiusGroup = load_model('RadiusGroup')
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
@@ -288,6 +289,37 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         model = RadiusAccounting
         fields = '__all__'
         read_only_fields = ('organization',)
+
+
+class RadiusGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RadiusGroup
+        fields = '__all__'
+
+
+class RadiusUserGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RadiusUserGroup
+        fields = [
+            'group',
+            'groupname',
+        ]
+        # read_only_fields = ['created', 'priority', 'username']
+        extra_kwargs = {"groupname": {"required": True}, "group": {"required": True}}
+
+
+class RadiusUserGroupViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RadiusUserGroup
+        fields = [
+            'group',
+            'groupname',
+            'priority',
+            'user',
+            'username',
+            'created',
+            'modified',
+        ]
 
 
 class UserGroupCheckSerializer(serializers.ModelSerializer):

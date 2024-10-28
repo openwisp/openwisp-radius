@@ -83,6 +83,24 @@ def get_api_urls(api_views=None):
                 api_views.download_rad_batch_pdf,
                 name='download_rad_batch_pdf',
             ),
+            # list radius groups
+            path(
+                'radius/product/plans/',
+                api_views.radius_product_plans,
+                name='radius_product_plans',
+            ),
+            # update user plan
+            path(
+                'radius/user/<uuid:user>/plan/',
+                api_views.radius_user_plan_update,
+                name='radius_user_plan_update',
+            ),
+            # list user plans
+            path(
+                'radius/product/plans/<uuid:user>/',
+                api_views.radius_user_plan_list,
+                name='radius_user_plan_list',
+            ),
         ]
     else:
         return []

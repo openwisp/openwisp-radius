@@ -200,6 +200,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
         'name',
         'description',
         'default',
+        'price',
         'created',
         'modified',
     ]

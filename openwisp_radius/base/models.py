@@ -604,6 +604,14 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
     default = models.BooleanField(
         verbose_name=_('is default?'), help_text=_(_DEFAULT_HELP_TEXT), default=False
     )
+    price = models.DecimalField(
+        verbose_name=_('plan price'),
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        help_text=_('The Price set for this Radius Group or Plan; '
+                    'made available to down-stream systems'),
+    )
 
     class Meta:
         verbose_name = _('group')

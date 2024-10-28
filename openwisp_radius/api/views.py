@@ -28,9 +28,11 @@ from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
+    ListCreateAPIView,
     ListAPIView,
     RetrieveAPIView,
 )
+from rest_framework.mixins import UpdateModelMixin
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -39,7 +41,8 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
 
-from openwisp_radius.api.serializers import RadiusUserSerializer
+from openwisp_radius.api.serializers import RadiusUserSerializer, RadiusGroupSerializer, RadiusUserGroupSerializer, \
+    RadiusUserGroupViewSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
@@ -79,6 +82,7 @@ Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
 PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
+RadiusGroup = load_model('RadiusGroup')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
 RadiusUserGroup = load_model('RadiusUserGroup')
@@ -445,6 +449,88 @@ class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
 
 
 user_accounting = UserAccountingView.as_view()
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Returns the radius product plans available.
+        """,
+    ),
+)
+class RadiusGroupView(ThrottledAPIMixin, ListAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RadiusGroupSerializer
+    pagination_class = AccountingViewPagination
+    queryset = RadiusGroup.objects.all().order_by('created')
+
+    def list(self, request, *args, **kwargs):
+        self.request = request
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return super().get_queryset()  # pragma: no cover
+        return (
+            super()
+            .get_queryset()
+        )
+
+radius_product_plans = RadiusGroupView.as_view()
+
+
+@method_decorator(
+    name='put',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Updates/Set a User's main Product Plan.
+        `group = new product plan`
+        `groupname = name of new product plan`
+        """,
+    ),
+)
+class RadiusUserGroupUpdateView(GenericAPIView, UpdateModelMixin):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.all()
+    lookup_field = 'user'
+
+    def put(self, request, *args, **kwargs):
+        self.request = request
+        return self.update(request, *args, **kwargs)
+
+
+radius_user_plan_update = RadiusUserGroupUpdateView.as_view()
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        This view would return list of plans of the User
+        specified by the `{user}` portion of the URL.
+        """,
+    ),
+)
+class RadiusUserGroupView(ListAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RadiusUserGroupViewSerializer
+    # queryset = RadiusUserGroup.objects.all()
+    # lookup_field = 'user'
+
+    def get_queryset(self):
+        user =  self.kwargs['user']
+        return RadiusUserGroup.objects.filter(user=user)
+
+
+radius_user_plan_list = RadiusUserGroupView.as_view()
 
 
 @method_decorator(
