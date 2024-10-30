@@ -5,7 +5,7 @@ packaging
 openwisp-sphinx-theme~=1.0.2
 freezegun~=1.1.0
 django-extensions
-openwisp-utils[qa]~=1.1.0
+openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master
 pylinkvalidator
 lxml~=5.3.0
 cssselect~=1.2.0
