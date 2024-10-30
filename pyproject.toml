@@ -1,6 +1,5 @@
 [tool.coverage.run]
 source = ["openwisp_radius"]
-parallel = true
 concurrency = ["multiprocessing"]
 omit = [
     "openwisp_radius/__init__.py",

@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import timedelta
 
 from celery.schedules import crontab
 
@@ -9,7 +10,7 @@ SHELL = 'shell' in sys.argv or 'shell_plus' in sys.argv
 
 # Set DEBUG to False in production
 DEBUG = True
-
+INTERNAL_IPS = ['127.0.0.1']
 SECRET_KEY = '&a@f(0@lrl%606smticbu20=pvribdvubk5=gjti8&n1y%bi&4'
 
 ALLOWED_HOSTS = []
@@ -24,19 +25,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    # openwisp admin theme
-    'openwisp_utils.admin_theme',
-    'openwisp_users.accounts',
     # all-auth
     'django.contrib.sites',
+    # overrides allauth templates
+    # must precede allauth
+    'openwisp_users.accounts',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    # rest framework
-    'rest_framework',
-    'django_filters',
-    # registration
-    'rest_framework.authtoken',
+    'django_extensions',
+    # openwisp2 modules
+    'openwisp_users',
     'dj_rest_auth',
     'dj_rest_auth.registration',
     # social login
@@ -44,15 +43,22 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     # openwisp radius
     'openwisp_radius',
-    'openwisp_users',
-    # admin
+    # openwisp2 admin theme
+    # (must be loaded here)
+    'openwisp_utils.admin_theme',
     'admin_auto_filters',
+    # admin
     'django.contrib.admin',
+    'django.forms',
+    # other dependencies
+    'rest_framework',
+    'rest_framework.authtoken',
+    'django_filters',
     'private_storage',
     'drf_yasg',
-    'django_extensions',
     'openwisp2.integrations',
     'djangosaml2',
+    # 'debug_toolbar',
 ]
 
 LOGIN_REDIRECT_URL = 'admin:index'
@@ -83,6 +89,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'djangosaml2.middleware.SamlSessionMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 SESSION_COOKIE_SECURE = True
@@ -305,6 +312,88 @@ else:
 
 OPENWISP_USERS_AUTH_API = True
 
+if os.environ.get('MONITORING_INTEGRATION', False):
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('django.contrib.sites'),
+        'django.contrib.gis',
+    )
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('openwisp_radius') + 1,
+        'openwisp_radius.integrations.monitoring',
+    )
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('rest_framework.authtoken'), 'rest_framework_gis'
+    )
+    INSTALLED_APPS.append('channels')
+    dj_rest_auth_index = INSTALLED_APPS.index('dj_rest_auth')
+    INSTALLED_APPS = (
+        INSTALLED_APPS[:dj_rest_auth_index]
+        + [
+            'openwisp_controller.pki',
+            'openwisp_controller.config',
+            'openwisp_controller.geo',
+            'openwisp_controller.connection',
+            'openwisp_monitoring.monitoring',
+            'openwisp_monitoring.device',
+            'openwisp_monitoring.check',
+            'nested_admin',
+            'openwisp_notifications',
+            'flat_json_widget',
+            'openwisp_ipam',
+            'sortedm2m',
+            'reversion',
+            'leaflet',
+            'import_export',
+        ]
+        + INSTALLED_APPS[dj_rest_auth_index:]
+    )
+    TEMPLATES[0]['OPTIONS']['context_processors'].append(
+        'openwisp_notifications.context_processors.notification_api_settings'
+    )
+
+    TIMESERIES_DATABASE = {
+        'BACKEND': 'openwisp_monitoring.db.backends.influxdb',
+        'USER': 'openwisp',
+        'PASSWORD': 'openwisp',
+        'NAME': 'openwisp2',
+        'HOST': os.getenv('INFLUXDB_HOST', 'localhost'),
+        'PORT': '8086',
+    }
+    EXTENDED_APPS = ['django_x509', 'django_loci']
+
+    ASGI_APPLICATION = 'openwisp2.routing.application'
+    if TESTING:
+        CHANNEL_LAYERS = {
+            'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}
+        }
+    else:
+        CHANNEL_LAYERS = {
+            'default': {
+                'BACKEND': 'channels_redis.core.RedisChannelLayer',
+                'CONFIG': {'hosts': [f'redis://{redis_host}/7']},
+            }
+        }
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': 'redis://127.0.0.1:6379/6',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                },
+            }
+        }
+    DATABASES['default']['ENGINE'] = 'openwisp_utils.db.backends.spatialite'
+    CELERY_BEAT_SCHEDULE.update(
+        {
+            'write_user_registration_metrics': {
+                'task': 'openwisp_radius.integrations.monitoring.tasks.write_user_registration_metrics',
+                'schedule': timedelta(hours=1),
+                'args': None,
+                'relative': True,
+            }
+        }
+    )
+
 if os.environ.get('SAMPLE_APP', False):
     INSTALLED_APPS.remove('openwisp_radius')
     INSTALLED_APPS.remove('openwisp_users')
@@ -363,3 +452,5 @@ try:
     from .local_settings import *
 except ImportError:
     pass
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'

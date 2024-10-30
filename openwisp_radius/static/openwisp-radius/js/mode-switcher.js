@@ -7,7 +7,7 @@
                         '.field-user, .field-username)'),
             guided = $('.field-group, .field-user'),
             custom = $('.field-groupname, .field-username');
-        mode.change(function (e) {
+        mode.change(function () {
             allExceptMode.hide();
             if (mode.val() === 'guided') {
                 guided.show();

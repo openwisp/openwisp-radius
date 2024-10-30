@@ -1,0 +1,17 @@
+#no-session-msg {
+  text-align: center;
+  margin-bottom: 20px;
+}
+#radius-sessions .tabular.inline-related {
+  overflow-x: auto;
+}
+#radius-sessions .loader {
+  width: 4em;
+  height: 4em;
+}
+#radius-session-tbody strong {
+  color: green;
+}
+#radius-session-tbody tr td p {
+  white-space: nowrap;
+}

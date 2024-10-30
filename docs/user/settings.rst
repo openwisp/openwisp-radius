@@ -667,8 +667,8 @@ If this is enabled, each registered user should be verified using a
 verification method. The following choices are available by default:
 
 - ``''`` (empty string): unspecified
-- ``manual``: manually created
-- ``email``: Email (No Identity Verification)
+- ``manual``: Manually created
+- ``email``: Email
 - ``mobile_phone``: Mobile phone number :ref:`verification via SMS
   <openwisp_radius_sms_verification_enabled>`
 - ``social_login``: :doc:`social login feature <social_login>`
@@ -689,6 +689,8 @@ verification method. The following choices are available by default:
 
     **Disclaimer:** these are just suggestions on possible configurations
     of OpenWISP RADIUS and must not be considered as legal advice.
+
+.. _openwisp_radius_register_registration_method:
 
 Adding support for more registration/verification methods
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++

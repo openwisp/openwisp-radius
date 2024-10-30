@@ -39,6 +39,7 @@ RadiusUserGroup = load_model('RadiusUserGroup')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+Group = swapper.load_model('openwisp_users', 'Group')
 
 START_DATE = '2019-04-20T22:14:09+01:00'
 
@@ -1172,6 +1173,141 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             RadiusUserGroup.objects.all().delete()
             response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
             self.assertEqual(response.status_code, 404)
+
+    def test_user_group_check_serializer_counter_does_not_exist(self):
+        group = self._create_radius_group(name='group name')
+        group_check = self._create_radius_groupcheck(
+            attribute='ChilliSpot-Max-Input-Octets',
+            op=':=',
+            value='2000000000',
+            group=group,
+            groupname=group.name,
+        )
+        serializer = UserGroupCheckSerializer(group_check)
+        self.assertDictEqual(
+            serializer.data,
+            {
+                'attribute': 'ChilliSpot-Max-Input-Octets',
+                'op': ':=',
+                'result': None,
+                'type': None,
+                'value': '2000000000',
+            },
+        )
+
+    def test_radius_accounting(self):
+        path = reverse('radius:radius_accounting_list')
+        org1 = self.default_org
+        org2 = self._create_org(name='org2', slug='org2')
+        data1 = self.acct_post_data
+        data1.update(
+            dict(
+                session_id='35000006',
+                unique_id='75058e50',
+                input_octets=9900909,
+                output_octets=1513075509,
+                username='tester',
+                organization=org1,
+                calling_station_id='11:22:33:44:55:66',
+                called_station_id='AA:BB:CC:DD:EE:FF',
+            )
+        )
+        self._create_radius_accounting(**data1)
+        data2 = self.acct_post_data
+        data2.update(
+            dict(
+                session_id='40111116',
+                unique_id='12234f69',
+                input_octets=3000909,
+                output_octets=1613176609,
+                username='tester',
+                organization=org1,
+                calling_station_id='11-22-33-44-55-66',
+                called_station_id='AA-BB-CC-DD-EE-FF',
+            )
+        )
+        self._create_radius_accounting(**data2)
+        data3 = self.acct_post_data
+        data3.update(
+            dict(
+                session_id='89897654',
+                unique_id='99144d60',
+                input_octets=4440909,
+                output_octets=1119074409,
+                username='admin',
+                organization=org2,
+            )
+        )
+        self._create_radius_accounting(**data3)
+
+        with self.subTest('Test unauthenicated user'):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 401)
+
+        org1_user = self._create_org_user(organization=org1, is_admin=False)
+        administrator = Group.objects.get(name='Administrator')
+        org1_user.user.groups.add(administrator)
+        self.client.force_login(org1_user.user)
+        with self.subTest('Test organization user (not organization manager)'):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 403)
+
+        org1_user.is_admin = True
+        org1_user.save()
+        with self.subTest('Test organization user (organization manager)'):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(response.data[0]['unique_id'], data2['unique_id'])
+            self.assertEqual(response.data[1]['unique_id'], data1['unique_id'])
+
+        with self.subTest('Test superuser can view all sessions'):
+            admin = self._create_admin()
+            self.client.force_login(admin)
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 3)
+            self.assertEqual(response.data[0]['unique_id'], data3['unique_id'])
+            self.assertEqual(response.data[1]['unique_id'], data2['unique_id'])
+            self.assertEqual(response.data[2]['unique_id'], data1['unique_id'])
+
+        with self.subTest('Test filtering with called_station_id'):
+            response = self.client.get(path, {'called_station_id': 'AA-BB-CC-DD-EE-FF'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(response.data[0]['called_station_id'], 'AA-BB-CC-DD-EE-FF')
+            self.assertEqual(response.data[1]['called_station_id'], 'AA:BB:CC:DD:EE:FF')
+
+            response = self.client.get(path, {'called_station_id': 'AA:BB:CC:DD:EE:FF'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(response.data[0]['called_station_id'], 'AA-BB-CC-DD-EE-FF')
+            self.assertEqual(response.data[1]['called_station_id'], 'AA:BB:CC:DD:EE:FF')
+
+        with self.subTest('Test filtering with calling_station_id'):
+            response = self.client.get(
+                path, {'calling_station_id': '11-22-33-44-55-66'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                response.data[0]['calling_station_id'], '11-22-33-44-55-66'
+            )
+            self.assertEqual(
+                response.data[1]['calling_station_id'], '11:22:33:44:55:66'
+            )
+
+            response = self.client.get(
+                path, {'calling_station_id': '11:22:33:44:55:66'}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                response.data[0]['calling_station_id'], '11-22-33-44-55-66'
+            )
+            self.assertEqual(
+                response.data[1]['calling_station_id'], '11:22:33:44:55:66'
+            )
 
 
 del BaseTestCase
