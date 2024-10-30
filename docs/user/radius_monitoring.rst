@@ -58,12 +58,7 @@ in ``INSTALLED_APPS`` of your Django project's settings as following:
 
     # In your_project/settings.py
 
-    INSTALLED_APPS = [
-        # ...
-        'openwisp_radius',
-        'openwisp_radius.integrations.monitoring' # <--- add the app after openwisp_radius
-        # ...
-    ]
+    INSTALLED_APPS.append('openwisp_radius.integrations.monitoring')
 
 .. note::
 
