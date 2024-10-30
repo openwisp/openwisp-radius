@@ -4,7 +4,8 @@ Integration with OpenWISP Monitoring
 ====================================
 
 OpenWISP RADIUS includes an optional Django sub-app that adds integration
-with :doc:`OpenWISP Monitoring </monitoring/index>` to provide RADIUS metrics.
+with :doc:`OpenWISP Monitoring </monitoring/index>` to provide RADIUS
+metrics.
 
 .. image:: ../images/radius-dashboard-charts.png
     :alt: RADIUS session dashboard charts
@@ -65,10 +66,10 @@ Django project's settings as following:
 .. note::
 
     Ensure your Django project is correctly configured to utilize OpenWISP
-    Monitoring. For production environments, it is advisable to deploy OpenWISP using
-    :doc:`Ansible OpenWISP </ansible/index>`
-    or :doc:`Docker OpenWISP </docker/index>`,
-    as they simplify the deployment process considerably.
+    Monitoring. For production environments, it is advisable to deploy
+    OpenWISP using :doc:`Ansible OpenWISP </ansible/index>` or
+    :doc:`Docker OpenWISP </docker/index>`, as they simplify the
+    deployment process considerably.
 
 .. important::
 
