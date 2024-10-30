@@ -59,7 +59,7 @@ jobs:
           pip install ${{ matrix.django-version }}
 
       - name: Start InfluxDB and Redis container
-        run: docker-compose up -d influxdb redis
+        run: docker compose up -d influxdb redis
 
       - name: QA checks
         run: |
