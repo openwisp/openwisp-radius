@@ -71,13 +71,24 @@ def get_api_urls(api_views=None):
                 api_views.validate_phone_token,
                 name='phone_token_validate',
             ),
+
+            path(
+                'radius/organization/<slug:slug>/groups/',
+                views.radius_group_list, 
+                name='radius_group_list'), # Radius Groups
+            
+            path(
+                'radius/organization/<slug:slug>/groups/<uuid:user>/',
+                api_views.radius_user_group_list, 
+                name='radius_user_group_list')
+            
             # allow changing phone number
             path(
                 'radius/organization/<slug:slug>/account/phone/change/',
                 api_views.change_phone_number,
                 name='phone_number_change',
             ),
-            path('radius/batch/', api_views.batch, name='batch'),
+            
             path(
                 'radius/organization/<slug:slug>/batch/<uuid:pk>/pdf/',
                 api_views.download_rad_batch_pdf,
@@ -101,6 +112,16 @@ def get_api_urls(api_views=None):
                 api_views.radius_user_plan_list,
                 name='radius_user_plan_list',
             ),
+
+            path(
+                'radius/groups/',
+                api_views.radius_group_list_all, 
+                name='radius_group_list_all'),  # Renamed for clarity
+            path(
+                'radius/user/<uuid:user>/group/', 
+                api_views.radius_user_group_update, name='radius_user_group_update'),  # Renamed for clarity
+                path('radius/batch/', api_views.batch, 
+                name='batch'),
         ]
     else:
         return []
