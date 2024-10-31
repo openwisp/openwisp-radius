@@ -44,9 +44,13 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from openwisp_radius.api.serializers import RadiusUserSerializer, RadiusGroupSerializer, RadiusUserGroupSerializer, \
     RadiusUserGroupViewSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
+from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
+
+from drf_yasg import openapi
+from django_filters import rest_framework as filters
 
 from .. import settings as app_settings
 from ..exceptions import (
@@ -250,11 +254,54 @@ class RadiusTokenMixin(object):
         responses={201: RegisterResponse},
     ),
 )
+
+class RadiusGroupListAPIView(ProtectedAPIMixin, ListAPIView):
+    throttle_scope = 'radius_group_list'
+    serializer_class = RadiusGroupSerializer
+    queryset = swapper.load_model('openwisp_radius', 'RadiusGroup').objects.all()
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['name']
+    ordering_fields = '__all__'
+    ordering = ['name']
+    lookup_field = 'slug' # Needed for organization slug lookup
+    lookup_url_kwarg = 'slug' # Needed for organization slug lookup
+
+    @swagger_auto_schema(
+        operation_description="List Radius Groups for a specific Organization.",
+        tags=['Radius Groups'],
+        manual_parameters=[
+            openapi.Parameter(
+                'slug',
+                openapi.IN_PATH,
+                description="Organization slug",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+        ]
+    )
+    def get_queryset(self):
+        org_slug = self.kwargs.get(self.lookup_url_kwarg) # Use get to handle missing slug
+        try:
+            org = Organization.objects.get(slug=org_slug)
+        except Organization.DoesNotExist:
+            raise Http404(_("Organization not found"))
+        if not self.request.user.is_superuser:
+            if org not in self.request.user.organizations_managed:
+                raise PermissionDenied(_("You do not have permission to perform this action."))
+        qs = super().get_queryset().filter(organization=org)
+        return qs
+   def get(self, request, *args, **kwargs): 
+        return super().get(request, *args, **kwargs)
+   
+radius_group_list = RadiusGroupListAPIView.as_view()
+
+
 class RegisterView(
     ThrottledAPIMixin, RadiusTokenMixin, DispatchOrgMixin, BaseRegisterView
 ):
     authentication_classes = tuple()
     permission_classes = (IsRegistrationEnabled,)
+    register = RegisterView.as_view()
 
     def get_response_data(self, user):
         data = super().get_response_data(user)
