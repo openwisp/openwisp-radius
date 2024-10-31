@@ -97,16 +97,20 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         ip_list = self._get_ip_list(uuid)
 
         for ip in ip_list:
-            try:
-                if ipaddress.ip_address(client_ip) in ipaddress.ip_network(ip):
-                    return (AnonymousUser(), uuid)
-            except ValueError:
-                invalid_addr_message = _(
-                    'Request rejected: ({ip}) in organization settings or '
-                    'settings.py is not a valid IP address. '
-                    'Please contact administrator.'
-                ).format(ip=ip)
-                raise AuthenticationFailed(invalid_addr_message)
+            if '/' in ip:  # Check for CIDR notation (IP range)
+                try:
+                    if ipaddress.ip_address(client_ip) in ipaddress.ip_network(ip):
+                        return (AnonymousUser(), uuid)
+                except ValueError as e:
+                    invalid_addr_message = _(
+                        f'Request rejected: ({ip}) in organization settings or '
+                        f'settings.py is not a valid IP network range: {e} '
+                        f'Please contact administrator.'
+                    ).format(ip=ip)
+                    raise AuthenticationFailed(invalid_addr_message)
+            elif client_ip == ip:  # Check for single IP address
+                return (AnonymousUser(), uuid)  # Return if single IP matches
+
         message = _(
             'Request rejected: Client IP address ({client_ip}) is not in '
             'the list of IP addresses allowed to consume the freeradius API.'
