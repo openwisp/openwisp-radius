@@ -27,6 +27,11 @@ def get_saml_urls(saml_views=None):
             name='saml2_acs',
         ),
         path(
+            'additional-info/',
+            saml_views.LoginAdditionalInfoView.as_view(),
+            name='saml2_additional_info',
+        ),
+        path(
             'logout/',
             saml_views.LogoutInitView.as_view(),
             name='saml2_logout',
