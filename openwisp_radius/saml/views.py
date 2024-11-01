@@ -2,6 +2,8 @@ import logging
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
+from allauth.utils import ValidationError
 from django.conf import settings
 from django.contrib.auth import logout
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
@@ -16,7 +18,7 @@ from rest_framework.authtoken.models import Token
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
-from .utils import get_url_or_path
+from .utils import get_email_from_ava, get_url_or_path
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,37 @@ class AssertionConsumerServiceView(
         try:
             user.registered_user
         except ObjectDoesNotExist:
+            email = None
+            uid_is_email = 'email' in getattr(
+                settings, 'SAML_ATTRIBUTE_MAPPING', {}
+            ).get('uid', ())
+            if uid_is_email:
+                email = session_info['name_id'].text
+            if email is None:
+                email = get_email_from_ava(session_info['ava'])
+            if email:
+                user.email = email
+                try:
+                    user.full_clean()
+                    user.save()
+                    EmailAddress.objects.create(
+                        user=user, email=email, verified=True, primary=True
+                    )
+                except ValidationError:
+                    assertion_email = get_email_from_ava(session_info['ava'])
+                    if assertion_email and assertion_email != email:
+                        user.email = assertion_email
+                        try:
+                            user.full_clean()
+                            user.save()
+                            EmailAddress.objects.create(
+                                user=user,
+                                email=assertion_email,
+                                verified=True,
+                                primary=True,
+                            )
+                        except ValidationError:
+                            raise ValidationError('Email Verification Failed')
             registered_user = RegisteredUser(
                 user=user, method='saml', is_verified=app_settings.SAML_IS_VERIFIED
             )
