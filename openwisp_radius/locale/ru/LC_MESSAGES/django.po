@@ -150,10 +150,15 @@ msgstr "Добавьте свой адрес электронной почты, 
 
 #: templates/djangosaml2/login_additional_info.html:6
 msgid ""
-"It looks like we didn't receive your email from your identity provider.</"
-"br>Please enter your email address below to complete setting up your account."
+"It looks like we didn't receive your email from your identity provider."
 msgstr ""
-"Похоже, мы не получили ваш адрес электронной почты от вашего провайдера идентификации.<br>Пожалуйста, введите свой адрес электронной почты ниже, чтобы завершить настройку вашей учетной записи."
+"Похоже, мы не получили ваш адрес электронной почты от вашего поставщика удостоверений."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Пожалуйста, введите ваш адрес электронной почты ниже, чтобы завершить настройку вашей учетной записи."
 
 #: templates/djangosaml2/login_additional_info.html:10
 msgid "Save Email Address and Continue"

@@ -3,7 +3,8 @@
 
 {% block content %}
 <h1>{% trans "Add Your Email to Complete Your Account Setup" %}</h1>
-<p>{% blocktrans %}It looks like we didn't receive your email from your identity provider.</br>Please enter your email address below to complete setting up your account.{% endblocktrans %}</p>
+<p>{% trans "It looks like we didn't receive your email from your identity provider." %}</p>
+<p>{% trans "Please enter your email address below to complete setting up your account." %}</p>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

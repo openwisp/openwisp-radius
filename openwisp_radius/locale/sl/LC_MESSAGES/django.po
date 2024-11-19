@@ -155,10 +155,15 @@ msgstr "Dodajte svoj e-poštni naslov, da dokončate nastavitev računa"
 
 #: templates/djangosaml2/login_additional_info.html:6
 msgid ""
-"It looks like we didn't receive your email from your identity provider.</"
-"br>Please enter your email address below to complete setting up your account."
+"It looks like we didn't receive your email from your identity provider."
 msgstr ""
-"Zdi se, da nismo prejeli vašega e-poštnega naslova od vašega ponudnika identitete.<br>Prosim, vnesite svoj e-poštni naslov spodaj, da dokončate nastavitev svojega računa."
+"Videti je, da nismo prejeli vašega e-poštnega naslova od vašega ponudnika identitete."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Prosimo, vnesite svoj e-poštni naslov spodaj, da dokončate nastavitev računa."
 
 #: templates/djangosaml2/login_additional_info.html:10
 msgid "Save Email Address and Continue"

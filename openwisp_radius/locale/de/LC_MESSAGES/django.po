@@ -158,10 +158,15 @@ msgstr "Fügen Sie Ihre E-Mail hinzu, um die Einrichtung Ihres Kontos abzuschlie
 
 #: templates/djangosaml2/login_additional_info.html:6
 msgid ""
-"It looks like we didn't receive your email from your identity provider.</"
-"br>Please enter your email address below to complete setting up your account."
+"It looks like we didn't receive your email from your identity provider."
 msgstr ""
-"Es sieht so aus, als hätten wir Ihre E-Mail von Ihrem Identitätsanbieter nicht erhalten.<br>Bitte geben Sie Ihre E-Mail-Adresse unten ein, um die Einrichtung Ihres Kontos abzuschließen."
+"Es scheint, dass wir Ihre E-Mail-Adresse von Ihrem Identitätsanbieter nicht erhalten haben."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Bitte geben Sie unten Ihre E-Mail-Adresse ein, um die Einrichtung Ihres Kontos abzuschließen."
 
 #: templates/djangosaml2/login_additional_info.html:10
 msgid "Save Email Address and Continue"
