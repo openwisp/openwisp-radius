@@ -3,9 +3,11 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
+from django.core import mail
 from django.test import TestCase, override_settings
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from djangosaml2.tests import auth_response, conf
 from djangosaml2.utils import get_session_id_from_saml2, saml2_from_httpredirect_request
 from rest_framework.authtoken.models import Token
@@ -74,15 +76,18 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         org_user = OrganizationUser.objects.get(user_id=user_id)
         self.assertEqual(org_user.organization.slug, org_slug)
         expected_query_params = {
-            'username': ['org_user@example.com'],
-            'token': [Token.objects.get(user_id=user_id).key],
-            'login_method': ['saml'],
+            'next': [
+                '/radius/saml2/additional-info/'
+                '?username=org_user%40example.com'
+                f'&token={Token.objects.get(user_id=user_id).key}'
+                '&login_method=saml'
+            ]
         }
         self.assertDictEqual(query_params, expected_query_params)
 
     @capture_any_output()
     def test_organization_slug_present(self):
-        expected_redirect_url = 'https://captive-portal.example.com'
+        expected_redirect_url = '/radius/saml2/additional-info/'
         org_slug = 'default'
         relay_state = self._get_relay_state(
             redirect_url=expected_redirect_url, org_slug=org_slug
@@ -102,7 +107,7 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
 
     @capture_any_output()
     def test_relay_state_relative_path(self):
-        expected_redirect_path = '/captive/portal/page'
+        expected_redirect_path = '/radius/saml2/additional-info/'
         org_slug = 'default'
         relay_state = self._get_relay_state(
             redirect_url=expected_redirect_path, org_slug=org_slug
@@ -163,6 +168,51 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
                 self.assertEqual(response.status_code, 302)
                 user.refresh_from_db()
                 self.assertEqual(user.username, 'org_user@example.com')
+
+
+@override_settings(SAML_ALLOWED_HOSTS=['captive-portal.example.com'])
+class TestAdditionInfoView(TestSamlMixin, TestCase):
+    view_path = reverse_lazy('radius:saml2_additional_info')
+
+    def test_unauthenticated_user(self):
+        response = self.client.get(self.view_path)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f'{settings.LOGIN_URL}?next={self.view_path}')
+
+    def test_user_has_email(self):
+        user = self._create_user()
+        self.client.force_login(user)
+        response = self.client.get(
+            f'{self.view_path}?next=https://captive-portal.example.com/login/'
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://captive-portal.example.com/login/')
+
+    def test_user_has_no_email(self):
+        user = self._create_user()
+        User.objects.filter(pk=user.pk).update(email='')
+        self.client.force_login(user)
+        url = f'{self.view_path}?next=https://captive-portal.example.com/login/'
+        response = self.client.get(url)
+        # Verify that a form is displayed to collect email
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<input type="email" name="email" maxlength="254" required id="id_email">',
+        )
+
+        # Make post request to set email
+        response = self.client.post(url, data={'email': 'test@openwisp.org'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://captive-portal.example.com/login/')
+        user.refresh_from_db()
+        self.assertEqual(user.email, 'test@openwisp.org')
+        self.assertEqual(
+            user.emailaddress_set.filter(email='test@openwisp.org').count(), 1
+        )
+        self.assertEqual(
+            mail.outbox[0].subject, '[example.com] Please Confirm Your Email Address'
+        )
 
 
 @override_settings(

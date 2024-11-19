@@ -151,3 +151,27 @@ msgstr "Session verwalten"
 #: openwisp_radius/tasks.py: 80
 msgid "New WiFi session started"
 msgstr "Neue Session WiFi gestartet"
+
+#: templates/djangosaml2/login_additional_info.html:5
+msgid "Add Your Email to Complete Your Account Setup"
+msgstr "Fügen Sie Ihre E-Mail hinzu, um die Einrichtung Ihres Kontos abzuschließen"
+
+#: templates/djangosaml2/login_additional_info.html:6
+msgid ""
+"It looks like we didn't receive your email from your identity provider."
+msgstr ""
+"Es scheint, dass wir Ihre E-Mail-Adresse von Ihrem Identitätsanbieter nicht erhalten haben."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Bitte geben Sie unten Ihre E-Mail-Adresse ein, um die Einrichtung Ihres Kontos abzuschließen."
+
+#: templates/djangosaml2/login_additional_info.html:10
+msgid "Save Email Address and Continue"
+msgstr "E-Mail-Adresse speichern und fortfahren"
+
+#: templates/djangosaml2/login_additional_info.html:12
+msgid "Logout"
+msgstr "Abmelden"
