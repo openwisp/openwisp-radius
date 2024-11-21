@@ -3,11 +3,9 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import swapper
-from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
-from django.core.validators import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse, reverse_lazy
 from djangosaml2.tests import auth_response, conf
@@ -73,8 +71,9 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(User.objects.count(), 1)
         user_id = self.client.session[SESSION_KEY]
         user = User.objects.get(id=user_id)
-        email = EmailAddress.objects.filter(user=user)
-        self.assertEqual(email.count(), 1)
+        self.assertEqual(
+            user.emailaddress_set.filter(verified=True, primary=True).count(), 1
+        )
         self.assertEqual(user.username, 'org_user@example.com')
         self.assertEqual(OrganizationUser.objects.count(), 1)
         org_user = OrganizationUser.objects.get(user_id=user_id)
@@ -118,7 +117,7 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         saml_response, relay_state = self._get_saml_response_for_acs_view(
             relay_state, uid=invalid_email
         )
-        with self.assertRaises(ValidationError):
+        with patch('logging.Logger.exception') as mocked_logger:
             self.client.post(
                 reverse('radius:saml2_acs'),
                 {
@@ -126,6 +125,10 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
                     'RelayState': relay_state,
                 },
             )
+        mocked_logger.assert_called_once_with(
+            'Failed email validation for "invalid_email@example" during'
+            ' SAML user creation'
+        )
 
     @capture_any_output()
     def test_relay_state_relative_path(self):

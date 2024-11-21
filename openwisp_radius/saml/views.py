@@ -4,12 +4,12 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse
 import swapper
 from allauth.account.models import EmailAddress
 from allauth.account.utils import send_email_confirmation
-from allauth.utils import ValidationError
+from allauth.utils import valid_email_or_none
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView
@@ -24,7 +24,7 @@ from rest_framework.authtoken.models import Token
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
-from .utils import get_email_from_ava, get_url_or_path
+from .utils import get_url_or_path
 
 logger = logging.getLogger(__name__)
 
@@ -75,42 +75,24 @@ class AssertionConsumerServiceView(
         try:
             user.registered_user
         except ObjectDoesNotExist:
-            email = None
-            uid_is_email = 'email' in getattr(
-                settings, 'SAML_ATTRIBUTE_MAPPING', {}
-            ).get('uid', ())
-            if uid_is_email:
-                email = session_info['name_id'].text
-            if email is None:
-                email = get_email_from_ava(session_info['ava'])
-            if email:
-                user.email = email
-                try:
-                    user.full_clean()
-                    user.save()
-                    EmailAddress.objects.create(
-                        user=user, email=email, verified=True, primary=True
-                    )
-                except ValidationError:
-                    assertion_email = get_email_from_ava(session_info['ava'])
-                    if assertion_email and assertion_email != email:
-                        user.email = assertion_email
-                        try:
-                            user.full_clean()
-                            user.save()
-                            EmailAddress.objects.create(
-                                user=user,
-                                email=assertion_email,
-                                verified=True,
-                                primary=True,
-                            )
-                        except ValidationError:
-                            raise ValidationError('Email Verification Failed')
             registered_user = RegisteredUser(
                 user=user, method='saml', is_verified=app_settings.SAML_IS_VERIFIED
             )
             registered_user.full_clean()
             registered_user.save()
+            # The user is just created, it will not have an email address
+            if user.email:
+                try:
+                    email_address = EmailAddress(
+                        user=user, email=user.email, primary=True, verified=True
+                    )
+                    email_address.full_clean()
+                    email_address.save()
+                except ValidationError:
+                    logger.exception(
+                        f'Failed email validation for "{user}"'
+                        ' during SAML user creation'
+                    )
 
     def customize_relay_state(self, relay_state):
         """
