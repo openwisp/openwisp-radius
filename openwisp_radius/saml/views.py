@@ -4,7 +4,6 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse
 import swapper
 from allauth.account.models import EmailAddress
 from allauth.account.utils import send_email_confirmation
-from allauth.utils import valid_email_or_none
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model, logout
