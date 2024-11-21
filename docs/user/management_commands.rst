@@ -81,13 +81,23 @@ date set.
 
 This command deletes users created using batch operation that have expired
 (and should have been deactivated by ``deactivate_expired_users``) for
-more than the specified ``<duration_in_months>``.
+more than the specified ``<duration_in_days>``.
+
+.. code-block:: shell
+
+    ./manage.py delete_old_radiusbatch_users --older-than-days <duration_in_days>
+
+Note that the default duration is set to **540 days** (18 months).
+
+For backward compatibility, the command also accepts the argument
+``--older-than-months``:
 
 .. code-block:: shell
 
     ./manage.py delete_old_radiusbatch_users --older-than-months <duration_in_months>
 
-Note that the default duration is set to **18 months**.
+If both ``--older-than-days`` and ``--older-than-months`` are provided,
+preference is given to ``--older-than-days``.
 
 ``delete_unverified_users``
 ---------------------------
