@@ -154,6 +154,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
     @capture_stdout()
     def test_delete_old_radiusbatch_users_command(self):
+        # Create RadiusBatch users that expired more than 18 months ago
         path = self._get_path('static/test_batch.csv')
         options = dict(
             organization=self.default_org.slug,
@@ -162,6 +163,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             name='test',
         )
         self._call_command('batch_add_users', **options)
+        # Create RadiusBatch users that expired 15 months ago
         expiration_date = (now() - timedelta(days=30 * 15)).strftime('%d-%m-%Y')
         path = self._get_path('static/test_batch_new.csv')
         options = dict(
@@ -171,6 +173,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             name='test1',
         )
         self._call_command('batch_add_users', **options)
+        # Create RadiusBatch users that expired 10 days ago
         path = self._get_path('static/test_batch_users.csv')
         expiration_date = (now() - timedelta(days=10)).strftime('%d-%m-%Y')
         options = dict(
@@ -181,12 +184,30 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         )
         self._call_command('batch_add_users', **options)
         self.assertEqual(get_user_model().objects.all().count(), 9)
-        call_command('delete_old_radiusbatch_users')
-        self.assertEqual(get_user_model().objects.all().count(), 6)
-        call_command('delete_old_radiusbatch_users', older_than_months=12)
-        self.assertEqual(get_user_model().objects.all().count(), 3)
-        call_command('delete_old_radiusbatch_users', older_than_days=9)
-        self.assertEqual(get_user_model().objects.all().count(), 0)
+
+        with self.subTest('Test executing command without arguments'):
+            call_command('delete_old_radiusbatch_users')
+            # Only users that expired more than 18 months ago should be deleted
+            self.assertEqual(get_user_model().objects.all().count(), 6)
+
+        with self.subTest('Test executing command with older_than_months argument'):
+            call_command('delete_old_radiusbatch_users', older_than_months=12)
+            # Users that expired more than 12 months ago should be deleted
+            self.assertEqual(get_user_model().objects.all().count(), 3)
+
+        with self.subTest('Test executing command with older_than_days argument'):
+            call_command('delete_old_radiusbatch_users', older_than_days=9)
+            # Users that expired more than 9 days ago should be deleted
+            self.assertEqual(get_user_model().objects.all().count(), 0)
+
+        with self.subTest('Test executing command with both arguments'):
+            options['name'] = 'test3'
+            call_command('batch_add_users', **options)
+            call_command(
+                'delete_old_radiusbatch_users', older_than_days=9, older_than_months=12
+            )
+            # Users that expired more than 9 days ago should be deleted
+            self.assertEqual(get_user_model().objects.all().count(), 0)
 
     @capture_stdout()
     def test_prefix_add_users_command(self):

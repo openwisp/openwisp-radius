@@ -122,9 +122,9 @@ addition of users from the csv.
 ``OPENWISP_RADIUS_BATCH_DELETE_EXPIRED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``18``
+**Default**: ``540`` (18 months)
 
-It is the number of months after which the expired users are deleted.
+It is the number of days after which the expired users are deleted.
 
 ``OPENWISP_RADIUS_BATCH_PDF_TEMPLATE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

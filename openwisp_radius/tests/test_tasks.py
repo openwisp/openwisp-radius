@@ -34,14 +34,16 @@ class TestTasks(FileMixin, BaseTestCase):
         app.autodiscover_tasks()
         cls.celery_worker = start_worker(app)
 
-    def _get_expired_user_from_radius_batch(self):
+    def _get_expired_user_from_radius_batch(self, **kwargs):
         reader = [['sample', 'admin', 'user@openwisp.com', 'SampleName', 'Lastname']]
-        batch = self._create_radius_batch(
+        options = dict(
             name='test',
             strategy='csv',
             csvfile=self._get_csvfile(reader),
             expiration_date='1998-01-28',
         )
+        options.update(kwargs)
+        batch = self._create_radius_batch(**options)
         batch.add(reader)
         return batch.users.first()
 
@@ -70,9 +72,41 @@ class TestTasks(FileMixin, BaseTestCase):
     def test_delete_old_radiusbatch_users(self):
         self._get_expired_user_from_radius_batch()
         self.assertEqual(User.objects.all().count(), 1)
-        result = tasks.delete_old_radiusbatch_users.delay(30)
-        self.assertTrue(result.successful())
-        self.assertEqual(User.objects.all().count(), 0)
+
+        with self.subTest('Ensure first argument is "older_than_month"'):
+            # The first argument should be processed as "older_than_month"
+            # to maintain backward compatibility.
+            result = tasks.delete_old_radiusbatch_users.delay(30)
+            self.assertTrue(result.successful())
+            self.assertEqual(User.objects.all().count(), 0)
+
+        with self.subTest('Test "older_than_days" keyword argument'):
+            self._get_expired_user_from_radius_batch(
+                name='test-older-than-days',
+                expiration_date=(now() - timedelta(days=31)),
+            )
+            self.assertEqual(User.objects.all().count(), 1)
+            result = tasks.delete_old_radiusbatch_users.delay(older_than_days=30)
+            self.assertTrue(result.successful())
+            self.assertEqual(User.objects.all().count(), 0)
+
+        with self.subTest('Test with both positional arguments'):
+            self._get_expired_user_from_radius_batch(
+                name='test-argument-precedence',
+                expiration_date=(now() - timedelta(days=31)),
+            )
+            self.assertEqual(User.objects.all().count(), 1)
+            # Precedence should be given to "older_than_days" (second argument).
+            # Hence, the user should NOT be deleted.
+            result = tasks.delete_old_radiusbatch_users.delay(1, 60)
+            self.assertTrue(result.successful())
+            self.assertEqual(User.objects.all().count(), 1)
+
+            # Precedence should be given to "older_than_days" (second argument).
+            # Hence, the user should be deleted.
+            result = tasks.delete_old_radiusbatch_users.delay(2, 30)
+            self.assertTrue(result.successful())
+            self.assertEqual(User.objects.all().count(), 0)
 
     @capture_any_output()
     def test_delete_old_postauth(self):

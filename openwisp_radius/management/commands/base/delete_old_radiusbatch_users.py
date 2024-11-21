@@ -17,24 +17,23 @@ class BaseDeleteOldRadiusBatchUsersCommand(BaseCommand):
             '--older-than-days',
             action='store',
             type=int,
-            default=30 * BATCH_DELETE_EXPIRED,
-            help='Delete users that are older than days provided',
+            help='Delete RADIUS batch users that are older than days provided',
         )
         parser.add_argument(
             '--older-than-months',
             action='store',
             type=int,
-            help='Delete users that are older than months provided',
+            help='Delete RADIUS batch users that are older than months provided',
         )
 
     def handle(self, *args, **options):
-        days = options.get('older_than_days')
-        months = options.get('older_than_months')
-
-        if months is not None:
-            threshold_date = now() - timedelta(days=30 * months)
+        if options.get('older_than_days'):
+            days = options['older_than_days']
+        elif options.get('older_than_months'):
+            days = 30 * options['older_than_months']
         else:
-            threshold_date = now() - timedelta(days=days)
+            days = BATCH_DELETE_EXPIRED
+        threshold_date = now() - timedelta(days=days)
 
         batches = RadiusBatch.objects.filter(expiration_date__lt=threshold_date)
         time_period = threshold_date.strftime('%Y-%m-%d %H:%M:%S')
