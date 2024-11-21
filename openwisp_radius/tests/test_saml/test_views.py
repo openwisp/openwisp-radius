@@ -60,17 +60,20 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
     def _get_relay_state(self, redirect_url, org_slug):
         return f'{redirect_url}?org={org_slug}'
 
-    def _get_saml_response_for_acs_view(self, relay_state):
+    def _get_saml_response_for_acs_view(self, relay_state, uid='org_user@example.com'):
         response = self.client.get(self.login_url, {'RelayState': relay_state})
         saml2_req = saml2_from_httpredirect_request(response.url)
         session_id = get_session_id_from_saml2(saml2_req)
         self.add_outstanding_query(session_id, relay_state)
-        return auth_response(session_id, 'org_user@example.com'), relay_state
+        return auth_response(session_id, uid), relay_state
 
     def _post_successful_auth_assertions(self, query_params, org_slug):
         self.assertEqual(User.objects.count(), 1)
         user_id = self.client.session[SESSION_KEY]
         user = User.objects.get(id=user_id)
+        self.assertEqual(
+            user.emailaddress_set.filter(verified=True, primary=True).count(), 1
+        )
         self.assertEqual(user.username, 'org_user@example.com')
         self.assertEqual(OrganizationUser.objects.count(), 1)
         org_user = OrganizationUser.objects.get(user_id=user_id)
@@ -104,6 +107,28 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(get_url_or_path(response.url), expected_redirect_url)
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
+
+    @capture_any_output()
+    def test_invalid_email_raise_validation_error(self):
+        invalid_email = 'invalid_email@example'
+        relay_state = self._get_relay_state(
+            redirect_url='https://captive-portal.example.com', org_slug='default'
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(
+            relay_state, uid=invalid_email
+        )
+        with patch('logging.Logger.exception') as mocked_logger:
+            self.client.post(
+                reverse('radius:saml2_acs'),
+                {
+                    'SAMLResponse': self.b64_for_post(saml_response),
+                    'RelayState': relay_state,
+                },
+            )
+        mocked_logger.assert_called_once_with(
+            'Failed email validation for "invalid_email@example" during'
+            ' SAML user creation'
+        )
 
     @capture_any_output()
     def test_relay_state_relative_path(self):

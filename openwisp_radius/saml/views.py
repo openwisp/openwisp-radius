@@ -2,12 +2,13 @@ import logging
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
 from allauth.account.utils import send_email_confirmation
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView
@@ -78,6 +79,19 @@ class AssertionConsumerServiceView(
             )
             registered_user.full_clean()
             registered_user.save()
+            # The user is just created, it will not have an email address
+            if user.email:
+                try:
+                    email_address = EmailAddress(
+                        user=user, email=user.email, primary=True, verified=True
+                    )
+                    email_address.full_clean()
+                    email_address.save()
+                except ValidationError:
+                    logger.exception(
+                        f'Failed email validation for "{user}"'
+                        ' during SAML user creation'
+                    )
 
     def customize_relay_state(self, relay_state):
         """
