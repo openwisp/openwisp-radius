@@ -35,11 +35,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        (
-            'openwisp-users '
-            '@ https://github.com/openwisp/openwisp-users/tarball/master'
-        ),
-        'openwisp-utils[rest,celery]~=1.1.0',
+        'openwisp-users~=1.1.0',
+        'openwisp-utils[rest,celery]~=1.1.1',
         'passlib~=1.7.1',
         'djangorestframework-link-header-pagination~=0.1.1',
         'weasyprint~=59.0',
