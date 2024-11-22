@@ -7,6 +7,7 @@ import string
 from datetime import timedelta
 from io import StringIO
 
+import chardet
 import phonenumbers
 import swapper
 from django.conf import settings
@@ -951,7 +952,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         if not csvfile:
             csvfile = self.csvfile
         csv_data = csvfile.read()
-        csv_data = csv_data.decode('utf-8') if isinstance(csv_data, bytes) else csv_data
+        if isinstance(csv_data, bytes):
+            csv_data = csv_data.decode(chardet.detect(csv_data)['encoding'])
         reader = csv.reader(StringIO(csv_data), delimiter=',')
         self.full_clean()
         self.save()

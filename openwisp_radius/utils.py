@@ -4,6 +4,7 @@ import os
 from datetime import timedelta
 from io import BytesIO, StringIO
 
+import chardet
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -129,10 +130,27 @@ def find_available_username(username, users_list, prefix=False):
     return tmp
 
 
+def decode_csv_data(csv_data):
+    if isinstance(csv_data, bytes):
+        # Detect encoding using chardet
+        detected = chardet.detect(csv_data)
+        detected_encoding = detected.get('encoding')
+
+        # Explicit handling for UTF-16 encodings (check for BOM)
+        if csv_data.startswith(b'\xff\xfe') or csv_data.startswith(b'\xfe\xff'):
+            detected_encoding = 'utf-16'
+        detected_encoding = detected_encoding or 'utf-8'
+        try:
+            return csv_data.decode(detected_encoding)
+        except UnicodeDecodeError as e:
+            raise
+        return csv_data
+
+
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
     try:
-        csv_data = csv_data.decode('utf-8') if isinstance(csv_data, bytes) else csv_data
+        csv_data = decode_csv_data(csv_data)
     except UnicodeDecodeError:
         raise ValidationError(
             _(
