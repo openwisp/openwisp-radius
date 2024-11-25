@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 
-from ..utils import find_available_username, get_one_time_login_url, validate_csvfile
+from ..utils import find_available_username, get_one_time_login_url, validate_csvfile, get_encoding_format
 from . import FileMixin
 from .mixins import BaseTestCase
 
@@ -34,6 +34,23 @@ class TestUtils(FileMixin, BaseTestCase):
             validate_csvfile(open(improper_csv_path, 'rt'))
         self.assertTrue('Improper CSV format' in error.exception.message)
 
+    def test_get_encoding_format(self):
+        test_cases = [
+            # UTF-8 encoded data
+            (b'hello world', 'utf-8', "UTF-8 encoded data"),
+            # UTF-16 encoded data with BOM
+            (b'\xff\xfeh\x00e\x00l\x00l\x00o\x00 \x00w\x00o\x00r\x00l\x00d\x00', 'utf-16', "UTF-16 encoded data with BOM"),
+            # Empty data
+            (b'', 'utf-8', "Empty byte data"),
+            # Invalid encoding data
+            (b'\x80\x81\x82', 'utf-8', "Invalid encoding data")
+        ]
+
+        for data, expected, description in test_cases:
+            with self.subTest(description=description):
+                result = get_encoding_format(data)
+                self.assertEqual(result, expected)
+                
     @override_settings(AUTHENTICATION_BACKENDS=[])
     def test_get_one_time_login_url(self):
         login_url = get_one_time_login_url(None, None)
