@@ -1,11 +1,18 @@
 import logging
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
+from allauth.account.utils import send_email_confirmation
+from django import forms
 from django.conf import settings
-from django.contrib.auth import logout
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.shortcuts import get_object_or_404, render
+from django.contrib.auth import get_user_model, logout
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.generic import UpdateView
+from djangosaml2.utils import validate_referral_url
 from djangosaml2.views import (
     AssertionConsumerServiceView as BaseAssertionConsumerServiceView,
 )
@@ -20,6 +27,7 @@ from .utils import get_url_or_path
 
 logger = logging.getLogger(__name__)
 
+User = get_user_model()
 Organization = swapper.load_model('openwisp_users', 'Organization')
 RadiusToken = load_model('RadiusToken')
 RegisteredUser = load_model('RegisteredUser')
@@ -71,6 +79,19 @@ class AssertionConsumerServiceView(
             )
             registered_user.full_clean()
             registered_user.save()
+            # The user is just created, it will not have an email address
+            if user.email:
+                try:
+                    email_address = EmailAddress(
+                        user=user, email=user.email, primary=True, verified=True
+                    )
+                    email_address.full_clean()
+                    email_address.save()
+                except ValidationError:
+                    logger.exception(
+                        f'Failed email validation for "{user}"'
+                        ' during SAML user creation'
+                    )
 
     def customize_relay_state(self, relay_state):
         """
@@ -87,10 +108,57 @@ class AssertionConsumerServiceView(
         """
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)
-        return (
-            f'{relay_state}?username={user.username}&token={token.key}&'
-            f'login_method=saml'
+        next = '{relay_state}?{params}'.format(
+            relay_state=relay_state,
+            params=urlencode(
+                {'username': user.username, 'token': token.key, 'login_method': 'saml'}
+            ),
         )
+        return '{path}?next={next}'.format(
+            path=reverse('radius:saml2_additional_info'), next=quote(next)
+        )
+
+
+class LoginAdditionalInfoForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['email']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+
+class LoginAdditionalInfoView(LoginRequiredMixin, UpdateView):
+    model = User
+    form_class = LoginAdditionalInfoForm
+    template_name = 'djangosaml2/login_additional_info.html'
+
+    def get_object(self):
+        return self.request.user
+
+    def get_response(self):
+        success_url = self.get_success_url()
+        if success_url:
+            return redirect(success_url)
+        return render(self.request, 'djangosaml2/login_error.html')
+
+    def get_success_url(self):
+        return validate_referral_url(self.request, self.request.GET.get('next'))
+
+    def form_valid(self, form):
+        user = form.save()
+        send_email_confirmation(self.request, user, signup=True, email=user.email)
+        return self.get_response()
+
+    def is_user_profile_complete(self):
+        return self.request.user.email
+
+    def get(self, request, *args, **kwargs):
+        # Redirect user to the next page if the user profile is complete.
+        if self.is_user_profile_complete():
+            return self.get_response()
+        return super().get(request, *args, **kwargs)
 
 
 class LoginView(OrganizationSamlMixin, BaseLoginView):
