@@ -23,13 +23,13 @@ class TestUtils(FileMixin, BaseTestCase):
             'Unrecognized file format, the supplied file does not look like a CSV file.'
             in error.exception.message
         )
-        
+            
+    def test_validate_utf16_file_format(self):
         utf_16_file_1_format_path = self._get_path('static/test_batch_utf16_file1.csv')
         assert validate_csvfile(open(utf_16_file_1_format_path, 'rb')) is None
-        
         utf_16_file_2_format_path = self._get_path('static/test_batch_utf16_file2.csv')
         assert validate_csvfile(open(utf_16_file_2_format_path, 'rb')) is None
-        
+
     def test_validate_csvfile(self):
         invalid_csv_path = self._get_path('static/test_batch_invalid.csv')
         improper_csv_path = self._get_path('static/test_batch_improper.csv')
