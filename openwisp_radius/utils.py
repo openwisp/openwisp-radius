@@ -145,20 +145,17 @@ def get_encoding_format(csv_data):
         return 'utf-8'
     
     if detected_encoding == 'utf-16le':
-        try:
-            csv_data.decode('utf-16le')  # Test if decoding works
-            return detected_encoding
-        except UnicodeDecodeError:
-            pass
-        
+        return "utf-16le"
+    
     return detected_encoding or 'utf-8'
 
 
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
     try:
-        if isinstance(csv_data, bytes): 
-            csv_data = csv_data.decode(get_encoding_format(csv_data))  
+        # if isinstance(csv_data, bytes): 
+        #     csv_data = csv_data.decode(get_encoding_format(csv_data))  
+        csv_data = csv_data.decode(get_encoding_format(csv_data)) if isinstance(csv_data, bytes) else csv_data
     except UnicodeDecodeError:
         raise ValidationError(
             _(
