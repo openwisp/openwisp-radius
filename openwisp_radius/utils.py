@@ -137,13 +137,10 @@ def get_encoding_format(csv_data):
     if csv_data.startswith(b'\xff\xfe') or csv_data.startswith(b'\xfe\xff'):
         return 'utf-16'
 
-    # Detect encoding using chardet
-    detected = chardet.detect(csv_data)
-    detected_encoding = detected.get('encoding')
+    detected_encoding = chardet.detect(csv_data).get('encoding')
 
     if detected_encoding == 'ascii': 
         return 'utf-8'
-    
     if detected_encoding == 'utf-16le':
         return "utf-16le"
     
@@ -153,8 +150,6 @@ def get_encoding_format(csv_data):
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
     try:
-        # if isinstance(csv_data, bytes): 
-        #     csv_data = csv_data.decode(get_encoding_format(csv_data))  
         csv_data = csv_data.decode(get_encoding_format(csv_data)) if isinstance(csv_data, bytes) else csv_data
     except UnicodeDecodeError:
         raise ValidationError(
