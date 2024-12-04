@@ -46,8 +46,8 @@ verification
 `generation of new users for events
 <https://openwisp.io/docs/stable/radius/user/generating_users.html>`_,
 `social login
-<https://openwisp.io/docs/stable/radius/user/social_login.html>`_, and much
-more.
+<https://openwisp.io/docs/stable/radius/user/social_login.html>`_, and
+much more.
 
 It can be used as a standalone application or integrated with the rest of
 `OpenWISP <https://openwisp.org>`_. It can also be used as a `base system
