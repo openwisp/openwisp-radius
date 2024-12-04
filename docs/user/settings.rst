@@ -539,7 +539,9 @@ means that the global setting specified in ``settings.py`` will be used.
 
 .. code-block:: python
 
-    {"__all__": "https://{site}/{organization}/password/reset/confirm/{uid}/{token}"}
+    {
+        "__all__": "https://{site}/{organization}/password/reset/confirm/{uid}/{token}"
+    }
 
 A dictionary representing the frontend URLs through which end users can
 complete the password reset operation.
@@ -869,7 +871,9 @@ type in the API response for ``ChilliSpot-Max-Input-Octets`` attribute:
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_RADIUS_ATTRIBUTES_TYPE_MAP = {"ChilliSpot-Max-Input-Octets": "bytes"}
+    OPENWISP_RADIUS_RADIUS_ATTRIBUTES_TYPE_MAP = {
+        "ChilliSpot-Max-Input-Octets": "bytes"
+    }
 
 .. _radius_social_login_settings:
 

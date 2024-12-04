@@ -25,6 +25,6 @@ class TestSamlMixin:
             came_from,
         )
         self.saml_session.save()
-        self.client.cookies[settings.SESSION_COOKIE_NAME] = (
-            self.saml_session.session_key
-        )
+        self.client.cookies[
+            settings.SESSION_COOKIE_NAME
+        ] = self.saml_session.session_key
