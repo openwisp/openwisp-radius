@@ -8,8 +8,8 @@ Features
 ~~~~~~~~
 
 - Added integration with `OpenWISP Monitoring
-  <https://openwisp.io/docs/stable/radius/user/radius_monitoring.html>`_ to
-  collect and visualize metrics for user-signups and RADIUS traffic.
+  <https://openwisp.io/docs/stable/radius/user/radius_monitoring.html>`_
+  to collect and visualize metrics for user-signups and RADIUS traffic.
 - Added support for `Change of Authorization (CoA)
   <https://openwisp.io/docs/stable/radius/user/change_of_authorization.html>`_.
 - Added `MonthlyTrafficCounter
