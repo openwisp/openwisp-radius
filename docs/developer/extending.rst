@@ -206,9 +206,7 @@ Once you have created the models, add the following to your
     OPENWISP_RADIUS_RADIUSGROUP_MODEL = "myradius.RadiusGroup"
     OPENWISP_RADIUS_RADIUSTOKEN_MODEL = "myradius.RadiusToken"
     OPENWISP_RADIUS_PHONETOKEN_MODEL = "myradius.PhoneToken"
-    OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = (
-        "myradius.OrganizationRadiusSettings"
-    )
+    OPENWISP_RADIUS_ORGANIZATIONRADIUSSETTINGS_MODEL = "myradius.OrganizationRadiusSettings"
     OPENWISP_RADIUS_REGISTEREDUSER_MODEL = "myradius.RegisteredUser"
 
     # You will need to change AUTH_USER_MODEL if you are extending openwisp_users
@@ -315,9 +313,7 @@ resort to monkey patching, you can proceed as follows:
     RadiusGroupCheck = load_model("openwisp_radius", "RadiusGroupCheck")
     RadiusGroupReply = load_model("openwisp_radius", "RadiusGroupReply")
     RadiusUserGroup = load_model("openwisp_radius", "RadiusUserGroup")
-    OrganizationRadiusSettings = load_model(
-        "openwisp_radius", "OrganizationRadiusSettings"
-    )
+    OrganizationRadiusSettings = load_model("openwisp_radius", "OrganizationRadiusSettings")
     User = get_user_model()
 
     admin.site.unregister(RadiusCheck)

@@ -130,27 +130,29 @@ def find_available_username(username, users_list, prefix=False):
     return tmp
 
 
-
 def get_encoding_format(csv_data):
-    
     # Explicit handling for UTF-16 encodings (check for BOM)
     if csv_data.startswith(b'\xff\xfe') or csv_data.startswith(b'\xfe\xff'):
         return 'utf-16'
 
     detected_encoding = chardet.detect(csv_data).get('encoding')
 
-    if detected_encoding == 'ascii': 
+    if detected_encoding == 'ascii':
         return 'utf-8'
     if detected_encoding == 'utf-16le':
         return "utf-16le"
-    
+
     return detected_encoding or 'utf-8'
 
 
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
     try:
-        csv_data = csv_data.decode(get_encoding_format(csv_data)) if isinstance(csv_data, bytes) else csv_data
+        csv_data = (
+            csv_data.decode(get_encoding_format(csv_data))
+            if isinstance(csv_data, bytes)
+            else csv_data
+        )
     except UnicodeDecodeError:
         raise ValidationError(
             _(

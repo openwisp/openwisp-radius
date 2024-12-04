@@ -49,11 +49,11 @@ from ..utils import (
     SmsMessage,
     find_available_username,
     generate_sms_token,
+    get_encoding_format,
     get_sms_default_valid_until,
     load_model,
     prefix_generate_users,
     validate_csvfile,
-    get_encoding_format
 )
 from .validators import ipv6_network_validator, password_reset_url_validator
 
@@ -952,7 +952,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         if not csvfile:
             csvfile = self.csvfile
         csv_data = csvfile.read()
-        csv_data = csv_data.decode(get_encoding_format(csv_data)) if isinstance(csv_data, bytes) else csv_data
+        csv_data = (
+            csv_data.decode(get_encoding_format(csv_data))
+            if isinstance(csv_data, bytes)
+            else csv_data
+        )
         reader = csv.reader(StringIO(csv_data), delimiter=',')
         self.full_clean()
         self.save()

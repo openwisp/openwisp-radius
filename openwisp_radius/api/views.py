@@ -155,9 +155,9 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
         if radbatch.strategy == 'prefix':
             pdf = generate_pdf(radbatch.pk)
             response = HttpResponse(content_type='application/pdf')
-            response[
-                'Content-Disposition'
-            ] = f'attachment; filename="{radbatch.name}.pdf"'
+            response['Content-Disposition'] = (
+                f'attachment; filename="{radbatch.name}.pdf"'
+            )
             response.write(pdf)
             return response
         else:
