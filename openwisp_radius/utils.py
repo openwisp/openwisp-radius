@@ -4,7 +4,6 @@ import os
 from datetime import timedelta
 from io import BytesIO, StringIO
 
-import chardet
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -130,29 +129,32 @@ def find_available_username(username, users_list, prefix=False):
     return tmp
 
 
-def get_encoding_format(csv_data):
-    # Explicit handling for UTF-16 encodings (check for BOM)
-    if csv_data.startswith(b'\xff\xfe') or csv_data.startswith(b'\xfe\xff'):
-        return 'utf-16'
+def get_encoding_format(byte_data):
+    # Explicitly handle some common encodings, including utf-16le
+    common_encodings = ['utf-8-sig', 'utf-16', 'utf-16be', 'utf-16le', 'ascii']
 
-    detected_encoding = chardet.detect(csv_data).get('encoding')
+    for enc in common_encodings:
+        try:
+            byte_data.decode(enc)
+            return enc
+        except (UnicodeDecodeError, TypeError):
+            continue
 
-    if detected_encoding == 'ascii':
-        return 'utf-8'
-    if detected_encoding == 'utf-16le':
-        return "utf-16le"
+    return 'utf-8'
 
-    return detected_encoding or 'utf-8'
+
+def decode_byte_data(data):
+    if isinstance(data, bytes):
+        data = data.decode(get_encoding_format(data))
+        data = data.replace('\x00', '')  # Removing null bytes
+    return data
 
 
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
+
     try:
-        csv_data = (
-            csv_data.decode(get_encoding_format(csv_data))
-            if isinstance(csv_data, bytes)
-            else csv_data
-        )
+        csv_data = decode_byte_data(csv_data)
     except UnicodeDecodeError:
         raise ValidationError(
             _(
@@ -160,6 +162,7 @@ def validate_csvfile(csvfile):
                 'does not look like a CSV file.'
             )
         )
+
     reader = csv.reader(StringIO(csv_data), delimiter=',')
     error_message = 'The CSV contains a line with invalid data,\
                     line number {} triggered the following error: {}'

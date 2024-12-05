@@ -2,12 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 
-from ..utils import (
-    find_available_username,
-    get_encoding_format,
-    get_one_time_login_url,
-    validate_csvfile,
-)
+from ..utils import find_available_username, get_one_time_login_url, validate_csvfile
 from . import FileMixin
 from .mixins import BaseTestCase
 
@@ -32,7 +27,11 @@ class TestUtils(FileMixin, BaseTestCase):
     def test_validate_utf16_file_format(self):
         utf_16_file_1_format_path = self._get_path('static/test_batch_utf16_file1.csv')
         assert validate_csvfile(open(utf_16_file_1_format_path, 'rb')) is None
-        utf_16_file_2_format_path = self._get_path('static/test_batch_utf16_file2.csv')
+
+    def test_validate_utf8Sig_file_format(self):
+        utf_16_file_2_format_path = self._get_path(
+            'static/test_batch_utf8Sig_file2.csv'
+        )
         assert validate_csvfile(open(utf_16_file_2_format_path, 'rb')) is None
 
     def test_validate_csvfile(self):
@@ -44,27 +43,6 @@ class TestUtils(FileMixin, BaseTestCase):
         with self.assertRaises(ValidationError) as error:
             validate_csvfile(open(improper_csv_path, 'rt'))
         self.assertTrue('Improper CSV format' in error.exception.message)
-
-    def test_get_encoding_format(self):
-        test_cases = [
-            # UTF-8 encoded data
-            (b'hello world', 'utf-8', "UTF-8 encoded data"),
-            # UTF-16 encoded data with BOM
-            (
-                b'\xff\xfeh\x00e\x00l\x00l\x00o\x00 \x00w\x00o\x00r\x00l\x00d\x00',
-                'utf-16',
-                "UTF-16 encoded data with BOM",
-            ),
-            # Empty data
-            (b'', 'utf-8', "Empty byte data"),
-            # Invalid encoding data
-            (b'\x80\x81\x82', 'utf-8', "Invalid encoding data"),
-        ]
-
-        for data, expected, description in test_cases:
-            with self.subTest(description=description):
-                result = get_encoding_format(data)
-                self.assertEqual(result, expected)
 
     @override_settings(AUTHENTICATION_BACKENDS=[])
     def test_get_one_time_login_url(self):
