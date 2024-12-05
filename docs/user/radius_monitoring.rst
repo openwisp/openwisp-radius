@@ -62,6 +62,16 @@ Django project's settings as following:
     # In your_project/settings.py
 
     INSTALLED_APPS.append("openwisp_radius.integrations.monitoring")
+    CELERY_BEAT_SCHEDULE.update(
+        {
+            "write_user_registration_metrics": {
+                "task": "openwisp_radius.integrations.monitoring.tasks.write_user_registration_metrics",
+                "schedule": timedelta(hours=1),
+                "args": None,
+                "relative": True,
+            }
+        }
+    )
 
 .. note::
 
