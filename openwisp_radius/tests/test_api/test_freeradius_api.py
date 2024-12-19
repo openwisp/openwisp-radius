@@ -299,7 +299,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_postauth_called_station_id_max_length_50_exceed_400(self):
-        params = {'called_station_id': 'C0-4A-00-EE-D1-0D:' + 'A' * 50}
+        params = {
+            'called_station_id': 'C0-4A-00-EE-D1-0D:' + 'A' * 50,
+            'calling_station_id': '00:26:b9:20:5f:10' + 'A' * 50,
+        }
         params = self._get_postauth_params(**params)
         response = self.client.post(
             reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
@@ -307,6 +310,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.data['called_station_id'][0],
+            'Ensure this field has no more than 50 characters.',
+        )
+        self.assertEqual(
+            response.data['calling_station_id'][0],
             'Ensure this field has no more than 50 characters.',
         )
 
