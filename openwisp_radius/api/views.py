@@ -60,6 +60,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -81,6 +82,7 @@ PhoneToken = load_model('PhoneToken')
 RadiusAccounting = load_model('RadiusAccounting')
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+RadiusGroup = load_model('RadiusGroup')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
 auth_backend = UsersAuthenticationBackend()
@@ -801,3 +803,21 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
 
 
 change_phone_number = ChangePhoneNumberView.as_view()
+
+
+@method_decorator(
+    name='get',
+    decorator=swagger_auto_schema(
+        operation_description="""
+        **Requires the user auth token (Bearer Token).**
+        Returns the list of all RADIUS groups.
+        """
+    ),
+)
+class RadiusGroupListView(ListAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    queryset = RadiusGroup.objects.all()
+    serializer_class = RadiusGroupSerializer
+
+
+list_radius_group = RadiusGroupListView.as_view()

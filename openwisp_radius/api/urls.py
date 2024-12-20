@@ -83,6 +83,11 @@ def get_api_urls(api_views=None):
                 api_views.download_rad_batch_pdf,
                 name='download_rad_batch_pdf',
             ),
+            path(
+                'radius/radiusgroup/',
+                api_views.list_radius_group,
+                name='list_radius_groups',
+            ),
         ]
     else:
         return []

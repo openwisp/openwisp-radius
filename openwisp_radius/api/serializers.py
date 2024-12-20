@@ -50,6 +50,7 @@ RadiusAccounting = load_model('RadiusAccounting')
 RadiusBatch = load_model('RadiusBatch')
 RadiusToken = load_model('RadiusToken')
 RadiusGroupCheck = load_model('RadiusGroupCheck')
+RadiusGroup = load_model('RadiusGroup')
 RadiusUserGroup = load_model('RadiusUserGroup')
 RegisteredUser = load_model('RegisteredUser')
 OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
@@ -711,3 +712,23 @@ class RadiusUserSerializer(serializers.ModelSerializer):
             'password_expired',
             'radius_user_token',
         ]
+
+
+class RadiusGroupSerializer(serializers.ModelSerializer):
+    """
+    Used to list all the groups available
+    """
+
+    organization = serializers.CharField(source='organization.slug', read_only=True)
+
+    class Meta:
+        model = RadiusGroup
+        fields = [
+            'name',
+            'description',
+            'default',
+            'organization',
+            'created',
+            'modified',
+        ]
+        ref_name = 'radius_group_serializer'

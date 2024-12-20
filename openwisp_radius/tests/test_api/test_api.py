@@ -35,6 +35,7 @@ from .test_freeradius_api import AcctMixin
 User = get_user_model()
 RadiusToken = load_model('RadiusToken')
 RadiusBatch = load_model('RadiusBatch')
+RadiusGroup = load_model('RadiusGroup')
 RadiusUserGroup = load_model('RadiusUserGroup')
 OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
 Organization = swapper.load_model('openwisp_users', 'Organization')
@@ -303,6 +304,12 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         self.default_org.radius_settings.sms_verification = False
         self.default_org.radius_settings.save()
+
+    def test_list_radius_groups(self):
+        url = reverse('radius:list_radius_groups')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), RadiusGroup.objects.all().count())
 
     def test_radius_user_serializer(self):
         self._register_user()
