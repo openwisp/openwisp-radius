@@ -5,11 +5,11 @@ packaging
 openwisp-sphinx-theme~=1.0.2
 freezegun~=1.5.1
 django-extensions
-openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/master
+openwisp-utils[qa] @ https://github.com/openwisp/openwisp-utils/tarball/1.2
 pylinkvalidator
 lxml~=5.3.0
 cssselect~=1.2.0
-openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/tarball/master
+openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/tarball/1.2
 django-redis~=5.4.0
 mock-ssh-server~=0.9.1
 channels_redis~=4.2.1
