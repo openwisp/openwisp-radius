@@ -434,7 +434,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
     )
     called_station_id = models.CharField(
         verbose_name=_('called station ID'),
-        max_length=50,
+        max_length=253,
         db_column='calledstationid',
         db_index=True,
         blank=True,
@@ -442,7 +442,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
     )
     calling_station_id = models.CharField(
         verbose_name=_('calling station ID'),
-        max_length=50,
+        max_length=253,
         db_column='callingstationid',
         db_index=True,
         blank=True,
@@ -791,14 +791,14 @@ class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
     reply = models.CharField(verbose_name=_('reply'), max_length=32)
     called_station_id = models.CharField(
         verbose_name=_('called station ID'),
-        max_length=50,
+        max_length=253,
         db_column='calledstationid',
         blank=True,
         null=True,
     )
     calling_station_id = models.CharField(
         verbose_name=_('calling station ID'),
-        max_length=50,
+        max_length=253,
         db_column='callingstationid',
         blank=True,
         null=True,
