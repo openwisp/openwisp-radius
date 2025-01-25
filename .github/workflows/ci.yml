@@ -52,7 +52,7 @@ jobs:
               libspatialite-dev \
               spatialite-bin \
               libsqlite3-mod-spatialite
-          sudo npm install -g jslint stylelint jshint
+          sudo npm install -g prettier
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
