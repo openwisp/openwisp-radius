@@ -13,4 +13,3 @@ openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/tarball/ma
 django-redis~=5.4.0
 mock-ssh-server~=0.9.1
 channels_redis~=4.2.1
-chardet~=4.0.0
