@@ -129,10 +129,32 @@ def find_available_username(username, users_list, prefix=False):
     return tmp
 
 
+def get_encoding_format(byte_data):
+    # Explicitly handle some common encodings, including utf-16le
+    common_encodings = ['utf-8-sig', 'utf-16', 'utf-16be', 'utf-16le', 'ascii']
+
+    for enc in common_encodings:
+        try:
+            byte_data.decode(enc)
+            return enc
+        except (UnicodeDecodeError, TypeError):
+            continue
+
+    return 'utf-8'
+
+
+def decode_byte_data(data):
+    if isinstance(data, bytes):
+        data = data.decode(get_encoding_format(data))
+        data = data.replace('\x00', '')  # Removing null bytes
+    return data
+
+
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
+
     try:
-        csv_data = csv_data.decode('utf-8') if isinstance(csv_data, bytes) else csv_data
+        csv_data = decode_byte_data(csv_data)
     except UnicodeDecodeError:
         raise ValidationError(
             _(
@@ -140,6 +162,7 @@ def validate_csvfile(csvfile):
                 'does not look like a CSV file.'
             )
         )
+
     reader = csv.reader(StringIO(csv_data), delimiter=',')
     error_message = 'The CSV contains a line with invalid data,\
                     line number {} triggered the following error: {}'

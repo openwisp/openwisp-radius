@@ -1,6 +1,7 @@
 """
 Receiver functions for django signals (eg: post_save)
 """
+
 import logging
 
 from celery.exceptions import OperationalError
