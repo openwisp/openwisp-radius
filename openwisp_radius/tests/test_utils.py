@@ -28,6 +28,9 @@ class TestUtils(FileMixin, BaseTestCase):
         utf_16_file_1_format_path = self._get_path('static/test_batch_utf16_file1.csv')
         assert validate_csvfile(open(utf_16_file_1_format_path, 'rb')) is None
 
+        utf_16_file_2_format_path = self._get_path('static/test_batch_utf16_file2.csv')
+        assert validate_csvfile(open(utf_16_file_2_format_path, 'rb')) is None
+
     def test_validate_utf8Sig_file_format(self):
         utf_16_file_2_format_path = self._get_path(
             'static/test_batch_utf8Sig_file2.csv'
