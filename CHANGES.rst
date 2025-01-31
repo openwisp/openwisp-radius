@@ -6,6 +6,20 @@ Version 1.2.0 [Unreleased]
 
 Work in progress.
 
+Version 1.1.1 [2025-01-31]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed `bug in FreeRADIUS PostAuthView
+  <https://github.com/openwisp/openwisp-radius/issues/467>`_ that caused a
+  server 500 error when ``called_station_id`` exceeded 50 characters. The
+  maximum length has been updated to ``253`` characters.
+- Fixed `handling of UTF-16 encoded CSV files
+  <https://github.com/openwisp/openwisp-radius/issues/550>`_ for batch
+  user creation.
+
 Version 1.1.0 [2024-11-21]
 --------------------------
 
