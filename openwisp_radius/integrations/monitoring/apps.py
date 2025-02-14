@@ -1,9 +1,10 @@
+from datetime import timedelta
+
 from django.apps import AppConfig
 from django.db import models
 from django.db.models import Count, Sum
 from django.db.models.functions import Cast, Round
 from django.db.models.signals import post_save
-from django.utils.timezone import localdate
 from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.monitoring.configuration import (
     _register_chart_configuration_choice,
@@ -13,7 +14,11 @@ from swapper import load_model
 
 from openwisp_utils.admin_theme import register_dashboard_chart
 
-from .utils import get_datetime_filter_start_date, get_datetime_filter_stop_date
+from .utils import (
+    get_datetime_filter_start_datetime,
+    get_datetime_filter_stop_datetime,
+    get_utc_datetime_from_local_date,
+)
 
 
 class OpenwispRadiusMonitoringConfig(AppConfig):
@@ -36,7 +41,10 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                     'app_label': 'openwisp_radius',
                     'model': 'radiusaccounting',
                     'filter': {
-                        'start_time__date': localdate,
+                        # This will filter the sessions for today
+                        'start_time__gte': get_utc_datetime_from_local_date,
+                        'start_time__lt': lambda: get_utc_datetime_from_local_date()
+                        + timedelta(days=1),
                     },
                     'aggregate': {
                         'open': Count(
@@ -57,8 +65,8 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                     'closed': 'False',
                 },
                 'main_filters': {
-                    'start_time__gte': get_datetime_filter_start_date,
-                    'start_time__lt': get_datetime_filter_stop_date,
+                    'start_time__gte': get_datetime_filter_start_datetime,
+                    'start_time__lt': get_datetime_filter_stop_datetime,
                 },
                 'labels': {
                     'open': 'Open',
@@ -74,7 +82,10 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                     'app_label': 'openwisp_radius',
                     'model': 'radiusaccounting',
                     'filter': {
-                        'start_time__date': localdate,
+                        # This will filter the sessions for today
+                        'start_time__gte': get_utc_datetime_from_local_date,
+                        'start_time__lt': lambda: get_utc_datetime_from_local_date()
+                        + timedelta(days=1),
                     },
                     'aggregate': {
                         'download_traffic': Round(
@@ -94,8 +105,8 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                     'upload_traffic': 'Upload traffic (GB)',
                 },
                 'main_filters': {
-                    'start_time__gte': get_datetime_filter_start_date,
-                    'start_time__lt': get_datetime_filter_stop_date,
+                    'start_time__gte': get_datetime_filter_start_datetime,
+                    'start_time__lt': get_datetime_filter_stop_datetime,
                 },
                 'filtering': 'False',
             },

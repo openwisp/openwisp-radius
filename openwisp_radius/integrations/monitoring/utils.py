@@ -1,27 +1,44 @@
 import hashlib
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
 from django.utils import timezone
 
 local_timezone = timezone.get_current_timezone()
 
 
-def _get_formatted_datetime_string(date_time):
-    return (
-        str(datetime.combine(date_time, datetime.min.time()).astimezone(local_timezone))
-        .replace(' ', '+')
-        .replace(':', '%3A')
+def _get_urlencoded_datetime(date_time):
+    """
+    URL encodes the date_time string and returns the value.
+    """
+    return urlencode({'': date_time}).split('=')[1]
+
+
+def get_today_start_datetime():
+    """
+    Returns the beginning of the current day in local timezone.
+    """
+
+    return timezone.make_aware(
+        datetime.combine(timezone.localdate(), datetime.min.time())
     )
 
 
-def get_datetime_filter_start_date():
-    start_date = timezone.localdate()
-    return _get_formatted_datetime_string(start_date)
+def get_utc_datetime_from_local_date():
+    """
+    Returns UTC time for the beginning of the current day in local timezone.
+    """
+    return get_today_start_datetime().astimezone(timezone.utc)
 
 
-def get_datetime_filter_stop_date():
-    stop_date = timezone.localdate() + timedelta(days=1)
-    return _get_formatted_datetime_string(stop_date)
+def get_datetime_filter_start_datetime():
+    today = get_today_start_datetime()
+    return _get_urlencoded_datetime(today)
+
+
+def get_datetime_filter_stop_datetime():
+    tomorrow = get_today_start_datetime() + timedelta(days=1)
+    return _get_urlencoded_datetime(tomorrow)
 
 
 def sha1_hash(input_string):
