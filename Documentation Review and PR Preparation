@@ -1,0 +1,118 @@
+# Documentation Review and PR Preparation
+
+## Verifying Documentation Updates
+
+Before submitting your PR, verify that all documentation has been properly updated:
+
+```bash
+# Check the settings documentation for Gigawords support
+cat docs/user/settings.rst  # On Windows, use: type docs\user\settings.rst
+
+# Check that changes are documented in the changelog
+cat CHANGES.rst  # On Windows, use: type CHANGES.rst
+```
+
+> **Windows Tip**: You can also simply open these files in VS Code or any text editor instead of using command line.
+
+> **Additional Windows Tip**: For best compatibility and ease of use, run all Git and testing commands in the VS Code integrated terminal by pressing Ctrl + ` (backtick). This helps avoid path separator issues and command execution problems on Windows.
+
+Ensure that:
+
+- The `GIGAWORDS_SUPPORT` setting is documented in `settings.rst`
+- The changelog includes an entry for the Gigawords support feature
+
+## Preparing the Pull Request
+
+> **VS Code Tip**: To open the integrated terminal in VS Code, press Ctrl + ` (backtick)
+
+1. Review all changes you've made:
+
+```bash
+git status
+```
+
+2. Add all changes to staging:
+
+```bash
+git add .
+```
+
+3. Commit your changes with a descriptive message:
+
+```bash
+git commit -m "Implement Gigawords support for RADIUS accounting (#521)"
+```
+
+4. Push your changes to your branch:
+
+```bash
+git push origin your-branch-name
+```
+
+Replace `your-branch-name` with the actual name of your branch.
+
+## PR Description Template
+
+When creating your pull request, include the following information:
+
+````
+## Issue Reference
+Fixes #521
+
+## Summary
+This PR implements Gigawords support for RADIUS accounting, allowing the system to handle counters exceeding 32-bit values.
+
+## Test Results
+### Automated Tests
+- All tests pass: `pytest -xvs openwisp_radius/tests/test_api/test_accounting.py`
+- Coverage maintained at X%
+
+### Manual Tests
+- Successfully tested with FreeRADIUS using radclient
+- Verified accounting packets with Acct-Input-Gigawords and Acct-Output-Gigawords are processed correctly
+- Confirmed counter values exceeding 4GB are accurately recorded
+
+## Key Commands Used
+### Setting up the environment:
+```bash
+# Clone the repository
+git clone https://github.com/openwisp/openwisp-radius.git
+cd openwisp-radius  # On Windows: use cd openwisp-radius or navigate in File Explorer
+
+# Create and activate virtual environment
+python -m venv env
+source env/bin/activate  # On Windows: env\Scripts\activate
+
+# Install dependencies
+pip install -e .
+pip install -r requirements-test.txt
+````
+
+> **Note for Windows users**: You can use Git Bash, WSL, or PowerShell to run these commands. Path separators may need to be adjusted (use backslashes \ instead of forward slashes /).
+
+> **Additional Windows Tip**: For best compatibility and ease of use, run all Git and testing commands in the VS Code integrated terminal by pressing Ctrl + ` (backtick). This helps avoid path separator issues and command execution problems on Windows.
+
+### Running tests:
+
+```bash
+# Run the complete test suite
+./runtests.py  # On Windows: python runtests.py
+
+# Run specific accounting tests
+pytest -xvs openwisp_radius/tests/test_api/test_accounting.py  # On Windows: use backslashes in paths if needed
+
+# Run FreeRADIUS tests (if applicable)
+pytest -xvs openwisp_radius/tests/test_freeradius.py
+```
+
+> **VS Code Tip:** To open the VS Code integrated terminal, press Ctrl + ` (backtick). You can run these commands directly in the VS Code terminal.
+
+### Troubleshooting Tips
+
+- If encountering issues with large counter values, ensure both the client and server support Gigawords attributes
+- For testing with radclient, use the `-f` flag to specify a file containing the attributes
+- Windows users may need to install additional tools like FreeRADIUS through WSL (Windows Subsystem for Linux)
+
+```
+
+```

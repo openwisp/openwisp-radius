@@ -13,3 +13,9 @@ openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/tarball/1.
 django-redis~=5.4.0
 mock-ssh-server~=0.9.1
 channels_redis~=4.2.1
+
+# If you experience DLL errors with the cryptography package on Windows, try upgrading pip and using a pre-compiled wheel for cryptography.
+
+# Pin elementpath and xmlschema to Windows-compatible versions for Python 3.9.0
+elementpath==2.5.0
+xmlschema==2.0.0

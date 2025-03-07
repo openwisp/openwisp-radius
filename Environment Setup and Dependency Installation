@@ -1,0 +1,135 @@
+# Environment Setup and Dependency Installation for OpenWISP Radius
+
+This guide provides step-by-step instructions for setting up the development environment for OpenWISP Radius, including all necessary dependencies.
+
+## 1. Clone the Repository
+
+For both Windows and Linux/Mac:
+
+```bash
+git clone https://github.com/openwisp/openwisp-radius.git
+cd openwisp-radius
+```
+
+## 2. Create and Activate a Virtual Environment
+
+### For Windows:
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+Windows users should use the above commands in the Command Prompt or PowerShell.
+
+### For Linux/Mac:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+## 3. Install Python Dependencies
+
+Upgrade pip and install required packages:
+
+```bash
+pip install -U pip wheel setuptools
+pip install -r requirements-test.txt
+pip install -e .[saml,openvpn_status]
+```
+
+## 4. Install System Dependencies
+
+For Ubuntu/Debian systems:
+
+```bash
+sudo apt update
+sudo apt install -y xmlsec1 gettext sqlite3 fping gdal-bin libproj-dev libgeos-dev libspatialite-dev spatialite-bin libsqlite3-mod-spatialite
+```
+
+**Note for Windows users:** System dependency installation differs on Windows. Consider using Windows Subsystem for Linux (WSL) to run Ubuntu, or install equivalent Windows packages if available. Some dependencies may require specific Windows installation procedures or alternatives.
+
+## 5. Start Required Services via Docker
+
+Ensure Docker Desktop for Windows is installed if you're using Windows. Then start the necessary services using Docker Compose:
+
+```bash
+docker-compose up -d influxdb redis
+```
+
+This command can be run in the VS Code terminal or any command prompt with Docker access.
+
+After completing these steps, your development environment should be properly set up and ready for testing the OpenWISP Radius project.
+
+## Tip for VS Code Users
+
+After setting up your environment, use the VS Code terminal (Ctrl+`) for executing these commands. VS Code provides an integrated terminal experience that works well with both Windows and Linux/Mac commands.
+
+## 6. Troubleshooting Cryptography on Windows
+
+Windows users may encounter DLL load failures or other issues with the cryptography package, which is a dependency for several OpenWISP components. If you see errors related to cryptography, especially "ImportError: DLL load failed while importing \_rust", follow these troubleshooting steps:
+
+### Step-by-Step Resolution:
+
+- **Update pip and cryptography**:
+
+  ```bash
+  pip install --upgrade pip
+  pip install --upgrade cryptography
+  ```
+
+- **Try a specific working version** if the latest version causes issues:
+
+  ```bash
+
+  ```
+
+pip install cryptography==41.0.7
+
+````
+
+- **Install Rust** (required for building cryptography from source):
+
+1. Download the Rust installer from [the official Rust website](https://www.rust-lang.org/tools/install)
+2. Run the installer and follow the prompts
+3. Open a new command prompt and verify installation with `rustc --version`
+4. Ensure Rust is in your PATH environment variable
+
+- **Use pre-compiled wheels**:
+
+```bash
+pip install --upgrade pip wheel setuptools
+pip install cryptography
+````
+
+- **Check for conflicting libraries**:
+
+  - Ensure you don't have conflicting OpenSSL installations
+  - Create a fresh virtual environment if necessary
+  - Verify that Visual C++ build tools are installed (required for some dependencies)
+
+- **Clear pip cache** if needed:
+  ```bash
+  pip cache purge
+  ```
+
+### Additional Resources:
+
+- [Cryptography Package Installation Documentation](https://cryptography.io/en/latest/installation.html)
+- [Rust Installation Guide](https://www.rust-lang.org/tools/install)
+- [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+If you continue to experience issues after trying these steps, please refer to the [OpenWISP community support channels](https://openwisp.org/support.html) for assistance.
+
+## Known Issues with Python 3.9.0 on Windows
+
+When running tests on Windows with Python 3.9.0, a 'TypeError: unhashable type: "list"' error may occur due to issues with the typing module's handling of type annotations in dependencies such as elementpath. This issue can be resolved in one of two ways:
+
+1. Upgrade to Python 3.9.2 or later, where this issue has been addressed.
+
+2. Alternatively, pin the dependencies by modifying your requirements as follows:
+   - Set elementpath to version 2.5.0
+   - Set xmlschema to version 2.0.0
+
+These changes ensure that the dependencies used are compatible with Python 3.9.0 on Windows.

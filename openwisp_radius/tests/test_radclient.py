@@ -17,20 +17,62 @@ class TestRadClient(TestCase):
 
     def test_clean_attributes(self):
         client = self._get_client()
-        attrs = {
-            'Max-Daily-Session-Traffic': '3000000',
-            'Max-Daily-Session': '10800',
-            'WISPr-Bandwidth-Max-Down': '30000',
-        }
-        cleaned_attrs = client.clean_attributes(attrs)
-        self.assertEqual(
-            cleaned_attrs,
-            {
-                'Session-Timeout': '10800',
-                app_settings.TRAFFIC_COUNTER_REPLY_NAME: '3000000',
+        
+        with self.subTest('Test normal traffic values'):
+            attrs = {
+                'Max-Daily-Session-Traffic': '3000000',
+                'Max-Daily-Session': '10800',
                 'WISPr-Bandwidth-Max-Down': '30000',
-            },
-        )
+            }
+            cleaned_attrs = client.clean_attributes(attrs)
+            self.assertEqual(
+                cleaned_attrs,
+                {
+                    'Session-Timeout': '10800',
+                    app_settings.TRAFFIC_COUNTER_REPLY_NAME: '3000000',
+                    'WISPr-Bandwidth-Max-Down': '30000',
+                },
+            )
+        
+        with self.subTest('Test traffic values exceeding 4GB with Gigawords enabled'):
+            # Mock GIGAWORDS_ENABLED setting to True
+            with patch('openwisp_radius.settings.GIGAWORDS_ENABLED', True):
+                # 5GB in bytes = 5 * 1024 * 1024 * 1024 = 5368709120
+                attrs = {
+                    'Max-Daily-Session-Traffic': '5368709120',
+                    'Max-Daily-Session': '10800',
+                }
+                cleaned_attrs = client.clean_attributes(attrs)
+                
+                # Lower 32 bits: 5368709120 & 0xFFFFFFFF = 1073741824 (1GB)
+                # Upper 32 bits (Gigawords): 5368709120 >> 32 = 1
+                self.assertEqual(
+                    cleaned_attrs,
+                    {
+                        'Session-Timeout': '10800',
+                        app_settings.TRAFFIC_COUNTER_REPLY_NAME: '1073741824',
+                        f'{app_settings.TRAFFIC_COUNTER_REPLY_NAME}-Gigawords': '1',
+                    },
+                )
+                
+        with self.subTest('Test traffic values exceeding 4GB with Gigawords disabled'):
+            # Mock GIGAWORDS_ENABLED setting to False
+            with patch('openwisp_radius.settings.GIGAWORDS_ENABLED', False):
+                # 5GB in bytes = 5 * 1024 * 1024 * 1024 = 5368709120
+                attrs = {
+                    'Max-Daily-Session-Traffic': '5368709120',
+                    'Max-Daily-Session': '10800',
+                }
+                cleaned_attrs = client.clean_attributes(attrs)
+                
+                # When Gigawords is disabled, the value should be truncated to 32 bits
+                self.assertEqual(
+                    cleaned_attrs,
+                    {
+                        'Session-Timeout': '10800',
+                        app_settings.TRAFFIC_COUNTER_REPLY_NAME: '1073741824',
+                    },
+                )
 
     @patch('logging.Logger.info')
     def test_perform_change_of_authorization(self, mocked_logger):

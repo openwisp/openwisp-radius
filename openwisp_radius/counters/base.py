@@ -93,6 +93,38 @@ class BaseCounter(ABC):
         # or if nothing is returned (no sessions present), return zero
         return row[0] or 0
 
+    @staticmethod
+    def split_value(value):
+        """
+        Split a counter value into its 32-bit octets and gigawords components.
+        
+        This implements the RADIUS Gigawords extension (RFC 2869) which allows accounting
+        for data transfers larger than 4GB (2^32 bytes). When a counter exceeds 32 bits,
+        the lower 32 bits are reported in the standard Acct-*-Octets attribute, while
+        the upper bits are reported in the corresponding Acct-*-Gigawords attribute.
+        
+        Args:
+            value (int): The counter value to split
+            
+        Returns:
+            tuple: (octets, gigawords) where:
+                  - octets: the lower 32 bits (0 to 4,294,967,295)
+                  - gigawords: the upper 32 bits (number of times the counter has wrapped)
+                  
+        Example:
+            For a value of 6,442,450,944 (6GB), this returns (2147483648, 1)
+            meaning 2,147,483,648 octets and 1 gigaword (1 * 2^32 + 2,147,483,648 = 6GB)
+            
+            To reconstruct the original value: (1 << 32) + 2147483648 = 6,442,450,944
+        """
+        if app_settings.GIGAWORDS_ENABLED and value > 0xFFFFFFFF:
+            # 0xFFFFFFFF = 4,294,967,295 (maximum 32-bit value)
+            # value & 0xFFFFFFFF extracts the lower 32 bits (remainder after division by 2^32)
+            # value >> 32 shifts right by 32 bits to get the gigawords component (division by 2^32)
+            return value & 0xFFFFFFFF, value >> 32
+        # For values that don't exceed 32 bits, return the original value and 0 gigawords
+        return value, 0
+        
     def check(self, gigawords=gigawords):
         if not self.group_check:
             raise SkipCheck(

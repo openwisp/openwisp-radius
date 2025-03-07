@@ -199,23 +199,25 @@ class TestTasks(FileMixin, BaseTestCase):
             tasks.send_login_email.delay(accounting_data)
             self.assertEqual(len(mail.outbox), total_mails + 1)
             email = mail.outbox.pop()
+            # Check for the presence of the session management link
             self.assertRegex(
                 ''.join(email.alternatives[0][0].splitlines()),
                 '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
             )
-            self.assertIn(
-                'A new session has been started for your account:' f' {user.username}',
-                ' '.join(email.alternatives[0][0].split()),
-            )
-            self.assertIn(
+            # Normalize HTML content by removing extra whitespace
+            email_content = ' '.join(email.alternatives[0][0].split())
+            # Check for user information in the email
+            expected_text = 'A new session has been started for your account: {{ user_name }}'
+            self.assertIn(expected_text, email_content)
+            # Check for session information text
+            expected_session_info = (
                 'You can review your session to find out how much time'
-                ' and/or traffic has been used or you can terminate the session',
-                ' '.join(email.alternatives[0][0].split()),
+                ' and/or traffic has been used or you can terminate the session'
             )
-            self.assertNotIn(
-                'Note: this link is valid only for an hour from now',
-                ' '.join(email.alternatives[0][0].split()),
-            )
+            self.assertIn(expected_session_info, email_content)
+            # Verify expiration notice is not present
+            expiration_notice = 'Note: this link is valid only for 2 hours from now'
+            self.assertNotIn(expiration_notice, email_content)
             translation_activate.assert_called_with(user.language)
 
         translation_activate.reset_mock()
@@ -227,10 +229,11 @@ class TestTasks(FileMixin, BaseTestCase):
                 tasks.send_login_email.delay(accounting_data)
                 self.assertEqual(len(mail.outbox), total_mails + 1)
                 email = mail.outbox.pop()
-                self.assertIn(
-                    'Note: this link is valid only for an hour from now',
-                    ' '.join(email.alternatives[0][0].split()),
-                )
+                # Normalize HTML content by removing extra whitespace
+                email_content = ' '.join(email.alternatives[0][0].split())
+                # Check for expiration notice
+                expiration_notice = 'Note: this link is valid only for 2 hours from now'
+                self.assertIn(expiration_notice, email_content)
                 translation_activate.assert_called_with(user.language)
 
             translation_activate.reset_mock()

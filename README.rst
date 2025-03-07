@@ -61,6 +61,81 @@ Documentation
 - `Developer documentation
   <https://openwisp.io/docs/stable/radius/developer/>`_
 
+Testing
+-------
+
+To run tests, use:
+
+```bash
+python runtests.py
+```
+
+> For Windows users, ensure you are running the command in the VS Code integrated terminal (Ctrl + `) or PowerShell, and use:
+>
+>     python runtests.py
+>
+> **Windows Cryptography Issues**: If you encounter DLL load errors related to the cryptography package
+> (e.g., "ImportError: DLL load failed while importing _rust"), try these solutions:
+>
+> - Update pip and cryptography: ``pip install --upgrade pip cryptography``
+> - Install Rust if needed: https://www.rust-lang.org/tools/install
+> - Try a specific version: ``pip install cryptography==41.0.7``
+>
+> For detailed troubleshooting steps, refer to the "Troubleshooting Cryptography on Windows" 
+> section in the Environment Setup documentation.
+
+Troubleshooting Python Version Issues on Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Windows users running Python 3.9.0 may encounter a ``TypeError: unhashable type: list`` error when running tests. This is a known issue affecting the XML processing libraries used by the test suite. There are two ways to resolve this:
+
+Option 1: Upgrade Python (Recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Upgrade to Python 3.9.2 or later:
+
+1. Download the latest Python version from the `official Python website <https://www.python.org/downloads/>`_
+2. Install the new Python version
+3. Create a new virtual environment:
+
+   .. code-block:: bash
+
+      # Create a new virtual environment with the upgraded Python
+      python -m venv new_venv
+      
+      # Activate the new environment
+      # On Windows Command Prompt:
+      new_venv\Scripts\activate
+      # On Windows PowerShell:
+      .\new_venv\Scripts\Activate.ps1
+      
+      # Install requirements
+      pip install -e .[dev]
+
+Option 2: Pin Dependency Versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If upgrading Python is not possible, pin the problematic dependencies:
+
+1. Clear pip cache:
+
+   .. code-block:: bash
+
+      pip cache purge
+
+2. Install specific versions of the problematic packages:
+
+   .. code-block:: bash
+
+      pip install elementpath==2.5.0 xmlschema==2.0.0
+      
+      # Reinstall project dependencies
+      pip install -e .[dev]
+
+After applying either solution, run the tests again to verify the issue is resolved.
+
+This will execute all tests and provide a comprehensive report of the results.
+
 Contributing
 ------------
 

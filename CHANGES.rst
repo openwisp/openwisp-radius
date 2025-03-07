@@ -56,7 +56,18 @@ Features
   setting to delete inactive users after a specified period.
 - Added API endpoint to return user's RADIUS usage.
 - Supported password expiration feature from openwisp-users.
-- Added initial support for Gigaword RADIUS attributes.
+- Added official support for Gigaword RADIUS attributes (RFC 2869) which enables
+  tracking of data usage exceeding 4GB (`#521 <https://github.com/openwisp/openwisp-radius/issues/521>`_).
+  The implementation:
+  
+  - Properly handles Acct-Input-Gigawords and Acct-Output-Gigawords attributes
+  - Correctly splits and combines counter values for accurate accounting
+  - Supports configurable enabling/disabling via the ``GIGAWORDS_ENABLED`` setting
+  - Maintains backward compatibility with existing accounting data
+  - Includes proper handling in both the RadiusAccounting model and API endpoints
+  - Ensures correct calculation of total traffic by combining standard and gigaword counters
+  - Provides seamless migration path for existing installations without data loss
+  
 - Added ``LoginAdditionalInfoView`` to collection additional user details
   in SAML sign-up flow.
 - Added autocomplete support for filters in the admin interface.

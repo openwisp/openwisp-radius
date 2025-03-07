@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Test Suite Runner for OpenWISP Radius
+# This script runs the complete test suite and reports results
+#
+# NOTE: This is a local testing utility and is NOT required to be committed as part of a PR.
+# Contributors can run tests either using this script or directly via 'python manage.py test'.
+
+# Set colors for better readability
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}Starting OpenWISP Radius Test Suite${NC}"
+echo "==============================================="
+echo ""
+
+# Navigate to project root if needed
+# Uncomment if script is not run from project root
+# cd "$(dirname "$0")/.."
+
+# Check if virtual environment is active
+if [[ -z "${VIRTUAL_ENV}" ]]; then
+  echo -e "${YELLOW}Warning: No virtual environment detected.${NC}"
+  echo "It's recommended to run tests within a virtual environment."
+  echo ""
+fi
+
+# Run the complete test suite
+echo -e "${YELLOW}Running complete test suite...${NC}"
+TEST_OUTPUT=$(python manage.py test 2>&1)
+TEST_RESULT=$?
+
+# Display test output
+echo "$TEST_OUTPUT"
+echo ""
+
+# Check test results
+if [ $TEST_RESULT -eq 0 ]; then
+  echo -e "${GREEN}✓ All tests passed successfully!${NC}"
+  echo ""
+  echo "Test files checked include:"
+  echo "- openwisp_radius/tests/test_radclient.py"
+  echo "- openwisp_radius/counters/base.py"
+  echo "- openwisp_radius/radclient/client.py"
+  echo "- and all other test files in the project"
+else
+  echo -e "${RED}✗ Some tests failed.${NC}"
+  echo ""
+  echo "Please address the failing tests before proceeding:"
+  echo "1. Review the error messages above"
+  echo "2. Fix the issues in the relevant files"
+  echo "3. Run this test suite again to confirm fixes"
+  echo ""
+  echo "Common issues to check:"
+  echo "- Syntax errors in recent code changes"
+  echo "- Missing dependencies"
+  echo "- Configuration issues"
+  echo "- Database migration problems"
+fi
+
+echo ""
+echo "==============================================="
+echo -e "${YELLOW}Test Suite Completed${NC}"
+
+exit $TEST_RESULT

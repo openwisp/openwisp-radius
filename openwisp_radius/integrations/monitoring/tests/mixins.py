@@ -1,14 +1,14 @@
 from uuid import uuid4
 
+from django.conf import settings
 from openwisp_monitoring.db import timeseries_db
-from openwisp_monitoring.db.backends import TIMESERIES_DB
 from openwisp_monitoring.device.utils import manage_short_retention_policy
 from swapper import load_model
 
 
 class CreateDeviceMonitoringMixin(object):
     TEST_MAC_ADDRESS = '00:11:22:33:44:55'
-    ORIGINAL_DB = TIMESERIES_DB['NAME']
+    ORIGINAL_DB = getattr(settings, 'OPENWISP_MONITORING', {}).get('TIMESERIES_DATABASE', {}).get('NAME', '')
     TEST_DB = f'{ORIGINAL_DB}_test'
 
     @classmethod

@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import F, Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
@@ -430,7 +430,9 @@ class UserAccountingView(ThrottledAPIMixin, DispatchOrgMixin, ListAPIView):
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = UserAccountingFilter
-    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+    queryset = RadiusAccounting.objects.all().order_by(
+        F('stop_time').asc(nulls_first=True), '-start_time'
+    )
 
     def list(self, request, *args, **kwargs):
         self.request = request

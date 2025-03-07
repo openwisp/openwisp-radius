@@ -88,6 +88,7 @@ PASSWORD_RESET_URLS.update(get_settings_value('PASSWORD_RESET_URLS', {}))
 DEFAULT_PASSWORD_RESET_URL = get_default_password_reset_url(PASSWORD_RESET_URLS)
 SMS_VERIFICATION_ENABLED = get_settings_value('SMS_VERIFICATION_ENABLED', False)
 COA_ENABLED = get_settings_value('COA_ENABLED', False)
+GIGAWORDS_ENABLED = get_settings_value('GIGAWORDS_ENABLED', True)
 # SMS_TOKEN_DEFAULT_VALIDITY time is in minutes
 SMS_TOKEN_DEFAULT_VALIDITY = get_settings_value('SMS_TOKEN_DEFAULT_VALIDITY', 30)
 SMS_TOKEN_LENGTH = get_settings_value('SMS_TOKEN_LENGTH', 6)

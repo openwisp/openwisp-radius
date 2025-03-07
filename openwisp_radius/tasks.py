@@ -112,13 +112,26 @@ def send_login_email(accounting_data):
             'call_to_action_url': one_time_login_url,
             'call_to_action_text': _('Manage Session'),
         }
+        context['user_name'] = user.get_username()
         if hasattr(settings, 'SESAME_MAX_AGE'):
+            if int(settings.SESAME_MAX_AGE) == 60 * 60:
+                expiration_text = _('Note: this link is valid only for an hour from now.')
+            else:
+                hours = int(settings.SESAME_MAX_AGE / 3600)
+                expiration_text = _('Note: this link is valid only for {hours} hour{s} from now.').format(
+                    hours=hours, s='s' if hours != 1 else ''
+                )
             context.update(
                 {
-                    'sesame_max_age': timezone.now()
-                    + timedelta(seconds=settings.SESAME_MAX_AGE)
+                    'sesame_max_age': timezone.now() + timedelta(seconds=settings.SESAME_MAX_AGE),
+                    'expiration_text': expiration_text,
                 }
             )
+        else:
+            # Default fallback if SESAME_MAX_AGE is not set
+            context.update({
+                'expiration_text': _('Note: this link is valid only for a limited time.')
+            })
         body_html = loader.render_to_string('radius_accounting_start.html', context)
         send_email(subject, body_html, body_html, [user.email], context)
 

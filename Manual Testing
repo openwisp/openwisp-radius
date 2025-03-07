@@ -1,0 +1,205 @@
+# Manual Testing for Gigawords Feature
+
+This document provides step-by-step instructions for manually testing the Gigawords feature in OpenWISP Radius.
+
+## Setting Up the Environment
+
+1. Ensure you have activated your virtual environment:
+
+   **For Linux/Mac:**
+
+   ```
+   source /path/to/your/virtualenv/bin/activate
+   ```
+
+   **For Windows:**
+
+   ```
+   C:\path\to\your\virtualenv\Scripts\activate
+   ```
+
+   > **VS Code Tip:** Open the VS Code integrated terminal (Ctrl + `) and run the appropriate command above. In VS Code on Windows, you can copy these commands directly into the terminal. Remember to use either double backslashes (\\) or raw string notation for file paths.
+
+2. Navigate to your OpenWISP Radius project directory:
+
+   ```
+   # Linux/Mac
+   cd /path/to/openwisp-radius
+
+   # Windows
+   cd C:\path\to\openwisp-radius
+   ```
+
+   > **Note for Windows users:** Always replace forward slashes with backslashes in file paths and adjust drive letters as needed for your system. The VS Code integrated terminal (Ctrl + `) makes it easy to run these commands directly.
+
+## Testing the `split_value` Method
+
+1. Start the Django shell:
+
+   ```
+   python manage.py shell
+   ```
+
+   > **VS Code Tip:** If using the VS Code integrated terminal (Ctrl + `) on Windows, this command can be copied directly into the terminal.
+
+2. Import the BaseCounter class:
+
+   ```python
+   from openwisp_radius.counters.base import BaseCounter
+   ```
+
+3. Test with 1GB (1073741824 bytes):
+
+   ```python
+   result = BaseCounter.split_value(1073741824)
+   print(result)
+   ```
+
+   Expected output: `(1, 0)`
+
+   This means 1 GB and 0 bytes.
+
+4. Test with 5GB (5368709120 bytes):
+
+   ```python
+   result = BaseCounter.split_value(5368709120)
+   print(result)
+   ```
+
+   Expected output: `(5, 0)`
+
+   This means 5 GB and 0 bytes.
+
+5. Test with 10GB (10737418240 bytes):
+
+   ```python
+   result = BaseCounter.split_value(10737418240)
+   print(result)
+   ```
+
+   Expected output: `(10, 0)`
+
+   This means 10 GB and 0 bytes.
+
+6. Test with 100GB (107374182400 bytes):
+
+   ```python
+   result = BaseCounter.split_value(107374182400)
+   print(result)
+   ```
+
+   Expected output: `(100, 0)`
+
+   This means 100 GB and 0 bytes.
+
+7. Test with a non-round number, e.g., 1.5GB (1610612736 bytes):
+
+   ```python
+   result = BaseCounter.split_value(1610612736)
+   print(result)
+   ```
+
+   Expected output: `(1, 536870912)`
+
+   This means 1 GB and 536870912 bytes (0.5 GB).
+
+## Testing the RadClient Functionality
+
+1. In the same Django shell (or start a new one if you've exited), import the RadClient:
+
+   ```python
+   from openwisp_radius.radclient.client import RadClient
+   ```
+
+2. Create a RadClient instance with dummy values:
+
+   ```python
+   client = RadClient(
+       host='127.0.0.1',
+       secret='testing123',
+       port=1812,
+       dictionary='/path/to/dictionary/file'  # For Windows: use 'C:\\path\\to\\dictionary\\file' or r'C:\path\to\dictionary\file'
+   )
+   ```
+
+3. Create attributes with large counter values:
+
+   ```python
+   attributes = {
+       'Acct-Input-Gigawords': 0,
+       'Acct-Input-Octets': 10737418240,  # 10GB
+       'Acct-Output-Gigawords': 0,
+       'Acct-Output-Octets': 5368709120,  # 5GB
+   }
+   ```
+
+4. Process the attributes with clean_attributes():
+
+   ```python
+   cleaned_attributes = client.clean_attributes(attributes)
+   print(cleaned_attributes)
+   ```
+
+   Expected output should show the attributes with Gigawords values properly set.
+
+5. Test with values exceeding 4GB (which should increment Gigawords):
+
+   ```python
+   large_attributes = {
+       'Acct-Input-Gigawords': 0,
+       'Acct-Input-Octets': 5368709120,  # 5GB
+       'Acct-Output-Gigawords': 0,
+       'Acct-Output-Octets': 4294967296,  # 4GB
+   }
+   cleaned_large_attributes = client.clean_attributes(large_attributes)
+   print(cleaned_large_attributes)
+   ```
+
+   Expected output should show Acct-Input-Gigawords as 1 and Acct-Input-Octets as the remainder.
+
+6. Test with extremely large values:
+
+   ```python
+   extreme_attributes = {
+       'Acct-Input-Gigawords': 0,
+       'Acct-Input-Octets': 107374182400,  # 100GB
+       'Acct-Output-Gigawords': 0,
+       'Acct-Output-Octets': 214748364800,  # 200GB
+   }
+   cleaned_extreme_attributes = client.clean_attributes(extreme_attributes)
+   print(cleaned_extreme_attributes)
+   ```
+
+   Expected output should show Gigawords values properly incremented.
+
+7. Exit the Django shell:
+
+   ```python
+   exit()
+   ```
+
+   > **VS Code Tip:** If using the VS Code integrated terminal (Ctrl + `) on Windows, this command can be copied directly into the terminal.
+
+## Verification
+
+After running these tests, verify that:
+
+1. The `split_value` method correctly splits byte values into Gigawords and Octets.
+2. The RadClient's `clean_attributes` method correctly processes large counter values.
+3. No errors or unexpected behaviors occur during the testing process.
+
+If all tests pass as expected, the Gigawords feature is working correctly.
+
+---
+
+## Additional Notes for Windows Users
+
+- When working with file paths in Windows, you can use either:
+
+  - Double backslashes: `C:\\Users\\username\\openwisp-radius`
+  - Raw strings: `r'C:\Users\username\openwisp-radius'`
+  - Forward slashes (usually works in Python): `C:/Users/username/openwisp-radius`
+
+- VS Code's integrated terminal on Windows is fully compatible with all commands in this guide. Use Ctrl + ` to open the terminal. Remember to use either double backslashes (\\) or raw string notation for file paths when working with Windows paths.
+
+- If you encounter permission issues, try running VS Code as administrator.

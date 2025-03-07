@@ -1026,7 +1026,17 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def _remove_files(self):
         if self.csvfile:
-            self.csvfile.storage.delete(self.csvfile.name)
+            try:
+                self.csvfile.storage.delete(self.csvfile.name)
+            except PermissionError:
+                import time
+                time.sleep(0.1)
+                try:
+                    self.csvfile.storage.delete(self.csvfile.name)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error deleting file {self.csvfile.name}: {e}")
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):

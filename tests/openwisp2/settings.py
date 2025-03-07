@@ -312,6 +312,24 @@ else:
 
 OPENWISP_USERS_AUTH_API = True
 
+# Unified Timeseries Database configuration for OpenWISP Monitoring
+OPENWISP_MONITORING = {
+    'TIMESERIES_DATABASE': {
+        "BACKEND": "openwisp_monitoring.db.backends.influxdb",
+        "USER": "openwisp",
+        "PASSWORD": "openwisp",
+        "NAME": "openwisp2",
+        "HOST": os.getenv('INFLUXDB_HOST', 'localhost'),
+        "PORT": "8086",
+        "OPTIONS": {
+            "udp_writes": False,
+            "udp_port": 8089
+        }
+    },
+    'DEFAULT_RETENTION_POLICY': '60d',
+    'SHORT_RETENTION_POLICY': '7d'
+}
+
 if os.environ.get('MONITORING_INTEGRATION', False):
     INSTALLED_APPS.insert(
         INSTALLED_APPS.index('django.contrib.sites'),
@@ -350,15 +368,6 @@ if os.environ.get('MONITORING_INTEGRATION', False):
     TEMPLATES[0]['OPTIONS']['context_processors'].append(
         'openwisp_notifications.context_processors.notification_api_settings'
     )
-
-    TIMESERIES_DATABASE = {
-        'BACKEND': 'openwisp_monitoring.db.backends.influxdb',
-        'USER': 'openwisp',
-        'PASSWORD': 'openwisp',
-        'NAME': 'openwisp2',
-        'HOST': os.getenv('INFLUXDB_HOST', 'localhost'),
-        'PORT': '8086',
-    }
     EXTENDED_APPS = ['django_x509', 'django_loci']
 
     ASGI_APPLICATION = 'openwisp2.routing.application'

@@ -1,6 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**__pycache__**/
 *.py[cod]
+*.pyc
 *$py.class
 
 # C extensions
@@ -112,5 +114,9 @@ Pipfile
 # Other project related
 media/
 tmp/
+tests/openwisp2/media/private/test-org/
 *_loaded.json
 *.pid
+
+# IDE settings
+.idea/

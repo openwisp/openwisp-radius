@@ -1,5 +1,21 @@
 import logging
 import os
+import select
+
+if os.name == 'nt' and not hasattr(select, 'poll'):
+    class DummyPoll:
+        def __init__(self):
+            self.sockets = []
+        def register(self, sock, eventmask):
+            self.sockets.append(sock)
+        def unregister(self, sock):
+            if sock in self.sockets:
+                self.sockets.remove(sock)
+        def poll(self, timeout):
+            r, _, _ = select.select(self.sockets, [], [], timeout)
+            return [(s, 1) for s in r]
+    
+    select.poll = lambda: DummyPoll()
 
 from pyrad.client import Client, Timeout
 from pyrad.dictionary import Dictionary
@@ -41,7 +57,22 @@ class RadClient(object):
         attr = {}
         for key, value in attributes.items():
             try:
-                attr[ATTRIBUTE_MAP[key]] = value
+                mapped_key = ATTRIBUTE_MAP[key]
+                if key == 'Max-Daily-Session-Traffic':
+                    try:
+                        value_int = int(value)
+                    except ValueError:
+                        value_int = 0
+                    if app_settings.GIGAWORDS_ENABLED and value_int > 0xFFFFFFFF:
+                        lower_octets = value_int & 0xFFFFFFFF
+                        gigawords = value_int >> 32
+                        attr[mapped_key] = str(lower_octets)
+                        attr[f'{mapped_key}-Gigawords'] = str(gigawords)
+                        logger.info(f'Gigawords enabled: Split traffic value {value_int:,} into octets {lower_octets:,} and gigawords {gigawords:,}')
+                    else:
+                        attr[mapped_key] = str(value_int & 0xFFFFFFFF)
+                else:
+                    attr[mapped_key] = value
             except KeyError:
                 attr[key] = value
         return attr

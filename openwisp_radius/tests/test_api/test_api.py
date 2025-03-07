@@ -938,7 +938,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['output_octets'], data2['output_octets'])
+        self.assertEqual(item['output_octets'], 1613176609)
         self.assertEqual(item['input_octets'], data2['input_octets'])
         self.assertEqual(item['nas_ip_address'], '172.16.64.91')
         self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')

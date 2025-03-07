@@ -856,6 +856,45 @@ assigned can consume.
 It should be changed according to the NAS software in use, for example, if
 using PfSense, this setting should be set to ``pfSense-Max-Total-Octets``.
 
+``OPENWISP_RADIUS_GIGAWORDS_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+When enabled, counter values exceeding 32 bits (4 GB) are automatically split into octets and gigawords
+as per RFC 2869. This allows proper handling of large traffic values in RADIUS accounting.
+
+The RADIUS protocol originally used 32-bit counters for traffic accounting, which limited values to 4 GB 
+before overflowing. RFC 2869 introduced "gigawords" attributes to handle larger values by splitting them 
+into two components:
+
+- **Octets**: The lower 32 bits (0 to 4,294,967,295 bytes)
+- **Gigawords**: The number of times the counter has wrapped around 2^32
+
+When this setting is enabled:
+
+1. Large counter values are automatically split into octets and gigawords components
+2. For example, a 10 GB counter value would be represented as:
+   - 2 gigawords (8 GB)
+   - 2,147,483,648 octets (2 GB)
+   - Total: 10 GB (8 GB + 2 GB)
+
+3. This allows the system to correctly account for traffic up to 2^64 bytes (16 exabytes)
+
+When disabled, counter values are not split, which may cause accounting inaccuracies for sessions 
+exceeding 4 GB of traffic.
+
+.. code-block:: python
+
+    # In settings.py
+    OPENWISP_RADIUS_GIGAWORDS_ENABLED = True  # Default
+    
+    # To disable gigawords support
+    OPENWISP_RADIUS_GIGAWORDS_ENABLED = False
+
+This setting affects how the ``split_value`` method in ``BaseCounter`` processes large counter values
+and is particularly important for high-bandwidth networks or long-duration sessions.
+
 ``OPENWISP_RADIUS_RADIUS_ATTRIBUTES_TYPE_MAP``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

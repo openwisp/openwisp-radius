@@ -1,0 +1,96 @@
+# Automated Testing for OpenWISP Radius
+
+This guide provides instructions for running automated tests for the OpenWISP Radius project, with special focus on the Gigawords feature.
+
+## Prerequisites
+
+Before running tests, ensure you have:
+
+1. A working installation of OpenWISP Radius
+2. All dependencies installed
+3. A properly configured development environment
+
+## Running the Complete Test Suite
+
+The simplest way to run all tests is using the provided test runner:
+
+```bash
+# Run the complete test suite using the test runner
+./runtests.py
+```
+
+> **Note for Windows users:** If the test runner file is not marked as executable, run the test suite using:
+> python runtests.py
+>
+> ```
+>
+> ```
+>
+> When using Windows, it is recommended to run commands in the VS Code integrated terminal (Ctrl + `) for a better experience.
+
+This will execute all tests and provide a comprehensive report of the results.
+
+> **VS Code Tip:** To open the VS Code integrated terminal, press Ctrl + ` (backtick). You can run these commands directly in the VS Code terminal.
+
+## Running Tests with Django's Test Command
+
+Alternatively, you can use Django's built-in test command:
+
+```bash
+# Run all tests
+python manage.py test
+```
+
+This command will discover and run all tests in the project.
+python runtests.py
+
+> **VS Code Tip:** To open the VS Code integrated terminal, press Ctrl + ` (backtick). You can run these commands directly in the VS Code terminal.
+
+## Testing Specific Gigawords Features
+
+To test specific components of the Gigawords feature:
+
+### Testing Counters
+
+```bash
+# Run counter-related tests
+python manage.py test openwisp_radius.tests.test_counters
+```
+
+These tests verify that the accounting counters work correctly, including handling of large values that require Gigawords support.
+
+> **VS Code Tip:** To open the VS Code integrated terminal, press Ctrl + ` (backtick). You can run these commands directly in the VS Code terminal.
+
+### Testing Radclient Integration
+
+```bash
+# Run radclient-related tests
+python manage.py test openwisp_radius.tests.test_radclient
+```
+
+These tests ensure that the radclient integration properly handles Gigawords attributes in RADIUS packets.
+
+> **VS Code Tip:** To open the VS Code integrated terminal, press Ctrl + ` (backtick). You can run these commands directly in the VS Code terminal.
+
+> **Note on file paths:** The examples in this guide use forward slashes (/) which work on both Windows and Unix-based systems. If you're using Windows command prompt, you might need to use backslashes (\\) instead.
+
+## Troubleshooting
+
+If you encounter test failures:
+
+1. Check that all dependencies are correctly installed
+2. Verify your database configuration
+3. Ensure FreeRADIUS is properly configured if running integration tests
+4. Check the logs for detailed error messages
+
+## Expected Output
+
+When tests pass successfully, you should see output similar to:
+
+```
+Ran XX tests in X.XXXs
+
+OK
+```
+
+If any tests fail, you'll see detailed information about the failures to help with debugging.

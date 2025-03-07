@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 import os
 import sys
@@ -12,4 +13,11 @@ if __name__ == '__main__':
             'available on your PYTHONPATH environment variable? Did you '
             'forget to activate a virtual environment?'
         )
+    
+    # Check if there are enough arguments
+    if len(sys.argv) > 1:
+        TESTING = sys.argv[1] == 'test'
+    else:
+        TESTING = False
+
     execute_from_command_line(sys.argv)
