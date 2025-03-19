@@ -14,7 +14,8 @@ if __name__ == '__main__':
     args.insert(1, 'test')
     if not os.environ.get('SAMPLE_APP', False):
         args.insert(2, 'openwisp2.integrations')
-        args.insert(3, 'openwisp_radius')
+        args.insert(3, 'openwisp2.tests.user_batch_test')
+        args.insert(4, 'openwisp_radius')
     else:
         args.insert(2, 'openwisp2')
     if os.environ.get('MONITORING_INTEGRATION', False):
