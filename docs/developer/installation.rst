@@ -40,7 +40,7 @@ Launch Redis:
 
 .. code-block:: shell
 
-    docker-compose up -d redis
+    docker compose up -d redis
 
 Setup and activate a virtual-environment (we'll be using `virtualenv
 <https://pypi.org/project/virtualenv/>`_):

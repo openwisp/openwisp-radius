@@ -52,9 +52,11 @@ setup(
         "pyrad~=2.4",
     ],
     extras_require={
-        "saml": ["djangosaml2~=1.9.2"],
-        "openvpn_status": ["openvpn-status~=0.2.1"],
+        # https://github.com/IdentityPython/djangosaml2/issues/414
+        'saml': ['djangosaml2==1.9.3'],
+        'openvpn_status': ['openvpn-status~=0.2.1'],
         "selenium": ["selenium>=4.10,<4.30"],
+
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable ",
