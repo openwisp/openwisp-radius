@@ -26,54 +26,54 @@ from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
-RadiusToken = load_model('RadiusToken')
-RadiusAccounting = load_model('RadiusAccounting')
-RadiusPostAuth = load_model('RadiusPostAuth')
-RadiusGroupReply = load_model('RadiusGroupReply')
-RegisteredUser = load_model('RegisteredUser')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
-Organization = swapper.load_model('openwisp_users', 'Organization')
-OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+RadiusToken = load_model("RadiusToken")
+RadiusAccounting = load_model("RadiusAccounting")
+RadiusPostAuth = load_model("RadiusPostAuth")
+RadiusGroupReply = load_model("RadiusGroupReply")
+RegisteredUser = load_model("RegisteredUser")
+OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
+Organization = swapper.load_model("openwisp_users", "Organization")
+OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
-START_DATE = '2019-04-20T22:14:09+01:00'
+START_DATE = "2019-04-20T22:14:09+01:00"
 _AUTH_TYPE_ACCEPT_RESPONSE = {
-    'control:Auth-Type': 'Accept',
-    'CoovaChilli-Max-Total-Octets': 3000000000,
-    'Session-Timeout': 10800,
+    "control:Auth-Type": "Accept",
+    "CoovaChilli-Max-Total-Octets": 3000000000,
+    "Session-Timeout": 10800,
 }
-_AUTH_TYPE_REJECT_RESPONSE = {'control:Auth-Type': 'Reject'}
-_BASE_COUNTER_CHECK = 'openwisp_radius.counters.base.BaseCounter.check'
+_AUTH_TYPE_REJECT_RESPONSE = {"control:Auth-Type": "Reject"}
+_BASE_COUNTER_CHECK = "openwisp_radius.counters.base.BaseCounter.check"
 
 
 class AcctMixin(object):
-    _acct_url = reverse('radius:accounting')
+    _acct_url = reverse("radius:accounting")
     _acct_initial_data = {
-        'unique_id': '75058e50',
-        'session_id': '35000006',
-        'nas_ip_address': '172.16.64.91',
-        'session_time': 0,
-        'input_octets': 0,
-        'output_octets': 0,
+        "unique_id": "75058e50",
+        "session_id": "35000006",
+        "nas_ip_address": "172.16.64.91",
+        "session_time": 0,
+        "input_octets": 0,
+        "output_octets": 0,
     }
     _acct_post_data = {
-        'username': 'admin',
-        'realm': '',
-        'nas_port_id': '1',
-        'nas_port_type': 'Async',
-        'session_time': '261',
-        'authentication': 'RADIUS',
-        'input_octets': '1111909',
-        'output_octets': '1511074444',
-        'called_station_id': '00-27-22-F3-FA-F1:hostname',
-        'calling_station_id': '5c:7d:c1:72:a7:3b',
-        'terminate_cause': 'User_Request',
-        'service_type': 'Login-User',
-        'framed_protocol': 'test',
-        'framed_ip_address': '127.0.0.1',
-        'framed_ipv6_address': '::1',
-        'framed_ipv6_prefix': '0::/64',
-        'framed_interface_id': '0000:0000:0000:0001',
-        'delegated_ipv6_prefix': '0::/64',
+        "username": "admin",
+        "realm": "",
+        "nas_port_id": "1",
+        "nas_port_type": "Async",
+        "session_time": "261",
+        "authentication": "RADIUS",
+        "input_octets": "1111909",
+        "output_octets": "1511074444",
+        "called_station_id": "00-27-22-F3-FA-F1:hostname",
+        "calling_station_id": "5c:7d:c1:72:a7:3b",
+        "terminate_cause": "User_Request",
+        "service_type": "Login-User",
+        "framed_protocol": "test",
+        "framed_ip_address": "127.0.0.1",
+        "framed_ipv6_address": "::1",
+        "framed_ipv6_prefix": "0::/64",
+        "framed_interface_id": "0000:0000:0000:0001",
+        "delegated_ipv6_prefix": "0::/64",
     }
 
     @property
@@ -99,26 +99,26 @@ class AcctMixin(object):
 
 
 class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
-    _test_email = 'test@openwisp.org'
+    _test_email = "test@openwisp.org"
 
     def test_invalid_token(self):
         self._get_org_user()
-        auth_header = self.auth_header.replace(' ', '')  # removes spaces in token
+        auth_header = self.auth_header.replace(" ", "")  # removes spaces in token
         response = self._authorize_user(auth_header=auth_header)
         self.assertEqual(response.status_code, 400)
 
     def test_disabled_user_login(self):
         user = self._create_user(
             **{
-                'username': 'barbar',
-                'email': 'barbar@email.com',
-                'password': 'molly',
-                'is_active': False,
+                "username": "barbar",
+                "email": "barbar@email.com",
+                "password": "molly",
+                "is_active": False,
             }
         )
-        self._create_org_user(**{'user': user})
+        self._create_org_user(**{"user": user})
         response = self._authorize_user(
-            username='barbar', password='molly', auth_header=self.auth_header
+            username="barbar", password="molly", auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
@@ -129,10 +129,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self._authorize_user()
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
-            response.data['detail'],
+            response.data["detail"],
             (
-                'Radius token does not exist. Obtain a new radius token or provide '
-                'the organization UUID and API token.'
+                "Radius token does not exist. Obtain a new radius token or provide "
+                "the organization UUID and API token."
             ),
         )
 
@@ -140,16 +140,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_authorize_no_username_403(self):
         self._get_org_user()
         self._login_and_obtain_auth_token()
-        response = self.client.get(reverse('radius:authorize'))
+        response = self.client.get(reverse("radius:authorize"))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], 'username field is required.')
+        self.assertEqual(response.data["detail"], "username field is required.")
 
     def _test_authorize_without_auth_helper(self, username, password):
         r = self._authorize_user(username=username, password=password)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @mock.patch('openwisp_users.settings.USER_PASSWORD_EXPIRATION', 30)
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_authorize_password_expired(self):
         self._get_org_user()
         User.objects.update(password_updated=now() - timedelta(days=60))
@@ -159,36 +159,36 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_authorize_failed(self):
         response = self._authorize_user(
-            username='baldo', password='ugo', auth_header=self.auth_header
+            username="baldo", password="ugo", auth_header=self.auth_header
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
     def test_authorize_fail_auth_details_incomplete(self):
         for querystring in [
-            f'?token={self.default_org.radius_settings.token}',
-            f'?uuid={str(self.default_org.pk)}',
+            f"?token={self.default_org.radius_settings.token}",
+            f"?uuid={str(self.default_org.pk)}",
         ]:
             with self.subTest(querystring):
                 post_url = f'{reverse("radius:authorize")}{querystring}'
                 response = self.client.post(
-                    post_url, {'username': 'tester', 'password': 'tester'}
+                    post_url, {"username": "tester", "password": "tester"}
                 )
                 self.assertEqual(response.status_code, 403)
 
     def test_authorize_wrong_password(self):
         self._get_org_user()
-        response = self._authorize_user(password='wrong', auth_header=self.auth_header)
+        response = self._authorize_user(password="wrong", auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
     def test_authorize_multiple_org_interaction(self):
         self._get_org_user()
         self._login_and_obtain_auth_token()
-        org2 = self._create_org(name='org2', slug='org2')
+        org2 = self._create_org(name="org2", slug="org2")
         rad_settings = OrganizationRadiusSettings.objects.create(organization=org2)
         # authorize authenticating as org2
-        auth_header = f'Bearer {org2.pk} {rad_settings.token}'
+        auth_header = f"Bearer {org2.pk} {rad_settings.token}"
         response = self._authorize_user(auth_header=auth_header)
         self.assertIsNone(response.data)
         self.assertEqual(response.status_code, 200)
@@ -212,8 +212,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         org_settings.needs_identity_verification = True
         org_settings.save()
         response = self.client.post(
-            reverse('radius:user_auth_token', args=[user.organization.slug]),
-            data={'username': 'tester', 'password': 'tester'},
+            reverse("radius:user_auth_token", args=[user.organization.slug]),
+            data={"username": "tester", "password": "tester"},
         )
         self.assertEqual(response.status_code, 401)
 
@@ -221,9 +221,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params()
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
-        params['password'] = ''
+        params["password"] = ""
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
@@ -233,8 +233,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusToken.objects.all().count(), 0)
         self._get_org_user()
         self._create_radius_token(can_auth=False)
-        params = self._get_postauth_params(**{'username': 'tester', 'password': ''})
-        response = self.client.post(reverse('radius:postauth'), params)
+        params = self._get_postauth_params(**{"username": "tester", "password": ""})
+        response = self.client.post(reverse("radius:postauth"), params)
         self.assertEqual(RadiusToken.objects.all().count(), 1)
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
@@ -245,10 +245,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._login_and_obtain_auth_token()
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params(
-            **{'username': 'tester', 'password': 'tester'}
+            **{"username": "tester", "password": "tester"}
         )
-        response = self.client.post(reverse('radius:postauth'), params)
-        params['password'] = ''
+        response = self.client.post(reverse("radius:postauth"), params)
+        params["password"] = ""
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
@@ -258,34 +258,34 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         params = self._get_postauth_params()
         post_url = f'{reverse("radius:postauth")}{self.token_querystring}'
         response = self.client.post(post_url, params)
-        params['password'] = ''
+        params["password"] = ""
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
 
     def test_postauth_reject_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
-        params = {'username': 'molly', 'password': 'barba', 'reply': 'Access-Reject'}
+        params = {"username": "molly", "password": "barba", "reply": "Access-Reject"}
         params = self._get_postauth_params(**params)
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
         self.assertEqual(
-            RadiusPostAuth.objects.filter(username='molly', password='barba').count(),
+            RadiusPostAuth.objects.filter(username="molly", password="barba").count(),
             1,
         )
 
     def test_postauth_reject_201_empty_fields(self):
         params = {
-            'reply': 'Access-Reject',
-            'called_station_id': '',
-            'calling_station_id': '',
+            "reply": "Access-Reject",
+            "called_station_id": "",
+            "calling_station_id": "",
         }
         params = self._get_postauth_params(**params)
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
@@ -293,76 +293,76 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_postauth_400(self):
         response = self.client.post(
-            reverse('radius:postauth'), {}, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), {}, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         self.assertEqual(response.status_code, 400)
 
     def test_postauth_station_id_max_length_253_exceed_400(self):
         params = {
-            'called_station_id': 'C0-4A-00-EE-D1-0D:' + 'A' * 253,
-            'calling_station_id': '00:26:b9:20:5f:10' + 'A' * 253,
+            "called_station_id": "C0-4A-00-EE-D1-0D:" + "A" * 253,
+            "calling_station_id": "00:26:b9:20:5f:10" + "A" * 253,
         }
         params = self._get_postauth_params(**params)
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.data['called_station_id'][0],
-            'Ensure this field has no more than 253 characters.',
+            response.data["called_station_id"][0],
+            "Ensure this field has no more than 253 characters.",
         )
         self.assertEqual(
-            response.data['calling_station_id'][0],
-            'Ensure this field has no more than 253 characters.',
+            response.data["calling_station_id"][0],
+            "Ensure this field has no more than 253 characters.",
         )
 
     @capture_any_output()
     def test_postauth_no_token_403(self):
-        response = self.client.post(reverse('radius:postauth'), {'username': 'tester'})
+        response = self.client.post(reverse("radius:postauth"), {"username": "tester"})
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
-            response.data['detail'],
+            response.data["detail"],
             (
-                'Radius token does not exist. Obtain a new radius token or provide '
-                'the organization UUID and API token.'
+                "Radius token does not exist. Obtain a new radius token or provide "
+                "the organization UUID and API token."
             ),
         )
 
     def test_postauth_long_password_access_reject(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params(
-            **{'password': get_random_string(length=128), 'reply': 'Access-Reject'}
+            **{"password": get_random_string(length=128), "reply": "Access-Reject"}
         )
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusPostAuth.objects.count(), 1)
         pa = RadiusPostAuth.objects.first()
-        with self.subTest('Ensure validation does not fail'):
+        with self.subTest("Ensure validation does not fail"):
             pa.full_clean()
-        with self.subTest('Ensure max length is honored'):
+        with self.subTest("Ensure max length is honored"):
             self.assertEqual(
-                len(pa.password), RadiusPostAuth._meta.get_field('password').max_length
+                len(pa.password), RadiusPostAuth._meta.get_field("password").max_length
             )
 
     def test_postauth_long_password_access_accept(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params(
-            **{'password': get_random_string(length=128), 'reply': 'Access-Accept'}
+            **{"password": get_random_string(length=128), "reply": "Access-Accept"}
         )
         response = self.client.post(
-            reverse('radius:postauth'), params, HTTP_AUTHORIZATION=self.auth_header
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
         )
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusPostAuth.objects.count(), 1)
         pa = RadiusPostAuth.objects.first()
-        with self.subTest('Ensure validation does not fail'):
+        with self.subTest("Ensure validation does not fail"):
             pa.full_clean()
-        with self.subTest('Ensure password is not saved'):
+        with self.subTest("Ensure password is not saved"):
             self.assertEqual(len(pa.password), 0)
 
     def post_json(self, data):
@@ -374,12 +374,12 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self._acct_url,
             data=json.dumps(data),
             HTTP_AUTHORIZATION=self.auth_header,
-            content_type='application/json',
+            content_type="application/json",
         )
 
     def _prep_start_acct_data(self):
         data = self.acct_post_data
-        data['status_type'] = 'Start'
+        data["status_type"] = "Start"
         return self._get_accounting_params(**data)
 
     def assertAcctData(self, ra, data):
@@ -390,12 +390,12 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         """
         # we don't expect the organization field
         # because it will be inferred from the auth token
-        self.assertNotIn('organization', data)
+        self.assertNotIn("organization", data)
         # but we still want to ensure the
         # organization is filled correctly
-        data['organization'] = self.default_org
+        data["organization"] = self.default_org
         for key, _ in data.items():
-            if key in ('status_type', 'framed_ipv6_address'):
+            if key in ("status_type", "framed_ipv6_address"):
                 continue
             ra_value = getattr(ra, key)
             data_value = data[key]
@@ -406,18 +406,18 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     def test_accounting_no_token_403(self):
-        response = self.client.post(self._acct_url, {'username': 'tester'})
+        response = self.client.post(self._acct_url, {"username": "tester"})
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
-            response.data['detail'],
+            response.data["detail"],
             (
-                'Radius token does not exist. Obtain a new radius token or provide '
-                'the organization UUID and API token.'
+                "Radius token does not exist. Obtain a new radius token or provide "
+                "the organization UUID and API token."
             ),
         )
 
     @freeze_time(START_DATE)
-    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     def test_accounting_start_200(self, send_login_email):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
@@ -425,8 +425,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with catch_signal(radius_accounting_success) as handler:
             response = self.post_json(data)
         handler.assert_called_once()
-        view = handler.mock_calls[0].kwargs.get('view')
-        self.assertTrue(hasattr(view, 'request'))
+        view = handler.mock_calls[0].kwargs.get("view")
+        self.assertTrue(hasattr(view, "request"))
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
@@ -435,14 +435,14 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     @capture_any_output()
-    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     @mock.patch(
-        'openwisp_radius.api.serializers.RadiusAccountingSerializer.create',
+        "openwisp_radius.api.serializers.RadiusAccountingSerializer.create",
         side_effect=IntegrityError,
     )
     def test_accounting_start_integrity_error(self, create, send_login_email):
         data = self.acct_post_data
-        data['status_type'] = 'Start'
+        data["status_type"] = "Start"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
@@ -452,26 +452,26 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         send_login_email.assert_not_called()
 
     @mock.patch(
-        'openwisp_radius.receivers.send_login_email.delay', side_effect=OperationalError
+        "openwisp_radius.receivers.send_login_email.delay", side_effect=OperationalError
     )
-    @mock.patch('openwisp_radius.receivers.logger')
+    @mock.patch("openwisp_radius.receivers.logger")
     def test_celery_broker_unreachable(self, logger, *args):
         data = self._prep_start_acct_data()
         self.post_json(data)
-        logger.warning.assert_called_with('Celery broker is unreachable')
+        logger.warning.assert_called_with("Celery broker is unreachable")
 
-    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     def test_accounting_start_radius_token_201(self, send_login_email):
         self._get_org_user()
         self._login_and_obtain_auth_token()
         data = self._prep_start_acct_data()
-        data.update(username='tester')
+        data.update(username="tester")
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         with catch_signal(radius_accounting_success) as handler:
             response = self.client.post(
                 self._acct_url,
                 data=json.dumps(data),
-                content_type='application/json',
+                content_type="application/json",
             )
         handler.assert_called_once()
         send_login_email.assert_called_once()
@@ -479,20 +479,20 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
 
-    @mock.patch('openwisp_radius.receivers.send_login_email.delay')
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     def test_accounting_start_radius_token_201_ppp(self, send_login_email):
         self._get_org_user()
         self._login_and_obtain_auth_token()
         data = self._prep_start_acct_data()
-        data.update(username='tester')
+        data.update(username="tester")
         # set `framed_protocol` to 'PPP'
-        data.update(framed_protocol='PPP')
+        data.update(framed_protocol="PPP")
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         with catch_signal(radius_accounting_success) as handler:
             response = self.client.post(
                 self._acct_url,
                 data=json.dumps(data),
-                content_type='application/json',
+                content_type="application/json",
             )
         # assert `send_email_on_new_accounting_handler` is called once
         handler.assert_called_once()
@@ -507,23 +507,23 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_radius_token(can_auth=False)
         self._create_radius_accounting(**self._acct_initial_data)
         data = self._prep_start_acct_data()
-        data.update(username='tester')
+        data.update(username="tester")
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
-            content_type='application/json',
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'')
+        self.assertEqual(response.content, b"")
 
     @freeze_time(START_DATE)
     def test_accounting_start_200_querystring(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
         data = self._prep_start_acct_data()
-        post_url = f'{self._acct_url}{self.token_querystring}'
+        post_url = f"{self._acct_url}{self.token_querystring}"
         response = self.client.post(
-            post_url, json.dumps(data), content_type='application/json'
+            post_url, json.dumps(data), content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
@@ -536,28 +536,28 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_accounting_start_coova_chilli(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
-            'status_type': 'Start',
-            'session_id': '5a4f59aa00000001',
-            'unique_id': 'd11a8069e261040d8b01b9135bdb8dc9',
-            'username': 'username',
-            'realm': '',
-            'nas_ip_address': '192.168.182.1',
-            'nas_port_id': '1',
-            'nas_port_type': 'Wireless-802.11',
-            'session_time': '',
-            'authentication': '',
-            'input_octets': '',
-            'output_octets': '',
-            'called_station_id': 'C0-4A-00-EE-D1-0D',
-            'calling_station_id': 'A4-02-B9-D3-FD-29',
-            'terminate_cause': '',
-            'service_type': '',
-            'framed_protocol': '',
-            'framed_ip_address': '192.168.182.3',
-            'framed_ipv6_address': '::ffff:c0a8:b603',
-            'framed_ipv6_prefix': '0::/64',
-            'framed_interface_id': '0000:ffff:c0a8:b603',
-            'delegated_ipv6_prefix': '0::/64',
+            "status_type": "Start",
+            "session_id": "5a4f59aa00000001",
+            "unique_id": "d11a8069e261040d8b01b9135bdb8dc9",
+            "username": "username",
+            "realm": "",
+            "nas_ip_address": "192.168.182.1",
+            "nas_port_id": "1",
+            "nas_port_type": "Wireless-802.11",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
+            "called_station_id": "C0-4A-00-EE-D1-0D",
+            "calling_station_id": "A4-02-B9-D3-FD-29",
+            "terminate_cause": "",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "192.168.182.3",
+            "framed_ipv6_address": "::ffff:c0a8:b603",
+            "framed_ipv6_prefix": "0::/64",
+            "framed_interface_id": "0000:ffff:c0a8:b603",
+            "delegated_ipv6_prefix": "0::/64",
         }
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
@@ -566,9 +566,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra = RadiusAccounting.objects.last()
         ra.refresh_from_db()
-        data['session_time'] = 0
-        data['input_octets'] = 0
-        data['output_octets'] = 0
+        data["session_time"] = 0
+        data["input_octets"] = 0
+        data["output_octets"] = 0
         self.assertEqual(ra.session_time, 0)
         self.assertEqual(ra.input_octets, 0)
         self.assertEqual(ra.output_octets, 0)
@@ -579,7 +579,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_accounting_start_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
-        data['status_type'] = 'Start'
+        data["status_type"] = "Start"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
@@ -592,7 +592,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
         data = self.acct_post_data
-        data['status_type'] = 'Interim-Update'
+        data["status_type"] = "Interim-Update"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
@@ -600,18 +600,18 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
-        data['terminate_cause'] = ''
+        data["terminate_cause"] = ""
         self.assertAcctData(ra, data)
 
     @mock.patch.object(
         app_settings,
-        'CALLED_STATION_IDS',
+        "CALLED_STATION_IDS",
         {
-            'test-org': {
-                'openvpn_config': [
-                    {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+            "test-org": {
+                "openvpn_config": [
+                    {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
                 ],
-                'unconverted_ids': ['00-27-22-F3-FA-F1:hostname'],
+                "unconverted_ids": ["00-27-22-F3-FA-F1:hostname"],
             }
         },
     )
@@ -620,43 +620,43 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
 
-        with self.subTest('should not overwrite back to unconverted ID'):
-            ra.called_station_id = '00-00-11-11-22-22'
+        with self.subTest("should not overwrite back to unconverted ID"):
+            ra.called_station_id = "00-00-11-11-22-22"
             ra.save()
             data = self.acct_post_data
-            data['status_type'] = 'Interim-Update'
+            data["status_type"] = "Interim-Update"
             data = self._get_accounting_params(**data)
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
             self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
-            self.assertEqual(ra.called_station_id, '00-00-11-11-22-22')
+            self.assertEqual(ra.called_station_id, "00-00-11-11-22-22")
 
-        with self.subTest('should overwrite if different called station ID'):
-            ra.called_station_id = '00-00-11-11-22-22'
+        with self.subTest("should overwrite if different called station ID"):
+            ra.called_station_id = "00-00-11-11-22-22"
             ra.save()
             data = self.acct_post_data
-            data['status_type'] = 'Interim-Update'
+            data["status_type"] = "Interim-Update"
             data = self._get_accounting_params(**data)
             # this called station ID is not in the unconverted_ids list
             # and simulates the situation in which the user roams
             # to a different device and hence the called station ID can change
-            data['called_station_id'] = '00-00-22-22-33-33'
+            data["called_station_id"] = "00-00-22-22-33-33"
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
             self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
-            self.assertEqual(ra.called_station_id, '00-00-22-22-33-33')
+            self.assertEqual(ra.called_station_id, "00-00-22-22-33-33")
 
     @freeze_time(START_DATE)
     @capture_any_output()
     def test_accounting_update(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
-        with self.subTest('test interim update on unexisting radius accounting'):
+        with self.subTest("test interim update on unexisting radius accounting"):
             data = self.acct_post_data
-            data['status_type'] = 'Interim-Update'
+            data["status_type"] = "Interim-Update"
             data = self._get_accounting_params(**data)
             response = self.post_json(data)
             self.assertEqual(response.status_code, 201)
@@ -664,26 +664,26 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra = RadiusAccounting.objects.first()
             self.assertEqual(ra.update_time.timetuple(), now().timetuple())
-            data['terminate_cause'] = ''
+            data["terminate_cause"] = ""
             self.assertAcctData(ra, data)
-        with self.subTest('test interim update on stopped radius accounting'):
+        with self.subTest("test interim update on stopped radius accounting"):
             data = {
                 **self.acct_post_data,
-                'start_time': '2018-03-02T00:43:24.020460+01:00',
-                'stop_time': '2018-03-02T00:43:24.020460+01:00',
-                'terminate_cause': 'User Request',
-                'unique_id': 'd11a8069e261040d8b01b9135bdb8dc9',
+                "start_time": "2018-03-02T00:43:24.020460+01:00",
+                "stop_time": "2018-03-02T00:43:24.020460+01:00",
+                "terminate_cause": "User Request",
+                "unique_id": "d11a8069e261040d8b01b9135bdb8dc9",
             }
             ra = self._create_radius_accounting(**data)
-            self.assertEqual(ra.stop_time, parser.parse(data['stop_time']))
-            self.assertEqual(ra.terminate_cause, data['terminate_cause'])
-            data['status_type'] = 'Interim-Update'
+            self.assertEqual(ra.stop_time, parser.parse(data["stop_time"]))
+            self.assertEqual(ra.terminate_cause, data["terminate_cause"])
+            data["status_type"] = "Interim-Update"
             response = self.post_json(data)
             self.assertEqual(response.status_code, 200)
             self.assertIsNone(response.data)
             ra.refresh_from_db()
             self.assertEqual(ra.stop_time, None)
-            self.assertEqual(ra.terminate_cause, '')
+            self.assertEqual(ra.terminate_cause, "")
 
     @freeze_time(START_DATE)
     def test_accounting_stop_200(self):
@@ -693,7 +693,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         ra.refresh_from_db()
         start_time = ra.start_time
         data = self.acct_post_data
-        data['status_type'] = 'Stop'
+        data["status_type"] = "Stop"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
@@ -721,10 +721,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self.acct_post_data
         data.update(
             {
-                'status_type': 'Stop',
-                'terminate_cause': '',
-                'input_octets': '',
-                'output_octets': '',
+                "status_type": "Stop",
+                "terminate_cause": "",
+                "input_octets": "",
+                "output_octets": "",
             }
         )
         data = self._get_accounting_params(**data)
@@ -745,7 +745,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_accounting_stop_201(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
-        data['status_type'] = 'Stop'
+        data["status_type"] = "Stop"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
@@ -762,7 +762,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         radtoken = self._create_radius_token(can_auth=True)
         # Send Accounting stop request
         data = self.acct_post_data
-        data.update(username='tester', status_type='Stop')
+        data.update(username="tester", status_type="Stop")
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
@@ -771,7 +771,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @mock.patch.object(
         app_settings,
-        'DISPOSABLE_RADIUS_USER_TOKEN',
+        "DISPOSABLE_RADIUS_USER_TOKEN",
         False,
     )
     def test_user_auth_token_not_disabled_on_stop(self):
@@ -779,7 +779,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         radtoken = self._create_radius_token(can_auth=True)
         # Send Accounting stop request
         data = self.acct_post_data
-        data.update(username='tester', status_type='Stop')
+        data.update(username="tester", status_type="Stop")
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
@@ -789,28 +789,28 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @freeze_time(START_DATE)
     def test_user_auth_token_org_accounting_stop(self):
         self._get_org_user()
-        self.org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
-        self._create_org_user(**{'organization': self.org2})
+        self.org2 = self._create_org(**{"name": "test", "slug": "test"})
+        self._create_org_user(**{"organization": self.org2})
         # Start Accounting with first organzation
         response = self.client.post(
-            reverse('radius:user_auth_token', args=[self.default_org.slug]),
-            {'username': 'tester', 'password': 'tester'},
+            reverse("radius:user_auth_token", args=[self.default_org.slug]),
+            {"username": "tester", "password": "tester"},
         )
         data = self._prep_start_acct_data()
-        data.update(username='tester')
+        data.update(username="tester")
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
         # Get radius token with second organization
         response = self.client.post(
-            reverse('radius:user_auth_token', args=[self.org2.slug]),
-            {'username': 'tester', 'password': 'tester'},
+            reverse("radius:user_auth_token", args=[self.org2.slug]),
+            {"username": "tester", "password": "tester"},
         )
         # Test RadiusAccounting is terminated with correct cause
         self.assertEqual(
             RadiusAccounting.objects.filter(
-                username='tester',
+                username="tester",
                 organization=self.default_org,
-                terminate_cause='NAS_Request',
+                terminate_cause="NAS_Request",
                 stop_time__isnull=False,
             ).count(),
             1,
@@ -824,9 +824,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         unique_id = uuid.uuid4().hex
         data = self._prep_start_acct_data()
         data.update(
-            username='tester',
+            username="tester",
             stop_time=START_DATE,
-            terminate_cause='User-Request',
+            terminate_cause="User-Request",
             unique_id=unique_id,
             session_id=unique_id,
         )
@@ -840,47 +840,47 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._get_accounting_params(**self.acct_post_data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('status_type', response.data)
+        self.assertIn("status_type", response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
     @capture_any_output()
     def test_accounting_400_invalid_status_type(self):
         data = self.acct_post_data
-        data['status_type'] = 'INVALID'
+        data["status_type"] = "INVALID"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('status_type', response.data)
+        self.assertIn("status_type", response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
     @freeze_time(START_DATE)
-    @mock.patch('logging.Logger.warn')
+    @mock.patch("logging.Logger.warn")
     def test_accounting_400_validation_error(self, mocked_logger):
         data = self.acct_post_data
-        data['status_type'] = 'Start'
-        del data['nas_ip_address']
+        data["status_type"] = "Start"
+        del data["nas_ip_address"]
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('nas_ip_address', response.data)
+        self.assertIn("nas_ip_address", response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         expected_error_string = (
-            '{\'nas_ip_address\': '
-            '[ErrorDetail(string=\'This field is required.\', '
-            'code=\'required\')]}'
+            "{'nas_ip_address': "
+            "[ErrorDetail(string='This field is required.', "
+            "code='required')]}"
         )
         mocked_logger.assert_called_with(
-            'Freeradius accounting request failed.\n'
-            f'Error: {expected_error_string}\n'
-            f'Request payload: {data}'
+            "Freeradius accounting request failed.\n"
+            f"Error: {expected_error_string}\n"
+            f"Request payload: {data}"
         )
 
     @freeze_time(START_DATE)
-    @mock.patch('logging.Logger.warn')
+    @mock.patch("logging.Logger.warn")
     @capture_any_output()
     def test_accounting_interim_update_openwisp_closed_session(self, mocked_logger):
-        org2 = self._create_org(name='org2', slug='org2')
+        org2 = self._create_org(name="org2", slug="org2")
         org2.radius_settings = OrganizationRadiusSettings.objects.create(
             organization=org2
         )
@@ -889,7 +889,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         # Create RadiusAccounting object with "default" organization
         data = self.acct_post_data
-        data['status_type'] = 'Interim-Update'
+        data["status_type"] = "Interim-Update"
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
@@ -897,14 +897,14 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         # Create RadiusAccounting object with "org2" organization
         org2_data = self.acct_post_data
-        org2_data['status_type'] = 'Interim-Update'
-        org2_data['unique_id'] = '42'
+        org2_data["status_type"] = "Interim-Update"
+        org2_data["unique_id"] = "42"
         org2_data = self._get_accounting_params(**org2_data)
         response = self.client.post(
             self._acct_url,
             data=json.dumps(org2_data),
-            HTTP_AUTHORIZATION=f'Bearer {org2.pk} {org2.radius_settings.token}',
-            content_type='application/json',
+            HTTP_AUTHORIZATION=f"Bearer {org2.pk} {org2.radius_settings.token}",
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(RadiusAccounting.objects.count(), 2)
@@ -914,8 +914,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
-            HTTP_AUTHORIZATION=f'Bearer {org2.pk} {org2.radius_settings.token}',
-            content_type='application/json',
+            HTTP_AUTHORIZATION=f"Bearer {org2.pk} {org2.radius_settings.token}",
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
@@ -924,8 +924,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data1 = self.acct_post_data
         data1.update(
             dict(
-                session_id='35000006',
-                unique_id='75058e50',
+                session_id="35000006",
+                unique_id="75058e50",
                 input_octets=9900909,
                 output_octets=1513075509,
             )
@@ -934,8 +934,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data2 = self.acct_post_data
         data2.update(
             dict(
-                session_id='40111116',
-                unique_id='12234f69',
+                session_id="40111116",
+                unique_id="12234f69",
                 input_octets=3000909,
                 output_octets=1613176609,
             )
@@ -944,113 +944,113 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data3 = self.acct_post_data
         data3.update(
             dict(
-                session_id='89897654',
-                unique_id='99144d60',
+                session_id="89897654",
+                unique_id="99144d60",
                 input_octets=4440909,
                 output_octets=1119074409,
             )
         )
         self._create_radius_accounting(**data3)
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=1',
+            f"{self._acct_url}?page_size=1&page=1",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['output_octets'], data3['output_octets'])
-        self.assertEqual(item['input_octets'], data3['input_octets'])
-        self.assertEqual(item['nas_ip_address'], '172.16.64.91')
-        self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
+        self.assertEqual(item["output_octets"], data3["output_octets"])
+        self.assertEqual(item["input_octets"], data3["input_octets"])
+        self.assertEqual(item["nas_ip_address"], "172.16.64.91")
+        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=2',
+            f"{self._acct_url}?page_size=1&page=2",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['output_octets'], data2['output_octets'])
-        self.assertEqual(item['nas_ip_address'], '172.16.64.91')
-        self.assertEqual(item['input_octets'], data2['input_octets'])
-        self.assertEqual(item['called_station_id'], '00-27-22-F3-FA-F1:hostname')
+        self.assertEqual(item["output_octets"], data2["output_octets"])
+        self.assertEqual(item["nas_ip_address"], "172.16.64.91")
+        self.assertEqual(item["input_octets"], data2["input_octets"])
+        self.assertEqual(item["called_station_id"], "00-27-22-F3-FA-F1:hostname")
         response = self.client.get(
-            f'{self._acct_url}?page_size=1&page=3',
+            f"{self._acct_url}?page_size=1&page=3",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['username'], 'admin')
-        self.assertEqual(item['calling_station_id'], '5c:7d:c1:72:a7:3b')
-        self.assertEqual(item['output_octets'], data1['output_octets'])
-        self.assertEqual(item['input_octets'], data1['input_octets'])
+        self.assertEqual(item["username"], "admin")
+        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
+        self.assertEqual(item["output_octets"], data1["output_octets"])
+        self.assertEqual(item["input_octets"], data1["input_octets"])
 
     def test_accounting_filter_username(self):
         data1 = self.acct_post_data
-        data1.update(dict(username='test_user', unique_id='75058e50'))
+        data1.update(dict(username="test_user", unique_id="75058e50"))
         self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        data2.update(dict(username='admin', unique_id='99144d60'))
+        data2.update(dict(username="admin", unique_id="99144d60"))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?username=test_user',
+            f"{self._acct_url}?username=test_user",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['username'], 'test_user')
+        self.assertEqual(item["username"], "test_user")
 
     def test_accounting_filter_called_station_id(self):
         data1 = self.acct_post_data
-        data1.update(dict(called_station_id='E0-CA-40-EE-D1-0D', unique_id='99144d60'))
+        data1.update(dict(called_station_id="E0-CA-40-EE-D1-0D", unique_id="99144d60"))
         self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        data2.update(dict(called_station_id='C0-CA-40-FE-E1-9D', unique_id='85144d60'))
+        data2.update(dict(called_station_id="C0-CA-40-FE-E1-9D", unique_id="85144d60"))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?called_station_id=E0-CA-40-EE-D1-0D',
+            f"{self._acct_url}?called_station_id=E0-CA-40-EE-D1-0D",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['called_station_id'], 'E0-CA-40-EE-D1-0D')
+        self.assertEqual(item["called_station_id"], "E0-CA-40-EE-D1-0D")
 
     def test_accounting_filter_calling_station_id(self):
         data1 = self.acct_post_data
-        data1.update(dict(calling_station_id='4c:8d:c2:80:a7:4c', unique_id='99144d60'))
+        data1.update(dict(calling_station_id="4c:8d:c2:80:a7:4c", unique_id="99144d60"))
         self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        data2.update(dict(calling_station_id='5c:6d:c2:80:a7:4c', unique_id='85144d60'))
+        data2.update(dict(calling_station_id="5c:6d:c2:80:a7:4c", unique_id="85144d60"))
         self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?calling_station_id=4c:8d:c2:80:a7:4c',
+            f"{self._acct_url}?calling_station_id=4c:8d:c2:80:a7:4c",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['calling_station_id'], '4c:8d:c2:80:a7:4c')
+        self.assertEqual(item["calling_station_id"], "4c:8d:c2:80:a7:4c")
 
     @freeze_time(START_DATE)
     def test_accounting_filter_start_time(self):
         data1 = self.acct_post_data
-        data1.update(dict(unique_id='99144d60'))
+        data1.update(dict(unique_id="99144d60"))
         self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
         data2.update(
-            dict(start_time='2018-03-02T00:43:24.020460+01:00', unique_id='85144d60')
+            dict(start_time="2018-03-02T00:43:24.020460+01:00", unique_id="85144d60")
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?start_time=2018-03-01',
+            f"{self._acct_url}?start_time=2018-03-01",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 2)
         self.assertEqual(response.status_code, 200)
         item = response.data[-1]
-        self.assertEqual(parser.parse(item['start_time']), ra.start_time)
+        self.assertEqual(parser.parse(item["start_time"]), ra.start_time)
 
     @freeze_time(START_DATE)
     def test_accounting_filter_stop_time(self):
@@ -1058,84 +1058,84 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data1.update(
             dict(
                 start_time=START_DATE,
-                stop_time=START_DATE.replace('04-20', '04-21'),
-                unique_id='99144d60',
+                stop_time=START_DATE.replace("04-20", "04-21"),
+                unique_id="99144d60",
             )
         )
         self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        stop_time = '2018-03-02T11:43:24.020460+01:00'
+        stop_time = "2018-03-02T11:43:24.020460+01:00"
         data2.update(
             dict(
-                start_time='2018-03-02T10:43:24.020460+01:00',
+                start_time="2018-03-02T10:43:24.020460+01:00",
                 stop_time=stop_time,
-                unique_id='85144d60',
+                unique_id="85144d60",
             )
         )
         ra = self._create_radius_accounting(**data2)
         response = self.client.get(
-            f'{self._acct_url}?stop_time=2018-03-02 21:43:25',
+            f"{self._acct_url}?stop_time=2018-03-02 21:43:25",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(parser.parse(item['stop_time']), ra.stop_time)
+        self.assertEqual(parser.parse(item["stop_time"]), ra.stop_time)
 
-    @freeze_time('2023-10-25T22:14:09+01:00')
+    @freeze_time("2023-10-25T22:14:09+01:00")
     def test_accounting_filter_is_open(self):
         data1 = self.acct_post_data
-        data1.update(dict(stop_time=None, unique_id='99144d60'))
+        data1.update(dict(stop_time=None, unique_id="99144d60"))
         ra = self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
-        data2.update(dict(unique_id='85144d60'))
+        data2.update(dict(unique_id="85144d60"))
         self._create_radius_accounting(**data2)
         # The old session gets closed automatically, fetch the
         # updated object from the database.
-        ra.refresh_from_db(fields=['stop_time'])
+        ra.refresh_from_db(fields=["stop_time"])
         response = self.client.get(
-            f'{self._acct_url}?is_open=true',
+            f"{self._acct_url}?is_open=true",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item['stop_time'], None)
+        self.assertEqual(item["stop_time"], None)
         response = self.client.get(
-            f'{self._acct_url}?is_open=false',
+            f"{self._acct_url}?is_open=false",
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(parser.parse(item['stop_time']), ra.stop_time)
+        self.assertEqual(parser.parse(item["stop_time"]), ra.stop_time)
 
     @freeze_time(START_DATE)
     def test_coova_accounting_on_200(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
-            'status_type': 'Accounting-On',
-            'session_id': '',
-            'unique_id': '569533dad629d47d8b122826d3ed7f3d',
-            'username': '',
-            'realm': '',
-            'nas_ip_address': '192.168.182.1',
-            'nas_port_id': '',
-            'nas_port_type': 'Wireless-802.11',
-            'session_time': '',
-            'authentication': '',
-            'input_octets': '',
-            'output_octets': '',
-            'called_station_id': 'C0-4A-00-EE-D1-0D',
-            'calling_station_id': '00-00-00-00-00-00',
-            'terminate_cause': '',
-            'service_type': '',
-            'framed_protocol': '',
-            'framed_ip_address': '',
-            'framed_ipv6_address': '',
-            'framed_ipv6_prefix': '',
-            'framed_interface_id': '',
-            'delegated_ipv6_prefix': '',
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "569533dad629d47d8b122826d3ed7f3d",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "192.168.182.1",
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
+            "called_station_id": "C0-4A-00-EE-D1-0D",
+            "calling_station_id": "00-00-00-00-00-00",
+            "terminate_cause": "",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "",
+            "framed_ipv6_address": "",
+            "framed_ipv6_prefix": "",
+            "framed_interface_id": "",
+            "delegated_ipv6_prefix": "",
         }
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
@@ -1147,28 +1147,28 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_coova_accounting_off_200(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = {
-            'status_type': 'Accounting-Off',
-            'session_id': '',
-            'unique_id': '569533dad629d47d8b122826d3ed7f3d',
-            'username': '',
-            'realm': '',
-            'nas_ip_address': '192.168.182.1',
-            'nas_port_id': '',
-            'nas_port_type': 'Wireless-802.11',
-            'session_time': '',
-            'authentication': '',
-            'input_octets': '',
-            'output_octets': '',
-            'called_station_id': 'C0-4A-00-EE-D1-0D',
-            'calling_station_id': '00-00-00-00-00-00',
-            'terminate_cause': '0',
-            'service_type': '',
-            'framed_protocol': '',
-            'framed_ip_address': '',
-            'framed_ipv6_address': '',
-            'framed_ipv6_prefix': '',
-            'framed_interface_id': '',
-            'delegated_ipv6_prefix': '',
+            "status_type": "Accounting-Off",
+            "session_id": "",
+            "unique_id": "569533dad629d47d8b122826d3ed7f3d",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "192.168.182.1",
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
+            "called_station_id": "C0-4A-00-EE-D1-0D",
+            "calling_station_id": "00-00-00-00-00-00",
+            "terminate_cause": "0",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "",
+            "framed_ipv6_address": "",
+            "framed_ipv6_prefix": "",
+            "framed_interface_id": "",
+            "delegated_ipv6_prefix": "",
         }
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
@@ -1199,59 +1199,59 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
-            content_type='application/json',
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
     def test_get_authorize_view(self):
         url = f'{reverse("radius:authorize")}{self.token_querystring}'
-        r = self.client.get(url, HTTP_ACCEPT='text/html')
+        r = self.client.get(url, HTTP_ACCEPT="text/html")
         self.assertEqual(r.status_code, 405)
         expected = f'<form action="{reverse("radius:authorize")}'
         self.assertIn(expected, r.content.decode())
 
     def test_accounting_start_403(self):
         data = self.acct_post_data
-        data['status_type'] = 'Start'
-        data['organization'] = str(self.default_org.pk)
+        data["status_type"] = "Start"
+        data["organization"] = str(self.default_org.pk)
         data = self._get_accounting_params(**data)
         response = self.post_json(data)
         self.assertEqual(response.status_code, 403)
-        self.assertIn('setting the organization', str(response.data['detail']))
+        self.assertIn("setting the organization", str(response.data["detail"]))
 
     def test_accounting_show_only_token_org(self):
-        org = Organization.objects.create(name='org1')
+        org = Organization.objects.create(name="org1")
         self.assertEqual(RadiusAccounting.objects.count(), 0)
-        nas_ip = '127.0.0.1'
+        nas_ip = "127.0.0.1"
         test1 = RadiusAccounting(
-            session_id='asd1', organization=org, nas_ip_address=nas_ip, unique_id='123'
+            session_id="asd1", organization=org, nas_ip_address=nas_ip, unique_id="123"
         )
         test1.full_clean()
         test1.save()
         test2 = RadiusAccounting(
-            session_id='asd2',
+            session_id="asd2",
             organization=self.default_org,
             nas_ip_address=nas_ip,
-            unique_id='1234',
+            unique_id="1234",
         )
         test2.full_clean()
         test2.save()
         data = self.client.get(self._acct_url, HTTP_AUTHORIZATION=self.auth_header)
         self.assertEqual(len(data.json()), 1)
-        self.assertEqual(data.json()[0]['organization'], str(self.default_org.pk))
+        self.assertEqual(data.json()[0]["organization"], str(self.default_org.pk))
 
     def test_user_accounting_list_empty_diff_organization(self):
         self.test_accounting_start_200()
         self._get_org_user()
         with self.subTest("Auth Token"):
-            self._login_and_obtain_auth_token(username='tester')
-            response = self.client.get(f'{self._acct_url}?username=tester')
+            self._login_and_obtain_auth_token(username="tester")
+            response = self.client.get(f"{self._acct_url}?username=tester")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()), 0)
         with self.subTest("HTTP Auth"):
             response = self.client.get(
-                f'{self._acct_url}?username=tester', HTTP_AUTHORIZATION=self.auth_header
+                f"{self._acct_url}?username=tester", HTTP_AUTHORIZATION=self.auth_header
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()), 0)
@@ -1266,25 +1266,25 @@ class TestTransactionFreeradiusApi(
         user = self._get_org_user().user
         rug = user.radiususergroup_set.first()
         reply1 = RadiusGroupReply(
-            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+            group=rug.group, attribute="Session-Timeout", op="=", value="3600"
         )
         reply1.full_clean()
         reply1.save()
         reply2 = RadiusGroupReply(
-            group=rug.group, attribute='Idle-Timeout', op='=', value='500'
+            group=rug.group, attribute="Idle-Timeout", op="=", value="500"
         )
         reply2.full_clean()
         reply2.save()
         post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
         response = self.client.post(
-            post_url, {'username': 'tester', 'password': 'tester'}
+            post_url, {"username": "tester", "password": "tester"}
         )
         self.assertEqual(response.status_code, 200)
         expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
         expected.update(
             {
-                'Session-Timeout': {'op': '=', 'value': '3600'},
-                'Idle-Timeout': {'op': '=', 'value': '500'},
+                "Session-Timeout": {"op": "=", "value": "3600"},
+                "Idle-Timeout": {"op": "=", "value": "500"},
             }
         )
         self.assertEqual(
@@ -1296,49 +1296,49 @@ class TestTransactionFreeradiusApi(
         user = self._get_org_user().user
         rug = user.radiususergroup_set.first()
         reply = RadiusGroupReply(
-            group=rug.group, attribute='Session-Timeout', op='=', value='3600'
+            group=rug.group, attribute="Session-Timeout", op="=", value="3600"
         )
         reply.full_clean()
         reply.save()
 
-        with self.subTest('remaining lower than reply'):
+        with self.subTest("remaining lower than reply"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.return_value = 1200
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = 1200
-                expected['CoovaChilli-Max-Total-Octets'] = 1200
+                expected["Session-Timeout"] = 1200
+                expected["CoovaChilli-Max-Total-Octets"] = 1200
                 self.assertEqual(response.data, expected)
 
-        with self.subTest('remaining higher than reply'):
+        with self.subTest("remaining higher than reply"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.return_value = 3000000000
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
+                expected["Session-Timeout"] = {"op": "=", "value": "3600"}
                 self.assertEqual(response.data, expected)
 
-        with self.subTest('Counters disabled'):
-            with mock.patch.object(app_settings, 'COUNTERS', []):
+        with self.subTest("Counters disabled"):
+            with mock.patch.object(app_settings, "COUNTERS", []):
                 with self.assertNumQueries(6):
                     response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(response.status_code, 200)
                 expected = {
-                    'control:Auth-Type': 'Accept',
-                    'Session-Timeout': {'op': '=', 'value': '3600'},
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": {"op": "=", "value": "3600"},
                 }
                 self.assertEqual(response.data, expected)
 
         original_reply_value = reply.value
-        with self.subTest('incorrect reply value'):
-            reply.value = 'broken'
-            reply.save(update_fields=['value'])
+        with self.subTest("incorrect reply value"):
+            reply.value = "broken"
+            reply.save(update_fields=["value"])
             mocked_check.return_value = 1200
-            with mock.patch.object(freeradius_api_logger, 'warning') as mocked_warning:
+            with mock.patch.object(freeradius_api_logger, "warning") as mocked_warning:
                 response = self._authorize_user(auth_header=self.auth_header)
                 mocked_warning.assert_called_once_with(
                     'Session-Timeout value ("broken") cannot be converted to integer.'
@@ -1346,20 +1346,20 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(mocked_check.call_count, 2)
             self.assertEqual(response.status_code, 200)
             expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-            expected['Session-Timeout'] = 10800
-            expected['CoovaChilli-Max-Total-Octets'] = 3000000000
+            expected["Session-Timeout"] = 10800
+            expected["CoovaChilli-Max-Total-Octets"] = 3000000000
             self.assertEqual(response.data, expected)
         reply.value = original_reply_value
-        reply.save(update_fields=['value'])
+        reply.save(update_fields=["value"])
 
-        with self.subTest('remaining is None'):
+        with self.subTest("remaining is None"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.return_value = None
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, 2)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected['Session-Timeout'] = {'op': '=', 'value': '3600'}
-                del expected['CoovaChilli-Max-Total-Octets']
+                expected["Session-Timeout"] = {"op": "=", "value": "3600"}
+                del expected["CoovaChilli-Max-Total-Octets"]
                 self.assertEqual(response.data, expected)
 
     def test_authorize_200(self):
@@ -1372,7 +1372,7 @@ class TestTransactionFreeradiusApi(
         self._get_org_user()
         post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
         response = self.client.post(
-            post_url, {'username': 'tester', 'password': 'tester'}
+            post_url, {"username": "tester", "password": "tester"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
@@ -1380,13 +1380,13 @@ class TestTransactionFreeradiusApi(
     @capture_any_output()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
-        truncated_accept_response = {'control:Auth-Type': 'Accept'}
+        truncated_accept_response = {"control:Auth-Type": "Accept"}
 
-        with self.subTest('SkipCheck'):
+        with self.subTest("SkipCheck"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.side_effect = SkipCheck(
-                    message='Skip test',
-                    level='error',
+                    message="Skip test",
+                    level="error",
                     logger=logging,
                 )
                 response = self._authorize_user(auth_header=self.auth_header)
@@ -1394,24 +1394,24 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data, truncated_accept_response)
 
-        with self.subTest('MaxQuotaReached'):
+        with self.subTest("MaxQuotaReached"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
                 mocked_check.side_effect = MaxQuotaReached(
-                    message='MaxQuotaReached',
-                    level='info',
+                    message="MaxQuotaReached",
+                    level="info",
                     logger=logging,
-                    reply_message='reply MaxQuotaReached',
+                    reply_message="reply MaxQuotaReached",
                 )
                 response = self._authorize_user(auth_header=self.auth_header)
                 mocked_check.assert_called_once()
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_REJECT_RESPONSE.copy()
-                expected['Reply-Message'] = 'reply MaxQuotaReached'
+                expected["Reply-Message"] = "reply MaxQuotaReached"
                 self.assertEqual(response.data, expected)
 
-        with self.subTest('Unexpected exception'):
+        with self.subTest("Unexpected exception"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
-                mocked_check.side_effect = ValueError('Unexpected error')
+                mocked_check.side_effect = ValueError("Unexpected error")
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
@@ -1424,11 +1424,11 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @mock.patch.object(registration, 'AUTHORIZE_UNVERIFIED', ['mobile_phone'])
+    @mock.patch.object(registration, "AUTHORIZE_UNVERIFIED", ["mobile_phone"])
     def test_authorize_unverified_user_with_special_method(self):
         org_user = self._get_org_user()
         reg_user = RegisteredUser(
-            user=org_user.user, method='mobile_phone', is_verified=False
+            user=org_user.user, method="mobile_phone", is_verified=False
         )
         reg_user.full_clean()
         reg_user.save()
@@ -1451,43 +1451,43 @@ class TestTransactionFreeradiusApi(
 
     def test_authorize_user_with_email_as_username(self):
         user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
+            username="tester",
+            email="tester@gmail.com",
+            phone_number="+237675679231",
+            password="tester",
         )
         user1 = self._create_user(
-            username='tester@gmail.com',
-            email='tester1@gmail.com',
-            phone_number='+237675679232',
-            password='tester1',
+            username="tester@gmail.com",
+            email="tester1@gmail.com",
+            phone_number="+237675679232",
+            password="tester1",
         )
         self._create_org_user(organization=self._get_org(), user=user)
         self._create_org_user(organization=self._get_org(), user=user1)
 
-        self._test_authorize_with_user_auth_helper(user.email, 'tester')
+        self._test_authorize_with_user_auth_helper(user.email, "tester")
 
     def test_authorize_user_with_phone_number_as_username(self):
         user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
+            username="tester",
+            email="tester@gmail.com",
+            phone_number="+237675679231",
+            password="tester",
         )
         user1 = self._create_user(
-            username='+237675679231',
-            email='tester1@gmail.com',
-            phone_number='+237675679232',
-            password='tester1',
+            username="+237675679231",
+            email="tester1@gmail.com",
+            phone_number="+237675679232",
+            password="tester1",
         )
         self._create_org_user(organization=self._get_org(), user=user)
         self._create_org_user(organization=self._get_org(), user=user1)
 
-        self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+        self._test_authorize_with_user_auth_helper(user.phone_number, "tester")
 
     def test_authorize_with_password_after_radius_token_expires(self):
         self.test_authorize_radius_token_200()
-        self.assertFalse(RadiusToken.objects.get(user__username='tester').can_auth)
+        self.assertFalse(RadiusToken.objects.get(user__username="tester").can_auth)
         response = self._authorize_user()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
@@ -1495,54 +1495,54 @@ class TestTransactionFreeradiusApi(
     @capture_any_output()
     def test_authorize_with_user_auth(self):
         user = self._create_user(
-            username='tester2',
-            email='tester2@gmail.com',
-            phone_number='+237675679232',
-            password='tester',
+            username="tester2",
+            email="tester2@gmail.com",
+            phone_number="+237675679232",
+            password="tester",
         )
 
         self._create_org_user(organization=self._get_org(), user=user)
 
-        with self.subTest('Test authorize with username'):
-            self._test_authorize_with_user_auth_helper(user.username, 'tester')
+        with self.subTest("Test authorize with username"):
+            self._test_authorize_with_user_auth_helper(user.username, "tester")
 
-        with self.subTest('Test authorize with email'):
-            self._test_authorize_with_user_auth_helper(user.email, 'tester')
+        with self.subTest("Test authorize with email"):
+            self._test_authorize_with_user_auth_helper(user.email, "tester")
 
-        with self.subTest('Test authorize with phone_number'):
-            self._test_authorize_with_user_auth_helper(user.phone_number, 'tester')
+        with self.subTest("Test authorize with phone_number"):
+            self._test_authorize_with_user_auth_helper(user.phone_number, "tester")
 
-        with self.subTest('Test authorization failure'):
-            r = self._authorize_user('thisuserdoesnotexist', 'tester', self.auth_header)
+        with self.subTest("Test authorization failure"):
+            r = self._authorize_user("thisuserdoesnotexist", "tester", self.auth_header)
             self.assertEqual(r.status_code, 200)
             self.assertEqual(r.data, None)
 
     @capture_any_output()
     def test_authorize_without_user_auth(self):
         user = self._create_user(
-            username='tester',
-            email='tester@gmail.com',
-            phone_number='+237675679231',
-            password='tester',
+            username="tester",
+            email="tester@gmail.com",
+            phone_number="+237675679231",
+            password="tester",
         )
         self._create_org_user(organization=self._get_org(), user=user)
-        with self.subTest('Test authorize with username'):
-            self._test_authorize_with_user_auth_helper('tester', 'tester')
+        with self.subTest("Test authorize with username"):
+            self._test_authorize_with_user_auth_helper("tester", "tester")
 
-        with self.subTest('Test authorize with email'):
-            self._test_authorize_with_user_auth_helper('tester@gmail.com', 'tester')
+        with self.subTest("Test authorize with email"):
+            self._test_authorize_with_user_auth_helper("tester@gmail.com", "tester")
 
-        with self.subTest('Test authorize with phone_number'):
-            self._test_authorize_with_user_auth_helper('+237675679231', 'tester')
+        with self.subTest("Test authorize with phone_number"):
+            self._test_authorize_with_user_auth_helper("+237675679231", "tester")
 
-        with self.subTest('Test authorization failure'):
-            r = self._authorize_user('thisuserdoesnotexist', 'tester')
+        with self.subTest("Test authorization failure"):
+            r = self._authorize_user("thisuserdoesnotexist", "tester")
             self.assertEqual(r.status_code, 403)
             self.assertEqual(
-                r.data['detail'],
+                r.data["detail"],
                 (
-                    'Radius token does not exist. Obtain a new radius token or provide '
-                    'the organization UUID and API token.'
+                    "Radius token does not exist. Obtain a new radius token or provide "
+                    "the organization UUID and API token."
                 ),
             )
 
@@ -1578,98 +1578,98 @@ class TestTransactionFreeradiusApi(
 
 
 class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
-    _test_email = 'test@openwisp.org'
+    _test_email = "test@openwisp.org"
 
     def test_mac_addr_roaming_authorize_view(self):
         acct_post_data = self.acct_post_data
-        acct_post_data['username'] = 'tester'
-        acct_post_data['calling_station_id'] = '00-11-22-33-44-55'
+        acct_post_data["username"] = "tester"
+        acct_post_data["calling_station_id"] = "00-11-22-33-44-55"
         self._get_org_user()
         self._login_and_obtain_auth_token()
 
-        with self.subTest('Test user does not have an open session'):
+        with self.subTest("Test user does not have an open session"):
             response = self._authorize_user(
-                username=acct_post_data['calling_station_id'],
-                password=acct_post_data['calling_station_id'],
+                username=acct_post_data["calling_station_id"],
+                password=acct_post_data["calling_station_id"],
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, None)
 
         self._create_radius_accounting(**acct_post_data)
 
-        with self.subTest('Test mac address roaming is disabled'):
+        with self.subTest("Test mac address roaming is disabled"):
             response = self._authorize_user(
-                username=acct_post_data['calling_station_id'],
-                password=acct_post_data['calling_station_id'],
+                username=acct_post_data["calling_station_id"],
+                password=acct_post_data["calling_station_id"],
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, None)
 
         OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
         with self.subTest(
-            'Test user has open session and mac address roaming is enabled'
+            "Test user has open session and mac address roaming is enabled"
         ):
             response = self._authorize_user(
-                username=acct_post_data['calling_station_id'],
-                password=acct_post_data['calling_station_id'],
+                username=acct_post_data["calling_station_id"],
+                password=acct_post_data["calling_station_id"],
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data,
                 {
-                    'control:Auth-Type': 'Accept',
-                    'Session-Timeout': 10539,
-                    'CoovaChilli-Max-Total-Octets': 1487813647,
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": 10539,
+                    "CoovaChilli-Max-Total-Octets": 1487813647,
                 },
             )
         OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=False)
 
     def test_mac_addr_roaming_accounting_view(self):
         acct_post_data = self.acct_post_data
-        acct_post_data['username'] = 'tester'
-        acct_post_data['calling_station_id'] = '00-11-22-33-44-55'
+        acct_post_data["username"] = "tester"
+        acct_post_data["calling_station_id"] = "00-11-22-33-44-55"
         payload = acct_post_data.copy()
         payload.update(
             {
-                'unique_id': '119',
-                'username': payload['calling_station_id'],
-                'status_type': 'Start',
-                'nas_ip_address': '172.16.64.92',
-                'called_station_id': '66:55:44:33:22:11:hostname',
+                "unique_id": "119",
+                "username": payload["calling_station_id"],
+                "status_type": "Start",
+                "nas_ip_address": "172.16.64.92",
+                "called_station_id": "66:55:44:33:22:11:hostname",
             }
         )
 
         self._get_org_user()
         self._login_and_obtain_auth_token()
 
-        with self.subTest('Test user does not have an open session'):
+        with self.subTest("Test user does not have an open session"):
             response = response = self.client.post(
                 self._acct_url,
                 data=json.dumps(payload),
-                content_type='application/json',
+                content_type="application/json",
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, None)
 
         self._create_radius_accounting(**acct_post_data)
 
-        with self.subTest('Test mac address roaming is disabled'):
+        with self.subTest("Test mac address roaming is disabled"):
             response = response = self.client.post(
                 self._acct_url,
                 data=json.dumps(payload),
-                content_type='application/json',
+                content_type="application/json",
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, None)
 
         OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
         with self.subTest(
-            'Test user has open session and mac address roaming is enabled'
+            "Test user has open session and mac address roaming is enabled"
         ):
             response = response = self.client.post(
                 self._acct_url,
                 data=json.dumps(payload),
-                content_type='application/json',
+                content_type="application/json",
             )
             self.assertEqual(response.status_code, 201)
             self.assertEqual(
@@ -1677,23 +1677,23 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 None,
             )
             self.assertEqual(
-                RadiusAccounting.objects.filter(username='tester').count(), 2
+                RadiusAccounting.objects.filter(username="tester").count(), 2
             )
             self.assertEqual(
                 RadiusAccounting.objects.filter(
-                    username='tester',
+                    username="tester",
                     stop_time=None,
-                    nas_ip_address=payload['nas_ip_address'],
-                    called_station_id=payload['called_station_id'],
+                    nas_ip_address=payload["nas_ip_address"],
+                    called_station_id=payload["called_station_id"],
                 ).count(),
                 1,
             )
             self.assertEqual(
                 RadiusAccounting.objects.filter(
-                    username='tester',
+                    username="tester",
                     stop_time__isnull=False,
-                    nas_ip_address=acct_post_data['nas_ip_address'],
-                    called_station_id=acct_post_data['called_station_id'],
+                    nas_ip_address=acct_post_data["nas_ip_address"],
+                    called_station_id=acct_post_data["called_station_id"],
                 ).count(),
                 1,
             )
@@ -1714,33 +1714,33 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         self.assertEqual(
             response.data,
             {
-                'control:Auth-Type': 'Accept',
-                'Session-Timeout': 10800,
-                'CoovaChilli-Max-Total-Octets': 3000000000,
+                "control:Auth-Type": "Accept",
+                "Session-Timeout": 10800,
+                "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )
         # Start accounting session with first AP
         payload = self._acct_initial_data.copy()
         payload.update(
             {
-                'username': 'tester',
-                'called_station_id': '11:22:33:44:55:66',
-                'calling_station_id': 'AA:BB:CC:DD:EE:FF',
-                'status_type': 'Start',
+                "username": "tester",
+                "called_station_id": "11:22:33:44:55:66",
+                "calling_station_id": "AA:BB:CC:DD:EE:FF",
+                "status_type": "Start",
             }
         )
         response = self.client.post(
             self._acct_url,
             data=json.dumps(payload),
-            content_type='application/json',
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
             RadiusAccounting.objects.filter(
-                username='tester',
+                username="tester",
                 stop_time=None,
-                called_station_id=payload['called_station_id'],
-                calling_station_id=payload['calling_station_id'],
+                called_station_id=payload["called_station_id"],
+                calling_station_id=payload["calling_station_id"],
             ).count(),
             1,
         )
@@ -1750,41 +1750,41 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
 
         # User has moved to AP2 and the captive portal performs MAC auth
         response = self._authorize_user(
-            username=payload['calling_station_id'],
-            password=payload['calling_station_id'],
+            username=payload["calling_station_id"],
+            password=payload["calling_station_id"],
         )
         self.assertEqual(response.status_code, 200)
         # Start accounting session with the second AP
         payload.update(
             {
-                'session_id': '73',
-                'unique_id': '73',
-                'called_station_id': '11:22:33:44:55:67',
-                'username': payload['calling_station_id'],
+                "session_id": "73",
+                "unique_id": "73",
+                "called_station_id": "11:22:33:44:55:67",
+                "username": payload["calling_station_id"],
             }
         )
         response = self.client.post(
             self._acct_url,
             data=json.dumps(payload),
-            content_type='application/json',
+            content_type="application/json",
         )
-        self.assertEqual(RadiusAccounting.objects.filter(username='tester').count(), 2)
+        self.assertEqual(RadiusAccounting.objects.filter(username="tester").count(), 2)
         self.assertEqual(
             RadiusAccounting.objects.filter(
-                username='tester',
+                username="tester",
                 stop_time=None,
-                called_station_id=payload['called_station_id'],
-                calling_station_id=payload['calling_station_id'],
+                called_station_id=payload["called_station_id"],
+                calling_station_id=payload["calling_station_id"],
             ).count(),
             1,
         )
         # Accounting session with the first AP is closed
         self.assertEqual(
             RadiusAccounting.objects.filter(
-                username='tester',
+                username="tester",
                 stop_time__isnull=True,
-                called_station_id=payload['called_station_id'],
-                calling_station_id='AA:BB:CC:DD:EE:FF',
+                called_station_id=payload["called_station_id"],
+                calling_station_id="AA:BB:CC:DD:EE:FF",
             ).count(),
             1,
         )
@@ -1800,10 +1800,10 @@ class TestApiReject(ApiTokenMixin, BaseTestCase):
         app_settings.API_AUTHORIZE_REJECT = False
 
     def test_disabled_user_login(self):
-        User.objects.create_user(username='barbar', password='molly', is_active=False)
+        User.objects.create_user(username="barbar", password="molly", is_active=False)
         response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'barbar', 'password': 'molly'},
+            reverse("radius:authorize"),
+            {"username": "barbar", "password": "molly"},
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 401)
@@ -1811,8 +1811,8 @@ class TestApiReject(ApiTokenMixin, BaseTestCase):
 
     def test_authorize_401(self):
         response = self.client.post(
-            reverse('radius:authorize'),
-            {'username': 'baldo', 'password': 'ugo'},
+            reverse("radius:authorize"),
+            {"username": "baldo", "password": "ugo"},
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 401)
@@ -1827,92 +1827,92 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
 
     def test_automatic_groupname_account_enabled(self):
         user = User.objects.create_superuser(
-            username='username1', email='admin@admin.com', password='qwertyuiop'
+            username="username1", email="admin@admin.com", password="qwertyuiop"
         )
         usergroup1 = self._create_radius_usergroup(
-            groupname='group1',
+            groupname="group1",
             priority=2,
-            username='testgroup1',
-            group=self._create_radius_group(name='group1'),
+            username="testgroup1",
+            group=self._create_radius_group(name="group1"),
         )
         usergroup2 = self._create_radius_usergroup(
-            groupname='group2',
+            groupname="group2",
             priority=1,
-            username='testgroup2',
-            group=self._create_radius_group(name='group2'),
+            username="testgroup2",
+            group=self._create_radius_group(name="group2"),
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
             f'{reverse("radius:accounting")}{self.token_querystring}',
             {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': 'username1',
+                "status_type": "Start",
+                "session_time": "",
+                "input_octets": "",
+                "output_octets": "",
+                "nas_ip_address": "127.0.0.1",
+                "session_id": "48484",
+                "unique_id": "1515151",
+                "username": "username1",
             },
         )
-        accounting_created = RadiusAccounting.objects.get(username='username1')
-        self.assertEqual(accounting_created.groupname, 'test-org-group2')
+        accounting_created = RadiusAccounting.objects.get(username="username1")
+        self.assertEqual(accounting_created.groupname, "test-org-group2")
         user.delete()
 
     def test_multiple_radius_group_with_different_org_and_priority(self):
         user = User.objects.create_superuser(
-            username='username1', email='admin@admin.com', password='qwertyuiop'
+            username="username1", email="admin@admin.com", password="qwertyuiop"
         )
         organizations = Organization.objects.all()
         usergroup1 = self._create_radius_usergroup(
-            groupname='group1',
+            groupname="group1",
             priority=1,
-            username='testgroup1',
+            username="testgroup1",
             group=self._create_radius_group(
-                name='group1', organization=organizations.first()
+                name="group1", organization=organizations.first()
             ),
         )
         usergroup2 = self._create_radius_usergroup(
-            groupname='group2',
+            groupname="group2",
             priority=2,
-            username='testgroup2',
+            username="testgroup2",
             group=self._create_radius_group(
-                name='group2', organization=organizations.last()
+                name="group2", organization=organizations.last()
             ),
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
             f'{reverse("radius:accounting")}{self.token_querystring}',
             {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': 'username1',
+                "status_type": "Start",
+                "session_time": "",
+                "input_octets": "",
+                "output_octets": "",
+                "nas_ip_address": "127.0.0.1",
+                "session_id": "48484",
+                "unique_id": "1515151",
+                "username": "username1",
             },
         )
-        accounting_created = RadiusAccounting.objects.get(username='username1')
-        self.assertEqual(accounting_created.groupname, 'test-org-group2')
+        accounting_created = RadiusAccounting.objects.get(username="username1")
+        self.assertEqual(accounting_created.groupname, "test-org-group2")
         user.delete()
 
-    @mock.patch('openwisp_radius.api.serializers.logging')
+    @mock.patch("openwisp_radius.api.serializers.logging")
     def test_mac_authentication_with_no_logging(self, logger):
-        username = '5c:7d:c1:72:a7:3b'
+        username = "5c:7d:c1:72:a7:3b"
         self.client.post(
             f'{reverse("radius:accounting")}{self.token_querystring}',
             {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': username,
-                'calling_station_id': username,
+                "status_type": "Start",
+                "session_time": "",
+                "input_octets": "",
+                "output_octets": "",
+                "nas_ip_address": "127.0.0.1",
+                "session_id": "48484",
+                "unique_id": "1515151",
+                "username": username,
+                "calling_station_id": username,
             },
         )
         logger.warning.assert_not_called()
@@ -1928,47 +1928,47 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
 
     def test_account_creation_api_automatic_groupname_disabled(self):
         user = User.objects.create_superuser(
-            username='username1', email='admin@admin.com', password='qwertyuiop'
+            username="username1", email="admin@admin.com", password="qwertyuiop"
         )
         usergroup1 = self._create_radius_usergroup(
-            groupname='group1', priority=2, username='testgroup1'
+            groupname="group1", priority=2, username="testgroup1"
         )
         usergroup2 = self._create_radius_usergroup(
-            groupname='group2', priority=1, username='testgroup2'
+            groupname="group2", priority=1, username="testgroup2"
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         url = f'{reverse("radius:accounting")}{self.token_querystring}'
         self.client.post(
             url,
             {
-                'status_type': 'Start',
-                'session_time': '',
-                'input_octets': '',
-                'output_octets': '',
-                'nas_ip_address': '127.0.0.1',
-                'session_id': '48484',
-                'unique_id': '1515151',
-                'username': 'username1',
+                "status_type": "Start",
+                "session_time": "",
+                "input_octets": "",
+                "output_octets": "",
+                "nas_ip_address": "127.0.0.1",
+                "session_id": "48484",
+                "unique_id": "1515151",
+                "username": "username1",
             },
         )
-        accounting_created = RadiusAccounting.objects.get(username='username1')
+        accounting_created = RadiusAccounting.objects.get(username="username1")
         self.assertIsNone(accounting_created.groupname)
         user.delete()
 
 
 class TestClientIpApiMixin(object):
-    freeradius_hosts_path = 'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS'
+    freeradius_hosts_path = "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS"
     fail_msg = (
-        'Request rejected: Client IP address (127.0.0.1) is not in '
-        'the list of IP addresses allowed to consume the freeradius API.'
+        "Request rejected: Client IP address (127.0.0.1) is not in "
+        "the list of IP addresses allowed to consume the freeradius API."
     )
 
     def setUp(self):
         super().setUp()
         self._get_org_user()
-        self.params = {'username': 'tester', 'password': 'tester'}
+        self.params = {"username": "tester", "password": "tester"}
         self.client.post(
-            reverse('radius:user_auth_token', args=[self._get_org().slug]), self.params
+            reverse("radius:user_auth_token", args=[self._get_org().slug]), self.params
         )
 
 
@@ -1982,9 +1982,9 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
         rad_token = self._login_and_obtain_auth_token()
         self._authorize_user(password=rad_token)
         self.assertEqual(
-            cache.get(f'rt-{orguser.user.username}'), str(orguser.organization_id)
+            cache.get(f"rt-{orguser.user.username}"), str(orguser.organization_id)
         )
-        org2 = Organization.objects.get(slug='default')
+        org2 = Organization.objects.get(slug="default")
         ou = OrganizationUser(organization=org2, user=orguser.user)
         ou.full_clean()
         ou.save()
@@ -1992,42 +1992,42 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
         rt = RadiusToken.objects.get(key=rad_token)
         self.assertEqual(rt.organization, org2)
         self._authorize_user(password=rad_token)
-        self.assertEqual(cache.get(f'rt-{orguser.user.username}'), str(org2.id))
+        self.assertEqual(cache.get(f"rt-{orguser.user.username}"), str(org2.id))
 
     @capture_any_output()
     def test_ip_from_setting_invalid(self):
         org = self._get_org()
-        cache.delete(f'ip-{org.pk}')
+        cache.delete(f"ip-{org.pk}")
         test_fail_msg = (
-            'Request rejected: (localhost) in organization settings or '
-            'settings.py is not a valid IP address. Please contact administrator.'
+            "Request rejected: (localhost) in organization settings or "
+            "settings.py is not a valid IP address. Please contact administrator."
         )
         with mock.patch(
-            'openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS', ['localhost']
+            "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS", ["localhost"]
         ), mock.patch.object(
-            OrganizationRadiusSettings._meta.get_field('freeradius_allowed_hosts'),
-            'from_db_value',
-            return_value='localhost',
+            OrganizationRadiusSettings._meta.get_field("freeradius_allowed_hosts"),
+            "from_db_value",
+            return_value="localhost",
         ):
-            response = self.client.post(reverse('radius:authorize'), self.params)
+            response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], test_fail_msg)
+        self.assertEqual(response.data["detail"], test_fail_msg)
 
     @capture_any_output()
     def test_ip_from_radsetting_invalid(self):
         test_fail_msg = (
-            'Request rejected: (127.0.0.500) in organization settings or '
-            'settings.py is not a valid IP address. Please contact administrator.'
+            "Request rejected: (127.0.0.500) in organization settings or "
+            "settings.py is not a valid IP address. Please contact administrator."
         )
         radsetting = OrganizationRadiusSettings.objects.get(
             organization=self._get_org()
         )
-        radsetting.freeradius_allowed_hosts = '127.0.0.500'
+        radsetting.freeradius_allowed_hosts = "127.0.0.500"
         radsetting.save()
         with mock.patch(self.freeradius_hosts_path, []):
-            response = self.client.post(reverse('radius:authorize'), self.params)
+            response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data['detail'], test_fail_msg)
+        self.assertEqual(response.data["detail"], test_fail_msg)
 
 
 class TestTransactionClientIpApi(
@@ -2036,68 +2036,68 @@ class TestTransactionClientIpApi(
     def test_cache(self):
         def authorize_and_assert(numOfQueries, ip_list):
             with self.assertNumQueries(numOfQueries):
-                response = self.client.post(reverse('radius:authorize'), self.params)
+                response = self.client.post(reverse("radius:authorize"), self.params)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-            self.assertEqual(cache.get(f'ip-{org.pk}'), ip_list)
+            self.assertEqual(cache.get(f"ip-{org.pk}"), ip_list)
 
         cache.clear()
         org = self._get_org()
-        self.assertEqual(cache.get(f'ip-{org.pk}'), None)
-        with self.subTest('Without Cache'):
-            authorize_and_assert(11, ['127.0.0.1'])
-        with self.subTest('With Cache'):
-            authorize_and_assert(8, ['127.0.0.1'])
-        with self.subTest('Organization Settings Updated'):
+        self.assertEqual(cache.get(f"ip-{org.pk}"), None)
+        with self.subTest("Without Cache"):
+            authorize_and_assert(11, ["127.0.0.1"])
+        with self.subTest("With Cache"):
+            authorize_and_assert(8, ["127.0.0.1"])
+        with self.subTest("Organization Settings Updated"):
             radsetting = OrganizationRadiusSettings.objects.get(organization=org)
-            radsetting.freeradius_allowed_hosts = '127.0.0.1,192.0.2.0'
+            radsetting.freeradius_allowed_hosts = "127.0.0.1,192.0.2.0"
             radsetting.save()
-            authorize_and_assert(8, ['127.0.0.1', '192.0.2.0'])
-        with self.subTest('Cache Deleted'):
+            authorize_and_assert(8, ["127.0.0.1", "192.0.2.0"])
+        with self.subTest("Cache Deleted"):
             cache.clear()
-            authorize_and_assert(11, ['127.0.0.1', '192.0.2.0'])
+            authorize_and_assert(11, ["127.0.0.1", "192.0.2.0"])
 
     def test_ip_from_radsetting_valid(self):
         with mock.patch(self.freeradius_hosts_path, []):
             radsetting = OrganizationRadiusSettings.objects.get(
                 organization=self._get_org()
             )
-        radsetting.freeradius_allowed_hosts = '127.0.0.1'
+        radsetting.freeradius_allowed_hosts = "127.0.0.1"
         radsetting.save()
-        response = self.client.post(reverse('radius:authorize'), self.params)
+        response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     def test_ip_from_setting_valid(self):
-        response = self.client.post(reverse('radius:authorize'), self.params)
+        response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
     @capture_any_output()
     def test_ip_from_radsetting_not_exist(self):
-        org2 = self._create_org(**{'name': 'test', 'slug': 'test'})
-        user = self._create_user(username='org2-tester', email='tester@org2.com')
-        self._create_org_user(**{'organization': org2, 'user': user})
+        org2 = self._create_org(**{"name": "test", "slug": "test"})
+        user = self._create_user(username="org2-tester", email="tester@org2.com")
+        self._create_org_user(**{"organization": org2, "user": user})
         params = self.params.copy()
-        params['username'] = 'org2-tester'
+        params["username"] = "org2-tester"
         response = self.client.post(
-            reverse('radius:user_auth_token', args=[org2.slug]), params
+            reverse("radius:user_auth_token", args=[org2.slug]), params
         )
         self.assertEqual(response.status_code, 200)
-        with self.subTest('FREERADIUS_ALLOWED_HOSTS is 127.0.0.1'):
-            response = self.client.post(reverse('radius:authorize'), params)
+        with self.subTest("FREERADIUS_ALLOWED_HOSTS is 127.0.0.1"):
+            response = self.client.post(reverse("radius:authorize"), params)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-        with self.subTest('Empty Settings'), mock.patch(self.freeradius_hosts_path, []):
-            response = self.client.post(reverse('radius:authorize'), params)
+        with self.subTest("Empty Settings"), mock.patch(self.freeradius_hosts_path, []):
+            response = self.client.post(reverse("radius:authorize"), params)
             self.assertEqual(response.status_code, 403)
-            self.assertEqual(response.data['detail'], self.fail_msg)
+            self.assertEqual(response.data["detail"], self.fail_msg)
 
 
 class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
     def setUp(self):
         cache.clear()
-        self.org = self._create_org(**{'name': 'test', 'slug': 'test'})
+        self.org = self._create_org(**{"name": "test", "slug": "test"})
 
     def test_string_representation(self):
         rad = OrganizationRadiusSettings.objects.create(organization=self.org)
@@ -2110,75 +2110,75 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
     def test_bad_token(self):
         try:
             rad = OrganizationRadiusSettings(
-                token='bad.t.o.k.e.n', organization=self.org
+                token="bad.t.o.k.e.n", organization=self.org
             )
             rad.full_clean()
         except ValidationError as e:
             self.assertEqual(
-                e.message_dict['token'][0],
-                'This value must not contain spaces, dots or slashes.',
+                e.message_dict["token"][0],
+                "This value must not contain spaces, dots or slashes.",
             )
 
     def test_cache(self):
         rad = OrganizationRadiusSettings.objects.create(
-            token='12345', organization=self.org
+            token="12345", organization=self.org
         )
         self._get_org_user()
-        token_querystring = f'?token={rad.token}&uuid={str(self.org.pk)}'
+        token_querystring = f"?token={rad.token}&uuid={str(self.org.pk)}"
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
         # Clear cache before sending request
         cache.clear()
-        self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
-        with self.subTest('Cache & token match'):
+        self.client.post(post_url, {"username": "tester", "password": "tester"})
+        with self.subTest("Cache & token match"):
             self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        with self.subTest('Force changed corrupt cache returns 403'):
-            cache.set(rad.organization.pk, 'wrong-value')
+        with self.subTest("Force changed corrupt cache returns 403"):
+            cache.set(rad.organization.pk, "wrong-value")
             response = self.client.post(
-                post_url, {'username': 'tester', 'password': 'tester'}
+                post_url, {"username": "tester", "password": "tester"}
             )
             self.assertEqual(response.status_code, 403)
-        with self.subTest('Updated cache with radius setting token'):
-            rad.token = '1234567'
+        with self.subTest("Updated cache with radius setting token"):
+            rad.token = "1234567"
             rad.save()
             self.assertEqual(rad.token, cache.get(rad.organization.pk))
-        with self.subTest('Cache Miss: radius settings deleted'):
+        with self.subTest("Cache Miss: radius settings deleted"):
             rad.delete()
             self.assertEqual(None, cache.get(rad.organization.pk))
 
     def test_no_org_radius_setting(self):
         self._get_org_user()
-        token_querystring = f'?token=12345&uuid={str(self.org.pk)}'
+        token_querystring = f"?token=12345&uuid={str(self.org.pk)}"
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
-        r = self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
+        r = self.client.post(post_url, {"username": "tester", "password": "tester"})
         self.assertEqual(r.status_code, 403)
-        self.assertEqual(r.data, {'detail': 'Token authentication failed'})
+        self.assertEqual(r.data, {"detail": "Token authentication failed"})
 
     def test_uuid_in_cache(self):
         rad = OrganizationRadiusSettings.objects.create(
-            token='12345', organization=self.org
+            token="12345", organization=self.org
         )
-        cache.set('uuid', str(self.org.pk), 30)
+        cache.set("uuid", str(self.org.pk), 30)
         self._get_org_user()
-        token_querystring = f'?token={rad.token}&uuid={str(self.org.pk)}'
+        token_querystring = f"?token={rad.token}&uuid={str(self.org.pk)}"
         post_url = f'{reverse("radius:authorize")}{token_querystring}'
-        r = self.client.post(post_url, {'username': 'tester', 'password': 'tester'})
+        r = self.client.post(post_url, {"username": "tester", "password": "tester"})
         self.assertEqual(r.status_code, 200)
 
     def test_default_organisation_radius_settings(self):
         org = self._get_org()
-        self.assertTrue(hasattr(org, 'radius_settings'))
+        self.assertTrue(hasattr(org, "radius_settings"))
         self.assertIsInstance(org.radius_settings, OrganizationRadiusSettings)
 
     def test_sms_phone_required(self):
         radius_settings = OrganizationRadiusSettings(
-            organization=self.org, sms_verification=True, sms_sender=''
+            organization=self.org, sms_verification=True, sms_sender=""
         )
         try:
             radius_settings.full_clean()
         except ValidationError as e:
-            self.assertIn('sms_sender', e.message_dict)
+            self.assertIn("sms_sender", e.message_dict)
         else:
-            self.fail('ValidationError not raised')
+            self.fail("ValidationError not raised")
 
 
 del BaseTestCase

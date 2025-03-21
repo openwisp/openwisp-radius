@@ -11,9 +11,9 @@ def ipv6_network_validator(value):
     try:
         network = ip_network(value)
     except Exception as error:
-        raise ValidationError(_('Invalid ipv6 prefix: {error}').format(error=error))
+        raise ValidationError(_("Invalid ipv6 prefix: {error}").format(error=error))
     if not isinstance(network, IPv6Network):
-        raise ValidationError(_('{value} is not an IPv6 prefix').format(value=value))
+        raise ValidationError(_("{value} is not an IPv6 prefix").format(value=value))
 
 
 def password_reset_url_validator(value):
@@ -24,5 +24,5 @@ def password_reset_url_validator(value):
     from django.contrib.sites.models import Site
 
     site = Site.objects.get_current()
-    value = value.replace('{site}', site.domain)
+    value = value.replace("{site}", site.domain)
     URL_VALIDATOR(value)

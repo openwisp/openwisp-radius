@@ -7,13 +7,13 @@ from openwisp_radius.base.models import _GET_MOBILE_PREFIX_HELP_TEXT
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0003_default_groups_and_permissions'),
+        ("sample_radius", "0003_default_groups_and_permissions"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='allowed_mobile_prefixes',
+            model_name="organizationradiussettings",
+            name="allowed_mobile_prefixes",
             field=models.TextField(
                 blank=True,
                 help_text=str(_GET_MOBILE_PREFIX_HELP_TEXT),

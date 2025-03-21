@@ -6,32 +6,32 @@ from django.utils.translation import gettext_lazy as _
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0027_password_reset_url_org_settings'),
+        ("openwisp_radius", "0027_password_reset_url_org_settings"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='saml_registration_enabled',
+            model_name="organizationradiussettings",
+            name="saml_registration_enabled",
             field=models.BooleanField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether the registration using SAML should be enabled or not'
+                    "Whether the registration using SAML should be enabled or not"
                 ),
                 null=True,
-                verbose_name=_('SAML registration enabled'),
+                verbose_name=_("SAML registration enabled"),
             ),
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='social_registration_enabled',
+            model_name="organizationradiussettings",
+            name="social_registration_enabled",
             field=models.BooleanField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether the registration using social '
-                    'applications should be enabled or not'
+                    "Whether the registration using social "
+                    "applications should be enabled or not"
                 ),
                 null=True,
             ),

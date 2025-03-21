@@ -18,14 +18,14 @@ class Migration(migrations.Migration):
     users to the default group
     """
 
-    rad_model = swapper.get_model_name('openwisp_radius', 'RadiusToken')
-    users_model = swapper.get_model_name('openwisp_users', 'Organization')
+    rad_model = swapper.get_model_name("openwisp_radius", "RadiusToken")
+    users_model = swapper.get_model_name("openwisp_users", "Organization")
     dependencies = [
-        swapper.dependency('openwisp_radius', 'RadiusToken'),
+        swapper.dependency("openwisp_radius", "RadiusToken"),
         swapper.dependency(
-            *swapper.split(rad_model), version='0002_initial_openwisp_app'
+            *swapper.split(rad_model), version="0002_initial_openwisp_app"
         ),
-        swapper.dependency(*swapper.split(users_model), version='0004_default_groups'),
+        swapper.dependency(*swapper.split(users_model), version="0004_default_groups"),
     ]
 
     operations = [
@@ -42,48 +42,48 @@ class Migration(migrations.Migration):
             assign_permissions_to_groups, reverse_code=migrations.RunPython.noop
         ),
         migrations.AlterField(
-            model_name='nas',
-            name='organization',
+            model_name="nas",
+            name="organization",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiusaccounting',
-            name='organization',
+            model_name="radiusaccounting",
+            name="organization",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiuscheck',
-            name='organization',
+            model_name="radiuscheck",
+            name="organization",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiuspostauth',
-            name='organization',
+            model_name="radiuspostauth",
+            name="organization",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiusreply',
-            name='organization',
+            model_name="radiusreply",
+            name="organization",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
     ]

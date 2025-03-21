@@ -10,45 +10,45 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('openwisp_radius', '0004_default_permissions'),
+        ("openwisp_radius", "0004_default_permissions"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RadiusToken',
+            name="RadiusToken",
             fields=[
                 (
-                    'created',
+                    "created",
                     model_utils.fields.AutoCreatedField(
                         default=django.utils.timezone.now,
                         editable=False,
-                        verbose_name='created',
+                        verbose_name="created",
                     ),
                 ),
                 (
-                    'key',
+                    "key",
                     models.CharField(
                         max_length=40,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='Key',
+                        verbose_name="Key",
                     ),
                 ),
                 (
-                    'user',
+                    "user",
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='radius_token',
+                        related_name="radius_token",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'radius token',
-                'verbose_name_plural': 'radius token',
-                'db_table': 'radiustoken',
-                'abstract': False,
-                'swappable': 'OPENWISP_RADIUS_RADIUSTOKEN_MODEL',
+                "verbose_name": "radius token",
+                "verbose_name_plural": "radius token",
+                "db_table": "radiustoken",
+                "abstract": False,
+                "swappable": "OPENWISP_RADIUS_RADIUSTOKEN_MODEL",
             },
         )
     ]

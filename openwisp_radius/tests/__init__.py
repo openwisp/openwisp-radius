@@ -14,44 +14,44 @@ from ..utils import load_model
 
 # it's 21 of April on UTC, this date is fabricated on purpose
 # to test possible timezone related bugs in the date filtering
-_TEST_DATE = '2019-04-20T22:14:09-04:00'
+_TEST_DATE = "2019-04-20T22:14:09-04:00"
 _RADACCT = {
-    'username': 'bob',
-    'nas_ip_address': '127.0.0.1',
-    'start_time': '2017-06-10 10:50:00',
-    'authentication': 'RADIUS',
-    'connection_info_start': 'f',
-    'connection_info_stop': 'hgh',
-    'input_octets': '1',
-    'output_octets': '4',
-    'session_id': uuid4().int,
+    "username": "bob",
+    "nas_ip_address": "127.0.0.1",
+    "start_time": "2017-06-10 10:50:00",
+    "authentication": "RADIUS",
+    "connection_info_start": "f",
+    "connection_info_stop": "hgh",
+    "input_octets": "1",
+    "output_octets": "4",
+    "session_id": uuid4().int,
 }
 _CALLED_STATION_IDS = {
-    'test-org': {
-        'openvpn_config': [
-            {'host': '127.0.0.1', 'port': 7505, 'password': 'somepassword'}
+    "test-org": {
+        "openvpn_config": [
+            {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
         ],
-        'unconverted_ids': ['AA-AA-AA-AA-AA-0A'],
+        "unconverted_ids": ["AA-AA-AA-AA-AA-0A"],
     }
 }
 
-Nas = load_model('Nas')
-RadiusAccounting = load_model('RadiusAccounting')
-RadiusBatch = load_model('RadiusBatch')
-RadiusReply = load_model('RadiusReply')
-RadiusToken = load_model('RadiusToken')
-RadiusCheck = load_model('RadiusCheck')
-RadiusGroup = load_model('RadiusGroup')
-RadiusPostAuth = load_model('RadiusPostAuth')
-RadiusUserGroup = load_model('RadiusUserGroup')
-RadiusGroupCheck = load_model('RadiusGroupCheck')
-RadiusGroupReply = load_model('RadiusGroupReply')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+Nas = load_model("Nas")
+RadiusAccounting = load_model("RadiusAccounting")
+RadiusBatch = load_model("RadiusBatch")
+RadiusReply = load_model("RadiusReply")
+RadiusToken = load_model("RadiusToken")
+RadiusCheck = load_model("RadiusCheck")
+RadiusGroup = load_model("RadiusGroup")
+RadiusPostAuth = load_model("RadiusPostAuth")
+RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroupCheck = load_model("RadiusGroupCheck")
+RadiusGroupReply = load_model("RadiusGroupReply")
+OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 User = get_user_model()
 
 
 class CreateRadiusObjectsMixin(TestOrganizationMixin):
-    def _get_org(self, org_name='test org'):
+    def _get_org(self, org_name="test org"):
         organization = super()._get_org(org_name)
         OrganizationRadiusSettings.objects.get_or_create(
             organization_id=organization.pk
@@ -66,8 +66,8 @@ class CreateRadiusObjectsMixin(TestOrganizationMixin):
 
     def _get_defaults(self, opts, model=None):
         options = {}
-        if not model or hasattr(model, 'organization'):
-            options.update({'organization': self._get_org()})
+        if not model or hasattr(model, "organization"):
+            options.update({"organization": self._get_org()})
         options.update(opts)
         return options
 
@@ -142,7 +142,7 @@ class CreateRadiusObjectsMixin(TestOrganizationMixin):
         return rb
 
     def _create_radius_token(self, **kwargs):
-        options = {'user': self._get_user(), 'can_auth': True, 'key': '1234'}
+        options = {"user": self._get_user(), "can_auth": True, "key": "1234"}
         options.update(self._get_defaults(kwargs))
         radtoken = RadiusToken(**options)
         radtoken.full_clean()
@@ -158,11 +158,11 @@ class PostParamsMixin(object):
 
     def _get_postauth_params(self, **kwargs):
         params = {
-            'username': 'molly',
-            'password': 'barbar',
-            'reply': 'Access-Accept',
-            'called_station_id': '00-11-22-33-44-55:hostname',
-            'calling_station_id': '00:26:b9:20:5f:10',
+            "username": "molly",
+            "password": "barbar",
+            "reply": "Access-Accept",
+            "called_station_id": "00-11-22-33-44-55:hostname",
+            "calling_station_id": "00:26:b9:20:5f:10",
         }
         params.update(kwargs)
         return self._get_post_defaults(params)
@@ -182,20 +182,20 @@ class FileMixin(object):
         for row in rows:
             writer.writerow(row)
         return SimpleUploadedFile(
-            'test.csv',
-            bytes(output.getvalue(), encoding='utf8'),
-            content_type='text/csv',
+            "test.csv",
+            bytes(output.getvalue(), encoding="utf8"),
+            content_type="text/csv",
         )
 
     def _get_openvpn_status(self):
-        with open(self._get_path('static/openvpn.status')) as file:
+        with open(self._get_path("static/openvpn.status")) as file:
             status = file.read()
         return status
 
     def _get_openvpn_status_mock(self):
         return patch(
-            'openwisp_radius.management.commands.base.convert_called_station_id'
-            '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+            "openwisp_radius.management.commands.base.convert_called_station_id"
+            ".BaseConvertCalledStationIdCommand._get_raw_management_info",
             return_value=self._get_openvpn_status(),
         )
 

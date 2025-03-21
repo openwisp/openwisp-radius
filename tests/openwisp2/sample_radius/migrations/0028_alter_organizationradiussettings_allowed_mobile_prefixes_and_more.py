@@ -9,150 +9,150 @@ from openwisp_radius import settings as app_settings
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0027_remove_check_customizations'),
+        ("sample_radius", "0027_remove_check_customizations"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='allowed_mobile_prefixes',
+            model_name="organizationradiussettings",
+            name="allowed_mobile_prefixes",
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
-                default=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
-                fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+                default=",".join(app_settings.ALLOWED_MOBILE_PREFIXES),
+                fallback=",".join(app_settings.ALLOWED_MOBILE_PREFIXES),
                 help_text=(
-                    'Comma separated list of international mobile'
-                    ' prefixes allowed to register via the user registration API.'
+                    "Comma separated list of international mobile"
+                    " prefixes allowed to register via the user registration API."
                 ),
                 null=True,
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='birth_date',
+            model_name="organizationradiussettings",
+            name="birth_date",
             field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
-                    ('disabled', 'Disabled'),
-                    ('allowed', 'Allowed'),
-                    ('mandatory', 'Mandatory'),
+                    ("disabled", "Disabled"),
+                    ("allowed", "Allowed"),
+                    ("mandatory", "Mandatory"),
                 ],
                 help_text=(
-                    'Whether this field should be disabled, allowed or'
-                    ' mandatory in the user registration API.'
+                    "Whether this field should be disabled, allowed or"
+                    " mandatory in the user registration API."
                 ),
                 max_length=12,
                 null=True,
-                verbose_name='birth date',
+                verbose_name="birth date",
                 fallback=app_settings.OPTIONAL_REGISTRATION_FIELDS.get(
-                    'birth_date', None
+                    "birth_date", None
                 ),
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='first_name',
+            model_name="organizationradiussettings",
+            name="first_name",
             field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
-                    ('disabled', 'Disabled'),
-                    ('allowed', 'Allowed'),
-                    ('mandatory', 'Mandatory'),
+                    ("disabled", "Disabled"),
+                    ("allowed", "Allowed"),
+                    ("mandatory", "Mandatory"),
                 ],
                 help_text=(
-                    'Whether this field should be disabled, allowed or'
-                    ' mandatory in the user registration API.'
+                    "Whether this field should be disabled, allowed or"
+                    " mandatory in the user registration API."
                 ),
                 max_length=12,
                 null=True,
-                verbose_name='first name',
+                verbose_name="first name",
                 fallback=app_settings.OPTIONAL_REGISTRATION_FIELDS.get(
-                    'first_name', None
+                    "first_name", None
                 ),
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='freeradius_allowed_hosts',
+            model_name="organizationradiussettings",
+            name="freeradius_allowed_hosts",
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
-                default=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
-                fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+                default=",".join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+                fallback=",".join(app_settings.FREERADIUS_ALLOWED_HOSTS),
                 help_text=(
-                    'Comma separated list of IP addresses allowed to'
-                    ' access freeradius API'
+                    "Comma separated list of IP addresses allowed to"
+                    " access freeradius API"
                 ),
                 null=True,
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='last_name',
+            model_name="organizationradiussettings",
+            name="last_name",
             field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
-                    ('disabled', 'Disabled'),
-                    ('allowed', 'Allowed'),
-                    ('mandatory', 'Mandatory'),
+                    ("disabled", "Disabled"),
+                    ("allowed", "Allowed"),
+                    ("mandatory", "Mandatory"),
                 ],
                 help_text=(
-                    'Whether this field should be disabled, allowed or'
-                    ' mandatory in the user registration API.'
+                    "Whether this field should be disabled, allowed or"
+                    " mandatory in the user registration API."
                 ),
                 max_length=12,
                 null=True,
-                verbose_name='last name',
+                verbose_name="last name",
                 fallback=app_settings.OPTIONAL_REGISTRATION_FIELDS.get(
-                    'last_name', None
+                    "last_name", None
                 ),
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='location',
+            model_name="organizationradiussettings",
+            name="location",
             field=openwisp_utils.fields.FallbackCharChoiceField(
                 blank=True,
                 choices=[
-                    ('disabled', 'Disabled'),
-                    ('allowed', 'Allowed'),
-                    ('mandatory', 'Mandatory'),
+                    ("disabled", "Disabled"),
+                    ("allowed", "Allowed"),
+                    ("mandatory", "Mandatory"),
                 ],
                 help_text=(
-                    'Whether this field should be disabled, allowed or'
-                    ' mandatory in the user registration API.'
+                    "Whether this field should be disabled, allowed or"
+                    " mandatory in the user registration API."
                 ),
                 max_length=12,
                 null=True,
-                verbose_name='location',
+                verbose_name="location",
                 fallback=app_settings.OPTIONAL_REGISTRATION_FIELDS.get(
-                    'location', None
+                    "location", None
                 ),
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='needs_identity_verification',
+            model_name="organizationradiussettings",
+            name="needs_identity_verification",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether identity verification is required at the'
-                    ' time of user registration'
+                    "Whether identity verification is required at the"
+                    " time of user registration"
                 ),
                 null=True,
                 fallback=app_settings.NEEDS_IDENTITY_VERIFICATION,
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='password_reset_url',
+            model_name="organizationradiussettings",
+            name="password_reset_url",
             field=openwisp_utils.fields.FallbackCharField(
                 blank=True,
                 default=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
-                help_text='Enter the URL where users can reset their password',
+                help_text="Enter the URL where users can reset their password",
                 null=True,
-                verbose_name='Password reset URL',
+                verbose_name="Password reset URL",
                 max_length=200,
                 validators=[
                     openwisp_radius.base.validators.password_reset_url_validator
@@ -160,98 +160,98 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='registration_enabled',
+            model_name="organizationradiussettings",
+            name="registration_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether the registration API endpoint should be enabled or not'
+                    "Whether the registration API endpoint should be enabled or not"
                 ),
                 null=True,
                 fallback=app_settings.REGISTRATION_API_ENABLED,
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='saml_registration_enabled',
+            model_name="organizationradiussettings",
+            name="saml_registration_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether the registration using SAML should be enabled or not'
+                    "Whether the registration using SAML should be enabled or not"
                 ),
                 null=True,
-                verbose_name='SAML registration enabled',
+                verbose_name="SAML registration enabled",
                 fallback=app_settings.SAML_REGISTRATION_ENABLED,
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='sms_verification',
+            model_name="organizationradiussettings",
+            name="sms_verification",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether users who sign up should be required to'
-                    ' verify their mobile phone number via SMS'
+                    "Whether users who sign up should be required to"
+                    " verify their mobile phone number via SMS"
                 ),
                 null=True,
                 fallback=app_settings.SMS_VERIFICATION_ENABLED,
-                verbose_name='SMS verification',
+                verbose_name="SMS verification",
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='social_registration_enabled',
+            model_name="organizationradiussettings",
+            name="social_registration_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether the registration using social'
-                    ' applications should be enabled or not'
+                    "Whether the registration using social"
+                    " applications should be enabled or not"
                 ),
                 null=True,
                 fallback=app_settings.SOCIAL_REGISTRATION_ENABLED,
             ),
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='sms_message',
+            model_name="organizationradiussettings",
+            name="sms_message",
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 fallback=app_settings.SMS_MESSAGE_TEMPLATE,
                 help_text=(
-                    'SMS message template used for sending verification code.'
+                    "SMS message template used for sending verification code."
                     ' Must contain "{code}" placeholder for OTP value.'
                 ),
                 max_length=160,
                 null=True,
-                verbose_name='SMS Message',
+                verbose_name="SMS Message",
             ),
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='coa_enabled',
+            model_name="organizationradiussettings",
+            name="coa_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=app_settings.COA_ENABLED,
-                help_text='Whether RADIUS Change Of Authoization (CoA) is enabled',
+                help_text="Whether RADIUS Change Of Authoization (CoA) is enabled",
                 null=True,
-                verbose_name='CoA Enabled',
+                verbose_name="CoA Enabled",
             ),
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='mac_addr_roaming_enabled',
+            model_name="organizationradiussettings",
+            name="mac_addr_roaming_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=False,
-                help_text='Whether the MAC address roaming should be enabled or not.',
+                help_text="Whether the MAC address roaming should be enabled or not.",
                 null=True,
-                verbose_name='MAC address roaming enabled',
+                verbose_name="MAC address roaming enabled",
             ),
         ),
         migrations.AddField(

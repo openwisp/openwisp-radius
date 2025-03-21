@@ -9,8 +9,8 @@ from . import create_general_metrics, delete_general_metrics
 class Migration(migrations.Migration):
     initial = True
     dependencies = [
-        swapper.dependency('monitoring', 'Metric'),
-        swapper.dependency('monitoring', 'Chart'),
+        swapper.dependency("monitoring", "Metric"),
+        swapper.dependency("monitoring", "Chart"),
     ]
 
     operations = [

@@ -7,9 +7,9 @@ from swapper import load_model
 
 
 class CreateDeviceMonitoringMixin(object):
-    TEST_MAC_ADDRESS = '00:11:22:33:44:55'
-    ORIGINAL_DB = TIMESERIES_DB['NAME']
-    TEST_DB = f'{ORIGINAL_DB}_test'
+    TEST_MAC_ADDRESS = "00:11:22:33:44:55"
+    ORIGINAL_DB = TIMESERIES_DB["NAME"]
+    TEST_DB = f"{ORIGINAL_DB}_test"
 
     @classmethod
     def setUpClass(cls):
@@ -33,32 +33,32 @@ class CreateDeviceMonitoringMixin(object):
 
     @property
     def device_model(self):
-        return load_model('config', 'Device')
+        return load_model("config", "Device")
 
     @property
     def metric_model(self):
-        return load_model('monitoring', 'Metric')
+        return load_model("monitoring", "Metric")
 
     @property
     def chart_model(self):
-        return load_model('monitoring', 'Chart')
+        return load_model("monitoring", "Chart")
 
     @property
     def location_model(self):
-        return load_model('geo', 'Location')
+        return load_model("geo", "Location")
 
     @property
     def object_location_model(self):
-        return load_model('geo', 'DeviceLocation')
+        return load_model("geo", "DeviceLocation")
 
     def _create_device(self, **kwargs):
         options = dict(
-            name='default.test.device',
+            name="default.test.device",
             organization=self._get_org(),
             mac_address=self.TEST_MAC_ADDRESS,
             hardware_id=str(uuid4().hex),
-            model='TP-Link TL-WDR4300 v1',
-            os='LEDE Reboot 17.01-SNAPSHOT r3313-c2999ef',
+            model="TP-Link TL-WDR4300 v1",
+            os="LEDE Reboot 17.01-SNAPSHOT r3313-c2999ef",
         )
         options.update(kwargs)
         d = self.device_model(**options)
@@ -68,10 +68,10 @@ class CreateDeviceMonitoringMixin(object):
 
     def _create_location(self, **kwargs):
         options = dict(
-            name='test-location',
-            address='Via del Corso, Roma, Italia',
-            geometry='SRID=4326;POINT (12.512124 41.898903)',
-            type='outdoor',
+            name="test-location",
+            address="Via del Corso, Roma, Italia",
+            geometry="SRID=4326;POINT (12.512124 41.898903)",
+            type="outdoor",
         )
         options.update(kwargs)
         location = self.location_model(**options)

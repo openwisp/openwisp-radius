@@ -48,9 +48,9 @@ def _never(user=None):
 
 
 resets = {
-    'daily': _daily,
-    'weekly': _weekly,
-    'monthly': _monthly,
-    'monthly_subscription': _monthly_subscription,
-    'never': _never,
+    "daily": _daily,
+    "weekly": _weekly,
+    "monthly": _monthly,
+    "monthly_subscription": _monthly_subscription,
+    "never": _never,
 }

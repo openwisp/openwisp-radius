@@ -6,13 +6,13 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0004_allowed_mobile_prefixes'),
+        ("sample_radius", "0004_allowed_mobile_prefixes"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='phonetoken',
-            name='phone_number',
+            model_name="phonetoken",
+            name="phone_number",
             field=phonenumber_field.modelfields.PhoneNumberField(
                 blank=False, max_length=128, null=False, region=None
             ),
