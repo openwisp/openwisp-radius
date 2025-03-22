@@ -8,20 +8,20 @@ from openwisp_radius import settings as app_settings
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0033_alter_organizationradiussettings_password_reset_url'),
+        ("openwisp_radius", "0033_alter_organizationradiussettings_password_reset_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='coa_enabled',
+            model_name="organizationradiussettings",
+            name="coa_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=app_settings.COA_ENABLED,
-                help_text='Whether RADIUS Change Of Authoization (CoA) is enabled',
+                help_text="Whether RADIUS Change Of Authoization (CoA) is enabled",
                 null=True,
-                verbose_name='CoA Enabled',
+                verbose_name="CoA Enabled",
             ),
         ),
     ]

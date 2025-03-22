@@ -13,8 +13,8 @@ def get_social_urls(social_views=None):
 
     return [
         path(
-            '<slug:slug>/',
+            "<slug:slug>/",
             social_views.redirect_cp,
-            name='redirect_cp',
+            name="redirect_cp",
         )
     ]

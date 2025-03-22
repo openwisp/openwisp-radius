@@ -5,7 +5,7 @@ class BaseException(Exception):
         """
         self.message = message
         self.level = level
-        assert level in ['debug', 'info', 'warn', 'error', 'critical', 'exception']
+        assert level in ["debug", "info", "warn", "error", "critical", "exception"]
         # log message with specified level
         getattr(logger, level)(message)
 

@@ -7,31 +7,31 @@ from django.utils.timezone import now
 from openwisp_radius.utils import load_model
 
 User = get_user_model()
-RadiusAccounting = load_model('RadiusAccounting')
+RadiusAccounting = load_model("RadiusAccounting")
 
 
 class BaseDeleteUnverifiedUsersCommand(BaseCommand):
-    help = 'Delete unverified users older than <days>'
+    help = "Delete unverified users older than <days>"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--older-than-days',
-            action='store',
+            "--older-than-days",
+            action="store",
             default=1,
-            help='delete unverified users which registered days before this',
+            help="delete unverified users which registered days before this",
         )
         parser.add_argument(
-            '--exclude-methods',
-            action='store',
-            default='',
-            help='list of registration methods to skip',
+            "--exclude-methods",
+            action="store",
+            default="",
+            help="list of registration methods to skip",
         )
 
     def handle(self, *args, **options):
-        days = now() - timedelta(days=int(options['older_than_days']))
-        exclude_methods = str(options['exclude_methods'])
+        days = now() - timedelta(days=int(options["older_than_days"]))
+        exclude_methods = str(options["exclude_methods"])
         if exclude_methods:
-            exclude_methods = exclude_methods.split(',')
+            exclude_methods = exclude_methods.split(",")
 
         qs = User.objects.filter(
             date_joined__lt=days,
@@ -47,14 +47,14 @@ class BaseDeleteUnverifiedUsersCommand(BaseCommand):
                 user.delete()
 
         output = (
-            'Deleted unverified accounts older than '
+            "Deleted unverified accounts older than "
             f'{options["older_than_days"]} day(s)'
         )
         if exclude_methods:
             output += (
-                ', excluding users having registered with '
+                ", excluding users having registered with "
                 f'the following methods: {options["exclude_methods"]}'
             )
-        output += '.'
+        output += "."
 
         self.stdout.write(output)

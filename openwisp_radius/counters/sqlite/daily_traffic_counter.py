@@ -5,4 +5,4 @@ from . import SqliteCounterMixin, SqliteTrafficMixin
 class DailyTrafficCounter(
     SqliteTrafficMixin, SqliteCounterMixin, BaseDailyTrafficCounter
 ):
-    counter_name = 'sqlite.DailyTrafficCounter'
+    counter_name = "sqlite.DailyTrafficCounter"

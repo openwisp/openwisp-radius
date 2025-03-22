@@ -55,7 +55,7 @@ jobs:
           sudo npm install -g prettier
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
-          pip install -e .[saml,openvpn_status]
+          pip install -e .[saml,openvpn_status,selenium]
           pip install ${{ matrix.django-version }}
 
       - name: Start InfluxDB and Redis container

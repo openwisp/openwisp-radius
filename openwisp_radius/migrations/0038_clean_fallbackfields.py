@@ -15,7 +15,7 @@ def clean_fallback_fields(apps, schema_editor):
     is the same as the fallback value, effectively removing the
     unnecessary data from the database.
     """
-    OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+    OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
     fallback_fields = []
     fallback_field_names = []
 
@@ -48,8 +48,8 @@ def clean_fallback_fields(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         (
-            'openwisp_radius',
-            '0037_alter_organizationradiussettings_allowed_mobile_prefixes_and_more',
+            "openwisp_radius",
+            "0037_alter_organizationradiussettings_allowed_mobile_prefixes_and_more",
         ),
     ]
 

@@ -5,21 +5,21 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0026_password_reset_url_org_settings'),
+        ("sample_radius", "0026_password_reset_url_org_settings"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='radiuscheck',
-            name='is_active',
+            model_name="radiuscheck",
+            name="is_active",
         ),
         migrations.RemoveField(
-            model_name='radiuscheck',
-            name='valid_until',
+            model_name="radiuscheck",
+            name="valid_until",
         ),
         migrations.AlterField(
-            model_name='radiuscheck',
-            name='attribute',
-            field=models.CharField(max_length=64, verbose_name='attribute'),
+            model_name="radiuscheck",
+            name="attribute",
+            field=models.CharField(max_length=64, verbose_name="attribute"),
         ),
     ]
