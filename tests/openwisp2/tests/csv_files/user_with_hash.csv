@@ -1,0 +1,2 @@
+hash_user1,pbkdf2_sha256$100000$cKdP39chT3pW$2EtVk4Hhm1V65GNfYAA5AHj0uyD60f2CmqumqiB/gRk=,hashuser1@example.com,Hash1,User1
+hash_user2,pbkdf2_sha256$100000$aB4cDeF$gHiJkLmNoPqRsTuVwXyZ12345678901234567890123456789=,hashuser2@example.com,Hash2,User2

@@ -1,39 +1,28 @@
-import json
-import os
-
 from django.contrib.auth import get_user_model
-from selenium.webdriver.common.by import By
 
-from .selenium_test_mixins import SeleniumTestMixin as BaseSeleniumTestMixin
+from openwisp_utils.tests.selenium import SeleniumTestMixin as BaseSeleniumTestMixin
 
 User = get_user_model()
 
 
-class TestConfigMixin(object):
-    """Loads test configuration from a config.json file."""
-
-    config_file = os.path.join(os.path.dirname(__file__), "config.json")
-    root_location = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
-    with open(config_file) as json_file:
-        config = json.load(json_file)
-
-
-class SeleniumTestMixin(BaseSeleniumTestMixin, TestConfigMixin):
+class SeleniumTestMixin(BaseSeleniumTestMixin):
     admin_username = "admin"
     admin_password = "password"
+    admin_email = "admin@admin.com"
 
     def setUp(self):
         self.admin = self._create_admin(
             username=self.admin_username, password=self.admin_password
         )
+        self.web_driver = self.get_chrome_webdriver()
 
     def _create_user(self, **kwargs):
         opts = dict(
-            username=self.config["tester_username"],
-            password=self.config["tester_password"],
-            first_name=self.config["tester_first_name"],
-            last_name=self.config["tester_last_name"],
-            email=self.config["tester_email"],
+            username="tester_username",
+            password="tester_password",
+            first_name="tester_first_name",
+            last_name="tester_last_name",
+            email="tester_email@email.com",
         )
         opts.update(kwargs)
         user = User(**opts)
@@ -42,35 +31,11 @@ class SeleniumTestMixin(BaseSeleniumTestMixin, TestConfigMixin):
 
     def _create_admin(self, **kwargs):
         opts = dict(
-            username=self.config["admin_username"],
-            email=self.config["admin_email"],
-            password=self.config["admin_password"],
+            username=self.admin_username,
+            email=self.admin_email,
+            password=self.admin_password,
             is_superuser=True,
             is_staff=True,
         )
         opts.update(kwargs)
         return self._create_user(**opts)
-
-    def login(self, username=None, password=None, driver=None):
-        """Log in to the admin dashboard.
-
-        Input Arguments:
-
-        - username: username to be used for login (default:
-          cls.admin_username)
-        - password: password to be used for login (default:
-          cls.admin_password)
-        - driver: selenium driver (default: cls.web_driver).
-        """
-
-        if not driver:
-            driver = self.web_driver
-        if not username:
-            username = self.admin_username
-        if not password:
-            password = self.admin_password
-        driver.get(f"{self.live_server_url}/admin/login/")
-        if "admin/login" in driver.current_url:
-            driver.find_element(by=By.NAME, value="username").send_keys(username)
-            driver.find_element(by=By.NAME, value="password").send_keys(password)
-            driver.find_element(by=By.XPATH, value='//input[@type="submit"]').click()
