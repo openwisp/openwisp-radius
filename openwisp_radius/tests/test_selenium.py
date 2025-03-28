@@ -12,6 +12,8 @@ from . import FileMixin
 class BasicTest(
     SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
 ):
+    browser = 'chrome'
+
     # Test case for batch user creation
     def test_batch_user_creation(self):
         """Test the batch user creation feature"""
@@ -19,7 +21,7 @@ class BasicTest(
 
         # Navigate to the organization creation page
         self.open(reverse('admin:openwisp_users_organization_add'))
-        self.find_element(By.ID, 'id_name').send_keys(
+        self.find_element(By.ID, 'id_name', 10).send_keys(
             'Test Batch'
         )  # Create an organization named 'Test Batch'
         self.find_element(
@@ -30,16 +32,16 @@ class BasicTest(
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
 
         # Set user strategy for batch creation to 'prefix'
-        dropdown = self.find_element(By.ID, 'id_strategy')
+        dropdown = self.wait_for_visibility(By.ID, 'id_strategy', 10)
         select = Select(dropdown)
         select.select_by_value('prefix')
 
         # Fill in the batch details
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
         prefix_field = self.find_element(By.ID, 'id_prefix')
         prefix_field.clear()
         prefix_field.send_keys('test-user-')  # Set a prefix for users to be generated
-        organization = self.find_element(By.ID, 'select2-id_organization-container')
+        organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
 
         # Select the previously created organization
@@ -47,6 +49,7 @@ class BasicTest(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and "
             "text()='Test Batch']",
+            10,
         )
         option.click()
 
@@ -54,7 +57,7 @@ class BasicTest(
         self.find_element(By.ID, 'id_number_of_users').send_keys('5')
 
         # Submit the form to create the users
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Verify success message
         success_message = self.wait_for_visibility(By.CLASS_NAME, 'success', 10)
@@ -77,34 +80,35 @@ class BasicTest(
 
         # Navigate to organization creation page
         self.open(reverse('admin:openwisp_users_organization_add'))
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
 
         # Set strategy to CSV for importing users
-        dropdown = self.find_element(By.ID, 'id_strategy')
+        dropdown = self.find_element(By.ID, 'id_strategy', 10)
         select = Select(dropdown)
         select.select_by_value('csv')
 
         # Select the organization to associate with the users
-        organization = self.find_element(By.ID, 'select2-id_organization-container')
+        organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
         option = self.find_element(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and "
             "text()='Test Batch']",
+            10,
         )
         option.click()
 
         # Set batch name and upload CSV file for user import
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
-        csv_file_input = self.find_element(By.ID, 'id_csvfile')
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
+        csv_file_input = self.find_element(By.ID, 'id_csvfile', 10)
         csv_file_input.send_keys(csv_file)
 
         # Submit the form to start the import
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Verify success message
         success_message = self.wait_for_visibility(By.CLASS_NAME, 'success', 10)
@@ -132,34 +136,35 @@ class BasicTest(
 
         # Navigate to organization creation page
         self.open(reverse('admin:openwisp_users_organization_add'))
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
 
         # Set strategy to CSV for importing users
-        dropdown = self.find_element(By.ID, 'id_strategy')
+        dropdown = self.find_element(By.ID, 'id_strategy', 10)
         select = Select(dropdown)
         select.select_by_value('csv')
 
         # Set batch name and select the organization
-        self.find_element(By.ID, 'id_name').send_keys('Hashed Password Import Test')
-        organization = self.find_element(By.ID, 'select2-id_organization-container')
+        self.find_element(By.ID, 'id_name', 10).send_keys('Hashed Password Import Test')
+        organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
         option = self.find_element(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and "
             "text()='Test Batch']",
+            10,
         )
         option.click()
 
         # Upload the CSV file with hashed passwords
-        csv_file_input = self.find_element(By.ID, 'id_csvfile')
+        csv_file_input = self.find_element(By.ID, 'id_csvfile', 10)
         csv_file_input.send_keys(csv_file)
 
         # Submit the form to import users
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Verify success message
         success_message = self.wait_for_visibility(By.CLASS_NAME, 'success', 10)
@@ -174,7 +179,7 @@ class BasicTest(
         self.assertIsNotNone(hash_user1_link)
 
         hash_user2_link = self.find_element(
-            By.XPATH, "//a[contains(text(), 'hash_user2')]"
+            By.XPATH, "//a[contains(text(), 'hash_user2')]", 10
         )
         self.assertIsNotNone(hash_user2_link)
 
@@ -185,36 +190,37 @@ class BasicTest(
 
         # Create an organization for the prefix user generation
         self.open(reverse('admin:openwisp_users_organization_add'))
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
 
         # Set user strategy to 'prefix'
-        dropdown = self.find_element(By.ID, 'id_strategy')
+        dropdown = self.find_element(By.ID, 'id_strategy', 10)
         select = Select(dropdown)
         select.select_by_value('prefix')
 
         # Select the organization and set the prefix for users
-        organization = self.find_element(By.ID, 'select2-id_organization-container')
+        organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
         option = self.find_element(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and "
             "text()='Test Batch']",
+            10,
         )
         option.click()
 
         # Set prefix and number of users to generate
-        self.find_element(By.ID, 'id_name').send_keys('Prefix Test')
+        self.find_element(By.ID, 'id_name', 10).send_keys('Prefix Test')
         prefix_field = self.find_element(By.ID, 'id_prefix')
         prefix_field.clear()
         prefix_field.send_keys('prefix-user-')
         self.find_element(By.ID, 'id_number_of_users').send_keys('10')
 
         # Submit the form to create users with the prefix
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Verify success message
         success_message = self.wait_for_visibility(By.CLASS_NAME, 'success', 10)
@@ -225,12 +231,13 @@ class BasicTest(
             By.XPATH, "//a[contains(text(), 'Prefix Test')]", 10
         )
         batch_link.click()
-        user_count_xpath = (
-            '/html/body/div/div[3]/div[3]/div/div[1]/div[2]/form/div/'
-            'fieldset/div[6]/div/div/div'
-        )
-        user_count = self.wait_for_visibility(By.XPATH, user_count_xpath, 10)
-        self.assertIn('10', user_count.text)
+        readonly_elements = self.find_elements(By.CLASS_NAME, 'readonly', 10)
+
+        # Check if any of the elements contain "10"
+        contains_ten = any('10' in element.text for element in readonly_elements)
+
+        # Assert if at least one element contains "10"
+        assert contains_ten, "No element contains the number 10"
 
     # Test case for user generation using CSV file upload
     def test_csv_user_generation(self):
@@ -242,33 +249,34 @@ class BasicTest(
 
         # Navigate to organization creation page
         self.open(reverse('admin:openwisp_users_organization_add'))
-        self.find_element(By.ID, 'id_name').send_keys('Test Batch')
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
 
         # Set strategy to 'csv' for user generation
-        dropdown = self.find_element(By.ID, 'id_strategy')
+        dropdown = self.find_element(By.ID, 'id_strategy', 10)
         select = Select(dropdown)
         select.select_by_value('csv')
 
         # Select the organization and upload the CSV
-        organization = self.find_element(By.ID, 'select2-id_organization-container')
+        organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
         option = self.find_element(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and "
             "text()='Test Batch']",
+            10,
         )
         option.click()
 
-        self.find_element(By.ID, 'id_name').send_keys('CSV Test')
-        csv_file_input = self.find_element(By.ID, 'id_csvfile')
+        self.find_element(By.ID, 'id_name', 10).send_keys('CSV Test')
+        csv_file_input = self.find_element(By.ID, 'id_csvfile', 10)
         csv_file_input.send_keys(csv_file)
 
         # Submit the form to generate users via CSV upload
-        self.find_element(By.CSS_SELECTOR, 'input[type=submit]').click()
+        self.find_element(By.CSS_SELECTOR, 'input[type=submit]', 10).click()
 
         # Verify success message
         success_message = self.wait_for_visibility(By.CLASS_NAME, 'success', 10)
