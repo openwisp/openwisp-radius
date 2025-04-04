@@ -38,7 +38,6 @@ class BasicTest(
         # Fill in the batch details
         self.find_element(By.ID, 'id_name', 10).send_keys('Test Batch')
         prefix_field = self.find_element(By.ID, 'id_prefix')
-        prefix_field.clear()
         prefix_field.send_keys('test-user-')  # Set a prefix for users to be generated
         organization = self.find_element(By.ID, 'select2-id_organization-container', 10)
         organization.click()
@@ -214,7 +213,6 @@ class BasicTest(
         # Set prefix and number of users to generate
         self.find_element(By.ID, 'id_name', 10).send_keys('Prefix Test')
         prefix_field = self.find_element(By.ID, 'id_prefix')
-        prefix_field.clear()
         prefix_field.send_keys('prefix-user-')
         self.find_element(By.ID, 'id_number_of_users').send_keys('10')
 
