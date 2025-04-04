@@ -73,7 +73,9 @@ jobs:
           MONITORING_INTEGRATION=1 coverage run runtests.py
           coverage combine
           coverage xml
-
+        env:
+          SELENIUM_HEADLESS: 1
+          
       - name: Upload Coverage
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         uses: coverallsapp/github-action@v2
