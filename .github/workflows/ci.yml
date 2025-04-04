@@ -68,10 +68,11 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |
-          coverage run runtests.py --parallel > /dev/null 2>&1 || ./runtests.py
-          SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
-          MONITORING_INTEGRATION=1 coverage run runtests.py
+          coverage run --parallel-mode runtests.py --parallel || ./runtests.py
+          # SAMPLE tests do not influence coverage, so we can speed up tests with --parallel
+          SAMPLE_APP=1 coverage run --parallel-mode ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
           coverage combine
+          MONITORING_INTEGRATION=1 coverage run --append runtests.py
           coverage xml
 
       - name: Upload Coverage
