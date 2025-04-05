@@ -1,6 +1,6 @@
 openwisp-radius
 ===============
- 
+
 .. image:: https://github.com/openwisp/openwisp-radius/workflows/OpenWISP%20Radius%20CI%20Build/badge.svg?branch=master
     :target: https://github.com/openwisp/openwisp-radius/actions?query=workflow%3A%22OpenWISP+Radius+CI+Build%22
     :alt: CI build status
