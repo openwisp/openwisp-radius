@@ -73,6 +73,13 @@ jobs:
           MONITORING_INTEGRATION=1 coverage run runtests.py
           coverage combine
           coverage xml
+        env:
+          SELENIUM_HEADLESS: 1
+          GECKO_LOG: 1
+
+      - name: Show gecko web driver log on failures
+        if: ${{ failure() }}
+        run: cat geckodriver.log
 
       - name: Upload Coverage
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
