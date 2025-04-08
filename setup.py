@@ -35,7 +35,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/1.2',
+        'openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/8b27115',
         (
             'openwisp-utils[rest,celery]'
             ' @ https://github.com/openwisp/openwisp-utils/tarball/1.2'
