@@ -72,7 +72,7 @@ class BasicTest(
         self.login()  # Log into the admin interface
 
         # Get the path of the CSV file for user import
-        csv_file = self._get_path('static/users.csv')
+        csv_file = self._get_path('static/selenium/test_standard_csv_import.csv')
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
@@ -117,7 +117,9 @@ class BasicTest(
         self.login()  # Log into the admin interface
 
         # Get the path of the CSV file with hashed passwords
-        csv_file = self._get_path('static/user_with_hash.csv')
+        csv_file = self._get_path(
+            'static/selenium/test_import_with_hashed_passwords.csv'
+        )
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
@@ -162,7 +164,7 @@ class BasicTest(
         self.login()  # Log into the admin interface
 
         # Get the path of the CSV file
-        csv_file = self._get_path('static/csv_user_gen.csv')
+        csv_file = self._get_path('static/selenium/test_csv_user_generation.csv')
 
         # Navigate to radius batch creation page
         self.open(reverse('admin:openwisp_radius_radiusbatch_add'))
