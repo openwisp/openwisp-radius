@@ -14,6 +14,7 @@ many features included in it such as:
   Usernames are generated from the email address whereas passwords are
   generated randomly and their lengths can be customized.
 - Passwords are accepted in both clear-text and hash formats from the CSV.
+- Set the RADIUS user groups that the user will belong to.
 - Send mails to users whose passwords have been generated automatically.
 
 This operation can be performed via the admin interface, with a management
@@ -28,7 +29,18 @@ The CSV shall be of the format:
 
 ::
 
+    username,password,email,firstname,lastname,notes,user_groups
+
+`user_groups` consists of one or more radius group names separated by a semicolon.
+Inserting groups that don't exist will silently fail.
+
+The previous format is also supported for backwards compatibility:
+
+::
+
     username,password,email,firstname,lastname
+
+OpenWISP will recognize the correct format automatically.
 
 Imported users with hashed passwords
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

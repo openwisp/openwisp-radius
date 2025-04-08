@@ -925,18 +925,36 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         super().clean()
 
     def add(self, reader, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
+        RadiusUserGroup = swapper.load_model('openwisp_radius', 'RadiusUserGroup')
+        RadiusGroup = swapper.load_model('openwisp_radius', 'RadiusGroup')
         users_list = []
         generated_passwords = []
+        user_group_associations = []
+
         for row in reader:
-            if len(row) == 5:
+            # Both formats
+            if len(row) in [5, 7]:
                 user, password = self.get_or_create_user(
                     row, users_list, password_length
                 )
                 users_list.append(user)
                 if password:
                     generated_passwords.append(password)
+            # New format
+            if len(row) == 7:
+                radius_ugroups = row[6]
+                groupnames = radius_ugroups.split(';')
+                for groupname in groupnames:
+                    user_group_associations.append((user, groupname.strip()))
         for user in users_list:
             self.save_user(user)
+        for user, groupname in user_group_associations:
+            if RadiusGroup.objects.filter(name=groupname).exists():
+                RadiusUserGroup.objects.get_or_create(
+                    user=user,
+                    groupname=groupname,
+                    defaults={'priority': 1}
+                )
         for element in generated_passwords:
             username, password, user_email = element
             send_mail(
@@ -969,17 +987,17 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def get_or_create_user(self, row, users_list, password_length):
         User = get_user_model()
-        username, password, email, first_name, last_name = row
+        username, password, email, first_name, last_name, notes, radius_ugroups_string = self._batch_csv_read_row(row)
         if email and User.objects.filter(email=email).exists():
             user = User.objects.get(email=email)
             return user, None
         generated_password = None
-        username, password, email, first_name, last_name = row
+        username, password, email, first_name, last_name, notes, radius_ugroups_string = self._batch_csv_read_row(row)
         if not username and email:
             username = email.split('@')[0]
         username = find_available_username(username, users_list)
         user = User(
-            username=username, email=email, first_name=first_name, last_name=last_name
+            username=username, email=email, first_name=first_name, last_name=last_name, notes=notes
         )
         cleartext_delimiter = 'cleartext$'
         if not password:
@@ -1023,6 +1041,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         for u in users:
             u.is_active = False
             u.save()
+
+    def _batch_csv_read_row(self, row):
+        # 5 or 7 fields, for backwards compatibility with previous CSV format.
+        read_row = lambda row: (*row[:5], *row[5:7], '', '')[:7]
+        username, password, email, first_name, last_name, notes, radius_ugroups_string = readrow(row)
+        return username, password, email, first_name, last_name, notes, radius_ugroups_string
 
     def _remove_files(self):
         if self.csvfile:
