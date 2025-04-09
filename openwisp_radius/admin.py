@@ -623,13 +623,14 @@ if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 
         def get_formset(self, request, obj=None, **kwargs):
             kwargs['widgets'] = kwargs.get('widgets', {})
-            kwargs['widgets'].update(
-                {
-                    'key': forms.widgets.TextInput(
-                        attrs={'class': 'readonly vTextField', 'readonly': True}
-                    )
-                }
-            )
+            if hasattr(obj, 'radius_token'):
+                kwargs['widgets'].update(
+                    {
+                        'key': forms.widgets.TextInput(
+                            attrs={'class': 'readonly vTextField', 'readonly': True}
+                        )
+                    }
+                )
             return super().get_formset(request, obj, **kwargs)
 
     UserAdmin.inlines.insert(0, RadiusTokenInline)

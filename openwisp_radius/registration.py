@@ -54,3 +54,7 @@ def unregister_registration_method(name, fail_loud=True):
     # if not found, fail, unless fail_on_duplicate=False is passed
     if fail_loud:
         raise ImproperlyConfigured(f'No such Identity Verification Method "{name}"')
+
+
+def get_registration_choices():
+    return REGISTRATION_METHOD_CHOICES
