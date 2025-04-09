@@ -1,10 +1,10 @@
 import logging
 import re
-import telnetlib
 from uuid import UUID
 
 import openvpn_status
 from django.core.management import BaseCommand
+from Exscript.protocols import telnetlib
 from netaddr import EUI, mac_unix
 
 from .... import settings as app_settings

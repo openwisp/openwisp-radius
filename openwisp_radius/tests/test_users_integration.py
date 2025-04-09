@@ -1,5 +1,6 @@
 import csv
 
+import django
 from django.core.files.temp import NamedTemporaryFile
 from django.core.management import call_command
 from django.urls import reverse
@@ -43,7 +44,17 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             url,
         )
         self.assertContains(response, 'id="id_radius_token-__prefix__-organization"')
-        self.assertNotContains(response, 'id="id_radius_token-__prefix__-key"')
+        # TODO: Remove this while dropping support for Django 4.2
+        if django.VERSION < (5, 1):
+            self.assertNotContains(response, 'id="id_radius_token-__prefix__-key"')
+        else:
+            # On Django 5.1+, the empty form include hidden field for the
+            # primary key of the related object ("key" field for RadiusToken).
+            self.assertContains(
+                response,
+                '<input type="hidden" name="radius_token-__prefix__-key"'
+                ' id="id_radius_token-__prefix__-key">',
+            )
 
         # Create a radius token
         params.update(

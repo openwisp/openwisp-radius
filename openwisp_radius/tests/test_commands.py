@@ -379,7 +379,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         radius_acc = self._create_radius_accounting(**options)
 
         with self.subTest('Test telnet connection error'):
-            with patch('logging.Logger.warning') as mocked_logger:
+            with patch('logging.Logger.warning') as mocked_logger, patch(
+                'openwisp_radius.management.commands.base.convert_called_station_id'
+                '.BaseConvertCalledStationIdCommand._get_raw_management_info',
+                side_effect=ConnectionRefusedError(),
+            ):
                 call_command('convert_called_station_id')
                 mocked_logger.assert_called_once_with(
                     'Unable to establish telnet connection to 127.0.0.1 on 7505. '
