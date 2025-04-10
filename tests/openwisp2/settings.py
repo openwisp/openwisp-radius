@@ -196,7 +196,6 @@ AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'America/Asuncion'  # used to replicate timezone related bug, do not change!
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 PRIVATE_STORAGE_ROOT = os.path.join(MEDIA_ROOT, 'private')
@@ -324,6 +323,7 @@ if os.environ.get('MONITORING_INTEGRATION', False):
     INSTALLED_APPS.insert(
         INSTALLED_APPS.index('rest_framework.authtoken'), 'rest_framework_gis'
     )
+    INSTALLED_APPS.insert(0, 'daphne')
     INSTALLED_APPS.append('channels')
     dj_rest_auth_index = INSTALLED_APPS.index('dj_rest_auth')
     INSTALLED_APPS = (

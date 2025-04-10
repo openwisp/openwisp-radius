@@ -1,5 +1,6 @@
 import hashlib
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from urllib.parse import urlencode
 
 from django.utils import timezone
@@ -28,7 +29,7 @@ def get_utc_datetime_from_local_date():
     """
     Returns UTC time for the beginning of the current day in local timezone.
     """
-    return get_today_start_datetime().astimezone(timezone.utc)
+    return get_today_start_datetime().astimezone(dt_timezone.utc)
 
 
 def get_datetime_filter_start_datetime():

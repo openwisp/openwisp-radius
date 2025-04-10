@@ -50,6 +50,9 @@ setup(
         'django-private-storage~=3.1.0',
         'django-ipware~=5.0.0',
         'pyrad~=2.4',
+        # Python 3.13 removed built-in telnetlib module,
+        # thus we use Exscript for telnet.
+        'Exscript~=2.6.28',
     ],
     extras_require={
         # https://github.com/IdentityPython/djangosaml2/issues/414

@@ -795,7 +795,20 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Phone verification tokens',
                 'ordering': ('-created',),
                 'abstract': False,
-                'index_together': {('user', 'created'), ('user', 'created', 'ip')},
             },
+        ),
+        migrations.AddIndex(
+            model_name='phonetoken',
+            index=models.Index(
+                fields=['user', 'created'],
+                name='sample_radi_user_id_b748c7_idx',
+            ),
+        ),
+        migrations.AddIndex(
+            model_name='phonetoken',
+            index=models.Index(
+                fields=['user', 'created', 'ip'],
+                name='sample_radi_user_id_044fca_idx',
+            ),
         ),
     ]
