@@ -7,6 +7,7 @@ import string
 from datetime import timedelta
 from io import StringIO
 
+import django
 import phonenumbers
 import swapper
 from django.conf import settings
@@ -25,7 +26,10 @@ from model_utils.fields import AutoLastModifiedField
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 
-from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
+from openwisp_radius.registration import (
+    REGISTRATION_METHOD_CHOICES,
+    get_registration_choices,
+)
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 from openwisp_utils.fields import (
@@ -1369,7 +1373,10 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         verbose_name = _('Phone verification token')
         verbose_name_plural = _('Phone verification tokens')
         ordering = ('-created',)
-        index_together = (('user', 'created'), ('user', 'created', 'ip'))
+        indexes = [
+            models.Index(fields=['user', 'created']),
+            models.Index(fields=['user', 'created', 'ip']),
+        ]
         abstract = True
 
     def clean(self):
@@ -1515,7 +1522,16 @@ class AbstractRegisteredUser(models.Model):
         max_length=64,
         blank=True,
         default='',
-        choices=REGISTRATION_METHOD_CHOICES,
+        choices=(
+            REGISTRATION_METHOD_CHOICES
+            if django.VERSION < (5, 0)
+            # TODO: Remove when dropping support for Django 4.2
+            # In Django 5.0+, choices are normalized at model definition,
+            # creating a static list of tuples that doesn't update when registration
+            # methods are dynamically registered or unregistered. Using a callable
+            # ensures we always get the current choices from the registry.
+            else get_registration_choices
+        ),
     )
     is_verified = models.BooleanField(
         _('verified'),

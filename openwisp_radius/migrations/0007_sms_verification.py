@@ -116,8 +116,18 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Phone verification tokens',
             },
         ),
-        migrations.AlterIndexTogether(
-            name='phonetoken',
-            index_together={('user', 'created', 'ip'), ('user', 'created')},
+        migrations.AddIndex(
+            model_name='phonetoken',
+            index=models.Index(
+                fields=['user', 'created'],
+                name='openwisp_ra_user_id_9fe207_idx',
+            ),
+        ),
+        migrations.AddIndex(
+            model_name='phonetoken',
+            index=models.Index(
+                fields=['user', 'created', 'ip'],
+                name='openwisp_ra_user_id_d4dd52_idx',
+            ),
         ),
     ]
