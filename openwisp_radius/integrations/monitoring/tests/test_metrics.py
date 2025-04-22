@@ -86,6 +86,51 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points['traces'][0][1][-1], 1)
         self.assertEqual(points['summary'], {'mobile_phone': 1})
 
+    @patch('logging.Logger.warning')
+    def test_post_save_radiusaccounting_device_without_location(self, *args):
+        user = self._create_user()
+        reg_user = self._create_registered_user(user=user)
+        device = self._create_device()
+        options = _RADACCT.copy()
+        options.update(
+            {
+                'unique_id': '117',
+                'username': user.username,
+                'called_station_id': device.mac_address.replace('-', ':').upper(),
+                'calling_station_id': '00:00:00:00:00:00',
+                'input_octets': '8000000000',
+                'output_octets': '9000000000',
+            }
+        )
+        options['stop_time'] = options['start_time']
+        self._create_radius_accounting(**options)
+        with self.subTest('location_id should not be set'):
+            self.assertEqual(
+                self.metric_model.objects.filter(
+                    configuration='radius_acc',
+                    name='RADIUS Accounting',
+                    key='radius_acc',
+                    object_id=str(device.id),
+                    content_type=ContentType.objects.get_for_model(self.device_model),
+                    extra_tags={
+                        'called_station_id': device.mac_address,
+                        'calling_station_id': sha1_hash('00:00:00:00:00:00'),
+                        'method': reg_user.method,
+                        'organization_id': str(self.default_org.id),
+                    },
+                ).count(),
+                1,
+            )
+        with self.subTest('Deleting device without location_id should not fail'):
+            self.device_model.objects.all().delete()
+            self.assertEqual(self.device_model.objects.count(), 0)
+            self.assertEqual(
+                self.metric_model.objects.filter(
+                    key='radius_acc', object_id=str(device.id)
+                ).count(),
+                0,
+            )
+
     @patch('openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting')
     def test_post_save_radiusaccouting_open_session(self, mocked_task):
         radius_options = _RADACCT.copy()
@@ -157,7 +202,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                     extra_tags={
                         'called_station_id': device.mac_address,
                         'calling_station_id': sha1_hash('00:00:00:00:00:00'),
-                        'location_id': None,
                         'method': reg_user.method,
                         'organization_id': str(self.default_org.id),
                     },
@@ -222,7 +266,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 extra_tags={
                     'called_station_id': '11:22:33:44:55:66',
                     'calling_station_id': sha1_hash('00:00:00:00:00:00'),
-                    'location_id': None,
                     'method': reg_user.method,
                     'organization_id': str(self.default_org.id),
                 },

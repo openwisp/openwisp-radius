@@ -195,6 +195,12 @@ def post_save_radiusaccounting(
     else:
         registration_method = clean_registration_method(registration_method)
     device_lookup = Q(mac_address__iexact=called_station_id.replace('-', ':'))
+    extra_tags = {
+        'method': registration_method,
+        'organization_id': organization_id,
+        'calling_station_id': sha1_hash(calling_station_id),
+        'called_station_id': called_station_id,
+    }
     # Do not use organization_id for device lookup if shared accounting is enabled
     if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
@@ -212,16 +218,13 @@ def post_save_radiusaccounting(
         )
         object_id = None
         content_type = None
-        location_id = None
         if app_settings.SHARED_ACCOUNTING:
-            organization_id = None
+            extra_tags.pop('organization_id')
     else:
         object_id = str(device.id)
         content_type = ContentType.objects.get_for_model(Device)
         if hasattr(device, 'devicelocation'):
-            location_id = str(device.devicelocation.location_id)
-        else:
-            location_id = None
+            extra_tags['location_id'] = str(device.devicelocation.location_id)
 
     metric, created = Metric._get_or_create(
         configuration='radius_acc',
@@ -229,13 +232,7 @@ def post_save_radiusaccounting(
         key='radius_acc',
         object_id=object_id,
         content_type=content_type,
-        extra_tags={
-            'organization_id': organization_id,
-            'method': registration_method,
-            'calling_station_id': sha1_hash(calling_station_id),
-            'called_station_id': called_station_id,
-            'location_id': location_id,
-        },
+        extra_tags=extra_tags,
     )
     metric.write(
         input_octets,
