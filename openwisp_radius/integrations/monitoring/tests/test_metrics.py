@@ -104,31 +104,32 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         options['stop_time'] = options['start_time']
         self._create_radius_accounting(**options)
-        self.assertEqual(
-            self.metric_model.objects.filter(
-                configuration='radius_acc',
-                name='RADIUS Accounting',
-                key='radius_acc',
-                object_id=str(device.id),
-                content_type=ContentType.objects.get_for_model(self.device_model),
-                extra_tags={
-                    'called_station_id': device.mac_address,
-                    'calling_station_id': sha1_hash('00:00:00:00:00:00'),
-                    'method': reg_user.method,
-                    'organization_id': str(self.default_org.id),
-                },
-            ).count(),
-            1,
-        )
-        # Deleting the device should not raise any error
-        self.device_model.objects.all().delete()
-        self.assertEqual(self.device_model.objects.count(), 0)
-        self.assertEqual(
-            self.metric_model.objects.filter(
-                key='radius_acc', object_id=str(device.id)
-            ).count(),
-            0,
-        )
+        with self.subTest('location_id should not be set'):
+            self.assertEqual(
+                self.metric_model.objects.filter(
+                    configuration='radius_acc',
+                    name='RADIUS Accounting',
+                    key='radius_acc',
+                    object_id=str(device.id),
+                    content_type=ContentType.objects.get_for_model(self.device_model),
+                    extra_tags={
+                        'called_station_id': device.mac_address,
+                        'calling_station_id': sha1_hash('00:00:00:00:00:00'),
+                        'method': reg_user.method,
+                        'organization_id': str(self.default_org.id),
+                    },
+                ).count(),
+                1,
+            )
+        with self.subTest('Deleting device without location_id should not fail'):
+            self.device_model.objects.all().delete()
+            self.assertEqual(self.device_model.objects.count(), 0)
+            self.assertEqual(
+                self.metric_model.objects.filter(
+                    key='radius_acc', object_id=str(device.id)
+                ).count(),
+                0,
+            )
 
     @patch('openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting')
     def test_post_save_radiusaccouting_open_session(self, mocked_task):
