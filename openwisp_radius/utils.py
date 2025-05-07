@@ -150,6 +150,14 @@ def decode_byte_data(data):
     return data
 
 
+def validate_csv_batch_field_radusergroups(rugs_string):
+    if not rugs_string.strip():
+        return []
+    reader = csv.reader([rugs_string], delimiter=' ')
+    rugs = next(reader)
+    return rugs
+
+
 def validate_csvfile(csvfile):
     csv_data = csvfile.read()
 
@@ -171,6 +179,16 @@ def validate_csvfile(csvfile):
         if len(row) == 5:
             username, password, email, firstname, lastname = row
             try:
+                validate_email(email)
+            except ValidationError as error:
+                raise ValidationError(
+                    _(error_message.format(str(row_count), error.message))
+                )
+            row_count += 1
+        elif len(row) == 7:
+            username, password, email, firstname, lastname, notes, link_radius_usergroups = row
+            try:
+                validate_csv_batch_field_radusergroups(link_radius_usergroups)
                 validate_email(email)
             except ValidationError as error:
                 raise ValidationError(
