@@ -191,7 +191,7 @@ Features
   `OPENWISP_RADIUS_REGISTRATION_API_ENABLED setting or the admin interface
   <https://openwisp.io/docs/stable/radius/user/settings.html#openwisp-radius-registration-api-enabled>`_
 - Added `throttling of API requests
-  <https://openwisp.io/docs/stable/radius/user/api.html#api-throttling>`_
+  <https://openwisp.io/docs/stable/radius/user/rest-api.html#api-throttling>`_
 - Added `OPENWISP_RADIUS_API_BASEURL setting
   <https://openwisp.io/docs/stable/radius/user/settings.html#openwisp-radius-api-baseurl>`_
 - Add identity verification feature, configurable via the
@@ -201,7 +201,7 @@ Features
   verification methods
   <https://openwisp.io/docs/stable/radius/user/settings.html#adding-support-for-more-registration-verification-methods>`_
 - Added `captive portal mock views
-  <https://openwisp.io/docs/stable/radius/developer/captive_portal_mock.html>`_
+  <https://openwisp.io/docs/stable/radius/developer/utils.html#captive-portal-mock-views>`_
   to ease development and debugging
 - Add possibility to filter users by registration method in the admin
   interface
@@ -223,7 +223,7 @@ Features
   <https://openwisp.io/docs/stable/radius/user/enforcing_limits.html#how-limits-are-enforced-counters>`_
 - Added emission of django signal to FreeRADIUS accounting view:
   `radius_accounting_success
-  <https://openwisp.io/docs/stable/radius/developer/signals.html#radius-accounting-success>`_
+  <https://openwisp.io/docs/stable/radius/developer/utils.html#signals>`_
 - Added possibility to send email to the user an they start a new radius
   accounting session
 - Added organization level settings and related admin interface
