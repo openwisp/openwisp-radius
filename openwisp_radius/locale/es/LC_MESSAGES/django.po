@@ -1,0 +1,1307 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-19 15:07+0000\n"
+"PO-Revision-Date: 2025-05-19 15:21-0300\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.6\n"
+
+#: admin.py:215
+msgid "Group name"
+msgstr "Nombre de grupo"
+
+#: admin.py:226
+msgid ""
+"Cannot proceed with the delete operation because the batch of items contains "
+"the default group, which cannot be deleted"
+msgstr ""
+"No se puede proceder a la operación de borrado porque el lote de elementos "
+"contiene el grupo por defecto, que no se puede borrar"
+
+#: admin.py:239
+#, python-format
+msgid "Successfully deleted %(count)d %(items)s."
+msgstr "Eliminado con éxito %(count)d %(items)s."
+
+#: admin.py:366
+msgid ""
+"Users imported or generated through this form will be flagged as verified if "
+"the organization requires identity verification, otherwise the generated "
+"users would not be able to log in. If this organization requires identity "
+"verification, make sure the identity of the users is verified before before "
+"giving out the credentials."
+msgstr ""
+"Los usuarios importados o generados a través de este formulario se marcarán "
+"como verificados si la organización requiere verificación de identidad, de "
+"lo contrario los usuarios generados no podrían iniciar sesión. Si esta "
+"organización requiere verificación de identidad, asegúrese de que la "
+"identidad de los usuarios se verifica antes de proporcionar las credenciales."
+
+#: admin.py:393
+msgid "number of users"
+msgstr "cantidad de usuarios"
+
+#: admin.py:457
+msgid "Delete selected batches"
+msgstr "Borrar los lotes seleccionados"
+
+#: admin.py:487
+msgid "radius user group"
+msgstr "grupo de usuarios de radius"
+
+#: admin.py:488
+msgid "radius user groups"
+msgstr "grupos de usuarios de radius"
+
+#: admin.py:535 base/admin_filters.py:6
+msgid "Verified"
+msgstr "Verificado"
+
+#: admin.py:567
+msgid "SMS options"
+msgstr "Ajustes de SMS"
+
+#: api/freeradius_views.py:46 api/views.py:75
+msgid "Token authentication failed"
+msgstr "Fallo en la autenticación de token"
+
+#: api/freeradius_views.py:105
+#, python-brace-format
+msgid ""
+"Request rejected: ({ip}) in organization settings or settings.py is not a "
+"valid IP address. Please contact administrator."
+msgstr ""
+"Solicitud rechazada: ({ip}) en la configuración de la organización o "
+"settings.py no es una dirección IP válida. Póngase en contacto con el "
+"administrador."
+
+#: api/freeradius_views.py:111
+#, python-brace-format
+msgid ""
+"Request rejected: Client IP address ({client_ip}) is not in the list of IP "
+"addresses allowed to consume the freeradius API."
+msgstr ""
+"Solicitud rechazada: La dirección IP del cliente ({client_ip}) no está en la "
+"lista de direcciones IP permitidas para consumir la API de freeradius."
+
+#: api/freeradius_views.py:157
+msgid ""
+"Radius token does not exist. Obtain a new radius token or provide the "
+"organization UUID and API token."
+msgstr ""
+"El token de RADIUS no existe. Obtenga un nuevo token de radius o proporcione "
+"el UUID de la organización y el token de la API."
+
+#: api/freeradius_views.py:161
+msgid "username field is required."
+msgstr "el campo nombre de usuario es obligatorio."
+
+#: api/freeradius_views.py:210
+msgid "setting the organization parameter explicitly is not allowed"
+msgstr "no se permite establecer explícitamente el parámetro de organización"
+
+#: api/freeradius_views.py:224
+msgid "Invalid token"
+msgstr "Token inválido"
+
+#: api/permissions.py:29
+msgid "SMS verification is not enabled for this organization"
+msgstr "La verificación por SMS no está activada para esta organización"
+
+#: api/serializers.py:86
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Las credenciales introducidas no son válidas. Vuelva a comprobarlo e "
+"inténtelo de nuevo."
+
+#: api/serializers.py:91
+msgid "Must include \"username\" and \"password\"."
+msgstr "Debe incluir \"nombre de usuario\" y \"contraseña\"."
+
+#: api/serializers.py:424
+msgid "The field number_of_users cannot be empty"
+msgstr "El campo \"cantidad de usuarios\" no puede estar vacío"
+
+#: api/serializers.py:464
+#, python-format
+msgid "Password reset on %s"
+msgstr "Restablecer contraseña en %s"
+
+#: api/serializers.py:466
+msgid "Reset password"
+msgstr "Restablecer contraseña"
+
+#: api/serializers.py:481
+msgid ""
+"Required only when the organization has enabled SMS verification in its "
+"\"Organization RADIUS Settings.\""
+msgstr ""
+"Sólo es necesario si la organización ha activado la verificación por SMS en "
+"su \"Configuración RADIUS de la organización\""
+
+#: api/serializers.py:493
+msgid ""
+"Required only when the organization has mandatory identity verification in "
+"its \"Organization RADIUS Settings.\""
+msgstr ""
+"Sólo se requiere cuando la organización tiene verificación de identidad "
+"obligatoria en su \"Configuración RADIUS de la organización\""
+
+#: api/serializers.py:504 api/serializers.py:540
+msgid "This field is required."
+msgstr "Este campo es obligatorio."
+
+#: api/serializers.py:508 api/serializers.py:670
+msgid "This international mobile prefix is not allowed."
+msgstr "Este prefijo de móvil internacional no está permitido."
+
+#: api/serializers.py:516
+msgid "Only mobile phone numbers are allowed."
+msgstr "Sólo se admiten números de teléfono móvil."
+
+#: api/serializers.py:520
+msgid "A user is already registered with this phone number."
+msgstr "Ya hay un usuario registrado con este número de teléfono."
+
+#: api/serializers.py:594
+msgid "A user like the one being registered already exists."
+msgstr "Ya existe un usuario como el que se está registrando."
+
+#: api/serializers.py:664
+msgid "The new phone number must be different than the old one."
+msgstr "El nuevo número de teléfono debe ser diferente del anterior."
+
+#: api/views.py:141
+#, python-brace-format
+msgid "The user {username} is not member of organization {organization}."
+msgstr "El usuario {username} no es miembro de la organización {organization}."
+
+#: api/views.py:164
+msgid "Only available for users created with prefix strategy"
+msgstr "Sólo disponible para usuarios creados con la estrategia de prefijo"
+
+#: api/views.py:340
+#, python-brace-format
+msgid "{organization} does not allow self registration of new accounts."
+msgstr "{organization} no permite el auto-registro de nuevas cuentas."
+
+#: api/views.py:554
+msgid "The email field is required."
+msgstr "El campo de correo electrónico es obligatorio."
+
+#: api/views.py:665
+msgid "Wait before requesting another SMS token."
+msgstr "Espere antes de solicitar otro token SMS."
+
+#: api/views.py:737
+msgid "No verification code found in the system for this user."
+msgstr ""
+"No se ha encontrado ningún código de verificación en el sistema para este "
+"usuario."
+
+#: api/views.py:744
+msgid "Invalid code."
+msgstr "Código inválido."
+
+#: apps.py:61
+msgid "Social login"
+msgstr "Iniciar sesión con redes sociales"
+
+#: apps.py:154
+msgid "Accounting Sessions"
+msgstr "Contabilidad de sesiones"
+
+#: apps.py:160
+msgid "Groups"
+msgstr "Grupos"
+
+#: apps.py:166 base/models.py:584 base/models.py:585
+msgid "NAS"
+msgstr "NAS"
+
+#: apps.py:172
+msgid "Checks"
+msgstr "Comprobaciones"
+
+#: apps.py:178
+msgid "Replies"
+msgstr "Respuestas"
+
+#: apps.py:184
+msgid "Batch user Creation"
+msgstr "Creación de usuarios por lotes"
+
+#: apps.py:190
+msgid "Post Auth Log"
+msgstr "Registro post-autenticación"
+
+#: apps.py:198
+msgid "Radius Token"
+msgstr "Token Radius"
+
+#: apps.py:205
+msgid "RADIUS"
+msgstr "RADIUS"
+
+#: base/admin_filters.py:11
+msgid "Unknown"
+msgstr "Desconocido"
+
+#: base/admin_filters.py:12
+msgid "Yes"
+msgstr "Sí"
+
+#: base/admin_filters.py:13
+msgid "No"
+msgstr "No"
+
+#: base/forms.py:19
+msgid "Please select an option"
+msgstr "Por favor seleccione una opción"
+
+#: base/forms.py:20
+msgid "Guided (dropdown)"
+msgstr "Guiado (desplegable)"
+
+#: base/forms.py:21
+msgid "Custom (text input)"
+msgstr "Personalizado (entrada de texto)"
+
+#: base/forms.py:34
+msgid "Number of users to be generated"
+msgstr "Número de usuarios a generar"
+
+#: base/models.py:68
+msgid "Disabled"
+msgstr "Desactivado"
+
+#: base/models.py:69
+msgid "Allowed"
+msgstr "Permitido"
+
+#: base/models.py:70
+msgid "Mandatory"
+msgstr "Obligatorio"
+
+#: base/models.py:137
+msgid "Generate from prefix"
+msgstr "Generar a partir de un prefijo"
+
+#: base/models.py:137
+msgid "Import from CSV"
+msgstr "Importar desde un archivo CSV"
+
+#: base/models.py:138 base/models.py:898 base/models.py:902
+msgid "This field cannot be blank."
+msgstr "Este campo no puede estar en blanco."
+
+#: base/models.py:140
+msgid "Comma separated list of IP addresses allowed to access freeradius API"
+msgstr ""
+"Lista separada por comas de direcciones IP autorizadas a acceder a la API de "
+"freeradius"
+
+#: base/models.py:143
+msgid ""
+"Comma separated list of international mobile prefixes allowed to register "
+"via the user registration API."
+msgstr ""
+"Lista separada por comas de prefijos de móviles internacionales permitidos "
+"para registrarse a través de la API de registro de usuarios."
+
+#: base/models.py:147
+msgid ""
+"Whether this field should be disabled, allowed or mandatory in the user "
+"registration API."
+msgstr ""
+"Si este campo debe estar deshabilitado, permitido u obligatorio en la API de "
+"registro de usuarios."
+
+#: base/models.py:151
+msgid "Whether the registration API endpoint should be enabled or not"
+msgstr "Si el endpoint de la API de registro debe estar habilitado o no"
+
+#: base/models.py:154
+msgid "Whether the registration using SAML should be enabled or not"
+msgstr "Si el registro mediante SAML debe estar habilitado o no"
+
+#: base/models.py:157
+msgid "Whether the MAC address roaming should be enabled or not."
+msgstr "Si el roaming de direcciones MAC debe estar habilitado o no."
+
+#: base/models.py:160
+msgid ""
+"Whether the registration using social applications should be enabled or not"
+msgstr "Habilitar o no el registro mediante aplicaciones sociales"
+
+#: base/models.py:163
+msgid ""
+"Whether users who sign up should be required to verify their mobile phone "
+"number via SMS"
+msgstr ""
+"Si debe exigirse a los usuarios que se registren que verifiquen su número de "
+"teléfono móvil por SMS"
+
+#: base/models.py:166
+msgid "The user is not a member of this organization"
+msgstr "El usuario no es miembro de esta organización"
+
+#: base/models.py:168
+msgid ""
+"Whether identity verification is required at the time of user registration"
+msgstr ""
+"Si se exige la verificación de la identidad en el momento del registro del "
+"usuario"
+
+#: base/models.py:170
+msgid "Whether RADIUS Change Of Authoization (CoA) is enabled"
+msgstr "Si RADIUS Change Of Authoization (CoA) está activado"
+
+#: base/models.py:171
+msgid "Enter the URL where users can log in to the wifi service"
+msgstr ""
+"Introduzca la URL donde los usuarios pueden iniciar sesión en el servicio "
+"wifi"
+
+#: base/models.py:172
+msgid "Enter the URL where users can log out from the wifi service"
+msgstr ""
+"Introduzca la URL donde los usuarios pueden desconectarse del servicio wifi"
+
+#: base/models.py:173
+msgid "Enter the URL where users can reset their password"
+msgstr "Introduzca la URL donde los usuarios pueden restablecer su contraseña"
+
+#: base/models.py:255
+#, python-format
+msgid ""
+"Another %(object_name)s for the same user and with the same attribute "
+"already exists."
+msgstr ""
+"Ya existe otro %(object_name)s para el mismo usuario y con el mismo atributo."
+
+#: base/models.py:266
+#, python-format
+msgid ""
+"Another %(object_name)s for the same group and with the same attribute "
+"already exists."
+msgstr ""
+"Ya existe otro %(object_name)s para el mismo grupo y con el mismo atributo."
+
+#: base/models.py:275 base/models.py:313 base/models.py:356 base/models.py:686
+#: base/models.py:792
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:21
+msgid "username"
+msgstr "nombre de usuario"
+
+#: base/models.py:283 base/models.py:321 base/models.py:743 base/models.py:775
+msgid "value"
+msgstr "valor"
+
+#: base/models.py:285 base/models.py:323 base/models.py:738 base/models.py:773
+msgid "operator"
+msgstr "operador"
+
+#: base/models.py:291 base/models.py:325 base/models.py:736 base/models.py:771
+msgid "attribute"
+msgstr "atributo"
+
+#: base/models.py:301
+msgid "check"
+msgstr "comprobación"
+
+#: base/models.py:302
+msgid "checks"
+msgstr "comprobaciones"
+
+#: base/models.py:333 base/models.py:796
+msgid "reply"
+msgstr "respuesta"
+
+#: base/models.py:334
+msgid "replies"
+msgstr "respuestas"
+
+#: base/models.py:343
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:20
+msgid "session ID"
+msgstr "ID de sesión"
+
+#: base/models.py:349
+msgid "accounting unique ID"
+msgstr "ID único de contabilidad"
+
+#: base/models.py:359 base/models.py:599 base/models.py:695 base/models.py:728
+#: base/models.py:763
+msgid "group name"
+msgstr "nombre del grupo"
+
+#: base/models.py:362
+msgid "realm"
+msgstr ""
+
+#: base/models.py:365
+msgid "NAS IP address"
+msgstr "Dirección IP del NAS"
+
+#: base/models.py:368
+msgid "NAS port ID"
+msgstr "ID del puerto NAS"
+
+#: base/models.py:375
+msgid "NAS port type"
+msgstr "Tipo de puerto NAS"
+
+#: base/models.py:382
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:25
+msgid "start time"
+msgstr "fecha de inicio"
+
+#: base/models.py:389
+msgid "update time"
+msgstr "fecha de actualización"
+
+#: base/models.py:392
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:26
+msgid "stop time"
+msgstr "fecha de cierre"
+
+#: base/models.py:399
+msgid "interval"
+msgstr "intervalo"
+
+#: base/models.py:402
+msgid "session time"
+msgstr "tiempo de sesión"
+
+#: base/models.py:408
+msgid "authentication"
+msgstr "autenticación"
+
+#: base/models.py:415
+msgid "connection info start"
+msgstr "información de inicio de la conexión"
+
+#: base/models.py:422
+msgid "connection info stop"
+msgstr "información de cierre de la conexión"
+
+#: base/models.py:429
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:22
+msgid "input octets"
+msgstr "octetos de entrada"
+
+#: base/models.py:435
+msgid "output octets"
+msgstr "octetos de salida"
+
+#: base/models.py:441 base/models.py:798
+msgid "called station ID"
+msgstr "ID de la estación llamada"
+
+#: base/models.py:449 base/models.py:805
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:24
+msgid "calling station ID"
+msgstr "ID de la estación llamante"
+
+#: base/models.py:457
+msgid "termination cause"
+msgstr "causa de rescisión"
+
+#: base/models.py:464
+msgid "service type"
+msgstr "tipo de servicio"
+
+#: base/models.py:471
+msgid "framed protocol"
+msgstr "protocolo enmarcado"
+
+#: base/models.py:478
+msgid "framed IP address"
+msgstr "dirección IP enmarcada"
+
+#: base/models.py:487
+msgid "framed IPv6 address"
+msgstr "dirección IPv6 enmarcada"
+
+#: base/models.py:494
+msgid "framed IPv6 prefix"
+msgstr "prefijo IPv6 enmarcado"
+
+#: base/models.py:502
+msgid "framed interface ID"
+msgstr "ID de interfaz enmarcada"
+
+#: base/models.py:509
+msgid "delegated IPv6 prefix"
+msgstr "prefijo IPv6 delegado"
+
+#: base/models.py:524
+msgid "accounting"
+msgstr "contabilidad"
+
+#: base/models.py:525
+msgid "accountings"
+msgstr "Contabilidad de sesiones"
+
+#: base/models.py:556 base/models.py:844
+msgid "name"
+msgstr "nombre"
+
+#: base/models.py:558
+msgid "NAS Name (or IP address)"
+msgstr "Nombre del NAS (o dirección IP)"
+
+#: base/models.py:563
+msgid "short name"
+msgstr "nombre corto"
+
+#: base/models.py:566
+msgid "type"
+msgstr "tipo"
+
+#: base/models.py:568
+msgid "ports"
+msgstr "puertos"
+
+#: base/models.py:570
+msgid "secret"
+msgstr "secreto"
+
+#: base/models.py:570
+msgid "Shared Secret"
+msgstr "Secreto Compartido"
+
+#: base/models.py:573
+msgid "server"
+msgstr "servidor"
+
+#: base/models.py:576
+msgid "community"
+msgstr "comunidad"
+
+#: base/models.py:579 base/models.py:602
+msgid "description"
+msgstr "descripción"
+
+#: base/models.py:610
+msgid "is default?"
+msgstr "¿es por defecto?"
+
+#: base/models.py:614
+msgid "group"
+msgstr "grupo"
+
+#: base/models.py:615
+msgid "groups"
+msgstr "grupos"
+
+#: base/models.py:644
+msgid ""
+"There must be at least one default group present in the system. To change "
+"the default group, simply set as default the group you want to make the new "
+"default."
+msgstr ""
+"Debe haber al menos un grupo por defecto en el sistema. Para cambiar el "
+"grupo predeterminado, basta con establecer como predeterminado el grupo que "
+"desea convertir en el nuevo grupo predeterminado."
+
+#: base/models.py:648
+msgid "The default group cannot be deleted"
+msgstr "El grupo por defecto no puede ser eliminado"
+
+#: base/models.py:702
+msgid "priority"
+msgstr "prioridad"
+
+#: base/models.py:715
+msgid "user group"
+msgstr "grupo de usuarios"
+
+#: base/models.py:716
+msgid "user groups"
+msgstr "grupos de usuarios"
+
+#: base/models.py:751
+msgid "group check"
+msgstr "comprobación de grupo"
+
+#: base/models.py:752
+msgid "group checks"
+msgstr "comprobaciones de grupo"
+
+#: base/models.py:783
+msgid "group reply"
+msgstr "respuesta del grupo"
+
+#: base/models.py:784
+msgid "group replies"
+msgstr "respuestas del grupo"
+
+#: base/models.py:794
+msgid "password"
+msgstr "contraseña"
+
+#: base/models.py:812
+msgid "date"
+msgstr "fecha"
+
+#: base/models.py:817
+msgid "post auth"
+msgstr "post-autenticación"
+
+#: base/models.py:818
+msgid "post auth log"
+msgstr "registro post-autenticación"
+
+#: base/models.py:837
+msgid "strategy"
+msgstr "estrategia"
+
+#: base/models.py:841
+msgid "Import users from a CSV or generate using a prefix"
+msgstr "Importar usuarios desde un CSV o generarlos mediante un prefijo"
+
+#: base/models.py:846
+msgid "A unique batch name"
+msgstr "Un nombre de lote único"
+
+#: base/models.py:854
+msgid "List of users uploaded in this batch"
+msgstr "Lista de usuarios cargados en este lote"
+
+#: base/models.py:862
+msgid "The csv file containing the user details to be uploaded"
+msgstr "El archivo csv que contiene los datos del usuario que se va a cargar"
+
+#: base/models.py:866
+msgid "prefix"
+msgstr "prefijo"
+
+#: base/models.py:870
+msgid "Usernames generated will be of the format [prefix][number]"
+msgstr "Los nombres de usuario generados tendrán el formato [prefijo][número]"
+
+#: base/models.py:879
+msgid "expiration date"
+msgstr "fecha de vencimiento"
+
+#: base/models.py:882
+msgid "If left blank users will never expire"
+msgstr "Si se deja en blanco los usuarios nunca expirarán"
+
+#: base/models.py:888
+msgid "batch user creation"
+msgstr "creación de usuarios por lotes"
+
+#: base/models.py:889
+msgid "batch user creation operations"
+msgstr "operaciones de creación de usuarios por lotes"
+
+#: base/models.py:911
+msgid ""
+"This value may contain only                         letters, numbers, and "
+"@/./+/-/_ characters."
+msgstr "Este valor sólo puede contener letras, números y caracteres @/./+/-/_."
+
+#: base/models.py:925
+msgid "Mixing fields of different strategies"
+msgstr "Mezcla de campos de diferentes estrategias"
+
+#: base/models.py:1041
+msgid "Key"
+msgstr "Clave"
+
+#: base/models.py:1054 base/models.py:1055
+msgid "radius token"
+msgstr "token RADIUS"
+
+#: base/models.py:1081
+msgid "organization"
+msgstr "organización"
+
+#: base/models.py:1089
+msgid "SMS verification"
+msgstr "Verificación por SMS"
+
+#: base/models.py:1096
+msgid "Sender"
+msgstr "Remitente"
+
+#: base/models.py:1101
+msgid ""
+"alpha numeric identifier used as sender for SMS sent by this organization"
+msgstr ""
+"identificador alfanumérico utilizado como remitente para los SMS enviados "
+"por esta organización"
+
+#: base/models.py:1105
+msgid "SMS Message"
+msgstr "Mensaje SMS"
+
+#: base/models.py:1108
+#, python-brace-format
+msgid ""
+"SMS message template used for sending verification code. Must contain "
+"\"{code}\" placeholder for OTP value."
+msgstr ""
+"Plantilla de mensaje SMS utilizada para enviar el código de verificación. "
+"Debe contener el marcador \"{code}\" para el valor OTP."
+
+#: base/models.py:1114
+msgid "SMS Cooldown"
+msgstr "Tiempo de reutilización de SMS"
+
+#: base/models.py:1116
+msgid ""
+"Time period a user will have to wait before requesting another SMS token (in "
+"seconds)."
+msgstr ""
+"Periodo de tiempo que un usuario tendrá que esperar antes de solicitar otro "
+"token SMS (en segundos)."
+
+#: base/models.py:1125
+msgid ""
+"Additional configuration for SMS backend in JSON format (optional, leave "
+"blank if unsure)"
+msgstr ""
+"Configuración adicional para el backend de SMS en formato JSON (opcional, "
+"déjelo en blanco si no está seguro)"
+
+#: base/models.py:1128
+msgid "SMS meta data"
+msgstr "Metadatos SMS"
+
+#: base/models.py:1137
+msgid "CoA Enabled"
+msgstr "CoA Activado"
+
+#: base/models.py:1144
+msgid "first name"
+msgstr "nombre"
+
+#: base/models.py:1151
+msgid "last name"
+msgstr "apellido"
+
+#: base/models.py:1158
+msgid "location"
+msgstr "ubicación"
+
+#: base/models.py:1165
+msgid "birth date"
+msgstr "fecha de nacimiento"
+
+#: base/models.py:1177
+#: migrations/0028_organizationradiussettings_saml_social_registration_enabled.py:23
+msgid "SAML registration enabled"
+msgstr "Registro SAML activado"
+
+#: base/models.py:1182
+msgid "MAC address roaming enabled"
+msgstr "Roaming de direcciones MAC activado"
+
+#: base/models.py:1190
+msgid "Login URL"
+msgstr "URL de acceso"
+
+#: base/models.py:1196
+msgid "Status URL"
+msgstr "URL de estado"
+
+#: base/models.py:1202
+msgid "Password reset URL"
+msgstr "URL de restablecimiento de contraseña"
+
+#: base/models.py:1210
+msgid "Organization radius settings"
+msgstr "Configuración radius de la organización"
+
+#: base/models.py:1236
+msgid "if SMS verification is enabled this field is required."
+msgstr "si la verificación por SMS está activada, este campo es obligatorio."
+
+#: base/models.py:1252 tests/test_admin.py:563
+msgid ""
+"Cannot be empty when the settings value for "
+"`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided."
+msgstr ""
+"No puede estar vacío cuando no se proporciona el valor de configuración para "
+"`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS`."
+
+#: base/models.py:1270 tests/test_admin.py:576
+msgid ""
+"Invalid input. Please enter valid ip addresses or subnets separated by "
+"comma. (no spaces)"
+msgstr ""
+"Entrada no válida. Por favor, introduzca direcciones IP o subredes válidas "
+"separadas por comas. (sin espacios)"
+
+#: base/models.py:1285 tests/test_admin.py:1239 tests/test_admin.py:1250
+#: tests/test_admin.py:1263
+msgid ""
+"Invalid input. Please enter valid mobile prefixes separated by comma. (no "
+"spaces)"
+msgstr ""
+"Entrada no válida. Por favor, introduzca prefijos móviles válidos separados "
+"por coma. (sin espacios)"
+
+#: base/models.py:1305
+msgid ""
+"The URL must contain the \"{{token}}\" and \"{{uid}}\" placeholders, eg: {}."
+msgstr ""
+"La URL debe contener los marcadores \"{{token}}\" y \"{{uid}}\", por "
+"ejemplo: {}."
+
+#: base/models.py:1318
+msgid "The SMS message must contain the \"{{code}}\" placeholder, eg: {}."
+msgstr ""
+"El mensaje SMS debe contener el marcador \"{{code}}\", por ejemplo: {}."
+
+#: base/models.py:1349
+msgid "Phone verification token"
+msgstr "Código para la verificación telefónica"
+
+#: base/models.py:1350
+msgid "Phone verification tokens"
+msgstr "Códigos para la verificación telefónica"
+
+#: base/models.py:1378
+msgid "This phone number is already associated to another user."
+msgstr "Este número de teléfono ya está asociado a otro usuario."
+
+#: base/models.py:1398
+msgid "Maximum daily limit reached."
+msgstr "Límite máximo diario alcanzado."
+
+#: base/models.py:1405
+#, python-brace-format
+msgid "User {self.user} has reached the maximum "
+msgstr "El usuario {self.user} ha alcanzado el máximo"
+
+#: base/models.py:1411
+msgid "Maximum daily limit reached from this IP address."
+msgstr "Límite máximo diario alcanzado desde esta dirección IP."
+
+#: base/models.py:1426
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "El usuario {user} no es miembro de ninguna organización"
+
+#: base/models.py:1456
+msgid "This user has been already verified."
+msgstr "Este usuario ya ha sido verificado."
+
+#: base/models.py:1469
+msgid "Maximum number of attempts reached, request a new code."
+msgstr "Número máximo de intentos alcanzado, solicite un nuevo código."
+
+#: base/models.py:1477
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr ""
+"Este código de verificación ha caducado. Por favor, envíe un nuevo código e "
+"inténtelo de nuevo."
+
+#: base/models.py:1492
+msgid "registration method"
+msgstr "método de registro"
+
+#: base/models.py:1494
+msgid ""
+"users can sign up in different ways, some methods are valid as indirect "
+"identity verification (eg: mobile phone SIM card in most countries)"
+msgstr ""
+"los usuarios pueden registrarse de diferentes maneras, algunos métodos son "
+"válidos como verificación indirecta de identidad (por ejemplo: tarjeta SIM "
+"de teléfono móvil en la mayoría de los países)"
+
+#: base/models.py:1513
+msgid "verified"
+msgstr "verificado"
+
+#: base/models.py:1515
+msgid ""
+"whether the user has completed any identity verification process sucessfully"
+msgstr ""
+"si el usuario ha completado con éxito algún proceso de verificación de "
+"identidad"
+
+#: base/models.py:1520
+msgid "Last verification change"
+msgstr "Último cambio de verificación"
+
+#: base/models.py:1529
+msgid "Registration Information"
+msgstr "Información de Registro"
+
+#: base/validators.py:14
+#, python-brace-format
+msgid "Invalid ipv6 prefix: {error}"
+msgstr "Prefijo ipv6 inválido: {error}"
+
+#: base/validators.py:16
+#, python-brace-format
+msgid "{value} is not an IPv6 prefix"
+msgstr "{value} no es un prefijo IPv6"
+
+#: counters/base.py:45
+msgid "Your maximum daily usage time has been reached"
+msgstr "Se ha alcanzado el tiempo diario máximo de uso"
+
+#: integrations/monitoring/apps.py:27
+msgid "OpenWISP RADIUS Monitoring"
+msgstr "Supervisión RADIUS de OpenWISP"
+
+#: integrations/monitoring/apps.py:39
+msgid "Today's RADIUS sessions"
+msgstr "Sesiones RADIUS de hoy"
+
+#: integrations/monitoring/apps.py:80
+msgid "Today's RADIUS traffic (GB)"
+msgstr "Tráfico RADIUS de hoy (GB)"
+
+#: integrations/monitoring/configuration.py:11
+msgid "Total"
+msgstr "Total"
+
+#: integrations/monitoring/configuration.py:13
+msgid "Total new users"
+msgstr "Total de nuevos usuarios"
+
+#: integrations/monitoring/configuration.py:20
+#, python-format
+msgid "New %(label)s users"
+msgstr "Nuevos usuarios %(label)s"
+
+#: integrations/monitoring/configuration.py:30
+#: integrations/monitoring/configuration.py:31
+#: integrations/monitoring/configuration.py:76
+msgid "User Registrations"
+msgstr "Registros de usuarios"
+
+#: integrations/monitoring/configuration.py:32
+msgid "Daily user registrations grouped by registration method"
+msgstr "Registros diarios de usuarios agrupados por método de registro"
+
+#: integrations/monitoring/configuration.py:68
+#: integrations/monitoring/configuration.py:69
+msgid "Total Registered Users"
+msgstr "Total de Usuarios Registrados"
+
+#: integrations/monitoring/configuration.py:85
+msgid "Total User Registrations"
+msgstr "Total de registros de usuarios"
+
+#: integrations/monitoring/configuration.py:94
+msgid "RADIUS Accounting"
+msgstr "Contabilidad RADIUS"
+
+#: integrations/monitoring/configuration.py:109
+msgid "RADIUS Sessions Traffic"
+msgstr "Tráfico de sesiones RADIUS"
+
+#: integrations/monitoring/configuration.py:110
+msgid "RADIUS Traffic"
+msgstr "Tráfico RADIUS"
+
+#: integrations/monitoring/configuration.py:112
+#: integrations/monitoring/configuration.py:146
+#: integrations/monitoring/configuration.py:189
+#: integrations/monitoring/configuration.py:225
+msgid "RADIUS Network traffic (total, download and upload)."
+msgstr "RADIUS Tráfico de red (total, descarga y subida)."
+
+#: integrations/monitoring/configuration.py:115
+#: integrations/monitoring/configuration.py:192
+msgid "Total traffic"
+msgstr "Tráfico total"
+
+#: integrations/monitoring/configuration.py:116
+#: integrations/monitoring/configuration.py:193
+msgid "Total download traffic"
+msgstr "Tráfico total de descargas"
+
+#: integrations/monitoring/configuration.py:117
+#: integrations/monitoring/configuration.py:194
+msgid "Total upload traffic"
+msgstr "Tráfico total de carga"
+
+#: integrations/monitoring/configuration.py:143
+#: integrations/monitoring/configuration.py:144
+#: integrations/monitoring/configuration.py:222
+msgid "Unique RADIUS Sessions"
+msgstr "Sesiones RADIUS únicas"
+
+#: integrations/monitoring/configuration.py:170
+msgid "General RADIUS Accounting"
+msgstr "Contabilidad general RADIUS"
+
+#: integrations/monitoring/configuration.py:186
+msgid "Traffic of RADIUS Sessions"
+msgstr "Tráfico de sesiones RADIUS"
+
+#: integrations/monitoring/configuration.py:187
+msgid "General RADIUS Traffic"
+msgstr "Tráfico RADIUS general"
+
+#: integrations/monitoring/configuration.py:223
+msgid "General RADIUS Sessions"
+msgstr "Sesiones RADIUS generales"
+
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:13
+msgid "There are no RADIUS sessions for this device."
+msgstr "No hay sesiones RADIUS para este dispositivo."
+
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:16
+msgid "RADIUS Sessions"
+msgstr "Sesiones RADIUS"
+
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:23
+msgid "ouput octets"
+msgstr "octetos de salida"
+
+#: integrations/monitoring/templates/admin/config/radius-monitoring/device/change_form.html:32
+msgid "View all RADIUS Sessions"
+msgstr "Ver todas las sesiones RADIUS"
+
+#: management/commands/base/batch_add_users.py:42
+msgid "File does not exist"
+msgstr "El archivo no existe"
+
+#: registration.py:10
+msgid "Manually created"
+msgstr "Creado manualmente"
+
+#: registration.py:11
+msgid "Email"
+msgstr "Email"
+
+#: registration.py:12
+msgid "Mobile phone"
+msgstr "Teléfono móvil"
+
+#: settings.py:60
+msgid "Single Sign-On (SAML)"
+msgstr "Inicio de sesión único (SAML)"
+
+#: social/views.py:26
+msgid "missing cp GET param"
+msgstr "Falta el parámetro GET \"cp\""
+
+#: tasks.py:108
+msgid "New WiFi session started"
+msgstr "Nueva sesión WiFi iniciada"
+
+#: tasks.py:113
+msgid "Manage Session"
+msgstr "Gestionar sesión"
+
+#: templates/custom_password_reset_email.html:4
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"Está recibiendo este correo electrónico porque ha solicitado un "
+"restablecimiento de contraseña para su cuenta de usuario en\n"
+"%(site_name)s."
+
+#: templates/custom_password_reset_email.html:7
+msgid "Your username, in case you've forgotten:"
+msgstr "Su nombre de usuario, en caso de que lo haya olvidado:"
+
+#: templates/custom_password_reset_email.html:9
+msgid ""
+"Please click on the button below to open a page where you can choose a new "
+"password:"
+msgstr ""
+"Haga clic en el botón siguiente para abrir una página en la que podrá elegir "
+"una nueva contraseña:"
+
+#: templates/djangosaml2/auth_error.html:5
+msgid "Authorization error"
+msgstr "Error de autorización"
+
+#: templates/djangosaml2/auth_error.html:6
+msgid ""
+"You are already logged in and you are trying to access the login page again."
+msgstr ""
+"Ya ha iniciado sesión y está intentando acceder de nuevo a la página de "
+"inicio de sesión."
+
+#: templates/djangosaml2/auth_error.html:7
+msgid ""
+"You may have been redirected here when trying to access some content\n"
+"       that required extra privileges that you do not have."
+msgstr ""
+"Es posible que haya sido redirigido aquí al intentar acceder a algún "
+"contenido\n"
+"       que requiere privilegios adicionales que usted no tiene."
+
+#: templates/djangosaml2/auth_error.html:9
+msgid "Please logout and login as a different user"
+msgstr "Por favor, cierre la sesión e inicie sesión como un usuario diferente"
+
+#: templates/djangosaml2/auth_error.html:10
+msgid "logout"
+msgstr "cerrar sesión"
+
+#: templates/djangosaml2/login_additional_info.html:5
+msgid "Add Your Email to Complete Your Account Setup"
+msgstr ""
+"Añada su dirección de correo electrónico para completar la configuración de "
+"su cuenta"
+
+#: templates/djangosaml2/login_additional_info.html:6
+msgid "It looks like we didn't receive your email from your identity provider."
+msgstr ""
+"Parece que no hemos recibido tu correo electrónico de tu proveedor de "
+"identidad."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Introduzca su dirección de correo electrónico a continuación para completar "
+"la configuración de su cuenta."
+
+#: templates/djangosaml2/login_additional_info.html:11
+msgid "Save Email Address and Continue"
+msgstr "Guardar dirección de correo electrónico y continuar"
+
+#: templates/djangosaml2/login_additional_info.html:13
+msgid "Logout"
+msgstr "Cerrar sesión"
+
+#: templates/djangosaml2/login_error.html:5
+msgid "Authentication Error"
+msgstr "Error de autenticación"
+
+#: templates/djangosaml2/login_error.html:6
+msgid "Access Denied"
+msgstr "Acceso denegado"
+
+#: templates/djangosaml2/logout_error.html:5
+msgid "Logout Error"
+msgstr "Error de cierre de sesión"
+
+#: templates/djangosaml2/logout_error.html:6
+msgid ""
+"Your Identity Provider ask this system to do a global logout but your "
+"federated session is lost."
+msgstr ""
+"El proveedor de identidad solicitó un cierre de sesión global, pero no se "
+"pudo encontrar tu sesión federada."
+
+#: templates/djangosaml2/logout_error.html:8
+msgid ""
+"Even if your local session in this system has been closed, you have probably "
+"open sessions in other systems."
+msgstr ""
+"Aunque su sesión local en este sistema se haya cerrado, es probable que "
+"tenga sesiones abiertas en otros sistemas."
+
+#: templates/djangosaml2/logout_error.html:10
+msgid ""
+"In order to prevent illicit use of your personal information, please close "
+"your browser window and/or remove your cookies from your browser."
+msgstr ""
+"Para evitar el uso ilícito de su información personal, cierre la ventana de "
+"su navegador y/o elimine las cookies de su navegador."
+
+#: templates/djangosaml2/logout_error.html:12
+msgid "Sorry for this inconvenience."
+msgstr "Disculpe las molestias."
+
+#: templates/djangosaml2/wayf.html:5
+msgid "Where are you from?"
+msgstr "¿De dónde es usted?"
+
+#: templates/djangosaml2/wayf.html:6
+msgid "Please select your"
+msgstr "Por favor seleccione su"
+
+#: templates/djangosaml2/wayf.html:6
+msgid "Identity Provider"
+msgstr "Proveedor de identidad"
+
+#: templates/djangosaml2/wayf.html:6
+msgid "from the following list"
+msgstr "de la siguiente lista"
+
+#: templates/openwisp-radius/admin/rad_batch_users_add_form.html:8
+#, python-format
+msgid ""
+"\n"
+"        Please refer to the %(anchor_open)sdocumentation%(anchor_close)s for "
+"more information.\n"
+"        "
+msgstr ""
+"\n"
+"        Para más información, consulte la "
+"%(anchor_open)sdocumentación%(anchor_close)s.\n"
+"        "
+
+#: templates/openwisp-radius/admin/rad_batch_users_change_form.html:6
+msgid "Download User Credentials"
+msgstr "Descargar credenciales de usuario"
+
+#: templates/openwisp-radius/prefix_pdf.html:4
+msgid "WiFi username and passwords"
+msgstr "Nombre de usuario y contraseñas WiFi"
+
+#: templates/openwisp-radius/prefix_pdf.html:22
+msgid "Username"
+msgstr "Nombre de usuario"
+
+#: templates/openwisp-radius/prefix_pdf.html:23
+msgid "Password"
+msgstr "Contraseña"
+
+#: templates/radius_accounting_start.html:4
+msgid "A new session has been started for your account:"
+msgstr "Se ha iniciado una nueva sesión para su cuenta:"
+
+#: templates/radius_accounting_start.html:5
+msgid ""
+"You can review your session to find out how much time and/or traffic has "
+"been used or you can terminate the session at any time by clicking on the "
+"button below."
+msgstr ""
+"Puede revisar su sesión para saber cuánto tiempo y/o tráfico se ha utilizado "
+"o puede terminar la sesión en cualquier momento haciendo clic en el botón de "
+"abajo."
+
+#: templates/radius_accounting_start.html:6
+#, python-format
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Nota: este enlace sólo es válido por %(sesame_max_age)s"
+
+#: utils.py:161
+msgid ""
+"Unrecognized file format, the supplied file does not look like a CSV file."
+msgstr ""
+"Formato de archivo no reconocido, el archivo suministrado no parece un "
+"archivo CSV."
+
+#: utils.py:228
+msgid "Could not complete operation because of an internal misconfiguration"
+msgstr ""
+"No se ha podido completar la operación debido a un error de configuración "
+"interna"
