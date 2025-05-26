@@ -5,19 +5,19 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0024_registereduser_modified'),
+        ("openwisp_radius", "0024_registereduser_modified"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='sms_verification',
+            model_name="organizationradiussettings",
+            name="sms_verification",
             field=models.BooleanField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether users who sign up should be required to '
-                    'verify their mobile phone number via SMS'
+                    "Whether users who sign up should be required to "
+                    "verify their mobile phone number via SMS"
                 ),
                 null=True,
             ),

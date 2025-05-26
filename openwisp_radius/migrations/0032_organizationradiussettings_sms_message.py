@@ -8,23 +8,23 @@ from openwisp_radius import settings as app_settings
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0031_added_fallback_model_fields'),
+        ("openwisp_radius", "0031_added_fallback_model_fields"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='sms_message',
+            model_name="organizationradiussettings",
+            name="sms_message",
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 fallback=app_settings.SMS_MESSAGE_TEMPLATE,
                 help_text=(
-                    'SMS message template used for sending verification code.'
+                    "SMS message template used for sending verification code."
                     ' Must contain "{code}" placeholder for OTP value.'
                 ),
                 max_length=160,
                 null=True,
-                verbose_name='SMS Message',
+                verbose_name="SMS Message",
             ),
         ),
     ]

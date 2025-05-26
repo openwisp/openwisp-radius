@@ -65,112 +65,112 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 OPTIONAL_FIELD_CHOICES = (
-    ('disabled', _('Disabled')),
-    ('allowed', _('Allowed')),
-    ('mandatory', _('Mandatory')),
+    ("disabled", _("Disabled")),
+    ("allowed", _("Allowed")),
+    ("mandatory", _("Mandatory")),
 )
 
 RADOP_CHECK_TYPES = (
-    ('=', '='),
-    (':=', ':='),
-    ('==', '=='),
-    ('+=', '+='),
-    ('!=', '!='),
-    ('>', '>'),
-    ('>=', '>='),
-    ('<', '<'),
-    ('<=', '<='),
-    ('=~', '=~'),
-    ('!~', '!~'),
-    ('=*', '=*'),
-    ('!*', '!*'),
+    ("=", "="),
+    (":=", ":="),
+    ("==", "=="),
+    ("+=", "+="),
+    ("!=", "!="),
+    (">", ">"),
+    (">=", ">="),
+    ("<", "<"),
+    ("<=", "<="),
+    ("=~", "=~"),
+    ("!~", "!~"),
+    ("=*", "=*"),
+    ("!*", "!*"),
 )
 RAD_NAS_TYPES = app_settings.EXTRA_NAS_TYPES + (
-    ('Async', 'Async'),
-    ('Sync', 'Sync'),
-    ('ISDN Sync', 'ISDN Sync'),
-    ('ISDN Async V.120', 'ISDN Async V.120'),
-    ('ISDN Async V.110', 'ISDN Async V.110'),
-    ('Virtual', 'Virtual'),
-    ('PIAFS', 'PIAFS'),
-    ('HDLC Clear', 'HDLC Clear'),
-    ('Channel', 'Channel'),
-    ('X.25', 'X.25'),
-    ('X.75', 'X.75'),
-    ('G.3 Fax', 'G.3 Fax'),
-    ('SDSL', 'SDSL - Symmetric DSL'),
-    ('ADSL-CAP', 'ADSL-CAP'),
-    ('ADSL-DMT', 'ADSL-DMT'),
-    ('IDSL', 'IDSL'),
-    ('Ethernet', 'Ethernet'),
-    ('xDSL', 'xDSL'),
-    ('Cable', 'Cable'),
-    ('Wireless - Other', 'Wireless - Other'),
-    ('IEEE 802.11', 'Wireless - IEEE 802.11'),
-    ('Token-Ring', 'Token-Ring'),
-    ('FDDI', 'FDDI'),
-    ('Wireless - CDMA2000', 'Wireless - CDMA2000'),
-    ('Wireless - UMTS', 'Wireless - UMTS'),
-    ('Wireless - 1X-EV', 'Wireless - 1X-EV'),
-    ('IAPP', 'IAPP'),
-    ('FTTP', 'FTTP'),
-    ('IEEE 802.16', 'Wireless - IEEE 802.16'),
-    ('IEEE 802.20', 'Wireless - IEEE 802.20'),
-    ('IEEE 802.22', 'Wireless - IEEE 802.22'),
-    ('PPPoA', 'PPPoA - PPP over ATM'),
-    ('PPPoEoA', 'PPPoEoA - PPP over Ethernet over ATM'),
-    ('PPPoEoE', 'PPPoEoE - PPP over Ethernet over Ethernet'),
-    ('PPPoEoVLAN', 'PPPoEoVLAN - PPP over Ethernet over VLAN'),
-    ('PPPoEoQinQ', 'PPPoEoQinQ - PPP over Ethernet over IEEE 802.1QinQ'),
-    ('xPON', 'xPON - Passive Optical Network'),
-    ('Wireless - XGP', 'Wireless - XGP'),
-    ('WiMAX', ' WiMAX Pre-Release 8 IWK Function'),
-    ('WIMAX-WIFI-IWK', 'WIMAX-WIFI-IWK: WiMAX WIFI Interworking'),
-    ('WIMAX-SFF', 'WIMAX-SFF: Signaling Forwarding Function for LTE/3GPP2'),
-    ('WIMAX-HA-LMA', 'WIMAX-HA-LMA: WiMAX HA and or LMA function'),
-    ('WIMAX-DHCP', 'WIMAX-DHCP: WIMAX DCHP service'),
-    ('WIMAX-LBS', 'WIMAX-LBS: WiMAX location based service'),
-    ('WIMAX-WVS', 'WIMAX-WVS: WiMAX voice service'),
-    ('Other', 'Other'),
+    ("Async", "Async"),
+    ("Sync", "Sync"),
+    ("ISDN Sync", "ISDN Sync"),
+    ("ISDN Async V.120", "ISDN Async V.120"),
+    ("ISDN Async V.110", "ISDN Async V.110"),
+    ("Virtual", "Virtual"),
+    ("PIAFS", "PIAFS"),
+    ("HDLC Clear", "HDLC Clear"),
+    ("Channel", "Channel"),
+    ("X.25", "X.25"),
+    ("X.75", "X.75"),
+    ("G.3 Fax", "G.3 Fax"),
+    ("SDSL", "SDSL - Symmetric DSL"),
+    ("ADSL-CAP", "ADSL-CAP"),
+    ("ADSL-DMT", "ADSL-DMT"),
+    ("IDSL", "IDSL"),
+    ("Ethernet", "Ethernet"),
+    ("xDSL", "xDSL"),
+    ("Cable", "Cable"),
+    ("Wireless - Other", "Wireless - Other"),
+    ("IEEE 802.11", "Wireless - IEEE 802.11"),
+    ("Token-Ring", "Token-Ring"),
+    ("FDDI", "FDDI"),
+    ("Wireless - CDMA2000", "Wireless - CDMA2000"),
+    ("Wireless - UMTS", "Wireless - UMTS"),
+    ("Wireless - 1X-EV", "Wireless - 1X-EV"),
+    ("IAPP", "IAPP"),
+    ("FTTP", "FTTP"),
+    ("IEEE 802.16", "Wireless - IEEE 802.16"),
+    ("IEEE 802.20", "Wireless - IEEE 802.20"),
+    ("IEEE 802.22", "Wireless - IEEE 802.22"),
+    ("PPPoA", "PPPoA - PPP over ATM"),
+    ("PPPoEoA", "PPPoEoA - PPP over Ethernet over ATM"),
+    ("PPPoEoE", "PPPoEoE - PPP over Ethernet over Ethernet"),
+    ("PPPoEoVLAN", "PPPoEoVLAN - PPP over Ethernet over VLAN"),
+    ("PPPoEoQinQ", "PPPoEoQinQ - PPP over Ethernet over IEEE 802.1QinQ"),
+    ("xPON", "xPON - Passive Optical Network"),
+    ("Wireless - XGP", "Wireless - XGP"),
+    ("WiMAX", " WiMAX Pre-Release 8 IWK Function"),
+    ("WIMAX-WIFI-IWK", "WIMAX-WIFI-IWK: WiMAX WIFI Interworking"),
+    ("WIMAX-SFF", "WIMAX-SFF: Signaling Forwarding Function for LTE/3GPP2"),
+    ("WIMAX-HA-LMA", "WIMAX-HA-LMA: WiMAX HA and or LMA function"),
+    ("WIMAX-DHCP", "WIMAX-DHCP: WIMAX DCHP service"),
+    ("WIMAX-LBS", "WIMAX-LBS: WiMAX location based service"),
+    ("WIMAX-WVS", "WIMAX-WVS: WiMAX voice service"),
+    ("Other", "Other"),
 )
-RADOP_REPLY_TYPES = (('=', '='), (':=', ':='), ('+=', '+='))
-_STRATEGIES = (('prefix', _('Generate from prefix')), ('csv', _('Import from CSV')))
-_NOT_BLANK_MESSAGE = _('This field cannot be blank.')
+RADOP_REPLY_TYPES = (("=", "="), (":=", ":="), ("+=", "+="))
+_STRATEGIES = (("prefix", _("Generate from prefix")), ("csv", _("Import from CSV")))
+_NOT_BLANK_MESSAGE = _("This field cannot be blank.")
 _GET_IP_LIST_HELP_TEXT = _(
-    'Comma separated list of IP addresses allowed to access freeradius API'
+    "Comma separated list of IP addresses allowed to access freeradius API"
 )
 _GET_MOBILE_PREFIX_HELP_TEXT = _(
-    'Comma separated list of international mobile prefixes '
-    'allowed to register via the user registration API.'
+    "Comma separated list of international mobile prefixes "
+    "allowed to register via the user registration API."
 )
 _GET_OPTIONAL_FIELDS_HELP_TEXT = _(
-    'Whether this field should be disabled, allowed or mandatory '
-    'in the user registration API.'
+    "Whether this field should be disabled, allowed or mandatory "
+    "in the user registration API."
 )
 _REGISTRATION_ENABLED_HELP_TEXT = _(
-    'Whether the registration API endpoint should be enabled or not'
+    "Whether the registration API endpoint should be enabled or not"
 )
 _SAML_REGISTRATION_ENABLED_HELP_TEXT = _(
-    'Whether the registration using SAML should be enabled or not'
+    "Whether the registration using SAML should be enabled or not"
 )
 _MAC_ADDR_ROAMING_ENABLED_HELP_TEXT = _(
-    'Whether the MAC address roaming should be enabled or not.'
+    "Whether the MAC address roaming should be enabled or not."
 )
 _SOCIAL_REGISTRATION_ENABLED_HELP_TEXT = _(
-    'Whether the registration using social applications should be enabled or not'
+    "Whether the registration using social applications should be enabled or not"
 )
 _SMS_VERIFICATION_HELP_TEXT = _(
-    'Whether users who sign up should be required to verify their mobile '
-    'phone number via SMS'
+    "Whether users who sign up should be required to verify their mobile "
+    "phone number via SMS"
 )
-_ORGANIZATION_HELP_TEXT = _('The user is not a member of this organization')
+_ORGANIZATION_HELP_TEXT = _("The user is not a member of this organization")
 _IDENTITY_VERIFICATION_ENABLED_HELP_TEXT = _(
-    'Whether identity verification is required at the time of user registration'
+    "Whether identity verification is required at the time of user registration"
 )
-_COA_ENABLED_HELP_TEXT = _('Whether RADIUS Change Of Authoization (CoA) is enabled')
-_LOGIN_URL_HELP_TEXT = _('Enter the URL where users can log in to the wifi service')
-_STATUS_URL_HELP_TEXT = _('Enter the URL where users can log out from the wifi service')
-_PASSWORD_RESET_URL_HELP_TEXT = _('Enter the URL where users can reset their password')
+_COA_ENABLED_HELP_TEXT = _("Whether RADIUS Change Of Authoization (CoA) is enabled")
+_LOGIN_URL_HELP_TEXT = _("Enter the URL where users can log in to the wifi service")
+_STATUS_URL_HELP_TEXT = _("Enter the URL where users can log out from the wifi service")
+_PASSWORD_RESET_URL_HELP_TEXT = _("Enter the URL where users can reset their password")
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 
 
@@ -188,13 +188,13 @@ class AutoUsernameMixin(object):
 
         if self.user:
             self.username = self.user.username
-            if hasattr(self, 'organization') and not self.user.is_member(
+            if hasattr(self, "organization") and not self.user.is_member(
                 self.organization
             ):
-                raise ValidationError({'organization': _ORGANIZATION_HELP_TEXT})
+                raise ValidationError({"organization": _ORGANIZATION_HELP_TEXT})
         elif not self.username:
             raise ValidationError(
-                {'username': _NOT_BLANK_MESSAGE, 'user': _NOT_BLANK_MESSAGE}
+                {"username": _NOT_BLANK_MESSAGE, "user": _NOT_BLANK_MESSAGE}
             )
         return super().clean()
 
@@ -209,7 +209,7 @@ class AutoGroupnameMixin(object):
             self.groupname = self.group.name
         elif not self.groupname:
             raise ValidationError(
-                {'groupname': _NOT_BLANK_MESSAGE, 'group': _NOT_BLANK_MESSAGE}
+                {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
 
 
@@ -223,7 +223,7 @@ class AttributeValidationMixin(object):
     @property
     def _object_name(self):
         return (
-            type(self).__name__.lower().replace('radius', '').replace('group', 'group ')
+            type(self).__name__.lower().replace("radius", "").replace("group", "group ")
         )
 
     def clean(self):
@@ -237,24 +237,24 @@ class AttributeValidationMixin(object):
             .exclude(pk=self.pk)
             .exists()
         ):
-            raise ValidationError({'attribute': self._get_error_message()})
+            raise ValidationError({"attribute": self._get_error_message()})
         return super().clean()
 
 
 class UserAttributeValidationMixin(AttributeValidationMixin):
     def _get_validation_queryset_kwargs(self):
         kwargs = dict(user=self.user, attribute=self.attribute)
-        org = getattr(self, 'organization', None)
+        org = getattr(self, "organization", None)
         # only add `organization` key if it exists
         if org:
-            kwargs['organization'] = org
+            kwargs["organization"] = org
         return kwargs
 
     def _get_error_message(self):
         return _(
-            'Another %(object_name)s for the same user and with '
-            'the same attribute already exists.'
-        ) % {'object_name': self._object_name}
+            "Another %(object_name)s for the same user and with "
+            "the same attribute already exists."
+        ) % {"object_name": self._object_name}
 
 
 class GroupAttributeValidationMixin(AttributeValidationMixin):
@@ -263,16 +263,16 @@ class GroupAttributeValidationMixin(AttributeValidationMixin):
 
     def _get_error_message(self):
         return _(
-            'Another %(object_name)s for the same group and with '
-            'the same attribute already exists.'
-        ) % {'object_name': self._object_name}
+            "Another %(object_name)s for the same group and with "
+            "the same attribute already exists."
+        ) % {"object_name": self._object_name}
 
 
 class AbstractRadiusCheck(
     OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
-        verbose_name=_('username'),
+        verbose_name=_("username"),
         max_length=64,
         db_index=True,
         # blank values are forbidden with custom validation
@@ -280,15 +280,15 @@ class AbstractRadiusCheck(
         # foreign key is filled (it will be auto-filled)
         blank=True,
     )
-    value = models.CharField(verbose_name=_('value'), max_length=253)
+    value = models.CharField(verbose_name=_("value"), max_length=253)
     op = models.CharField(
-        verbose_name=_('operator'),
+        verbose_name=_("operator"),
         max_length=2,
         choices=RADOP_CHECK_TYPES,
-        default=':=',
+        default=":=",
     )
     attribute = models.CharField(
-        verbose_name=_('attribute'),
+        verbose_name=_("attribute"),
         max_length=64,
     )
     # the foreign key is not part of the standard freeradius schema
@@ -297,9 +297,9 @@ class AbstractRadiusCheck(
     )
 
     class Meta:
-        db_table = 'radcheck'
-        verbose_name = _('check')
-        verbose_name_plural = _('checks')
+        db_table = "radcheck"
+        verbose_name = _("check")
+        verbose_name_plural = _("checks")
         abstract = True
 
     def __str__(self):
@@ -310,7 +310,7 @@ class AbstractRadiusReply(
     OrgMixin, AutoUsernameMixin, UserAttributeValidationMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
-        verbose_name=_('username'),
+        verbose_name=_("username"),
         max_length=64,
         db_index=True,
         # blank values are forbidden with custom validation
@@ -318,20 +318,20 @@ class AbstractRadiusReply(
         # foreign key is filled (it will be auto-filled)
         blank=True,
     )
-    value = models.CharField(verbose_name=_('value'), max_length=253)
+    value = models.CharField(verbose_name=_("value"), max_length=253)
     op = models.CharField(
-        verbose_name=_('operator'), max_length=2, choices=RADOP_REPLY_TYPES, default='='
+        verbose_name=_("operator"), max_length=2, choices=RADOP_REPLY_TYPES, default="="
     )
-    attribute = models.CharField(verbose_name=_('attribute'), max_length=64)
+    attribute = models.CharField(verbose_name=_("attribute"), max_length=64)
     # the foreign key is not part of the standard freeradius schema
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
 
     class Meta:
-        db_table = 'radreply'
-        verbose_name = _('reply')
-        verbose_name_plural = _('replies')
+        db_table = "radreply"
+        verbose_name = _("reply")
+        verbose_name_plural = _("replies")
         abstract = True
 
     def __str__(self):
@@ -340,143 +340,143 @@ class AbstractRadiusReply(
 
 class AbstractRadiusAccounting(OrgMixin, models.Model):
     session_id = models.CharField(
-        verbose_name=_('session ID'),
+        verbose_name=_("session ID"),
         max_length=64,
-        db_column='acctsessionid',
+        db_column="acctsessionid",
         db_index=True,
     )
     unique_id = models.CharField(
-        verbose_name=_('accounting unique ID'),
+        verbose_name=_("accounting unique ID"),
         max_length=32,
-        db_column='acctuniqueid',
+        db_column="acctuniqueid",
         unique=True,
         primary_key=True,
     )
     username = models.CharField(
-        verbose_name=_('username'), max_length=64, db_index=True, null=True, blank=True
+        verbose_name=_("username"), max_length=64, db_index=True, null=True, blank=True
     )
     groupname = models.CharField(
-        verbose_name=_('group name'), max_length=64, null=True, blank=True
+        verbose_name=_("group name"), max_length=64, null=True, blank=True
     )
     realm = models.CharField(
-        verbose_name=_('realm'), max_length=64, null=True, blank=True
+        verbose_name=_("realm"), max_length=64, null=True, blank=True
     )
     nas_ip_address = models.GenericIPAddressField(
-        verbose_name=_('NAS IP address'), db_column='nasipaddress', db_index=True
+        verbose_name=_("NAS IP address"), db_column="nasipaddress", db_index=True
     )
     nas_port_id = models.CharField(
-        verbose_name=_('NAS port ID'),
+        verbose_name=_("NAS port ID"),
         max_length=15,
-        db_column='nasportid',
+        db_column="nasportid",
         null=True,
         blank=True,
     )
     nas_port_type = models.CharField(
-        verbose_name=_('NAS port type'),
+        verbose_name=_("NAS port type"),
         max_length=32,
-        db_column='nasporttype',
+        db_column="nasporttype",
         null=True,
         blank=True,
     )
     start_time = models.DateTimeField(
-        verbose_name=_('start time'),
-        db_column='acctstarttime',
+        verbose_name=_("start time"),
+        db_column="acctstarttime",
         db_index=True,
         null=True,
         blank=True,
     )
     update_time = models.DateTimeField(
-        verbose_name=_('update time'), db_column='acctupdatetime', null=True, blank=True
+        verbose_name=_("update time"), db_column="acctupdatetime", null=True, blank=True
     )
     stop_time = models.DateTimeField(
-        verbose_name=_('stop time'),
-        db_column='acctstoptime',
+        verbose_name=_("stop time"),
+        db_column="acctstoptime",
         db_index=True,
         null=True,
         blank=True,
     )
     interval = models.IntegerField(
-        verbose_name=_('interval'), db_column='acctinterval', null=True, blank=True
+        verbose_name=_("interval"), db_column="acctinterval", null=True, blank=True
     )
     session_time = models.PositiveIntegerField(
-        verbose_name=_('session time'),
-        db_column='acctsessiontime',
+        verbose_name=_("session time"),
+        db_column="acctsessiontime",
         null=True,
         blank=True,
     )
     authentication = models.CharField(
-        verbose_name=_('authentication'),
+        verbose_name=_("authentication"),
         max_length=32,
-        db_column='acctauthentic',
+        db_column="acctauthentic",
         null=True,
         blank=True,
     )
     connection_info_start = models.CharField(
-        verbose_name=_('connection info start'),
+        verbose_name=_("connection info start"),
         max_length=50,
-        db_column='connectinfo_start',
+        db_column="connectinfo_start",
         null=True,
         blank=True,
     )
     connection_info_stop = models.CharField(
-        verbose_name=_('connection info stop'),
+        verbose_name=_("connection info stop"),
         max_length=50,
-        db_column='connectinfo_stop',
+        db_column="connectinfo_stop",
         null=True,
         blank=True,
     )
     input_octets = models.BigIntegerField(
-        verbose_name=_('input octets'),
-        db_column='acctinputoctets',
+        verbose_name=_("input octets"),
+        db_column="acctinputoctets",
         null=True,
         blank=True,
     )
     output_octets = models.BigIntegerField(
-        verbose_name=_('output octets'),
-        db_column='acctoutputoctets',
+        verbose_name=_("output octets"),
+        db_column="acctoutputoctets",
         null=True,
         blank=True,
     )
     called_station_id = models.CharField(
-        verbose_name=_('called station ID'),
+        verbose_name=_("called station ID"),
         max_length=253,
-        db_column='calledstationid',
+        db_column="calledstationid",
         db_index=True,
         blank=True,
         null=True,
     )
     calling_station_id = models.CharField(
-        verbose_name=_('calling station ID'),
+        verbose_name=_("calling station ID"),
         max_length=253,
-        db_column='callingstationid',
+        db_column="callingstationid",
         db_index=True,
         blank=True,
         null=True,
     )
     terminate_cause = models.CharField(
-        verbose_name=_('termination cause'),
+        verbose_name=_("termination cause"),
         max_length=32,
-        db_column='acctterminatecause',
+        db_column="acctterminatecause",
         blank=True,
         null=True,
     )
     service_type = models.CharField(
-        verbose_name=_('service type'),
+        verbose_name=_("service type"),
         max_length=32,
-        db_column='servicetype',
+        db_column="servicetype",
         null=True,
         blank=True,
     )
     framed_protocol = models.CharField(
-        verbose_name=_('framed protocol'),
+        verbose_name=_("framed protocol"),
         max_length=32,
-        db_column='framedprotocol',
+        db_column="framedprotocol",
         null=True,
         blank=True,
     )
     framed_ip_address = models.GenericIPAddressField(
-        verbose_name=_('framed IP address'),
-        db_column='framedipaddress',
+        verbose_name=_("framed IP address"),
+        db_column="framedipaddress",
         # the default MySQL freeradius schema defines
         # this as NOT NULL but defaulting to empty string
         # but that wouldn't work on PostgreSQL
@@ -484,31 +484,31 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         blank=True,
     )
     framed_ipv6_address = models.GenericIPAddressField(
-        verbose_name=_('framed IPv6 address'),
-        db_column='framedipv6address',
-        protocol='IPv6',
+        verbose_name=_("framed IPv6 address"),
+        db_column="framedipv6address",
+        protocol="IPv6",
         null=True,
         blank=True,
     )
     framed_ipv6_prefix = models.CharField(
-        verbose_name=_('framed IPv6 prefix'),
+        verbose_name=_("framed IPv6 prefix"),
         max_length=44,
-        db_column='framedipv6prefix',
+        db_column="framedipv6prefix",
         validators=[ipv6_network_validator],
         null=True,
         blank=True,
     )
     framed_interface_id = models.CharField(
-        verbose_name=_('framed interface ID'),
+        verbose_name=_("framed interface ID"),
         max_length=19,
-        db_column='framedinterfaceid',
+        db_column="framedinterfaceid",
         null=True,
         blank=True,
     )
     delegated_ipv6_prefix = models.CharField(
-        verbose_name=_('delegated IPv6 prefix'),
+        verbose_name=_("delegated IPv6 prefix"),
         max_length=44,
-        db_column='delegatedipv6prefix',
+        db_column="delegatedipv6prefix",
         validators=[ipv6_network_validator],
         null=True,
         blank=True,
@@ -520,9 +520,9 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
 
     class Meta:
-        db_table = 'radacct'
-        verbose_name = _('accounting')
-        verbose_name_plural = _('accountings')
+        db_table = "radacct"
+        verbose_name = _("accounting")
+        verbose_name_plural = _("accountings")
         abstract = True
 
     def __str__(self):
@@ -547,42 +547,42 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
-            session.terminate_cause = 'Session Timeout'
+            session.terminate_cause = "Session Timeout"
             session.save()
 
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
     name = models.CharField(
-        verbose_name=_('name'),
+        verbose_name=_("name"),
         max_length=128,
-        help_text=_('NAS Name (or IP address)'),
+        help_text=_("NAS Name (or IP address)"),
         db_index=True,
-        db_column='nasname',
+        db_column="nasname",
     )
     short_name = models.CharField(
-        verbose_name=_('short name'), max_length=32, db_column='shortname'
+        verbose_name=_("short name"), max_length=32, db_column="shortname"
     )
     type = models.CharField(
-        verbose_name=_('type'), max_length=30, default='other', choices=RAD_NAS_TYPES
+        verbose_name=_("type"), max_length=30, default="other", choices=RAD_NAS_TYPES
     )
-    ports = models.PositiveIntegerField(verbose_name=_('ports'), blank=True, null=True)
+    ports = models.PositiveIntegerField(verbose_name=_("ports"), blank=True, null=True)
     secret = models.CharField(
-        verbose_name=_('secret'), max_length=60, help_text=_('Shared Secret')
+        verbose_name=_("secret"), max_length=60, help_text=_("Shared Secret")
     )
     server = models.CharField(
-        verbose_name=_('server'), max_length=64, blank=True, null=True
+        verbose_name=_("server"), max_length=64, blank=True, null=True
     )
     community = models.CharField(
-        verbose_name=_('community'), max_length=50, blank=True, null=True
+        verbose_name=_("community"), max_length=50, blank=True, null=True
     )
     description = models.CharField(
-        verbose_name=_('description'), max_length=200, null=True, blank=True
+        verbose_name=_("description"), max_length=200, null=True, blank=True
     )
 
     class Meta:
-        db_table = 'nas'
-        verbose_name = _('NAS')
-        verbose_name_plural = _('NAS')
+        db_table = "nas"
+        verbose_name = _("NAS")
+        verbose_name_plural = _("NAS")
         abstract = True
 
     def __str__(self):
@@ -596,23 +596,23 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
     """
 
     name = models.CharField(
-        verbose_name=_('group name'), max_length=255, unique=True, db_index=True
+        verbose_name=_("group name"), max_length=255, unique=True, db_index=True
     )
     description = models.CharField(
-        verbose_name=_('description'), max_length=64, blank=True, null=True
+        verbose_name=_("description"), max_length=64, blank=True, null=True
     )
     _DEFAULT_HELP_TEXT = (
-        'The default group is automatically assigned to new users; '
-        'changing the default group has only effect on new users '
-        '(existing users will keep being members of their current group)'
+        "The default group is automatically assigned to new users; "
+        "changing the default group has only effect on new users "
+        "(existing users will keep being members of their current group)"
     )
     default = models.BooleanField(
-        verbose_name=_('is default?'), help_text=_(_DEFAULT_HELP_TEXT), default=False
+        verbose_name=_("is default?"), help_text=_(_DEFAULT_HELP_TEXT), default=False
     )
 
     class Meta:
-        verbose_name = _('group')
-        verbose_name_plural = _('groups')
+        verbose_name = _("group")
+        verbose_name_plural = _("groups")
         abstract = True
 
     def __str__(self):
@@ -624,10 +624,10 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
 
     def clean(self):
         self.check_default()
-        if not hasattr(self, 'organization'):
+        if not hasattr(self, "organization"):
             return
-        if not self.name.startswith(f'{self.organization.slug}-'):
-            self.name = f'{self.organization.slug}-{self.name}'
+        if not self.name.startswith(f"{self.organization.slug}-"):
+            self.name = f"{self.organization.slug}-{self.name}"
 
     def save(self, *args, **kwargs):
         result = super().save(*args, **kwargs)
@@ -641,11 +641,11 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
         return result
 
     _DEFAULT_VALIDATION_ERROR = _(
-        'There must be at least one default group present in '
-        'the system. To change the default group, simply set '
-        'as default the group you want to make the new default.'
+        "There must be at least one default group present in "
+        "the system. To change the default group, simply set "
+        "as default the group you want to make the new default."
     )
-    _DEFAULT_PROTECTED_ERROR = _('The default group cannot be deleted')
+    _DEFAULT_PROTECTED_ERROR = _("The default group cannot be deleted")
 
     def delete(self, *args, **kwargs):
         if self.default:
@@ -667,7 +667,7 @@ class AbstractRadiusGroup(OrgMixin, TimeStampedEditableModel):
         (logic overridable via custom models)
         """
         if not self.default and self._initial_default:
-            raise ValidationError({'default': self._DEFAULT_VALIDATION_ERROR})
+            raise ValidationError({"default": self._DEFAULT_VALIDATION_ERROR})
 
     def get_default_queryset(self):
         """
@@ -683,7 +683,7 @@ class AbstractRadiusUserGroup(
     AutoGroupnameMixin, AutoUsernameMixin, TimeStampedEditableModel
 ):
     username = models.CharField(
-        verbose_name=_('username'),
+        verbose_name=_("username"),
         max_length=64,
         db_index=True,
         # blank values are forbidden with custom validation
@@ -692,14 +692,14 @@ class AbstractRadiusUserGroup(
         blank=True,
     )
     groupname = models.CharField(
-        verbose_name=_('group name'),
+        verbose_name=_("group name"),
         max_length=64,
         # blank values are forbidden with custom validation
         # because this field can left blank if the group
         # foreign key is filled (it will be auto-filled)
         blank=True,
     )
-    priority = models.IntegerField(verbose_name=_('priority'), default=1)
+    priority = models.IntegerField(verbose_name=_("priority"), default=1)
     # the foreign keys are not part of the standard freeradius schema,
     # these are added here to facilitate the synchronization of the
     # records which are related in different tables
@@ -707,14 +707,14 @@ class AbstractRadiusUserGroup(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
     group = models.ForeignKey(
-        'RadiusGroup', on_delete=models.CASCADE, blank=True, null=True
+        "RadiusGroup", on_delete=models.CASCADE, blank=True, null=True
     )
 
     class Meta:
-        db_table = 'radusergroup'
-        verbose_name = _('user group')
-        verbose_name_plural = _('user groups')
-        unique_together = ('user', 'group')
+        db_table = "radusergroup"
+        verbose_name = _("user group")
+        verbose_name_plural = _("user groups")
+        unique_together = ("user", "group")
         abstract = True
 
     def __str__(self):
@@ -725,7 +725,7 @@ class AbstractRadiusGroupCheck(
     AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
 ):
     groupname = models.CharField(
-        verbose_name=_('group name'),
+        verbose_name=_("group name"),
         max_length=64,
         db_index=True,
         # blank values are forbidden with custom validation
@@ -733,23 +733,23 @@ class AbstractRadiusGroupCheck(
         # foreign key is filled (it will be auto-filled)
         blank=True,
     )
-    attribute = models.CharField(verbose_name=_('attribute'), max_length=64)
+    attribute = models.CharField(verbose_name=_("attribute"), max_length=64)
     op = models.CharField(
-        verbose_name=_('operator'),
+        verbose_name=_("operator"),
         max_length=2,
         choices=RADOP_CHECK_TYPES,
-        default=':=',
+        default=":=",
     )
-    value = models.CharField(verbose_name=_('value'), max_length=253)
+    value = models.CharField(verbose_name=_("value"), max_length=253)
     # the foreign key is not part of the standard freeradius schema
     group = models.ForeignKey(
-        'RadiusGroup', on_delete=models.CASCADE, blank=True, null=True
+        "RadiusGroup", on_delete=models.CASCADE, blank=True, null=True
     )
 
     class Meta:
-        db_table = 'radgroupcheck'
-        verbose_name = _('group check')
-        verbose_name_plural = _('group checks')
+        db_table = "radgroupcheck"
+        verbose_name = _("group check")
+        verbose_name_plural = _("group checks")
         abstract = True
 
     def __str__(self):
@@ -760,7 +760,7 @@ class AbstractRadiusGroupReply(
     AutoGroupnameMixin, GroupAttributeValidationMixin, TimeStampedEditableModel
 ):
     groupname = models.CharField(
-        verbose_name=_('group name'),
+        verbose_name=_("group name"),
         max_length=64,
         db_index=True,
         # blank values are forbidden with custom validation
@@ -768,20 +768,20 @@ class AbstractRadiusGroupReply(
         # foreign key is filled (it will be auto-filled)
         blank=True,
     )
-    attribute = models.CharField(verbose_name=_('attribute'), max_length=64)
+    attribute = models.CharField(verbose_name=_("attribute"), max_length=64)
     op = models.CharField(
-        verbose_name=_('operator'), max_length=2, choices=RADOP_REPLY_TYPES, default='='
+        verbose_name=_("operator"), max_length=2, choices=RADOP_REPLY_TYPES, default="="
     )
-    value = models.CharField(verbose_name=_('value'), max_length=253)
+    value = models.CharField(verbose_name=_("value"), max_length=253)
     # the foreign key is not part of the standard freeradius schema
     group = models.ForeignKey(
-        'RadiusGroup', on_delete=models.CASCADE, blank=True, null=True
+        "RadiusGroup", on_delete=models.CASCADE, blank=True, null=True
     )
 
     class Meta:
-        db_table = 'radgroupreply'
-        verbose_name = _('group reply')
-        verbose_name_plural = _('group replies')
+        db_table = "radgroupreply"
+        verbose_name = _("group reply")
+        verbose_name_plural = _("group replies")
         abstract = True
 
     def __str__(self):
@@ -789,33 +789,33 @@ class AbstractRadiusGroupReply(
 
 
 class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
-    username = models.CharField(verbose_name=_('username'), max_length=64)
+    username = models.CharField(verbose_name=_("username"), max_length=64)
     password = models.CharField(
-        verbose_name=_('password'), max_length=64, db_column='pass', blank=True
+        verbose_name=_("password"), max_length=64, db_column="pass", blank=True
     )
-    reply = models.CharField(verbose_name=_('reply'), max_length=32)
+    reply = models.CharField(verbose_name=_("reply"), max_length=32)
     called_station_id = models.CharField(
-        verbose_name=_('called station ID'),
+        verbose_name=_("called station ID"),
         max_length=253,
-        db_column='calledstationid',
+        db_column="calledstationid",
         blank=True,
         null=True,
     )
     calling_station_id = models.CharField(
-        verbose_name=_('calling station ID'),
+        verbose_name=_("calling station ID"),
         max_length=253,
-        db_column='callingstationid',
+        db_column="callingstationid",
         blank=True,
         null=True,
     )
     date = models.DateTimeField(
-        verbose_name=_('date'), db_column='authdate', auto_now_add=True
+        verbose_name=_("date"), db_column="authdate", auto_now_add=True
     )
 
     class Meta:
-        db_table = 'radpostauth'
-        verbose_name = _('post auth')
-        verbose_name_plural = _('post auth log')
+        db_table = "radpostauth"
+        verbose_name = _("post auth")
+        verbose_name_plural = _("post auth log")
         abstract = True
 
     def __str__(self):
@@ -825,106 +825,106 @@ class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
 def _get_csv_file_location(instance, filename):
     return os.path.join(
         str(instance.organization.slug),
-        'batch',
+        "batch",
         str(instance.organization.pk),
-        'csv',
+        "csv",
         filename,
     )
 
 
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     strategy = models.CharField(
-        _('strategy'),
+        _("strategy"),
         max_length=16,
         choices=_STRATEGIES,
         db_index=True,
-        help_text=_('Import users from a CSV or generate using a prefix'),
+        help_text=_("Import users from a CSV or generate using a prefix"),
     )
     name = models.CharField(
-        verbose_name=_('name'),
+        verbose_name=_("name"),
         max_length=128,
-        help_text=_('A unique batch name'),
+        help_text=_("A unique batch name"),
         db_index=True,
         unique=False,
     )
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        related_name='radius_batch',
-        help_text=_('List of users uploaded in this batch'),
+        related_name="radius_batch",
+        help_text=_("List of users uploaded in this batch"),
     )
     csvfile = PrivateFileField(
         null=True,
         blank=True,
-        verbose_name='CSV',
+        verbose_name="CSV",
         storage=app_settings.PRIVATE_STORAGE_INSTANCE,
         upload_to=_get_csv_file_location,
-        help_text=_('The csv file containing the user details to be uploaded'),
+        help_text=_("The csv file containing the user details to be uploaded"),
         max_file_size=app_settings.MAX_CSV_FILE_SIZE,
     )
     prefix = models.CharField(
-        _('prefix'),
+        _("prefix"),
         null=True,
         blank=True,
         max_length=20,
-        help_text=_('Usernames generated will be of the format [prefix][number]'),
+        help_text=_("Usernames generated will be of the format [prefix][number]"),
     )
     # List of usernames and passwords used to create PDF
     user_credentials = JSONField(
         null=True,
         blank=True,
-        verbose_name='PDF',
+        verbose_name="PDF",
     )
     expiration_date = models.DateField(
-        verbose_name=_('expiration date'),
+        verbose_name=_("expiration date"),
         null=True,
         blank=True,
-        help_text=_('If left blank users will never expire'),
+        help_text=_("If left blank users will never expire"),
     )
 
     class Meta:
-        db_table = 'radbatch'
-        unique_together = ('name', 'organization')
-        verbose_name = _('batch user creation')
-        verbose_name_plural = _('batch user creation operations')
+        db_table = "radbatch"
+        unique_together = ("name", "organization")
+        verbose_name = _("batch user creation")
+        verbose_name_plural = _("batch user creation operations")
         abstract = True
 
     def __str__(self):
         return self.name
 
     def clean(self):
-        if self.strategy == 'csv' and not self.csvfile:
+        if self.strategy == "csv" and not self.csvfile:
             raise ValidationError(
-                {'csvfile': _('This field cannot be blank.')}, code='invalid'
+                {"csvfile": _("This field cannot be blank.")}, code="invalid"
             )
-        if self.strategy == 'prefix' and not self.prefix:
+        if self.strategy == "prefix" and not self.prefix:
             raise ValidationError(
-                {'prefix': _('This field cannot be blank.')}, code='invalid'
+                {"prefix": _("This field cannot be blank.")}, code="invalid"
             )
-        if self.strategy == 'prefix' and self.prefix:
+        if self.strategy == "prefix" and self.prefix:
             valid_chars = string.ascii_letters + string.digits + "@.+-_"
             for char in self.prefix:
                 if char not in valid_chars:
                     raise ValidationError(
                         {
-                            'prefix': _(
-                                'This value may contain only \
-                        letters, numbers, and @/./+/-/_ characters.'
+                            "prefix": _(
+                                "This value may contain only \
+                        letters, numbers, and @/./+/-/_ characters."
                             )
                         },
-                        code='invalid',
+                        code="invalid",
                     )
         if (
-            self.strategy == 'csv'
+            self.strategy == "csv"
             and self.prefix
-            or self.strategy == 'prefix'
+            or self.strategy == "prefix"
             and self.csvfile
         ):
             # this case would happen only when using the internal API
             raise ValidationError(
-                _('Mixing fields of different strategies'), code='invalid'
+                _("Mixing fields of different strategies"), code="invalid"
             )
-        if self.strategy == 'csv':
+        if self.strategy == "csv":
             validate_csvfile(self.csvfile.file)
         super().clean()
 
@@ -957,7 +957,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             csvfile = self.csvfile
         csv_data = csvfile.read()
         csv_data = decode_byte_data(csv_data)
-        reader = csv.reader(StringIO(csv_data), delimiter=',')
+        reader = csv.reader(StringIO(csv_data), delimiter=",")
         self.full_clean()
         self.save()
         self.add(reader, password_length)
@@ -980,12 +980,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         generated_password = None
         username, password, email, first_name, last_name = row
         if not username and email:
-            username = email.split('@')[0]
+            username = email.split("@")[0]
         username = find_available_username(username, users_list)
         user = User(
             username=username, email=email, first_name=first_name, last_name=last_name
         )
-        cleartext_delimiter = 'cleartext$'
+        cleartext_delimiter = "cleartext$"
         if not password:
             password = get_random_string(length=password_length)
             user.set_password(password)
@@ -999,10 +999,10 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return user, generated_password
 
     def save_user(self, user):
-        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
-        RegisteredUser = swapper.load_model('openwisp_radius', 'RegisteredUser')
+        OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+        RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         user.save()
-        registered_user = RegisteredUser(user=user, method='manual')
+        registered_user = RegisteredUser(user=user, method="manual")
         if self.organization.radius_settings.needs_identity_verification:
             registered_user.is_verified = True
         registered_user.save()
@@ -1038,21 +1038,21 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
     id = None
     # tokens are not supposed to be modified, can be regenerated if necessary
     modified = None
-    key = models.CharField(_('Key'), max_length=40, primary_key=True)
+    key = models.CharField(_("Key"), max_length=40, primary_key=True)
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='radius_token'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="radius_token"
     )
     can_auth = models.BooleanField(
         default=False,
         help_text=(
-            'Enable the radius token to be used for freeradius authorization request'
+            "Enable the radius token to be used for freeradius authorization request"
         ),
     )
 
     class Meta:
-        db_table = 'radiustoken'
-        verbose_name = _('radius token')
-        verbose_name_plural = _('radius token')
+        db_table = "radiustoken"
+        verbose_name = _("radius token")
+        verbose_name_plural = _("radius token")
         abstract = True
 
     def save(self, *args, **kwargs):
@@ -1061,7 +1061,7 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
         return super().save(*args, **kwargs)
 
     def delete_cache(self, *args, **kwargs):
-        username = f'rt-{self.user.username}'
+        username = f"rt-{self.user.username}"
         if cache.get(username):
             cache.delete(username)
 
@@ -1072,49 +1072,49 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
         # When the object is deleted, the key is set to None.
         # This raises error when deleting the object from
         # UserAdmin.
-        return self.key or f'RadiusToken: {self.user.username}'
+        return self.key or f"RadiusToken: {self.user.username}"
 
 
 class AbstractOrganizationRadiusSettings(UUIDModel):
     organization = models.OneToOneField(
-        swapper.get_model_name('openwisp_users', 'Organization'),
-        verbose_name=_('organization'),
-        related_name='radius_settings',
+        swapper.get_model_name("openwisp_users", "Organization"),
+        verbose_name=_("organization"),
+        related_name="radius_settings",
         on_delete=models.CASCADE,
     )
     token = KeyField(max_length=32)
     sms_verification = FallbackBooleanChoiceField(
         help_text=_SMS_VERIFICATION_HELP_TEXT,
         fallback=app_settings.SMS_VERIFICATION_ENABLED,
-        verbose_name=_('SMS verification'),
+        verbose_name=_("SMS verification"),
     )
     needs_identity_verification = FallbackBooleanChoiceField(
         help_text=_IDENTITY_VERIFICATION_ENABLED_HELP_TEXT,
         fallback=app_settings.NEEDS_IDENTITY_VERIFICATION,
     )
     sms_sender = models.CharField(
-        _('Sender'),
+        _("Sender"),
         max_length=128,
         blank=True,
         null=True,
         help_text=_(
-            'alpha numeric identifier used as sender for SMS sent by this organization'
+            "alpha numeric identifier used as sender for SMS sent by this organization"
         ),
     )
     sms_message = FallbackTextField(
-        _('SMS Message'),
+        _("SMS Message"),
         max_length=160,
         help_text=_(
-            'SMS message template used for sending verification code.'
+            "SMS message template used for sending verification code."
             ' Must contain "{code}" placeholder for OTP value.'
         ),
         fallback=app_settings.SMS_MESSAGE_TEMPLATE,
     )
     sms_cooldown = FallbackPositiveIntegerField(
-        _('SMS Cooldown'),
+        _("SMS Cooldown"),
         help_text=_(
-            'Time period a user will have to wait before requesting'
-            ' another SMS token (in seconds).'
+            "Time period a user will have to wait before requesting"
+            " another SMS token (in seconds)."
         ),
         fallback=app_settings.SMS_COOLDOWN,
     )
@@ -1122,51 +1122,51 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         null=True,
         blank=True,
         help_text=_(
-            'Additional configuration for SMS backend in JSON format'
-            ' (optional, leave blank if unsure)'
+            "Additional configuration for SMS backend in JSON format"
+            " (optional, leave blank if unsure)"
         ),
-        verbose_name=_('SMS meta data'),
+        verbose_name=_("SMS meta data"),
     )
     freeradius_allowed_hosts = FallbackTextField(
         help_text=_GET_IP_LIST_HELP_TEXT,
-        fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+        fallback=",".join(app_settings.FREERADIUS_ALLOWED_HOSTS),
     )
     coa_enabled = FallbackBooleanChoiceField(
         help_text=_COA_ENABLED_HELP_TEXT,
         fallback=app_settings.COA_ENABLED,
-        verbose_name=_('CoA Enabled'),
+        verbose_name=_("CoA Enabled"),
     )
     allowed_mobile_prefixes = FallbackTextField(
         help_text=_GET_MOBILE_PREFIX_HELP_TEXT,
-        fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+        fallback=",".join(app_settings.ALLOWED_MOBILE_PREFIXES),
     )
     first_name = FallbackCharChoiceField(
-        verbose_name=_('first name'),
+        verbose_name=_("first name"),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('first_name', None),
+        fallback=OPTIONAL_SETTINGS.get("first_name", None),
     )
     last_name = FallbackCharChoiceField(
-        verbose_name=_('last name'),
+        verbose_name=_("last name"),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('last_name', None),
+        fallback=OPTIONAL_SETTINGS.get("last_name", None),
     )
     location = FallbackCharChoiceField(
-        verbose_name=_('location'),
+        verbose_name=_("location"),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('location', None),
+        fallback=OPTIONAL_SETTINGS.get("location", None),
     )
     birth_date = FallbackCharChoiceField(
-        verbose_name=_('birth date'),
+        verbose_name=_("birth date"),
         help_text=_GET_OPTIONAL_FIELDS_HELP_TEXT,
         max_length=12,
         choices=OPTIONAL_FIELD_CHOICES,
-        fallback=OPTIONAL_SETTINGS.get('birth_date', None),
+        fallback=OPTIONAL_SETTINGS.get("birth_date", None),
     )
     registration_enabled = FallbackBooleanChoiceField(
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
@@ -1174,12 +1174,12 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     )
     saml_registration_enabled = FallbackBooleanChoiceField(
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
-        verbose_name=_('SAML registration enabled'),
+        verbose_name=_("SAML registration enabled"),
         fallback=app_settings.SAML_REGISTRATION_ENABLED,
     )
     mac_addr_roaming_enabled = FallbackBooleanChoiceField(
         help_text=_MAC_ADDR_ROAMING_ENABLED_HELP_TEXT,
-        verbose_name=_('MAC address roaming enabled'),
+        verbose_name=_("MAC address roaming enabled"),
         fallback=app_settings.MAC_ADDR_ROAMING_ENABLED,
     )
     social_registration_enabled = FallbackBooleanChoiceField(
@@ -1187,19 +1187,19 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         fallback=app_settings.SOCIAL_REGISTRATION_ENABLED,
     )
     login_url = models.URLField(
-        verbose_name=_('Login URL'),
+        verbose_name=_("Login URL"),
         null=True,
         blank=True,
         help_text=_LOGIN_URL_HELP_TEXT,
     )
     status_url = models.URLField(
-        verbose_name=_('Status URL'),
+        verbose_name=_("Status URL"),
         null=True,
         blank=True,
         help_text=_STATUS_URL_HELP_TEXT,
     )
     password_reset_url = FallbackCharField(
-        verbose_name=_('Password reset URL'),
+        verbose_name=_("Password reset URL"),
         max_length=200,
         help_text=_PASSWORD_RESET_URL_HELP_TEXT,
         fallback=DEFAULT_PASSWORD_RESET_URL,
@@ -1207,7 +1207,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     )
 
     class Meta:
-        verbose_name = _('Organization radius settings')
+        verbose_name = _("Organization radius settings")
         verbose_name_plural = verbose_name
         abstract = True
 
@@ -1218,22 +1218,22 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     def freeradius_allowed_hosts_list(self):
         addresses = []
         if self.freeradius_allowed_hosts:
-            addresses = self.freeradius_allowed_hosts.split(',')
+            addresses = self.freeradius_allowed_hosts.split(",")
         return addresses
 
     @property
     def allowed_mobile_prefixes_list(self):
         mobile_prefixes = []
         if self.allowed_mobile_prefixes:
-            mobile_prefixes = self.allowed_mobile_prefixes.split(',')
+            mobile_prefixes = self.allowed_mobile_prefixes.split(",")
         return mobile_prefixes
 
     def clean(self):
         if self.sms_verification and not self.sms_sender:
             raise ValidationError(
                 {
-                    'sms_sender': _(
-                        'if SMS verification is enabled this field is required.'
+                    "sms_sender": _(
+                        "if SMS verification is enabled this field is required."
                     )
                 }
             )
@@ -1248,9 +1248,9 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         if not allowed_hosts_set and not settings_allowed_hosts_set:
             raise ValidationError(
                 {
-                    'freeradius_allowed_hosts': _(
-                        'Cannot be empty when the settings value for '
-                        '`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided.'
+                    "freeradius_allowed_hosts": _(
+                        "Cannot be empty when the settings value for "
+                        "`OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS` is not provided."
                     )
                 }
             )
@@ -1266,9 +1266,9 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                 except ValueError:
                     raise ValidationError(
                         {
-                            'freeradius_allowed_hosts': _(
-                                'Invalid input. Please enter valid ip addresses '
-                                'or subnets separated by comma. (no spaces)'
+                            "freeradius_allowed_hosts": _(
+                                "Invalid input. Please enter valid ip addresses "
+                                "or subnets separated by comma. (no spaces)"
                             )
                         }
                     )
@@ -1278,12 +1278,12 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         allowed_mobile_prefixes_set = set(self.allowed_mobile_prefixes_list)
         settings_allowed_mobile_prefixes_set = set(app_settings.ALLOWED_MOBILE_PREFIXES)
         for code in self.allowed_mobile_prefixes_list:
-            if not code or code[0] != '+' or int(code[1:]) not in valid_country_codes:
+            if not code or code[0] != "+" or int(code[1:]) not in valid_country_codes:
                 raise ValidationError(
                     {
-                        'allowed_mobile_prefixes': _(
-                            'Invalid input. Please enter valid mobile '
-                            'prefixes separated by comma. (no spaces)'
+                        "allowed_mobile_prefixes": _(
+                            "Invalid input. Please enter valid mobile "
+                            "prefixes separated by comma. (no spaces)"
                         )
                     }
                 )
@@ -1296,12 +1296,12 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     def _clean_password_reset_url(self):
         if self.password_reset_url and (
-            '{uid}' not in self.password_reset_url
-            or '{token}' not in self.password_reset_url
+            "{uid}" not in self.password_reset_url
+            or "{token}" not in self.password_reset_url
         ):
             raise ValidationError(
                 {
-                    'password_reset_url': _(
+                    "password_reset_url": _(
                         'The URL must contain the "{{token}}" and '
                         '"{{uid}}" placeholders, eg: {}.'.format(
                             DEFAULT_PASSWORD_RESET_URL
@@ -1311,23 +1311,23 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             )
 
     def _clean_sms_message(self):
-        if self.sms_message and ('{code}' not in self.sms_message):
+        if self.sms_message and ("{code}" not in self.sms_message):
             raise ValidationError(
                 {
-                    'sms_message': _(
+                    "sms_message": _(
                         'The SMS message must contain the "{{code}}" '
-                        'placeholder, eg: {}.'.format(app_settings.SMS_MESSAGE_TEMPLATE)
+                        "placeholder, eg: {}.".format(app_settings.SMS_MESSAGE_TEMPLATE)
                     )
                 }
             )
 
     def save_cache(self, *args, **kwargs):
         cache.set(self.organization.pk, self.token)
-        cache.set(f'ip-{self.organization.pk}', self.freeradius_allowed_hosts_list)
+        cache.set(f"ip-{self.organization.pk}", self.freeradius_allowed_hosts_list)
 
     def delete_cache(self, *args, **kwargs):
         cache.delete(self.organization.pk)
-        cache.delete(f'ip-{self.organization.pk}')
+        cache.delete(f"ip-{self.organization.pk}")
 
 
 class AbstractPhoneToken(TimeStampedEditableModel):
@@ -1346,17 +1346,17 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     phone_number = PhoneNumberField(blank=False, null=False)
 
     class Meta:
-        verbose_name = _('Phone verification token')
-        verbose_name_plural = _('Phone verification tokens')
-        ordering = ('-created',)
+        verbose_name = _("Phone verification token")
+        verbose_name_plural = _("Phone verification tokens")
+        ordering = ("-created",)
         indexes = [
-            models.Index(fields=['user', 'created']),
-            models.Index(fields=['user', 'created', 'ip']),
+            models.Index(fields=["user", "created"]),
+            models.Index(fields=["user", "created", "ip"]),
         ]
         abstract = True
 
     def clean(self):
-        if not hasattr(self, 'user'):
+        if not hasattr(self, "user"):
             return
         self._validate_phone_number_uniqueness()
         self._validate_max_attempts()
@@ -1374,8 +1374,8 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         if phone_number_already_taken:
             raise ValidationError(
                 {
-                    'phone_number': _(
-                        'This phone number is already associated to another user.'
+                    "phone_number": _(
+                        "This phone number is already associated to another user."
                     )
                 }
             )
@@ -1387,28 +1387,28 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         """
         date_start = timezone.localdate()
         date_end = date_start + timedelta(days=1)
-        PhoneToken = load_model('PhoneToken')
+        PhoneToken = load_model("PhoneToken")
         qs = PhoneToken.objects.filter(created__range=[date_start, date_end])
         # limit generation of tokens per day by user
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
             logger.warning(
-                f'The user {self.user} has reached the maximum daily SMS limit.'
+                f"The user {self.user} has reached the maximum daily SMS limit."
             )
-            raise ValidationError(_('Maximum daily limit reached.'))
+            raise ValidationError(_("Maximum daily limit reached."))
         # limit generation of tokens per day by ip
         ip_token_count = qs.filter(ip=self.ip).count()
         if ip_token_count >= app_settings.SMS_TOKEN_MAX_IP_DAILY:
             logger.warning(
                 logger.warning(
                     _(
-                        f'User {self.user} has reached the maximum '
-                        f'daily SMS limit from ip address {self.ip}'
+                        f"User {self.user} has reached the maximum "
+                        f"daily SMS limit from ip address {self.ip}"
                     )
                 )
             )
             raise ValidationError(
-                _('Maximum daily limit reached from this IP address.')
+                _("Maximum daily limit reached from this IP address.")
             )
 
     def save(self, *args, **kwargs):
@@ -1419,11 +1419,11 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return result
 
     def send_token(self):
-        OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
+        OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         org_user = OrganizationUser.objects.filter(user=self.user).first()
         if not org_user:
             raise exceptions.NoOrgException(
-                _('The user {user} is not member of any organization').format(
+                _("The user {user} is not member of any organization").format(
                     user=self.user
                 )
             )
@@ -1451,9 +1451,9 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     def _validate_already_verified(self):
         try:
             if self.user.registered_user.is_verified:
-                logger.warning(f'User {self.user.pk} is already verified')
+                logger.warning(f"User {self.user.pk} is already verified")
                 raise exceptions.UserAlreadyVerified(
-                    _('This user has been already verified.')
+                    _("This user has been already verified.")
                 )
         except ObjectDoesNotExist:
             pass
@@ -1462,20 +1462,20 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         self._validate_already_verified()
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
-                f'User {self.user} has reached the max '
-                f'attempt limit for token {self.pk}.'
+                f"User {self.user} has reached the max "
+                f"attempt limit for token {self.pk}."
             )
             raise exceptions.MaxAttemptsException(
-                _('Maximum number of attempts reached, request a new code.')
+                _("Maximum number of attempts reached, request a new code.")
             )
         if timezone.now() > self.valid_until:
             logger.warning(
-                f'User {self.user} has tried to verify an expired token: {self.pk}.'
+                f"User {self.user} has tried to verify an expired token: {self.pk}."
             )
             raise exceptions.ExpiredTokenException(
                 _(
-                    'This verification code has expired, '
-                    'Please send a new code and try again.'
+                    "This verification code has expired, "
+                    "Please send a new code and try again."
                 )
             )
         return token == self.token
@@ -1485,19 +1485,19 @@ class AbstractRegisteredUser(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='registered_user',
+        related_name="registered_user",
         primary_key=True,
     )
     method = models.CharField(
-        _('registration method'),
+        _("registration method"),
         help_text=_(
-            'users can sign up in different ways, some methods are valid as '
-            'indirect identity verification (eg: mobile phone SIM card in '
-            'most countries)'
+            "users can sign up in different ways, some methods are valid as "
+            "indirect identity verification (eg: mobile phone SIM card in "
+            "most countries)"
         ),
         max_length=64,
         blank=True,
-        default='',
+        default="",
         choices=(
             REGISTRATION_METHOD_CHOICES
             if django.VERSION < (5, 0)
@@ -1510,15 +1510,15 @@ class AbstractRegisteredUser(models.Model):
         ),
     )
     is_verified = models.BooleanField(
-        _('verified'),
+        _("verified"),
         help_text=_(
-            'whether the user has completed any identity '
-            'verification process sucessfully'
+            "whether the user has completed any identity "
+            "verification process sucessfully"
         ),
         default=False,
     )
-    modified = AutoLastModifiedField(_('Last verification change'), editable=True)
-    _weak_verification_methods = {'', 'email'}
+    modified = AutoLastModifiedField(_("Last verification change"), editable=True)
+    _weak_verification_methods = {"", "email"}
 
     @property
     def is_identity_verified_strong(self):
@@ -1526,7 +1526,7 @@ class AbstractRegisteredUser(models.Model):
 
     class Meta:
         abstract = True
-        verbose_name = _('Registration Information')
+        verbose_name = _("Registration Information")
         verbose_name_plural = verbose_name
 
     @classmethod
@@ -1536,7 +1536,7 @@ class AbstractRegisteredUser(models.Model):
         # Exclude users who have unspecified, manual, or email
         # registration method because such users don't have an option
         # to re-verify. See https://github.com/openwisp/openwisp-radius/issues/517
-        cls.objects.exclude(method__in=['', 'manual', 'email']).filter(
+        cls.objects.exclude(method__in=["", "manual", "email"]).filter(
             user__is_staff=False,
             user__last_login__lt=timezone.now()
             - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),

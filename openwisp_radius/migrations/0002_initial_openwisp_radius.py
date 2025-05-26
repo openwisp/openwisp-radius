@@ -30,17 +30,17 @@ class Migration(migrations.Migration):
 
     dependencies = [
         swapper.dependency(
-            *swapper.split(settings.AUTH_USER_MODEL), version='0004_default_groups'
+            *swapper.split(settings.AUTH_USER_MODEL), version="0004_default_groups"
         ),
-        ('openwisp_radius', '0001_initial_freeradius'),
+        ("openwisp_radius", "0001_initial_freeradius"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RadiusBatch',
+            name="RadiusBatch",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.UUIDField(
                         default=uuid.uuid4,
                         editable=False,
@@ -49,120 +49,120 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    'created',
+                    "created",
                     model_utils.fields.AutoCreatedField(
                         default=django.utils.timezone.now,
                         editable=False,
-                        verbose_name='created',
+                        verbose_name="created",
                     ),
                 ),
                 (
-                    'modified',
+                    "modified",
                     model_utils.fields.AutoLastModifiedField(
                         default=django.utils.timezone.now,
                         editable=False,
-                        verbose_name='modified',
+                        verbose_name="modified",
                     ),
                 ),
                 (
-                    'strategy',
+                    "strategy",
                     models.CharField(
                         choices=[
-                            ('prefix', 'Generate from prefix'),
-                            ('csv', 'Import from CSV'),
+                            ("prefix", "Generate from prefix"),
+                            ("csv", "Import from CSV"),
                         ],
                         db_index=True,
-                        help_text='Import users from a CSV or generate using a prefix',
+                        help_text="Import users from a CSV or generate using a prefix",
                         max_length=16,
-                        verbose_name='strategy',
+                        verbose_name="strategy",
                     ),
                 ),
                 (
-                    'csvfile',
+                    "csvfile",
                     models.FileField(
                         blank=True,
                         help_text=(
-                            'The csv file containing the user details to be uploaded'
+                            "The csv file containing the user details to be uploaded"
                         ),
                         null=True,
                         upload_to="",
-                        verbose_name='CSV',
+                        verbose_name="CSV",
                     ),
                 ),
                 (
-                    'prefix',
+                    "prefix",
                     models.CharField(
                         blank=True,
                         help_text=(
-                            'Usernames generated will be of the format [prefix][number]'
+                            "Usernames generated will be of the format [prefix][number]"
                         ),
                         max_length=20,
                         null=True,
-                        verbose_name='prefix',
+                        verbose_name="prefix",
                     ),
                 ),
                 (
-                    'pdf',
+                    "pdf",
                     models.FileField(
                         blank=True,
                         help_text=(
-                            'The pdf file containing list of usernames and passwords'
+                            "The pdf file containing list of usernames and passwords"
                         ),
                         null=True,
                         upload_to="",
-                        verbose_name='PDF',
+                        verbose_name="PDF",
                     ),
                 ),
                 (
-                    'expiration_date',
+                    "expiration_date",
                     models.DateField(
                         blank=True,
-                        help_text='If left blank users will never expire',
+                        help_text="If left blank users will never expire",
                         null=True,
-                        verbose_name='expiration date',
+                        verbose_name="expiration date",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
                         db_index=True,
-                        help_text='A unique batch name',
+                        help_text="A unique batch name",
                         max_length=128,
-                        verbose_name='name',
+                        verbose_name="name",
                     ),
                 ),
                 (
-                    'organization',
+                    "organization",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to=get_model_name('openwisp_users', 'Organization'),
-                        verbose_name='organization',
+                        to=get_model_name("openwisp_users", "Organization"),
+                        verbose_name="organization",
                     ),
                 ),
                 (
-                    'users',
+                    "users",
                     models.ManyToManyField(
                         blank=True,
-                        help_text='List of users uploaded in this batch',
-                        related_name='radius_batch',
+                        help_text="List of users uploaded in this batch",
+                        related_name="radius_batch",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'batch user creation',
-                'verbose_name_plural': 'batch user creation operations',
-                'db_table': 'radbatch',
-                'abstract': False,
-                'swappable': 'OPENWISP_RADIUS_RADIUSBATCH_MODEL',
+                "verbose_name": "batch user creation",
+                "verbose_name_plural": "batch user creation operations",
+                "db_table": "radbatch",
+                "abstract": False,
+                "swappable": "OPENWISP_RADIUS_RADIUSBATCH_MODEL",
             },
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
         migrations.CreateModel(
-            name='RadiusGroup',
+            name="RadiusGroup",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.UUIDField(
                         default=uuid.uuid4,
                         editable=False,
@@ -171,118 +171,118 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    'created',
+                    "created",
                     model_utils.fields.AutoCreatedField(
                         default=django.utils.timezone.now,
                         editable=False,
-                        verbose_name='created',
+                        verbose_name="created",
                     ),
                 ),
                 (
-                    'modified',
+                    "modified",
                     model_utils.fields.AutoLastModifiedField(
                         default=django.utils.timezone.now,
                         editable=False,
-                        verbose_name='modified',
+                        verbose_name="modified",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
                         db_index=True,
                         max_length=255,
                         unique=True,
-                        verbose_name='group name',
+                        verbose_name="group name",
                     ),
                 ),
                 (
-                    'description',
+                    "description",
                     models.CharField(
-                        blank=True, max_length=64, null=True, verbose_name='description'
+                        blank=True, max_length=64, null=True, verbose_name="description"
                     ),
                 ),
                 (
-                    'default',
+                    "default",
                     models.BooleanField(
                         default=False,
                         help_text=(
-                            'The default group is automatically assigned '
-                            'to new users; changing the default group has only '
-                            'effect on new users (existing users will keep '
-                            'being members of their current group)'
+                            "The default group is automatically assigned "
+                            "to new users; changing the default group has only "
+                            "effect on new users (existing users will keep "
+                            "being members of their current group)"
                         ),
-                        verbose_name='is default?',
+                        verbose_name="is default?",
                     ),
                 ),
                 (
-                    'organization',
+                    "organization",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to=get_model_name('openwisp_users', 'Organization'),
-                        verbose_name='organization',
+                        to=get_model_name("openwisp_users", "Organization"),
+                        verbose_name="organization",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'group',
-                'verbose_name_plural': 'groups',
-                'abstract': False,
-                'swappable': 'OPENWISP_RADIUS_RADIUSGROUP_MODEL',
+                "verbose_name": "group",
+                "verbose_name_plural": "groups",
+                "abstract": False,
+                "swappable": "OPENWISP_RADIUS_RADIUSGROUP_MODEL",
             },
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
         migrations.CreateModel(
-            name='OrganizationRadiusSettings',
+            name="OrganizationRadiusSettings",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.UUIDField(
                         default=uuid.uuid4, primary_key=True, serialize=False
                     ),
                 ),
                 (
-                    'token',
+                    "token",
                     openwisp_utils.base.KeyField(
                         default=openwisp_utils.utils.get_random_key,
                         help_text=None,
                         max_length=32,
                         validators=[
                             django.core.validators.RegexValidator(
-                                re.compile('^[^\\s/\\.]+$'),
-                                code='invalid',
+                                re.compile("^[^\\s/\\.]+$"),
+                                code="invalid",
                                 message=(
-                                    'This value must not contain spaces, '
-                                    'dots or slashes.'
+                                    "This value must not contain spaces, "
+                                    "dots or slashes."
                                 ),
                             )
                         ],
                     ),
                 ),
                 (
-                    'organization',
+                    "organization",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to=get_model_name('openwisp_users', 'Organization'),
-                        verbose_name='organization',
+                        to=get_model_name("openwisp_users", "Organization"),
+                        verbose_name="organization",
                     ),
                 ),
             ],
-            options={'abstract': False},
+            options={"abstract": False},
             bases=(openwisp_users.mixins.ValidateOrgMixin, models.Model),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='is_active',
+            model_name="radiuscheck",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='notes',
+            model_name="radiuscheck",
+            name="notes",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='user',
+            model_name="radiuscheck",
+            name="user",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -291,13 +291,13 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='valid_until',
+            model_name="radiuscheck",
+            name="valid_until",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='radiusgroupcheck',
-            name='group',
+            model_name="radiusgroupcheck",
+            name="group",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -306,8 +306,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
-            model_name='radiusgroupreply',
-            name='group',
+            model_name="radiusgroupreply",
+            name="group",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -316,8 +316,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
-            model_name='radiusreply',
-            name='user',
+            model_name="radiusreply",
+            name="user",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -326,8 +326,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
-            model_name='radiususergroup',
-            name='group',
+            model_name="radiususergroup",
+            name="group",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -336,8 +336,8 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
-            model_name='radiususergroup',
-            name='user',
+            model_name="radiususergroup",
+            name="user",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
@@ -346,148 +346,148 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterField(
-            model_name='radiusaccounting',
-            name='called_station_id',
+            model_name="radiusaccounting",
+            name="called_station_id",
             field=models.CharField(
                 blank=True,
-                db_column='calledstationid',
+                db_column="calledstationid",
                 db_index=True,
                 max_length=50,
                 null=True,
-                verbose_name='called station ID',
+                verbose_name="called station ID",
             ),
         ),
         migrations.AlterField(
-            model_name='radiusaccounting',
-            name='calling_station_id',
+            model_name="radiusaccounting",
+            name="calling_station_id",
             field=models.CharField(
                 blank=True,
-                db_column='callingstationid',
+                db_column="callingstationid",
                 db_index=True,
                 max_length=50,
                 null=True,
-                verbose_name='calling station ID',
+                verbose_name="calling station ID",
             ),
         ),
         migrations.AlterField(
-            model_name='radiuscheck',
-            name='username',
+            model_name="radiuscheck",
+            name="username",
             field=models.CharField(
-                blank=True, db_index=True, max_length=64, verbose_name='username'
+                blank=True, db_index=True, max_length=64, verbose_name="username"
             ),
         ),
         migrations.AlterField(
-            model_name='radiusgroupcheck',
-            name='groupname',
+            model_name="radiusgroupcheck",
+            name="groupname",
             field=models.CharField(
-                blank=True, db_index=True, max_length=64, verbose_name='group name'
+                blank=True, db_index=True, max_length=64, verbose_name="group name"
             ),
         ),
         migrations.AlterField(
-            model_name='radiusgroupreply',
-            name='groupname',
+            model_name="radiusgroupreply",
+            name="groupname",
             field=models.CharField(
-                blank=True, db_index=True, max_length=64, verbose_name='group name'
+                blank=True, db_index=True, max_length=64, verbose_name="group name"
             ),
         ),
         migrations.AlterField(
-            model_name='radiusreply',
-            name='username',
+            model_name="radiusreply",
+            name="username",
             field=models.CharField(
-                blank=True, db_index=True, max_length=64, verbose_name='username'
+                blank=True, db_index=True, max_length=64, verbose_name="username"
             ),
         ),
         migrations.AlterField(
-            model_name='radiususergroup',
-            name='groupname',
+            model_name="radiususergroup",
+            name="groupname",
             field=models.CharField(
-                blank=True, max_length=64, verbose_name='group name'
+                blank=True, max_length=64, verbose_name="group name"
             ),
         ),
         migrations.AlterField(
-            model_name='radiususergroup',
-            name='username',
+            model_name="radiususergroup",
+            name="username",
             field=models.CharField(
-                blank=True, db_index=True, max_length=64, verbose_name='username'
+                blank=True, db_index=True, max_length=64, verbose_name="username"
             ),
         ),
         migrations.AlterUniqueTogether(
-            name='radiusbatch', unique_together={('name', 'organization')}
+            name="radiusbatch", unique_together={("name", "organization")}
         ),
         migrations.AlterModelOptions(
-            name='organizationradiussettings',
+            name="organizationradiussettings",
             options={
-                'verbose_name': 'Organization radius settings',
-                'verbose_name_plural': 'Organization radius settings',
+                "verbose_name": "Organization radius settings",
+                "verbose_name_plural": "Organization radius settings",
             },
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='id',
+            model_name="organizationradiussettings",
+            name="id",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, primary_key=True, serialize=False
             ),
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='organization',
+            model_name="organizationradiussettings",
+            name="organization",
             field=models.OneToOneField(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name='radius_settings',
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                related_name="radius_settings",
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         # Set null=True for organization field to allow
         # creation without giving a default value
         migrations.AddField(
-            model_name='nas',
-            name='organization',
+            model_name="nas",
+            name="organization",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AddField(
-            model_name='radiusaccounting',
-            name='organization',
+            model_name="radiusaccounting",
+            name="organization",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='organization',
+            model_name="radiuscheck",
+            name="organization",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AddField(
-            model_name='radiuspostauth',
-            name='organization',
+            model_name="radiuspostauth",
+            name="organization",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AddField(
-            model_name='radiusreply',
-            name='organization',
+            model_name="radiusreply",
+            name="organization",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         # Set default organization for all the existing records
@@ -497,58 +497,58 @@ class Migration(migrations.Migration):
         # Set null=False for all organization fields that need
         # NOT NULL condition as per the openwisp-radius model
         migrations.AlterField(
-            model_name='nas',
-            name='organization',
+            model_name="nas",
+            name="organization",
             field=models.ForeignKey(
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiusaccounting',
-            name='organization',
+            model_name="radiusaccounting",
+            name="organization",
             field=models.ForeignKey(
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiuscheck',
-            name='organization',
+            model_name="radiuscheck",
+            name="organization",
             field=models.ForeignKey(
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiuspostauth',
-            name='organization',
+            model_name="radiuspostauth",
+            name="organization",
             field=models.ForeignKey(
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
         migrations.AlterField(
-            model_name='radiusreply',
-            name='organization',
+            model_name="radiusreply",
+            name="organization",
             field=models.ForeignKey(
                 null=False,
                 blank=False,
                 on_delete=django.db.models.deletion.CASCADE,
-                to=get_model_name('openwisp_users', 'Organization'),
-                verbose_name='organization',
+                to=get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
             ),
         ),
     ]

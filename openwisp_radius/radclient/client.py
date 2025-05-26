@@ -12,16 +12,16 @@ logger = logging.getLogger(__name__)
 
 ATTRIBUTE_MAP = {
     # OpenWISP Check Attribute: Coova-Chilli Attribute
-    'Max-Daily-Session-Traffic': app_settings.TRAFFIC_COUNTER_REPLY_NAME,
-    'Max-Daily-Session': 'Session-Timeout',
+    "Max-Daily-Session-Traffic": app_settings.TRAFFIC_COUNTER_REPLY_NAME,
+    "Max-Daily-Session": "Session-Timeout",
 }
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DICTIONARY = os.path.join(MODULE_DIR, 'dictionary')
+DEFAULT_DICTIONARY = os.path.join(MODULE_DIR, "dictionary")
 
 
 class CoaPacket(BaseCoAPacket):
     def _EncodeKeyValues(self, key, values):
-        if values == '':
+        if values == "":
             return (key, values)
         return super()._EncodeKeyValues(key, values)
 
@@ -57,17 +57,17 @@ class RadClient(object):
             response = self.client._SendPacket(request, port=self.client.coaport)
         except Timeout:
             logger.info(
-                f'Failed to perform CoA with {self.client.server}'
-                f' with payload {attrs}. Error: CoA request timed out.'
+                f"Failed to perform CoA with {self.client.server}"
+                f" with payload {attrs}. Error: CoA request timed out."
             )
             return False
         if response.code == CoAACK:
             logger.info(
-                f'CoAACK received from {self.client.server} for payload: {attrs}'
+                f"CoAACK received from {self.client.server} for payload: {attrs}"
             )
             return True
         if response.code == CoANAK:
             logger.info(
-                f'CoANAK received from {self.client.server} for payload: {attrs}'
+                f"CoANAK received from {self.client.server} for payload: {attrs}"
             )
         return False

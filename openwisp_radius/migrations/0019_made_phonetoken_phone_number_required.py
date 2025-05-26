@@ -6,13 +6,13 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0018_populate_phonetoken_phone_number'),
+        ("openwisp_radius", "0018_populate_phonetoken_phone_number"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='phonetoken',
-            name='phone_number',
+            model_name="phonetoken",
+            name="phone_number",
             field=phonenumber_field.modelfields.PhoneNumberField(
                 max_length=128, region=None
             ),

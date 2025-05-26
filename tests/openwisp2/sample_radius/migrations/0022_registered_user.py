@@ -12,25 +12,25 @@ from openwisp_radius.registration import (
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0021_organizationradiussettings_registration_enabled'),
+        ("sample_radius", "0021_organizationradiussettings_registration_enabled"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RegisteredUser',
+            name="RegisteredUser",
             fields=[
                 (
-                    'user',
+                    "user",
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
                         primary_key=True,
-                        related_name='registered_user',
+                        related_name="registered_user",
                         serialize=False,
-                        to='sample_users.user',
+                        to="sample_users.user",
                     ),
                 ),
                 (
-                    'method',
+                    "method",
                     models.CharField(
                         blank=True,
                         choices=(
@@ -38,45 +38,45 @@ class Migration(migrations.Migration):
                             if django.VERSION < (5, 0)
                             else get_registration_choices
                         ),
-                        default='',
+                        default="",
                         help_text=(
-                            'users can sign up in different ways, some '
-                            'methods are valid as indirect identity '
-                            'verification (eg: mobile phone SIM card in '
-                            'most countries)'
+                            "users can sign up in different ways, some "
+                            "methods are valid as indirect identity "
+                            "verification (eg: mobile phone SIM card in "
+                            "most countries)"
                         ),
                         max_length=64,
-                        verbose_name='registration method',
+                        verbose_name="registration method",
                     ),
                 ),
                 (
-                    'is_verified',
+                    "is_verified",
                     models.BooleanField(
                         default=False,
                         help_text=(
-                            'whether the user has completed any identity '
-                            'verification process sucessfully'
+                            "whether the user has completed any identity "
+                            "verification process sucessfully"
                         ),
-                        verbose_name='verified',
+                        verbose_name="verified",
                     ),
                 ),
-                ('details', models.CharField(blank=True, max_length=64, null=True)),
+                ("details", models.CharField(blank=True, max_length=64, null=True)),
             ],
             options={
-                'verbose_name': 'Registration Information',
-                'verbose_name_plural': 'Registration Information',
-                'abstract': False,
+                "verbose_name": "Registration Information",
+                "verbose_name_plural": "Registration Information",
+                "abstract": False,
             },
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='needs_identity_verification',
+            model_name="organizationradiussettings",
+            name="needs_identity_verification",
             field=models.BooleanField(
                 blank=True,
                 default=None,
                 help_text=(
-                    'Whether identity verification is required '
-                    'at the time of user registration'
+                    "Whether identity verification is required "
+                    "at the time of user registration"
                 ),
                 null=True,
             ),

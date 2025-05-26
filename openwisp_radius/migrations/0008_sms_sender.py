@@ -5,27 +5,27 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0007_sms_verification'),
+        ("openwisp_radius", "0007_sms_verification"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='organizationradiussettings',
-            old_name='sms_phone_number',
-            new_name='sms_sender',
+            model_name="organizationradiussettings",
+            old_name="sms_phone_number",
+            new_name="sms_sender",
         ),
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='sms_sender',
+            model_name="organizationradiussettings",
+            name="sms_sender",
             field=models.CharField(
                 blank=True,
                 help_text=(
-                    'alpha numeric identifier used as sender for '
-                    'SMS sent by this organization'
+                    "alpha numeric identifier used as sender for "
+                    "SMS sent by this organization"
                 ),
                 max_length=128,
                 null=True,
-                verbose_name='Sender',
+                verbose_name="Sender",
             ),
         ),
     ]

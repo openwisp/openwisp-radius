@@ -42,7 +42,7 @@ class BaseCounter(ABC):
     # This is the reply message hardcoded in the FreeRADIUS 3
     # sqlcounter module, now we can translate it with gettext
     # or customize it (in new counter classes) if needed
-    reply_message = _('Your maximum daily usage time has been reached')
+    reply_message = _("Your maximum daily usage time has been reached")
     gigawords = False
 
     def __init__(self, user, group, group_check):
@@ -55,19 +55,19 @@ class BaseCounter(ABC):
 
     def __repr__(self):
         return (
-            f'{self.counter_name}('
-            f'user={self.user}, '
-            f'group={self.group}, '
-            f'organization_id={self.organization_id})'
+            f"{self.counter_name}("
+            f"user={self.user}, "
+            f"group={self.group}, "
+            f"organization_id={self.organization_id})"
         )
 
     @classmethod
     def get_attribute_type(self):
         check_name = self.check_name.lower()
-        if 'traffic' in check_name:
-            return 'bytes'
-        elif 'session' in check_name:
-            return 'seconds'
+        if "traffic" in check_name:
+            return "bytes"
+        elif "session" in check_name:
+            return "seconds"
         return app_settings.RADIUS_ATTRIBUTES_TYPE_MAP.get(self.check_name, None)
 
     def get_reset_timestamps(self):
@@ -76,7 +76,7 @@ class BaseCounter(ABC):
         except KeyError:
             raise SkipCheck(
                 message=f'Reset time with key "{self.reset}" not available.',
-                level='error',
+                level="error",
                 logger=self.logger,
             )
 
@@ -97,10 +97,10 @@ class BaseCounter(ABC):
         if not self.group_check:
             raise SkipCheck(
                 message=(
-                    f'Group {self.group} does not have '
-                    f'any {self.check_name} check defined'
+                    f"Group {self.group} does not have "
+                    f"any {self.check_name} check defined"
                 ),
-                level='debug',
+                level="debug",
                 logger=self.logger,
             )
 
@@ -110,26 +110,26 @@ class BaseCounter(ABC):
         except ValueError:
             raise SkipCheck(
                 message=(
-                    f'Group check value {self.group_check.value} '
-                    'cannot be converted to integer'
+                    f"Group check value {self.group_check.value} "
+                    "cannot be converted to integer"
                 ),
-                level='info',
+                level="info",
                 logger=self.logger,
             )
         is_max_reached = counter >= value
         remaining = value - counter
         self.logger.debug(
-            f'{self} result: is_max_reached={is_max_reached} remaining={remaining}'
+            f"{self} result: is_max_reached={is_max_reached} remaining={remaining}"
         )
 
         if is_max_reached:
             raise MaxQuotaReached(
                 message=(
-                    f'Counter {self} raised MaxQuotaReached exception, '
-                    f'counter value ({counter}) is greater or equal to '
-                    f'{self.check_name} check value ({value}).'
+                    f"Counter {self} raised MaxQuotaReached exception, "
+                    f"counter value ({counter}) is greater or equal to "
+                    f"{self.check_name} check value ({value})."
                 ),
-                level='info',
+                level="info",
                 logger=self.logger,
                 reply_message=self.reply_message,
             )
@@ -138,9 +138,9 @@ class BaseCounter(ABC):
 
 
 class BaseDailyCounter(BaseCounter):
-    check_name = 'Max-Daily-Session'
-    reply_name = 'Session-Timeout'
-    reset = 'daily'
+    check_name = "Max-Daily-Session"
+    reply_name = "Session-Timeout"
+    reset = "daily"
 
     def get_sql_params(self, start_time, end_time):
         return [
@@ -164,9 +164,9 @@ class BaseTrafficCounter(BaseCounter):
 
 class BaseDailyTrafficCounter(BaseTrafficCounter):
     check_name = app_settings.TRAFFIC_COUNTER_CHECK_NAME
-    reset = 'daily'
+    reset = "daily"
 
 
 class BaseMontlhyTrafficCounter(BaseTrafficCounter):
-    check_name = 'Max-Monthly-Session-Traffic'
-    reset = 'monthly'
+    check_name = "Max-Monthly-Session-Traffic"
+    reset = "monthly"

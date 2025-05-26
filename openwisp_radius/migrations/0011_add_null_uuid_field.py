@@ -7,55 +7,55 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0010_csv_private_storage'),
+        ("openwisp_radius", "0010_csv_private_storage"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='nas',
-            name='uuid',
+            model_name="nas",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiuscheck',
-            name='uuid',
+            model_name="radiuscheck",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiusgroupcheck',
-            name='uuid',
+            model_name="radiusgroupcheck",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiusgroupreply',
-            name='uuid',
+            model_name="radiusgroupreply",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiuspostauth',
-            name='uuid',
+            model_name="radiuspostauth",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiusreply',
-            name='uuid',
+            model_name="radiusreply",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),
         ),
         migrations.AddField(
-            model_name='radiususergroup',
-            name='uuid',
+            model_name="radiususergroup",
+            name="uuid",
             field=models.UUIDField(
                 default=uuid.uuid4, editable=False, null=True, serialize=False
             ),

@@ -3,4 +3,4 @@ from . import PostgresqlTrafficMixin
 
 
 class DailyTrafficCounter(PostgresqlTrafficMixin, BaseDailyTrafficCounter):
-    counter_name = 'postgresql.DailyTrafficCounter'
+    counter_name = "postgresql.DailyTrafficCounter"

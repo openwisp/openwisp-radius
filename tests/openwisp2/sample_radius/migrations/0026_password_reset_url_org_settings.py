@@ -5,18 +5,18 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('sample_radius', '0025_login_status_url_org_settings'),
+        ("sample_radius", "0025_login_status_url_org_settings"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='password_reset_url',
+            model_name="organizationradiussettings",
+            name="password_reset_url",
             field=models.URLField(
                 blank=True,
-                help_text='Enter the URL where users can reset their password',
+                help_text="Enter the URL where users can reset their password",
                 null=True,
-                verbose_name='Password reset URL',
+                verbose_name="Password reset URL",
             ),
         ),
     ]

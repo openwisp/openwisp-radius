@@ -20,20 +20,20 @@ from weasyprint import HTML
 
 from . import settings as app_settings
 
-SESSION_TIME_ATTRIBUTE = 'Max-Daily-Session'
-SESSION_TRAFFIC_ATTRIBUTE = 'Max-Daily-Session-Traffic'
-DEFAULT_SESSION_TIME_LIMIT = '10800'  # seconds
-DEFAULT_SESSION_TRAFFIC_LIMIT = '3000000000'  # bytes (octets)
+SESSION_TIME_ATTRIBUTE = "Max-Daily-Session"
+SESSION_TRAFFIC_ATTRIBUTE = "Max-Daily-Session-Traffic"
+DEFAULT_SESSION_TIME_LIMIT = "10800"  # seconds
+DEFAULT_SESSION_TRAFFIC_LIMIT = "3000000000"  # bytes (octets)
 
 logger = logging.getLogger(__name__)
 
 
 def load_model(model):
-    return swapper.load_model('openwisp_radius', model)
+    return swapper.load_model("openwisp_radius", model)
 
 
 def get_model(apps, model_path):
-    app, model = model_path.split('.')
+    app, model = model_path.split(".")
     return apps.get_model(app, model)
 
 
@@ -44,17 +44,17 @@ def get_swapped_model(apps, app_name, model_name):
 
 def create_default_groups(organization, apps=None):
     if apps is not None:
-        RadiusGroup = get_swapped_model(apps, 'openwisp_radius', 'RadiusGroup')
+        RadiusGroup = get_swapped_model(apps, "openwisp_radius", "RadiusGroup")
         RadiusGroupCheck = get_swapped_model(
-            apps, 'openwisp_radius', 'RadiusGroupCheck'
+            apps, "openwisp_radius", "RadiusGroupCheck"
         )
     else:
-        RadiusGroup = load_model('RadiusGroup')
-        RadiusGroupCheck = load_model('RadiusGroupCheck')
+        RadiusGroup = load_model("RadiusGroup")
+        RadiusGroupCheck = load_model("RadiusGroupCheck")
     default = RadiusGroup(
         organization_id=organization.pk,
-        name=f'{organization.slug}-users',
-        description='Regular users',
+        name=f"{organization.slug}-users",
+        description="Regular users",
         default=True,
     )
     default.save()
@@ -62,7 +62,7 @@ def create_default_groups(organization, apps=None):
         group_id=default.id,
         groupname=default.name,
         attribute=SESSION_TIME_ATTRIBUTE,
-        op=':=',
+        op=":=",
         value=DEFAULT_SESSION_TIME_LIMIT,
     )
     check.save()
@@ -70,14 +70,14 @@ def create_default_groups(organization, apps=None):
         group_id=default.id,
         groupname=default.name,
         attribute=SESSION_TRAFFIC_ATTRIBUTE,
-        op=':=',
+        op=":=",
         value=DEFAULT_SESSION_TRAFFIC_LIMIT,
     )
     check.save()
     power_users = RadiusGroup(
         organization_id=organization.pk,
-        name=f'{organization.slug}-power-users',
-        description='Users with less restrictions',
+        name=f"{organization.slug}-power-users",
+        description="Users with less restrictions",
         default=False,
     )
     power_users.save()
@@ -92,7 +92,7 @@ def generate_sms_token():
     length = app_settings.SMS_TOKEN_LENGTH
     hash_algorithm = app_settings.SMS_TOKEN_HASH_ALGORITHM
     hash_ = hash_algorithm()
-    hash_.update(settings.SECRET_KEY.encode('utf-8'))
+    hash_.update(settings.SECRET_KEY.encode("utf-8"))
     hash_.update(os.urandom(16))
     token = str(int(hash_.hexdigest(), 16))[-length:]
     return token
@@ -108,7 +108,7 @@ class SmsMessage(BaseSmsMessage):
             return 0
         backend_instance = self.get_connection(fail_silently)
         args = [[self]]
-        if meta_data and getattr(backend_instance, 'supports_meta_data', False):
+        if meta_data and getattr(backend_instance, "supports_meta_data", False):
             args.append(meta_data)
         res = backend_instance.send_messages(*args)
         sms_post_send.send(
@@ -120,18 +120,18 @@ class SmsMessage(BaseSmsMessage):
 def find_available_username(username, users_list, prefix=False):
     User = get_user_model()
     suffix = 1
-    tmp = f'{username}{suffix}' if prefix else username
+    tmp = f"{username}{suffix}" if prefix else username
     names_list = map(lambda x: x.username, users_list)
     while User.objects.filter(username=tmp).exists() or tmp in names_list:
         suffix += 1 if prefix else 0
-        tmp = f'{username}{suffix}'
+        tmp = f"{username}{suffix}"
         suffix += 1 if not prefix else 0
     return tmp
 
 
 def get_encoding_format(byte_data):
     # Explicitly handle some common encodings, including utf-16le
-    common_encodings = ['utf-8-sig', 'utf-16', 'utf-16be', 'utf-16le', 'ascii']
+    common_encodings = ["utf-8-sig", "utf-16", "utf-16be", "utf-16le", "ascii"]
 
     for enc in common_encodings:
         try:
@@ -140,13 +140,13 @@ def get_encoding_format(byte_data):
         except (UnicodeDecodeError, TypeError):
             continue
 
-    return 'utf-8'
+    return "utf-8"
 
 
 def decode_byte_data(data):
     if isinstance(data, bytes):
         data = data.decode(get_encoding_format(data))
-        data = data.replace('\x00', '')  # Removing null bytes
+        data = data.replace("\x00", "")  # Removing null bytes
     return data
 
 
@@ -158,14 +158,14 @@ def validate_csvfile(csvfile):
     except UnicodeDecodeError:
         raise ValidationError(
             _(
-                'Unrecognized file format, the supplied file '
-                'does not look like a CSV file.'
+                "Unrecognized file format, the supplied file "
+                "does not look like a CSV file."
             )
         )
 
-    reader = csv.reader(StringIO(csv_data), delimiter=',')
-    error_message = 'The CSV contains a line with invalid data,\
-                    line number {} triggered the following error: {}'
+    reader = csv.reader(StringIO(csv_data), delimiter=",")
+    error_message = "The CSV contains a line with invalid data,\
+                    line number {} triggered the following error: {}"
     row_count = 1
     for row in reader:
         if len(row) == 5:
@@ -179,7 +179,7 @@ def validate_csvfile(csvfile):
             row_count += 1
         elif len(row) > 0:
             raise ValidationError(
-                _(error_message.format(str(row_count), 'Improper CSV format.'))
+                _(error_message.format(str(row_count), "Improper CSV format."))
             )
     csvfile.seek(0)
 
@@ -200,8 +200,8 @@ def prefix_generate_users(prefix, n, password_length):
 
 def generate_pdf(radbatch_uuid):
     template = get_template(app_settings.BATCH_PDF_TEMPLATE)
-    data = load_model('RadiusBatch').objects.get(pk=radbatch_uuid)
-    html = HTML(string=template.render({'users': data.user_credentials}))
+    data = load_model("RadiusBatch").objects.get(pk=radbatch_uuid)
+    html = HTML(string=template.render({"users": data.user_credentials}))
     buffer = BytesIO()
     html.write_pdf(target=buffer)
     pdf = buffer.getvalue()
@@ -222,10 +222,10 @@ def get_organization_radius_settings(organization, radius_setting):
         return getattr(organization.radius_settings, radius_setting)
     except ObjectDoesNotExist:
         logger.exception(
-            f'Got exception while accessing radius_settings for {organization.name}'
+            f"Got exception while accessing radius_settings for {organization.name}"
         )
         raise APIException(
-            _('Could not complete operation because of an internal misconfiguration')
+            _("Could not complete operation because of an internal misconfiguration")
         )
 
 
@@ -244,8 +244,8 @@ def get_user_group(user, organization_id):
     """
     return (
         user.radiususergroup_set.filter(group__organization_id=organization_id)
-        .select_related('group')
-        .order_by('priority')
+        .select_related("group")
+        .order_by("priority")
         .first()
     )
 
@@ -277,8 +277,8 @@ def get_group_checks(group):
 
 
 def get_one_time_login_url(user, organization):
-    if 'sesame.backends.ModelBackend' not in getattr(
-        settings, 'AUTHENTICATION_BACKENDS', []
+    if "sesame.backends.ModelBackend" not in getattr(
+        settings, "AUTHENTICATION_BACKENDS", []
     ):
         return
     from sesame.utils import get_query_string
@@ -288,13 +288,13 @@ def get_one_time_login_url(user, organization):
     except ObjectDoesNotExist:
         logger.warning(
             f'Organization "{organization.name}" does not '
-            'have any OpenWISP RADIUS settings configured'
+            "have any OpenWISP RADIUS settings configured"
         )
         return
 
     login_url = org_radius_settings.login_url
     if not login_url:
-        logger.debug(f'login_url is not defined for {organization.name} organization')
+        logger.debug(f"login_url is not defined for {organization.name} organization")
         return
 
     if not user.is_member(organization):

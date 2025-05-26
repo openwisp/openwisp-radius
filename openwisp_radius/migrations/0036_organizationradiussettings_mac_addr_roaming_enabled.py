@@ -7,20 +7,20 @@ import openwisp_utils.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0035_organizationradiussettings_sms_cooldown'),
+        ("openwisp_radius", "0035_organizationradiussettings_sms_cooldown"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='mac_addr_roaming_enabled',
+            model_name="organizationradiussettings",
+            name="mac_addr_roaming_enabled",
             field=openwisp_utils.fields.FallbackBooleanChoiceField(
                 blank=True,
                 default=None,
                 fallback=False,
-                help_text='Whether the MAC address roaming should be enabled or not.',
+                help_text="Whether the MAC address roaming should be enabled or not.",
                 null=True,
-                verbose_name='MAC address roaming enabled',
+                verbose_name="MAC address roaming enabled",
             ),
         ),
     ]

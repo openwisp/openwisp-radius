@@ -12,9 +12,9 @@ from openwisp_users.migrations import (
 
 
 class Migration(migrations.Migration):
-    org_model = swapper.get_model_name('openwisp_users', 'organization')
+    org_model = swapper.get_model_name("openwisp_users", "organization")
     dependencies = [
-        swapper.dependency(*swapper.split(org_model), version='0001_initial')
+        swapper.dependency(*swapper.split(org_model), version="0001_initial")
     ]
 
     operations = [

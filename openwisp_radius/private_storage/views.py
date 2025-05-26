@@ -6,10 +6,10 @@ from ..utils import load_model
 
 class RadiusBatchCsvDownloadView(PrivateStorageDetailView):
     storage = PRIVATE_STORAGE_INSTANCE
-    model = load_model('RadiusBatch')
-    model_file_field = 'csvfile'
-    slug_field = 'csvfile'
-    slug_url_kwarg = 'path'
+    model = load_model("RadiusBatch")
+    model_file_field = "csvfile"
+    slug_field = "csvfile"
+    slug_url_kwarg = "path"
 
     def can_access_file(self, private_file):
         user = private_file.request.user

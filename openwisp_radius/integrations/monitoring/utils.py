@@ -12,7 +12,7 @@ def _get_urlencoded_datetime(date_time):
     """
     URL encodes the date_time string and returns the value.
     """
-    return urlencode({'': date_time}).split('=')[1]
+    return urlencode({"": date_time}).split("=")[1]
 
 
 def get_today_start_datetime():
@@ -44,11 +44,11 @@ def get_datetime_filter_stop_datetime():
 
 def sha1_hash(input_string):
     sha1 = hashlib.sha1()
-    sha1.update(input_string.encode('utf-8'))
+    sha1.update(input_string.encode("utf-8"))
     return sha1.hexdigest()
 
 
 def clean_registration_method(method):
-    if method == '':
-        method = 'unspecified'
+    if method == "":
+        method = "unspecified"
     return method

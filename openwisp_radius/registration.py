@@ -6,10 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from .utils import load_model
 
 REGISTRATION_METHOD_CHOICES = [
-    ('', 'Unspecified'),
-    ('manual', _('Manually created')),
-    ('email', _('Email')),
-    ('mobile_phone', _('Mobile phone')),
+    ("", "Unspecified"),
+    ("manual", _("Manually created")),
+    ("email", _("Email")),
+    ("mobile_phone", _("Mobile phone")),
 ]
 
 AUTHORIZE_UNVERIFIED = []
@@ -34,15 +34,15 @@ def register_registration_method(
     if not duplicate:
         REGISTRATION_METHOD_CHOICES.append((name, verbose_name))
     elif fail_loud:
-        raise ImproperlyConfigured(f'Method {name} is already registered')
+        raise ImproperlyConfigured(f"Method {name} is already registered")
     else:
-        logger.info(f'Method {name} is already registered')
+        logger.info(f"Method {name} is already registered")
     # needed to implement 3D secure verification
     # when doing credit/debit card payments
     if authorize_unverified and name not in AUTHORIZE_UNVERIFIED:
         AUTHORIZE_UNVERIFIED.append(name)
     if not strong_identity:
-        RegisteredUser = load_model('RegisteredUser')
+        RegisteredUser = load_model("RegisteredUser")
         RegisteredUser._weak_verification_methods.add(name)
 
 

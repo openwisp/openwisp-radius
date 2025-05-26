@@ -41,46 +41,46 @@ from .serializers import (
 from .utils import IDVerificationHelper
 
 RE_MAC_ADDR = re.compile(
-    u'^{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}'.format(u'[a-f0-9]{2}'), re.I
+    "^{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}".format("[a-f0-9]{2}"), re.I
 )
-_TOKEN_AUTH_FAILED = _('Token authentication failed')
+_TOKEN_AUTH_FAILED = _("Token authentication failed")
 # Accounting-On and Accounting-Off are not implemented and
 # hence  ignored right now - may be implemented in the future
-UNSUPPORTED_STATUS_TYPES = ['Accounting-On', 'Accounting-Off']
+UNSUPPORTED_STATUS_TYPES = ["Accounting-On", "Accounting-Off"]
 logger = logging.getLogger(__name__)
 
-RadiusToken = load_model('RadiusToken')
-RadiusAccounting = load_model('RadiusAccounting')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
-OrganizationUser = swapper.load_model('openwisp_users', 'OrganizationUser')
-Organization = swapper.load_model('openwisp_users', 'Organization')
+RadiusToken = load_model("RadiusToken")
+RadiusAccounting = load_model("RadiusAccounting")
+OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
+OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+Organization = swapper.load_model("openwisp_users", "Organization")
 auth_backend = UsersAuthenticationBackend()
 
 
 # Radius Accounting
 class AccountingFilter(filters.FilterSet):
-    start_time = filters.DateTimeFilter(field_name='start_time', lookup_expr='gte')
-    stop_time = filters.DateTimeFilter(field_name='stop_time', lookup_expr='lte')
+    start_time = filters.DateTimeFilter(field_name="start_time", lookup_expr="gte")
+    stop_time = filters.DateTimeFilter(field_name="stop_time", lookup_expr="lte")
     is_open = filters.BooleanFilter(
-        field_name='stop_time', lookup_expr='isnull', label='Is Open'
+        field_name="stop_time", lookup_expr="isnull", label="Is Open"
     )
 
     class Meta:
         model = RadiusAccounting
         fields = (
-            'username',
-            'called_station_id',
-            'calling_station_id',
-            'start_time',
-            'stop_time',
-            'is_open',
+            "username",
+            "called_station_id",
+            "calling_station_id",
+            "start_time",
+            "stop_time",
+            "is_open",
         )
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
     def _get_ip_list(self, uuid):
-        if f'ip-{uuid}' in cache:
-            ip_list = cache.get(f'ip-{uuid}')
+        if f"ip-{uuid}" in cache:
+            ip_list = cache.get(f"ip-{uuid}")
         else:
             try:
                 ip_list = OrganizationRadiusSettings.objects.get(
@@ -89,7 +89,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
             except OrganizationRadiusSettings.DoesNotExist:
                 ip_list = None
             else:
-                cache.set(f'ip-{uuid}', ip_list)
+                cache.set(f"ip-{uuid}", ip_list)
         return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
 
     def _check_client_ip_and_return(self, request, uuid):
@@ -102,14 +102,14 @@ class FreeradiusApiAuthentication(BaseAuthentication):
                     return (AnonymousUser(), uuid)
             except ValueError:
                 invalid_addr_message = _(
-                    'Request rejected: ({ip}) in organization settings or '
-                    'settings.py is not a valid IP address. '
-                    'Please contact administrator.'
+                    "Request rejected: ({ip}) in organization settings or "
+                    "settings.py is not a valid IP address. "
+                    "Please contact administrator."
                 ).format(ip=ip)
                 raise AuthenticationFailed(invalid_addr_message)
         message = _(
-            'Request rejected: Client IP address ({client_ip}) is not in '
-            'the list of IP addresses allowed to consume the freeradius API.'
+            "Request rejected: Client IP address ({client_ip}) is not in "
+            "the list of IP addresses allowed to consume the freeradius API."
         ).format(client_ip=client_ip)
         raise AuthenticationFailed(message)
 
@@ -120,9 +120,9 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         calling_station_id = RE_MAC_ADDR.match(username)[0]
         # Get the most recent open session for the roaming user
         open_session = (
-            RadiusAccounting.objects.select_related('organization__radius_settings')
+            RadiusAccounting.objects.select_related("organization__radius_settings")
             .filter(calling_station_id=calling_station_id, stop_time=None)
-            .order_by('-start_time')
+            .order_by("-start_time")
             .first()
         )
         if (
@@ -131,10 +131,10 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         ):
             return None, None
         username = open_session.username
-        if hasattr(request.data, '_mutable'):
+        if hasattr(request.data, "_mutable"):
             request.data._mutable = True
-        request.data['username'] = username
-        if hasattr(request.data, '_mutable'):
+        request.data["username"] = username
+        if hasattr(request.data, "_mutable"):
             request.data._mutable = False
         request._mac_allowed = True
         return username, request
@@ -142,7 +142,7 @@ class FreeradiusApiAuthentication(BaseAuthentication):
     def _radius_token_authenticate(self, username, request):
         # cached_orgid exists only for users authenticated
         # successfully in past 24 hours
-        cached_orgid = cache.get(f'rt-{username}')
+        cached_orgid = cache.get(f"rt-{username}")
         if cached_orgid:
             values = self._check_client_ip_and_return(request, cached_orgid)
             return values
@@ -154,24 +154,24 @@ class FreeradiusApiAuthentication(BaseAuthentication):
             except RadiusToken.DoesNotExist:
                 if username:
                     message = _(
-                        'Radius token does not exist. Obtain a new radius token '
-                        'or provide the organization UUID and API token.'
+                        "Radius token does not exist. Obtain a new radius token "
+                        "or provide the organization UUID and API token."
                     )
                 else:
-                    message = _('username field is required.')
+                    message = _("username field is required.")
                 raise NotAuthenticated(message)
             org_uuid = str(radtoken.organization_id)
-            cache.set(f'rt-{username}', org_uuid, 86400)
+            cache.set(f"rt-{username}", org_uuid, 86400)
             return self._check_client_ip_and_return(request, org_uuid)
 
     def authenticate(self, request):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
         if not uuid and not token:
-            if request.data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
+            if request.data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
                 return
-            username = request.data.get('username') or request.query_params.get(
-                'username'
+            username = request.data.get("username") or request.query_params.get(
+                "username"
             )
             username, request = self._handle_mac_address_authentication(
                 username, request
@@ -205,47 +205,47 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return self._check_client_ip_and_return(request, uuid)
 
     def check_organization(self, request):
-        if 'organization' in request.data:
+        if "organization" in request.data:
             raise AuthenticationFailed(
-                _('setting the organization parameter explicitly is not allowed')
+                _("setting the organization parameter explicitly is not allowed")
             )
 
     def get_uuid_token(self, request):
         # default to GET params
-        uuid = request.GET.get('uuid')
-        token = request.GET.get('token')
+        uuid = request.GET.get("uuid")
+        token = request.GET.get("token")
         # inspect authorization header
-        if 'HTTP_AUTHORIZATION' in request.META:
-            parts = request.META['HTTP_AUTHORIZATION'].split(' ')
+        if "HTTP_AUTHORIZATION" in request.META:
+            parts = request.META["HTTP_AUTHORIZATION"].split(" ")
             try:
                 uuid = parts[1]
                 token = parts[2]
             except IndexError:
-                raise ParseError(_('Invalid token'))
+                raise ParseError(_("Invalid token"))
         return uuid, token
 
 
 class AuthorizeView(GenericAPIView, IDVerificationHelper):
     authentication_classes = (FreeradiusApiAuthentication,)
-    accept_attributes = {'control:Auth-Type': 'Accept'}
+    accept_attributes = {"control:Auth-Type": "Accept"}
     accept_status = 200
-    reject_attributes = {'control:Auth-Type': 'Reject'}
+    reject_attributes = {"control:Auth-Type": "Reject"}
     reject_status = 401
     # we need to use 200 status code or we risk some NAS to
     # interpret other status codes (eg: 403) as invalid credentials
     # (this happens on PfSense)
     max_quota_status = 200
     max_quota_attributes = {
-        'control:Auth-Type': 'Reject',
-        'Reply-Message': BaseCounter.reply_message,
+        "control:Auth-Type": "Reject",
+        "Reply-Message": BaseCounter.reply_message,
     }
     serializer_class = AuthorizeSerializer
 
     @swagger_auto_schema(
         responses={
-            accept_status: f'`{accept_attributes}`',
-            reject_status: f'`{reject_attributes}`',
-            max_quota_status: f'`{max_quota_attributes}`',
+            accept_status: f"`{accept_attributes}`",
+            reject_status: f"`{reject_attributes}`",
+            max_quota_status: f"`{max_quota_attributes}`",
         }
     )
     def post(self, request, *args, **kwargs):
@@ -259,8 +259,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data.get('username')
-        password = serializer.validated_data.get('password')
+        username = serializer.validated_data.get("username")
+        password = serializer.validated_data.get("password")
         user = self.get_user(request, username, password)
         if user and self.authenticate_user(request, user, password):
             data, status = self.get_replies(user, organization_id=request.auth)
@@ -298,7 +298,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         if user_group:
             for reply in self.get_group_replies(user_group.group):
-                data.update({reply.attribute: {'op': reply.op, 'value': reply.value}})
+                data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
 
             group_checks = get_group_checks(user_group.group)
 
@@ -316,7 +316,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 # if max is reached send access rejected + reply message
                 except MaxQuotaReached as max_quota:
                     data = self.reject_attributes.copy()
-                    data['Reply-Message'] = max_quota.reply_message
+                    data["Reply-Message"] = max_quota.reply_message
                     return data, self.max_quota_status
                 # avoid crashing on unexpected runtime errors
                 except Exception as e:
@@ -338,13 +338,13 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     @staticmethod
     def _get_reply_value(data, counter):
-        value = data[counter.reply_name]['value']
+        value = data[counter.reply_name]["value"]
         try:
             return int(value)
         except ValueError:
             logger.warning(
                 f'{counter.reply_name} value ("{value}") '
-                'cannot be converted to integer.'
+                "cannot be converted to integer."
             )
             return math.inf
 
@@ -353,7 +353,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
-        needs_verification = self._needs_identity_verification({'pk': request._auth})
+        needs_verification = self._needs_identity_verification({"pk": request._auth})
         # if no identity verification enabled for this org,
         # just ensure user is active
         if not needs_verification:
@@ -379,7 +379,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         can be overridden to implement more complex checks
         """
         return bool(
-            getattr(request, '_mac_allowed', False)
+            getattr(request, "_mac_allowed", False)
             or (
                 not user.has_password_expired()
                 and (
@@ -414,7 +414,7 @@ authorize = AuthorizeView.as_view()
 
 class AccountingViewPagination(drf_link_header_pagination.LinkHeaderPagination):
     page_size = 10
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 100
 
 
@@ -430,8 +430,8 @@ class AccountingView(ListCreateAPIView):
           processing the response without generating warnings
     """
 
-    throttle_scope = 'accounting'
-    queryset = RadiusAccounting.objects.all().order_by('-start_time')
+    throttle_scope = "accounting"
+    queryset = RadiusAccounting.objects.all().order_by("-start_time")
     authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
@@ -448,7 +448,7 @@ class AccountingView(ListCreateAPIView):
         """
         return super().get(self, request, *args, **kwargs)
 
-    @swagger_auto_schema(responses={201: '', 200: ''})
+    @swagger_auto_schema(responses={201: "", 200: ""})
     def post(self, request, *args, **kwargs):
         """
         **API Endpoint used by FreeRADIUS server.**
@@ -459,11 +459,11 @@ class AccountingView(ListCreateAPIView):
         if request.user.is_anonymous and request.auth is None:
             return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
-        if data.get('status_type', None) in UNSUPPORTED_STATUS_TYPES:
+        if data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
             return Response(None)
         # Create or Update
         try:
-            instance = self.get_queryset().get(unique_id=data.get('unique_id'))
+            instance = self.get_queryset().get(unique_id=data.get("unique_id"))
         except RadiusAccounting.DoesNotExist:
             serializer = self.get_serializer(data=data)
             try:
@@ -477,7 +477,7 @@ class AccountingView(ListCreateAPIView):
                 serializer.create(acct_data)
             # on large systems using mac auth roaming this could happen
             except IntegrityError:
-                logger.info(f'Ignoring duplicate session {acct_data}')
+                logger.info(f"Ignoring duplicate session {acct_data}")
                 return Response(None, status=200)
             headers = self.get_success_headers(serializer.data)
             self.send_radius_accounting_signal(serializer.validated_data)
@@ -496,16 +496,16 @@ class AccountingView(ListCreateAPIView):
         that are closed by OpenWISP when user logs into
         another organization.
         """
-        unique_id_errors = error.detail.get('unique_id', [])
+        unique_id_errors = error.detail.get("unique_id", [])
         if len(unique_id_errors) == 1:
             error_detail = unique_id_errors.pop()
             if (
                 str(error_detail)
-                == 'accounting with this accounting unique ID already exists.'
-                and error_detail.code == 'unique'
+                == "accounting with this accounting unique ID already exists."
+                and error_detail.code == "unique"
             ):
-                rad = RadiusAccounting.objects.only('organization_id').get(
-                    unique_id=data.get('unique_id')
+                rad = RadiusAccounting.objects.only("organization_id").get(
+                    unique_id=data.get("unique_id")
                 )
                 if rad.organization_id != self.request.auth:
                     return True
@@ -513,8 +513,8 @@ class AccountingView(ListCreateAPIView):
 
     def _data_to_acct_model(self, valid_data):
         acct_org = Organization.objects.get(pk=self.request.auth)
-        valid_data.pop('status_type', None)
-        valid_data['organization'] = acct_org
+        valid_data.pop("status_type", None)
+        valid_data["organization"] = acct_org
         return valid_data
 
     def send_radius_accounting_signal(self, accounting_data):
@@ -532,7 +532,7 @@ class PostAuthView(CreateAPIView):
     authentication_classes = (FreeradiusApiAuthentication,)
     serializer_class = RadiusPostAuthSerializer
 
-    @swagger_auto_schema(responses={201: ''})
+    @swagger_auto_schema(responses={201: ""})
     def post(self, request, *args, **kwargs):
         """
         **API Endpoint used by FreeRADIUS server.**

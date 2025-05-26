@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     users to the default group
     """
 
-    dependencies = [('openwisp_radius', '0002_initial_openwisp_radius')]
+    dependencies = [("openwisp_radius", "0002_initial_openwisp_radius")]
 
     operations = [
         migrations.RunPython(

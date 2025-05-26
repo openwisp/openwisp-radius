@@ -3,4 +3,4 @@ from . import MysqlTrafficMixin
 
 
 class DailyTrafficCounter(MysqlTrafficMixin, BaseDailyTrafficCounter):
-    counter_name = 'mysql.DailyTrafficCounter'
+    counter_name = "mysql.DailyTrafficCounter"

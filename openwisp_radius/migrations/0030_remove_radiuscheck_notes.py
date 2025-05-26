@@ -5,12 +5,12 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0029_remove_check_customizations'),
+        ("openwisp_radius", "0029_remove_check_customizations"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='radiuscheck',
-            name='notes',
+            model_name="radiuscheck",
+            name="notes",
         ),
     ]

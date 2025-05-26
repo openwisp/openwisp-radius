@@ -9,24 +9,24 @@ from openwisp_radius import settings as app_settings
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0032_organizationradiussettings_sms_message'),
+        ("openwisp_radius", "0032_organizationradiussettings_sms_message"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='organizationradiussettings',
-            name='password_reset_url',
+            model_name="organizationradiussettings",
+            name="password_reset_url",
             field=openwisp_utils.fields.FallbackCharField(
                 blank=True,
                 default=app_settings.DEFAULT_PASSWORD_RESET_URL,
                 fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
-                help_text='Enter the URL where users can reset their password',
+                help_text="Enter the URL where users can reset their password",
                 max_length=200,
                 null=True,
                 validators=[
                     openwisp_radius.base.validators.password_reset_url_validator
                 ],
-                verbose_name='Password reset URL',
+                verbose_name="Password reset URL",
             ),
         ),
     ]

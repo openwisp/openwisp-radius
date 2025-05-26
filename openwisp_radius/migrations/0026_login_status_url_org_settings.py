@@ -5,27 +5,27 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0025_sms_verification'),
+        ("openwisp_radius", "0025_sms_verification"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='login_url',
+            model_name="organizationradiussettings",
+            name="login_url",
             field=models.URLField(
-                verbose_name='Login URL',
+                verbose_name="Login URL",
                 blank=True,
-                help_text='Enter the URL where users can log in to the wifi service',
+                help_text="Enter the URL where users can log in to the wifi service",
                 null=True,
             ),
         ),
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='status_url',
+            model_name="organizationradiussettings",
+            name="status_url",
             field=models.URLField(
-                verbose_name='Status URL',
+                verbose_name="Status URL",
                 blank=True,
-                help_text='Enter the URL where users can log out from the wifi service',
+                help_text="Enter the URL where users can log out from the wifi service",
                 null=True,
             ),
         ),

@@ -26,20 +26,20 @@ from .base.forms import ModeSwitcherForm, RadiusBatchForm
 from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
-Nas = load_model('Nas')
-RadiusAccounting = load_model('RadiusAccounting')
-RadiusToken = load_model('RadiusToken')
-RadiusBatch = load_model('RadiusBatch')
-RadiusCheck = load_model('RadiusCheck')
-RadiusGroup = load_model('RadiusGroup')
-RadiusPostAuth = load_model('RadiusPostAuth')
-RadiusReply = load_model('RadiusReply')
-PhoneToken = load_model('PhoneToken')
-RadiusGroupCheck = load_model('RadiusGroupCheck')
-RadiusGroupReply = load_model('RadiusGroupReply')
-RadiusUserGroup = load_model('RadiusUserGroup')
-RegisteredUser = load_model('RegisteredUser')
-OrganizationRadiusSettings = load_model('OrganizationRadiusSettings')
+Nas = load_model("Nas")
+RadiusAccounting = load_model("RadiusAccounting")
+RadiusToken = load_model("RadiusToken")
+RadiusBatch = load_model("RadiusBatch")
+RadiusCheck = load_model("RadiusCheck")
+RadiusGroup = load_model("RadiusGroup")
+RadiusPostAuth = load_model("RadiusPostAuth")
+RadiusReply = load_model("RadiusReply")
+PhoneToken = load_model("PhoneToken")
+RadiusGroupCheck = load_model("RadiusGroupCheck")
+RadiusGroupReply = load_model("RadiusGroupReply")
+RadiusUserGroup = load_model("RadiusUserGroup")
+RegisteredUser = load_model("RegisteredUser")
+OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 User = get_user_model()
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 
@@ -47,13 +47,13 @@ OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 class OrganizationFirstMixin(MultitenantAdminMixin):
     def get_fields(self, request, obj=None):
         fields = super().get_fields(request, obj=None)
-        fields.remove('organization')
-        fields.insert(0, 'organization')
+        fields.remove("organization")
+        fields.insert(0, "organization")
         return fields
 
 
 class TimeStampedEditableAdmin(TimeReadonlyAdminMixin, ModelAdmin):
-    ordering = ['created']
+    ordering = ["created"]
 
 
 class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
@@ -64,59 +64,59 @@ class AlwaysHasChangedForm(AlwaysHasChangedMixin, forms.ModelForm):
 class RadiusCheckAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     form = ModeSwitcherForm
     list_display = [
-        'username',
-        'organization',
-        'attribute',
-        'op',
-        'value',
-        'created',
-        'modified',
+        "username",
+        "organization",
+        "attribute",
+        "op",
+        "value",
+        "created",
+        "modified",
     ]
-    search_fields = ['username', 'value']
+    search_fields = ["username", "value"]
     list_filter = [
         MultitenantOrgFilter,
-        'created',
-        'modified',
+        "created",
+        "modified",
     ]
     fields = [
-        'mode',
-        'organization',
-        'user',
-        'username',
-        'op',
-        'attribute',
-        'value',
-        'created',
-        'modified',
+        "mode",
+        "organization",
+        "user",
+        "username",
+        "op",
+        "attribute",
+        "value",
+        "created",
+        "modified",
     ]
-    autocomplete_fields = ('user',)
+    autocomplete_fields = ("user",)
 
 
 @admin.register(RadiusReply)
 class RadiusReplyAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     form = ModeSwitcherForm
     list_display = [
-        'username',
-        'organization',
-        'attribute',
-        'op',
-        'value',
-        'created',
-        'modified',
+        "username",
+        "organization",
+        "attribute",
+        "op",
+        "value",
+        "created",
+        "modified",
     ]
     list_filter = (MultitenantOrgFilter,)
     fields = [
-        'mode',
-        'organization',
-        'user',
-        'username',
-        'attribute',
-        'op',
-        'value',
-        'created',
-        'modified',
+        "mode",
+        "organization",
+        "user",
+        "username",
+        "attribute",
+        "op",
+        "value",
+        "created",
+        "modified",
     ]
-    autocomplete_fields = ('user',)
+    autocomplete_fields = ("user",)
 
 
 BaseAccounting = ReadOnlyAdmin if not app_settings.EDITABLE_ACCOUNTING else ModelAdmin
@@ -125,26 +125,26 @@ BaseAccounting = ReadOnlyAdmin if not app_settings.EDITABLE_ACCOUNTING else Mode
 @admin.register(RadiusAccounting)
 class RadiusAccountingAdmin(OrganizationFirstMixin, BaseAccounting):
     list_display = [
-        'session_id',
-        'organization',
-        'username',
-        'session_time',
-        'input_octets',
-        'output_octets',
-        'calling_station_id',
-        'called_station_id',
-        'start_time',
-        'stop_time',
+        "session_id",
+        "organization",
+        "username",
+        "session_time",
+        "input_octets",
+        "output_octets",
+        "calling_station_id",
+        "called_station_id",
+        "start_time",
+        "stop_time",
     ]
     search_fields = [
-        'unique_id',
-        'username',
-        'calling_station_id',
-        'called_station_id',
-        'nas_ip_address',
+        "unique_id",
+        "username",
+        "calling_station_id",
+        "called_station_id",
+        "nas_ip_address",
     ]
-    list_filter = ['start_time', 'stop_time', MultitenantOrgFilter]
-    ordering = ['-start_time']
+    list_filter = ["start_time", "stop_time", MultitenantOrgFilter]
+    ordering = ["-start_time"]
 
 
 @admin.register(Nas)
@@ -153,79 +153,79 @@ class NasAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         (
             None,
             {
-                'fields': (
-                    'organization',
-                    'name',
-                    'short_name',
-                    'type',
-                    'ports',
-                    'secret',
-                    'server',
-                    'community',
-                    'description',
+                "fields": (
+                    "organization",
+                    "name",
+                    "short_name",
+                    "type",
+                    "ports",
+                    "secret",
+                    "server",
+                    "community",
+                    "description",
                 )
             },
         ),
     )
-    search_fields = ['name', 'short_name', 'server']
+    search_fields = ["name", "short_name", "server"]
     list_display = [
-        'name',
-        'organization',
-        'short_name',
-        'type',
-        'secret',
-        'created',
-        'modified',
+        "name",
+        "organization",
+        "short_name",
+        "type",
+        "secret",
+        "created",
+        "modified",
     ]
     list_filter = (MultitenantOrgFilter,)
 
 
 class RadiusGroupCheckInline(TimeReadonlyAdminMixin, StackedInline):
     model = RadiusGroupCheck
-    exclude = ['groupname']
+    exclude = ["groupname"]
     extra = 0
 
 
 class RadiusGroupReplyInline(TimeReadonlyAdminMixin, StackedInline):
     model = RadiusGroupReply
-    exclude = ['groupname']
+    exclude = ["groupname"]
     extra = 0
 
 
 @admin.register(RadiusGroup)
 class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     list_display = [
-        'get_group_name',
-        'organization',
-        'name',
-        'description',
-        'default',
-        'created',
-        'modified',
+        "get_group_name",
+        "organization",
+        "name",
+        "description",
+        "default",
+        "created",
+        "modified",
     ]
-    search_fields = ['name']
+    search_fields = ["name"]
     list_filter = (MultitenantOrgFilter,)
     inlines = [RadiusGroupCheckInline, RadiusGroupReplyInline]
-    select_related = ('organization',)
-    actions = ['delete_selected_groups']
+    select_related = ("organization",)
+    actions = ["delete_selected_groups"]
 
     def get_group_name(self, obj):
-        return obj.name.replace(f'{obj.organization.slug}-', '')
+        return obj.name.replace(f"{obj.organization.slug}-", "")
 
-    get_group_name.short_description = _('Group name')
+    get_group_name.short_description = _("Group name")
 
     def has_delete_permission(self, request, obj=None):
         if not request.user.is_superuser and obj and obj.default:
             return False
         return super().has_delete_permission(request, obj)
 
-    @admin.action(permissions=['delete'])
+    @admin.action(permissions=["delete"])
     def delete_selected_groups(self, request, queryset):
         if self.get_default_queryset(request, queryset).exists():
             msg = _(
-                'Cannot proceed with the delete operation because '
-                'the batch of items contains the default group, '
-                'which cannot be deleted'
+                "Cannot proceed with the delete operation because "
+                "the batch of items contains the default group, "
+                "which cannot be deleted"
             )
             self.message_user(request, msg, messages.ERROR)
             return False
@@ -236,16 +236,16 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
             queryset.delete()
             self.message_user(
                 request,
-                _('Successfully deleted %(count)d %(items)s.')
-                % {'count': n, 'items': model_ngettext(self.opts, n)},
+                _("Successfully deleted %(count)d %(items)s.")
+                % {"count": n, "items": model_ngettext(self.opts, n)},
                 messages.SUCCESS,
             )
         return None
 
     def get_actions(self, request):
         actions = super().get_actions(request)
-        if 'delete_selected' in actions:
-            del actions['delete_selected']
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
         return actions
 
     def get_default_queryset(self, request, queryset):
@@ -257,35 +257,35 @@ if app_settings.USERGROUP_ADMIN:
 
     @admin.register(RadiusUserGroup)
     class RadiusUserGroupAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
-        list_display = ['username', 'groupname', 'priority', 'created', 'modified']
-        autocomplete_fields = ['user', 'group']
+        list_display = ["username", "groupname", "priority", "created", "modified"]
+        autocomplete_fields = ["user", "group"]
         form = ModeSwitcherForm
         fields = [
-            'mode',
-            'user',
-            'username',
-            'group',
-            'groupname',
-            'priority',
-            'created',
-            'modified',
+            "mode",
+            "user",
+            "username",
+            "group",
+            "groupname",
+            "priority",
+            "created",
+            "modified",
         ]
-        multitenant_parent = 'group'
+        multitenant_parent = "group"
 
 
 class RadGroupMixin(object):
-    list_display = ['groupname', 'attribute', 'op', 'value', 'created', 'modified']
-    autocomplete_fields = ['group']
+    list_display = ["groupname", "attribute", "op", "value", "created", "modified"]
+    autocomplete_fields = ["group"]
     form = ModeSwitcherForm
     fields = [
-        'mode',
-        'group',
-        'groupname',
-        'attribute',
-        'op',
-        'value',
-        'created',
-        'modified',
+        "mode",
+        "group",
+        "groupname",
+        "attribute",
+        "op",
+        "value",
+        "created",
+        "modified",
     ]
 
 
@@ -295,7 +295,7 @@ if app_settings.GROUPCHECK_ADMIN:
     class RadiusGroupCheckAdmin(
         MultitenantAdminMixin, RadGroupMixin, TimeStampedEditableAdmin
     ):
-        multitenant_parent = 'group'
+        multitenant_parent = "group"
 
 
 if app_settings.GROUPREPLY_ADMIN:
@@ -304,7 +304,7 @@ if app_settings.GROUPREPLY_ADMIN:
     class RadiusGroupReplyAdmin(
         MultitenantAdminMixin, RadGroupMixin, TimeStampedEditableAdmin
     ):
-        multitenant_parent = 'group'
+        multitenant_parent = "group"
 
 
 BasePostAuth = ReadOnlyAdmin if not app_settings.EDITABLE_POSTAUTH else ModelAdmin
@@ -313,102 +313,102 @@ BasePostAuth = ReadOnlyAdmin if not app_settings.EDITABLE_POSTAUTH else ModelAdm
 @admin.register(RadiusPostAuth)
 class RadiusPostAuthAdmin(OrganizationFirstMixin, BasePostAuth):
     list_display = [
-        'username',
-        'organization',
-        'reply',
-        'calling_station_id',
-        'called_station_id',
-        'date',
+        "username",
+        "organization",
+        "reply",
+        "calling_station_id",
+        "called_station_id",
+        "date",
     ]
     list_filter = [
-        'date',
-        'reply',
+        "date",
+        "reply",
         MultitenantOrgFilter,
     ]
-    search_fields = ['username', 'reply', 'calling_station_id', 'called_station_id']
-    exclude = ['id']
-    ordering = ['-date']
+    search_fields = ["username", "reply", "calling_station_id", "called_station_id"]
+    exclude = ["id"]
+    ordering = ["-date"]
 
 
 @admin.register(RadiusBatch)
 class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
-    change_form_template = 'openwisp-radius/admin/rad_batch_users_change_form.html'
-    add_form_template = 'openwisp-radius/admin/rad_batch_users_add_form.html'
+    change_form_template = "openwisp-radius/admin/rad_batch_users_change_form.html"
+    add_form_template = "openwisp-radius/admin/rad_batch_users_add_form.html"
     list_display = [
-        'name',
-        'organization',
-        'strategy',
-        'expiration_date',
-        'created',
-        'modified',
+        "name",
+        "organization",
+        "strategy",
+        "expiration_date",
+        "created",
+        "modified",
     ]
     fields = [
-        'strategy',
-        'organization',
-        'name',
-        'csvfile',
-        'prefix',
-        'number_of_users',
-        'users',
-        'expiration_date',
-        'created',
-        'modified',
+        "strategy",
+        "organization",
+        "name",
+        "csvfile",
+        "prefix",
+        "number_of_users",
+        "users",
+        "expiration_date",
+        "created",
+        "modified",
     ]
     list_filter = [
-        'strategy',
+        "strategy",
         MultitenantOrgFilter,
     ]
-    search_fields = ['name']
-    actions = ['delete_selected_batches']
+    search_fields = ["name"]
+    actions = ["delete_selected_batches"]
     form = RadiusBatchForm
     help_text = {
-        'text': _(
-            'Users imported or generated through this form will be flagged '
-            'as verified if the organization requires identity verification, '
-            'otherwise the generated users would not be able to log in. '
-            'If this organization requires identity verification, make sure '
-            'the identity of the users is verified before before '
-            'giving out the credentials.'
+        "text": _(
+            "Users imported or generated through this form will be flagged "
+            "as verified if the organization requires identity verification, "
+            "otherwise the generated users would not be able to log in. "
+            "If this organization requires identity verification, make sure "
+            "the identity of the users is verified before before "
+            "giving out the credentials."
         ),
-        'documentation_url': (
-            'https://openwisp.io/docs/stable/radius/user/importing_users.html'
+        "documentation_url": (
+            "https://openwisp.io/docs/stable/radius/user/importing_users.html"
         ),
     }
 
     class Media:
         js = [
-            'admin/js/jquery.init.js',
-            'openwisp-radius/js/strategy-switcher.js',
+            "admin/js/jquery.init.js",
+            "openwisp-radius/js/strategy-switcher.js",
         ]
         css = {
-            'all': (
-                'openwisp-radius/css/radiusbatch.css',
-                'admin/css/help-text-stacked.css',
+            "all": (
+                "openwisp-radius/css/radiusbatch.css",
+                "admin/css/help-text-stacked.css",
             )
         }
 
     def number_of_users(self, obj):
         return obj.users.count()
 
-    number_of_users.short_description = _('number of users')
+    number_of_users.short_description = _("number of users")
 
     def get_fields(self, request, obj=None):
         fields = super().get_fields(request, obj)[:]
         if not obj:
-            fields.remove('users')
+            fields.remove("users")
         return fields
 
     def save_model(self, request, obj, form, change):
         data = form.cleaned_data
-        strategy = data.get('strategy')
+        strategy = data.get("strategy")
         if not change:
-            if strategy == 'csv':
-                if data.get('csvfile', False):
-                    csvfile = data.get('csvfile')
+            if strategy == "csv":
+                if data.get("csvfile", False):
+                    csvfile = data.get("csvfile")
                     obj.csvfile_upload(csvfile)
-            elif strategy == 'prefix':
-                prefix = data.get('prefix')
-                n = data.get('number_of_users')
+            elif strategy == "prefix":
+                prefix = data.get("prefix")
+                n = data.get("number_of_users")
                 obj.prefix_add(prefix, n)
         else:
             obj.save()
@@ -417,7 +417,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         obj.users.all().delete()
         super(RadiusBatchAdmin, self).delete_model(request, obj)
 
-    def change_view(self, request, object_id, form_url='', extra_context=None):
+    def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
         radbatch = self.get_object(request, object_id)
         if radbatch is None:
@@ -427,15 +427,15 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             return self._get_obj_does_not_exist_redirect(
                 request, self.model._meta, object_id
             )
-        if radbatch.strategy == 'prefix':
+        if radbatch.strategy == "prefix":
             batch_pdf_api_url = reverse(
-                'radius:download_rad_batch_pdf',
+                "radius:download_rad_batch_pdf",
                 urlconf=RADIUS_API_URLCONF,
                 args=[radbatch.organization.slug, object_id],
             )
             if RADIUS_API_BASEURL:
                 batch_pdf_api_url = urljoin(RADIUS_API_BASEURL, batch_pdf_api_url)
-            extra_context['download_rad_batch_pdf_url'] = batch_pdf_api_url
+            extra_context["download_rad_batch_pdf_url"] = batch_pdf_api_url
         return super().change_view(
             request,
             object_id,
@@ -443,23 +443,23 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             extra_context=extra_context,
         )
 
-    def add_view(self, request, form_url='', extra_context=None):
+    def add_view(self, request, form_url="", extra_context=None):
         extra_context = extra_context or {}
-        extra_context['help_text'] = self.help_text
+        extra_context["help_text"] = self.help_text
         return super().add_view(request, form_url, extra_context)
 
     def get_actions(self, request):
         actions = super().get_actions(request)
-        if 'delete_selected' in actions:
-            del actions['delete_selected']
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
         return actions
 
-    @admin.action(description=_('Delete selected batches'), permissions=['delete'])
+    @admin.action(description=_("Delete selected batches"), permissions=["delete"])
     def delete_selected_batches(self, request, queryset):
         for obj in queryset:
             obj.delete()
         self.message_user(
-            request, 'Successfully deleted selected batches.', level=messages.SUCCESS
+            request, "Successfully deleted selected batches.", level=messages.SUCCESS
         )
 
     def get_readonly_fields(self, request, obj=None):
@@ -468,12 +468,12 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         )
         if obj:
             return (
-                'strategy',
-                'prefix',
-                'csvfile',
-                'number_of_users',
-                'users',
-                'expiration_date',
+                "strategy",
+                "prefix",
+                "csvfile",
+                "number_of_users",
+                "users",
+                "expiration_date",
             ) + readonly_fields
         return readonly_fields
 
@@ -481,18 +481,18 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 # Inlines for UserAdmin & OrganizationAdmin
 class RadiusUserGroupInline(StackedInline):
     model = RadiusUserGroup
-    exclude = ['username', 'groupname', 'created', 'modified']
-    ordering = ('priority',)
-    autocomplete_fields = ('group',)
-    verbose_name = _('radius user group')
-    verbose_name_plural = _('radius user groups')
+    exclude = ["username", "groupname", "created", "modified"]
+    ordering = ("priority",)
+    autocomplete_fields = ("group",)
+    verbose_name = _("radius user group")
+    verbose_name_plural = _("radius user groups")
     extra = 0
 
 
 class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
     model = PhoneToken
     extra = 0
-    readonly_fields = ('verified', 'valid_until', 'attempts', 'phone_number', 'ip')
+    readonly_fields = ("verified", "valid_until", "attempts", "phone_number", "ip")
 
     def has_add_permission(self, request, obj):
         return False
@@ -508,7 +508,7 @@ class RegisteredUserInline(StackedInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
     extra = 0
-    readonly_fields = ('modified',)
+    readonly_fields = ("modified",)
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -519,22 +519,22 @@ UserAdmin.inlines += [
     RadiusUserGroupInline,
     PhoneTokenInline,
 ]
-UserAdmin.list_filter += (RegisteredUserFilter, 'registered_user__method')
+UserAdmin.list_filter += (RegisteredUserFilter, "registered_user__method")
 
 
 def get_is_verified(self, obj):
     try:
-        value = 'yes' if obj.registered_user.is_verified else 'no'
+        value = "yes" if obj.registered_user.is_verified else "no"
     except Exception:
-        value = 'unknown'
-    icon_url = static(f'admin/img/icon-{value}.svg')
+        value = "unknown"
+    icon_url = static(f"admin/img/icon-{value}.svg")
     return mark_safe(f'<img src="{icon_url}" alt="{value}">')
 
 
 UserAdmin.get_is_verified = get_is_verified
-UserAdmin.get_is_verified.short_description = _('Verified')
-UserAdmin.list_display.insert(3, 'get_is_verified')
-UserAdmin.list_select_related = ('registered_user',)
+UserAdmin.get_is_verified.short_description = _("Verified")
+UserAdmin.list_display.insert(3, "get_is_verified")
+UserAdmin.list_select_related = ("registered_user",)
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
@@ -544,45 +544,45 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
         (
             None,
             {
-                'fields': (
-                    'token',
-                    'freeradius_allowed_hosts',
-                    'coa_enabled',
-                    'registration_enabled',
-                    'saml_registration_enabled',
-                    'social_registration_enabled',
-                    'mac_addr_roaming_enabled',
-                    'needs_identity_verification',
-                    'first_name',
-                    'last_name',
-                    'birth_date',
-                    'location',
-                    'login_url',
-                    'status_url',
-                    'password_reset_url',
+                "fields": (
+                    "token",
+                    "freeradius_allowed_hosts",
+                    "coa_enabled",
+                    "registration_enabled",
+                    "saml_registration_enabled",
+                    "social_registration_enabled",
+                    "mac_addr_roaming_enabled",
+                    "needs_identity_verification",
+                    "first_name",
+                    "last_name",
+                    "birth_date",
+                    "location",
+                    "login_url",
+                    "status_url",
+                    "password_reset_url",
                 )
             },
         ),
         (
-            _('SMS options'),
+            _("SMS options"),
             {
-                'fields': (
-                    'sms_verification',
-                    'sms_sender',
-                    'sms_message',
-                    'allowed_mobile_prefixes',
-                    'sms_cooldown',
-                    'sms_meta_data',
+                "fields": (
+                    "sms_verification",
+                    "sms_sender",
+                    "sms_message",
+                    "allowed_mobile_prefixes",
+                    "sms_cooldown",
+                    "sms_meta_data",
                 ),
-                'classes': ('org-sms-options',),
+                "classes": ("org-sms-options",),
             },
         ),
     )
 
     class Media:
         js = [
-            'admin/js/jquery.init.js',
-            'openwisp-radius/js/organization-setting-inline.js',
+            "admin/js/jquery.init.js",
+            "openwisp-radius/js/organization-setting-inline.js",
         ]
 
 
@@ -597,7 +597,7 @@ if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
     class SocialAccountInline(admin.StackedInline):
         model = SocialAccount
         extra = 0
-        readonly_fields = ('provider', 'uid', 'extra_data')
+        readonly_fields = ("provider", "uid", "extra_data")
 
         def has_add_permission(self, request, obj):
             return False
@@ -617,17 +617,17 @@ if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 
         def get_exclude(self, request, obj=None):
             fields = super().get_exclude(request, obj) or []
-            if not hasattr(obj, 'radius_token'):
-                return fields + ['key']
+            if not hasattr(obj, "radius_token"):
+                return fields + ["key"]
             return fields
 
         def get_formset(self, request, obj=None, **kwargs):
-            kwargs['widgets'] = kwargs.get('widgets', {})
-            if hasattr(obj, 'radius_token'):
-                kwargs['widgets'].update(
+            kwargs["widgets"] = kwargs.get("widgets", {})
+            if hasattr(obj, "radius_token"):
+                kwargs["widgets"].update(
                     {
-                        'key': forms.widgets.TextInput(
-                            attrs={'class': 'readonly vTextField', 'readonly': True}
+                        "key": forms.widgets.TextInput(
+                            attrs={"class": "readonly vTextField", "readonly": True}
                         )
                     }
                 )
@@ -639,8 +639,8 @@ if settings.DEBUG:
 
     @admin.register(RadiusToken)
     class RadiusTokenAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
-        list_display = ['key', 'user', 'created']
-        fields = ['user', 'organization', 'can_auth']
-        ordering = ('-created',)
+        list_display = ["key", "user", "created"]
+        fields = ["user", "organization", "can_auth"]
+        ordering = ("-created",)
         list_filter = [MultitenantOrgFilter]
-        autocomplete_fields = ('user',)
+        autocomplete_fields = ("user",)

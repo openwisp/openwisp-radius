@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 default=None,
-                fallback=','.join(app_settings.ALLOWED_MOBILE_PREFIXES),
+                fallback=",".join(app_settings.ALLOWED_MOBILE_PREFIXES),
                 help_text=(
                     "Comma separated list of international mobile prefixes"
                     " allowed to register via the user registration API."
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
             field=openwisp_utils.fields.FallbackTextField(
                 blank=True,
                 default=None,
-                fallback=','.join(app_settings.FREERADIUS_ALLOWED_HOSTS),
+                fallback=",".join(app_settings.FREERADIUS_ALLOWED_HOSTS),
                 help_text=(
                     "Comma separated list of IP addresses allowed to access"
                     " freeradius API"

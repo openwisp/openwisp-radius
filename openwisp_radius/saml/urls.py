@@ -17,34 +17,34 @@ def get_saml_urls(saml_views=None):
 
     return [
         path(
-            'login/',
+            "login/",
             saml_views.LoginView.as_view(),
-            name='saml2_login',
+            name="saml2_login",
         ),
         path(
-            'acs/',
+            "acs/",
             saml_views.AssertionConsumerServiceView.as_view(),
-            name='saml2_acs',
+            name="saml2_acs",
         ),
         path(
-            'additional-info/',
+            "additional-info/",
             saml_views.LoginAdditionalInfoView.as_view(),
-            name='saml2_additional_info',
+            name="saml2_additional_info",
         ),
         path(
-            'logout/',
+            "logout/",
             saml_views.LogoutInitView.as_view(),
-            name='saml2_logout',
+            name="saml2_logout",
         ),
-        path('ls/', saml_views.LogoutView.as_view(), name='saml2_ls'),
+        path("ls/", saml_views.LogoutView.as_view(), name="saml2_ls"),
         path(
-            'ls/post/',
+            "ls/post/",
             saml_views.LogoutView.as_view(),
-            name='saml2_ls_post',
+            name="saml2_ls_post",
         ),
         path(
-            'metadata/',
+            "metadata/",
             saml_views.MetadataView.as_view(),
-            name='saml2_metadata',
+            name="saml2_metadata",
         ),
     ]

@@ -14,16 +14,16 @@ from .. import settings as app_settings
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0009_radbatch_user_credentials_field'),
+        ("openwisp_radius", "0009_radbatch_user_credentials_field"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='radiusbatch',
-            name='csvfile',
+            model_name="radiusbatch",
+            name="csvfile",
             field=private_storage.fields.PrivateFileField(
                 blank=True,
-                help_text='The csv file containing the user details to be uploaded',
+                help_text="The csv file containing the user details to be uploaded",
                 null=True,
                 storage=private_storage.storage.files.PrivateFileSystemStorage(
                     base_url=urljoin(
@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
                     location=settings.PRIVATE_STORAGE_ROOT,
                 ),
                 upload_to=openwisp_radius.base.models._get_csv_file_location,
-                verbose_name='CSV',
+                verbose_name="CSV",
             ),
         ),
     ]

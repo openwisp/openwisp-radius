@@ -6,21 +6,21 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0008_sms_sender'),
+        ("openwisp_radius", "0008_sms_sender"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='radiusbatch',
-            name='pdf',
+            model_name="radiusbatch",
+            name="pdf",
         ),
         migrations.AddField(
-            model_name='radiusbatch',
-            name='user_credentials',
+            model_name="radiusbatch",
+            name="user_credentials",
             field=jsonfield.fields.JSONField(
                 blank=True,
                 null=True,
-                verbose_name='PDF',
+                verbose_name="PDF",
             ),
         ),
     ]

@@ -5,18 +5,18 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('openwisp_radius', '0021_radius_user_group_unique_together'),
+        ("openwisp_radius", "0021_radius_user_group_unique_together"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='registration_enabled',
+            model_name="organizationradiussettings",
+            name="registration_enabled",
             field=models.BooleanField(
                 blank=True,
                 default=True,
-                help_text='Whether the registration API endpoint should be enabled or '
-                'not',
+                help_text="Whether the registration API endpoint should be enabled or "
+                "not",
                 null=True,
             ),
         ),
