@@ -3,7 +3,7 @@ djangorestframework-simplejwt
 django-cors-headers>=2.5.2
 packaging
 openwisp-sphinx-theme~=1.0.2
-freezegun~=1.5.1
+freezegun~=1.5.2
 django-extensions
 openwisp-utils[qa,selenium,channels-test] @ https://github.com/openwisp/openwisp-utils/tarball/1.2
 pylinkvalidator
