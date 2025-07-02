@@ -200,12 +200,12 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
             # let's set zero as default value
             if data.get('status_type', None) == 'Start' and data.get(field) == '':
                 data[field] = 0
-            # missing data in accounting stop,
+            # missing data in accounting data,
             # let's remove the empty string to
             # prevent the API from failing
             # the existing values stored in previous
             # interim-updates won't be changed
-            if data.get('status_type', None) == 'Stop' and data.get(field) == '':
+            if data.get('status_type', None) != "Start" and data.get(field) == '':
                 del data[field]
         return super().run_validation(data)
 
