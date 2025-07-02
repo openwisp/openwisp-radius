@@ -603,6 +603,26 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data["terminate_cause"] = ""
         self.assertAcctData(ra, data)
 
+    @freeze_time(START_DATE)
+    def test_accounting_update_missing_octets(self):
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+        data["input_octets"] = ""
+        data["output_octets"] = ""
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        ra.refresh_from_db()
+        self.assertEqual(ra.update_time.timetuple(), now().timetuple())
+        data["terminate_cause"] = ""
+        data["input_octets"] = 0
+        data["output_octets"] = 0
+        self.assertAcctData(ra, data)
+
     @mock.patch.object(
         app_settings,
         "CALLED_STATION_IDS",
