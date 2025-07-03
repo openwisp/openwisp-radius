@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
-from django.db import models
+from django.db import models, transaction
 from django.db.models import ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -958,9 +958,10 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         csv_data = csvfile.read()
         csv_data = decode_byte_data(csv_data)
         reader = csv.reader(StringIO(csv_data), delimiter=",")
-        self.full_clean()
-        self.save()
-        self.add(reader, password_length)
+        with transaction.atomic():
+            self.full_clean()
+            self.save()
+            self.add(reader, password_length)
 
     def prefix_add(self, prefix, n, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
         users_list, user_credentials = prefix_generate_users(prefix, n, password_length)
