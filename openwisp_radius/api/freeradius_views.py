@@ -315,8 +315,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                     continue
                 # if max is reached send access rejected + reply message
                 except MaxQuotaReached as max_quota:
-                    data = self.reject_attributes.copy()
-                    data["Reply-Message"] = max_quota.reply_message
+                    data.update(self.reject_attributes.copy())
+                    if "Reply-Message" not in data:
+                        data["Reply-Message"] = max_quota.reply_message
                     return data, self.max_quota_status
                 # avoid crashing on unexpected runtime errors
                 except Exception as e:
