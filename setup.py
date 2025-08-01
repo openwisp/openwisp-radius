@@ -42,7 +42,7 @@ setup(
         ),
         "passlib~=1.7.1",
         "djangorestframework-link-header-pagination~=0.1.1",
-        "weasyprint~=65.0",
+        "weasyprint>=65,<67",
         "dj-rest-auth>=6.0,<7.1",
         "django-sendsms~=0.5.0",
         "jsonfield~=3.1.0",
