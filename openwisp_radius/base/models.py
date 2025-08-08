@@ -529,8 +529,15 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         return self.unique_id
 
     @classmethod
-    def close_stale_sessions(cls, days):
-        older_than = timezone.now() - timedelta(days=days)
+    def close_stale_sessions(cls, days=None, hours=None):
+        if hours:
+            delta = timedelta(hours=hours)
+        elif days:
+            delta = timedelta(days=days)
+        else:
+            raise ValueError("Missing `days` or `hours`")
+        # determine limit date time
+        older_than = timezone.now() - delta
         # If the "update_time" is recent, then the session is not closed
         # even when the "start_time" is older than the specified time.
         # The "start_time" of a session is only checked when the
