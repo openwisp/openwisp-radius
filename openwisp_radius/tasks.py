@@ -28,8 +28,8 @@ def delete_old_radacct(number_of_days=365):
 
 
 @shared_task
-def cleanup_stale_radacct(number_of_days=365):
-    management.call_command("cleanup_stale_radacct", number_of_days)
+def cleanup_stale_radacct(number_of_days=365, number_of_hours=0):
+    management.call_command("cleanup_stale_radacct", number_of_days, number_of_hours)
 
 
 @shared_task
