@@ -139,7 +139,7 @@ STATUS_TYPE_CHOICES = (
     ("Start", "Start"),
     ("Interim-Update", "Interim-Update"),
     ("Stop", "Stop"),
-    ("Accounting-On", "Accounting-On (ignored)"),
+    ("Accounting-On", "Accounting-On"),
     ("Accounting-Off", "Accounting-Off (ignored)"),
 )
 
