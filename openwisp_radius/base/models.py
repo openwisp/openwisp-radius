@@ -557,6 +557,40 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.terminate_cause = "Session Timeout"
             session.save()
 
+    @classmethod
+    def close_nas_sessions(cls, organization_id, nas_ip_address):
+        """
+        Close all open sessions for a specific NAS.
+
+        This method is used when handling Accounting-On packets,
+        which indicate that the NAS has restarted or experienced
+        a power failure. All active sessions on that NAS should
+        be considered stale and closed.
+
+        Returns the number of sessions closed.
+        """
+        open_sessions = cls.objects.filter(
+            organization_id=organization_id,
+            nas_ip_address=nas_ip_address,
+            stop_time__isnull=True,
+        )
+
+        closed_sessions_count = 0
+        now_time = timezone.now()
+
+        for session in open_sessions:
+            session.stop_time = now_time
+            session.update_time = now_time
+            if session.start_time:
+                session.session_time = int(
+                    (now_time - session.start_time).total_seconds()
+                )
+            session.terminate_cause = "NAS-Reboot"
+            session.save()
+            closed_sessions_count += 1
+
+        return closed_sessions_count
+
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
     name = models.CharField(

@@ -44,9 +44,10 @@ RE_MAC_ADDR = re.compile(
     "^{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}".format("[a-f0-9]{2}"), re.I
 )
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
-# Accounting-On and Accounting-Off are not implemented and
-# hence  ignored right now - may be implemented in the future
-UNSUPPORTED_STATUS_TYPES = ["Accounting-On", "Accounting-Off"]
+# Accounting-Off is not implemented and hence ignored right now
+# - may be implemented in the future
+# Accounting-On is implemented to handle stale session cleanup
+UNSUPPORTED_STATUS_TYPES = ["Accounting-Off"]
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
@@ -496,13 +497,20 @@ class AccountingView(ListCreateAPIView):
         """
         **API Endpoint used by FreeRADIUS server.**
         Add or update accounting information (start, interim-update, stop);
+        Handle Accounting-On packets to close stale sessions;
         does not return any JSON response so that freeradius will avoid
         processing the response without generating warnings
         """
         if request.user.is_anonymous and request.auth is None:
             return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
-        if data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
+        status_type = data.get("status_type")
+
+        if status_type == "Accounting-On":
+            self._handle_accounting_on(data)
+            return Response(None)
+
+        if status_type in UNSUPPORTED_STATUS_TYPES:
             return Response(None)
         # Create or Update
         try:
@@ -565,6 +573,39 @@ class AccountingView(ListCreateAPIView):
             sender=self.__class__,
             accounting_data=accounting_data,
             view=self,
+        )
+
+    def _handle_accounting_on(self, data):
+        """
+        Handle Accounting-On packets by triggering a background task
+        to close stale sessions for the NAS.
+
+        When a NAS (Network Access Server) sends an Accounting-On packet,
+        it indicates that the NAS has restarted or experienced a power failure.
+        All active sessions on that NAS should be considered stale and closed.
+        """
+        nas_ip_address = data.get("nas_ip_address")
+        if not nas_ip_address:
+            logger.warning("Accounting-On packet received without nas_ip_address")
+            return
+
+        organization_id = self.request.auth
+        if not organization_id:
+            logger.warning("Accounting-On packet received without valid organization")
+            return
+
+        # Import here to avoid circular imports
+        from ..tasks import handle_accounting_on
+
+        # Execute the task in the background to avoid blocking the API response
+        # and to prevent performance issues when there are many sessions to close
+        handle_accounting_on.delay(
+            organization_id=organization_id, nas_ip_address=nas_ip_address
+        )
+
+        logger.info(
+            f"Accounting-On: Scheduled background task to close stale sessions "
+            f"for NAS {nas_ip_address} in organization {organization_id}"
         )
 
 
