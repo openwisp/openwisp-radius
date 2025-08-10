@@ -95,6 +95,15 @@ def _write_user_signup_metric_for_all(metric_key):
     except KeyError:
         total_registered_users[""] = users_without_registereduser
 
+    from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
+
+    all_methods = [clean_registration_method(m) for m, _ in REGISTRATION_METHOD_CHOICES]
+    for m in all_methods:
+        existing_methods = [
+            clean_registration_method(k) for k in total_registered_users.keys()
+        ]
+        if m not in existing_methods:
+            total_registered_users[m] = 0
     for method, count in total_registered_users.items():
         method = clean_registration_method(method)
         metric = get_metric_func(organization_id="__all__", registration_method=method)

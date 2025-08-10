@@ -463,17 +463,25 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         )
 
     def get_readonly_fields(self, request, obj=None):
+<<<<<<< HEAD
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
             request, obj
         )
         if obj and obj.status != "pending":
             return (
+=======
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if obj:
+            return readonly_fields + (
+>>>>>>> 1402441 ([admin/api] Make batch user creation organization field readonly #609)
                 "strategy",
+                "organization",
                 "prefix",
                 "csvfile",
                 "number_of_users",
                 "users",
                 "expiration_date",
+<<<<<<< HEAD
                 "name",
                 "organization",
                 "status",
@@ -506,6 +514,10 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         else:
             self.message_user(request, msg, messages.SUCCESS)
             return self.response_post_save_add(request, obj)
+=======
+            )
+        return readonly_fields
+>>>>>>> 1402441 ([admin/api] Make batch user creation organization field readonly #609)
 
 
 # Inlines for UserAdmin & OrganizationAdmin
