@@ -34,6 +34,7 @@ from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveUpdateAPIView,
     RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.pagination import PageNumberPagination
@@ -72,6 +73,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusBatchUpdateSerializer,
     RadiusGroupSerializer,
     RadiusUserGroupSerializer,
     UserRadiusUsageSerializer,
@@ -155,6 +157,34 @@ class DispatchOrgMixin(object):
             ).format(username=user.username, organization=self.organization.name)
             logger.info(message)
             raise serializers.ValidationError({"non_field_errors": [message]})
+
+
+class BatchUpdateView(ThrottledAPIMixin, RetrieveUpdateAPIView):
+    """
+    API view for updating existing RadiusBatch objects.
+    Organization field is readonly for existing objects.
+    """
+
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.none()
+    serializer_class = RadiusBatchSerializer
+
+    def get_queryset(self):
+        """Filter batches by user's organization membership"""
+        user = self.request.user
+        if user.is_superuser:
+            return RadiusBatch.objects.all()
+        return RadiusBatch.objects.filter(organization__in=user.organizations_managed)
+
+    def get_serializer_class(self):
+        """Use RadiusBatchUpdateSerializer for PUT/PATCH requests"""
+        if self.request.method in ("PUT", "PATCH"):
+            return RadiusBatchUpdateSerializer
+        return RadiusBatchSerializer
+
+
+batch_detail = BatchUpdateView.as_view()
 
 
 class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):

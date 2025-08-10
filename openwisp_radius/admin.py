@@ -469,6 +469,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         if obj and obj.status != "pending":
             return (
                 "strategy",
+                "organization",
                 "prefix",
                 "csvfile",
                 "number_of_users",
@@ -479,7 +480,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "status",
             ) + readonly_fields
         elif obj:
-            return ("status",) + readonly_fields
+            return ("organization", "status") + readonly_fields
         return ("status",) + readonly_fields
 
     def has_delete_permission(self, request, obj=None):
