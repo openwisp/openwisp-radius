@@ -1494,3 +1494,33 @@ class TestAdmin(
         with self.subTest("test radius group is registered"):
             html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)
+
+    def test_radiusbatch_organization_readonly_for_existing_objects(self):
+        """
+        Test that organization field is readonly for existing RadiusBatch objects
+        """
+        batch = self._create_radius_batch(
+            name="test-batch",
+            strategy="prefix",
+            prefix="test-prefix"
+        )
+        url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk])
+        
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertContains(response, 'readonly')
+        self.assertContains(response, batch.organization.name)
+
+    def test_radiusbatch_organization_editable_for_new_objects(self):
+        """
+        Test that organization field is editable for new RadiusBatch objects
+        """
+        url = reverse(f"admin:{self.app_label}_radiusbatch_add")
+        
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertContains(response, 'name="organization"')
+        form_html = response.content.decode()
+        self.assertIn('name="organization"', form_html)
