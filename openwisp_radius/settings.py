@@ -113,6 +113,12 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
         "location": "disabled",
     },
 )
+SIMULTANEOUS_USE_ENABLED = get_settings_value("SIMULTANEOUS_USE_ENABLED", False)
+ADDITIONAL_RADIUS_CHECKS = get_settings_value("ADDITIONAL_RADIUS_CHECKS", [])
+
+# Add Simultaneous-Use check if enabled
+if SIMULTANEOUS_USE_ENABLED and "Simultaneous-Use" not in ADDITIONAL_RADIUS_CHECKS:
+    ADDITIONAL_RADIUS_CHECKS = list(ADDITIONAL_RADIUS_CHECKS) + ["Simultaneous-Use"]
 
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS

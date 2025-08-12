@@ -302,40 +302,94 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             group_checks = get_group_checks(user_group.group)
 
-            for Counter in app_settings.COUNTERS:
-                group_check = group_checks.get(Counter.check_name)
-                if not group_check:
-                    continue
-                try:
-                    counter = Counter(
-                        user=user, group=user_group.group, group_check=group_check
-                    )
-                    remaining = counter.check()
-                except SkipCheck:
-                    continue
-                # if max is reached send access rejected + reply message
-                except MaxQuotaReached as max_quota:
-                    data.update(self.reject_attributes.copy())
-                    if "Reply-Message" not in data:
-                        data["Reply-Message"] = max_quota.reply_message
-                    return data, self.max_quota_status
-                # avoid crashing on unexpected runtime errors
-                except Exception as e:
-                    logger.exception(f'Got exception "{e}" while executing {counter}')
-                    continue
-                if remaining is None:
-                    continue
-                reply_name = counter.reply_name
-                # send remaining value in RADIUS reply, if needed.
-                # This emulates the implementation of sqlcounter in freeradius
-                # which sends the reply message only if the value is smaller
-                # than what was defined to a previous reply message
-                if reply_name not in data or remaining < self._get_reply_value(
-                    data, counter
-                ):
-                    data[reply_name] = remaining
+            # Validate additional radius checks
+            additional_checks_result = self._validate_additional_radius_checks(
+                group_checks, user, organization_id
+            )
+            if additional_checks_result is not None:
+                return additional_checks_result
+
+            # Execute counter checks
+            counter_result = self._execute_counter_checks(
+                data, user, user_group.group, group_checks
+            )
+            if counter_result is not None:
+                return counter_result
 
         return data, self.accept_status
+
+    def _validate_additional_radius_checks(self, group_checks, user, organization_id):
+        """
+        Validates additional RADIUS checks like Simultaneous-Use
+        Returns rejection response if validation fails, None if validation passes
+        """
+        for check_name in app_settings.ADDITIONAL_RADIUS_CHECKS:
+            group_check = group_checks.pop(check_name, None)
+            if not group_check:
+                continue
+
+            if check_name == "Simultaneous-Use":
+                # Check for simultaneous use
+                if self._check_simultaneous_use(user, group_check):
+                    data = self.reject_attributes.copy()
+                    if "Reply-Message" not in data:
+                        data["Reply-Message"] = (
+                            "You are already logged in - access denied"
+                        )
+                    return data, self.reject_status
+        return None
+
+    def _check_simultaneous_use(self, user, group_check):
+        """
+        Check if user has exceeded simultaneous use limit
+        Returns True if limit is exceeded, False otherwise
+        """
+        max_simultaneous = int(group_check.value)
+        if max_simultaneous <= 0:
+            return False
+        # Count open sessions for this user
+        open_sessions = RadiusAccounting.objects.filter(
+            username=user.username, stop_time__isnull=True
+        ).count()
+        return open_sessions >= max_simultaneous
+
+    def _execute_counter_checks(self, data, user, group, group_checks):
+        """
+        Execute counter checks and return rejection response if any quota is exceeded
+        Returns None if all checks pass
+        """
+        for Counter in app_settings.COUNTERS:
+            group_check = group_checks.get(Counter.check_name)
+            if not group_check:
+                continue
+            try:
+                counter = Counter(user=user, group=group, group_check=group_check)
+                remaining = counter.check()
+            except SkipCheck:
+                continue
+            # if max is reached send access rejected + reply message
+            except MaxQuotaReached as max_quota:
+                data.update(self.reject_attributes.copy())
+                if "Reply-Message" not in data:
+                    data["Reply-Message"] = max_quota.reply_message
+                return data, self.max_quota_status
+            # avoid crashing on unexpected runtime errors
+            except Exception as e:
+                logger.exception(f'Got exception "{e}" while executing {counter}')
+                continue
+            if remaining is None:
+                continue
+            reply_name = counter.reply_name
+            # send remaining value in RADIUS reply, if needed.
+            # This emulates the implementation of sqlcounter in freeradius
+            # which sends the reply message only if the value is smaller
+            # than what was defined to a previous reply message
+            if reply_name not in data or remaining < self._get_reply_value(
+                data, counter
+            ):
+                data[reply_name] = remaining
+
+        return None
 
     @staticmethod
     def _get_reply_value(data, counter):
