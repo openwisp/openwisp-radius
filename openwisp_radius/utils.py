@@ -265,10 +265,13 @@ def get_group_checks(group):
     instead of once per each counter in use.
     """
 
-    if not app_settings.COUNTERS:
+    if not app_settings.COUNTERS and not app_settings.ADDITIONAL_RADIUS_CHECKS:
         return
 
-    check_attributes = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys()
+    check_attributes = set(app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys())
+    # Add additional radius checks to the list of attributes to query
+    check_attributes.update(app_settings.ADDITIONAL_RADIUS_CHECKS)
+
     group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
     result = {}
     for group_check in group_checks:

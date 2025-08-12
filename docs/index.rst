@@ -43,6 +43,7 @@ OpenWISP architecture.
     user/radius_monitoring
     user/management_commands.rst
     user/rest-api.rst
+    user/simultaneous_use.rst
     user/settings.rst
 
 .. toctree::
