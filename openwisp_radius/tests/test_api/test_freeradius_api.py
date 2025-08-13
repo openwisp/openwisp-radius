@@ -22,7 +22,7 @@ from ... import settings as app_settings
 from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
-from ...utils import load_model
+from ...utils import get_group_checks, load_model
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
@@ -1346,7 +1346,7 @@ class TestTransactionFreeradiusApi(
 
         with self.subTest("Counters disabled"):
             with mock.patch.object(app_settings, "COUNTERS", []):
-                with self.assertNumQueries(6):
+                with self.assertNumQueries(7):
                     response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(response.status_code, 200)
                 expected = {
@@ -1596,10 +1596,7 @@ class TestTransactionFreeradiusApi(
 
     def test_get_group_checks_includes_additional_checks(self):
         """Test that get_group_checks includes additional radius checks"""
-        from ...utils import get_group_checks
-
         org = self._get_org()
-
         # Create a group with custom check
         group = RadiusGroup.objects.create(
             organization=org, name="test-group", description="Test group"

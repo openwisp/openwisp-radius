@@ -411,43 +411,23 @@ authorize the request with other freeradius modules.
 Set this to ``True`` if you are performing authorization exclusively
 through the REST API.
 
-.. _openwisp_radius_additional_radius_checks:
-
-``OPENWISP_RADIUS_ADDITIONAL_RADIUS_CHECKS``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``[]``
-
-This setting allows you to specify additional RADIUS checks that should be
-validated during the authorization process. These checks are performed in
-addition to the standard counter checks.
-
-Currently supported additional checks:
-
-- ``Simultaneous-Use``: Enforces per-user concurrent session limits. See
-  :doc:`simultaneous_use`.
-
-Example:
-
-.. code-block:: python
-
-    OPENWISP_RADIUS_ADDITIONAL_RADIUS_CHECKS = ["Simultaneous-Use"]
-
-When a check is listed, it is validated against the user's group during
-authorization; if it fails, the request is rejected.
-
 .. _openwisp_radius_simultaneous_use_enabled:
 
 ``OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Default**: ``False``
+**Default**: ``True``
 
-When ``True``, automatically adds ``Simultaneous-Use`` to
-:ref:`OPENWISP_RADIUS_ADDITIONAL_RADIUS_CHECKS
-<openwisp_radius_additional_radius_checks>`.
+``OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For behavior, configuration steps, and caveats, see
+**Default**: ``True``
+
+When set to ``True``, OpenWISP RADIUS will validate the
+``Simultaneous-Use`` check during authorization. This enforces per-user
+concurrent session limits as defined in the user's RADIUS group.
+
+For details on behavior, configuration steps, and caveats, see
 :doc:`simultaneous_use`.
 
 .. code-block:: python

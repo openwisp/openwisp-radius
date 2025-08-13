@@ -113,8 +113,8 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
         "location": "disabled",
     },
 )
-SIMULTANEOUS_USE_ENABLED = get_settings_value("SIMULTANEOUS_USE_ENABLED", False)
-ADDITIONAL_RADIUS_CHECKS = get_settings_value("ADDITIONAL_RADIUS_CHECKS", [])
+ADDITIONAL_RADIUS_CHECKS = []
+SIMULTANEOUS_USE_ENABLED = get_settings_value("SIMULTANEOUS_USE_ENABLED", True)
 
 # Add Simultaneous-Use check if enabled
 if SIMULTANEOUS_USE_ENABLED and "Simultaneous-Use" not in ADDITIONAL_RADIUS_CHECKS:
