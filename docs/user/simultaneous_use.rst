@@ -17,22 +17,11 @@ limit. To avoid this, OpenWISP RADIUS enforces ``Simultaneous-Use`` in its
 authorization API, ensuring the correct limit is applied according to the
 user's organization.
 
-Enabling and Configuring Simultaneous-Use
------------------------------------------
+Configuring Simultaneous-Use Check
+----------------------------------
 
-Enable this feature by setting
-:ref:`OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED
-<openwisp_radius_simultaneous_use_enabled>` to ``True`` in your Django
-project settings:
-
-.. code-block:: python
-
-    OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = True
-
-.. include:: /partials/settings-note.rst
-
-Then, add the ``Simultaneous-Use`` RADIUS check to the desired RADIUS
-group:
+Add the ``Simultaneous-Use`` RADIUS check to the desired RADIUS group by
+following these steps:
 
 1. In the admin interface, navigate to **RADIUS** in the left-hand menu.
 2. Go to **Groups**.
@@ -67,3 +56,10 @@ group:
        :alt: Example of setting Idle-Timeout to 240
 
 8. Click on **Save and continue editing** at the bottom of the page.
+
+Disabling Simultaneous-Use Enforcement
+--------------------------------------
+
+Simultaneous-Use enforcement is enabled by default. You can disable it
+using the :ref:`OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED
+<openwisp_radius_simultaneous_use_enabled>` setting.

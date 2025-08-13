@@ -418,21 +418,19 @@ through the REST API.
 
 **Default**: ``True``
 
-``OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This setting controls whether the :doc:`Simultaneous-Use
+<simultaneous_use>` RADIUS check is validated during authorization. When
+enabled, it enforces per-user concurrent session limits as defined in the
+user's RADIUS group.
 
-**Default**: ``True``
+Since this feature is enabled by default, you only need to change this
+setting if you want to disable simultaneous-use enforcement.
 
-When set to ``True``, OpenWISP RADIUS will validate the
-``Simultaneous-Use`` check during authorization. This enforces per-user
-concurrent session limits as defined in the user's RADIUS group.
-
-For details on behavior, configuration steps, and caveats, see
-:doc:`simultaneous_use`.
+To disable the feature, configure the setting as following:
 
 .. code-block:: python
 
-    OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = True
+    OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = False
 
 ``OPENWISP_RADIUS_API_ACCOUNTING_AUTO_GROUP``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
