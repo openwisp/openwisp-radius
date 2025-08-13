@@ -14,8 +14,8 @@ While FreeRADIUS can enforce this check via its ``sql`` module, it does
 not handle multi-tenancy. As a result, if a user belongs to multiple
 organizations with different session limits, it may apply an incorrect
 limit. To avoid this, OpenWISP RADIUS enforces ``Simultaneous-Use`` in its
-authorization API, ensuring the correct limit is applied for the user's
-organization.
+authorization API, ensuring the correct limit is applied according to the
+user's organization.
 
 Enabling and Configuring Simultaneous-Use
 -----------------------------------------
@@ -29,6 +29,8 @@ project settings:
 
     OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = True
 
+.. include:: /partials/settings-note.rst
+
 Then, add the ``Simultaneous-Use`` RADIUS check to the desired RADIUS
 group:
 
@@ -38,10 +40,13 @@ group:
 4. In the **GROUP CHECKS** section, click on **Add another Group check**.
 5. Fill in the fields as follows:
 
-       - **Attribute**: ``Simultaneous-Use``
-       - **Operator**: ``:=``
-       - **Value**: ``1`` (or any number greater than 0; `1` limits users
-         to one concurrent session)
+   - **Attribute**: ``Simultaneous-Use``
+   - **Operator**: ``:=``
+   - **Value**: ``1`` (or any number greater than 0; `1` limits users to
+     one concurrent session)
+
+   .. image:: ../images/simultaneous-use-radius-check.png
+       :alt: Example of setting Idle-Timeout to 240
 
 .. important::
 
@@ -54,8 +59,11 @@ group:
    **Add another Group reply**.
 7. Fill in the fields as follows:
 
-       - **Attribute**: ``Idle-Timeout``
-       - **Operator**: ``:=``
-       - **Value**: ``240``
+   - **Attribute**: ``Idle-Timeout``
+   - **Operator**: ``=``
+   - **Value**: ``240``
+
+   .. image:: ../images/idle-timeout-radius-reply.png
+       :alt: Example of setting Idle-Timeout to 240
 
 8. Click on **Save and continue editing** at the bottom of the page.
