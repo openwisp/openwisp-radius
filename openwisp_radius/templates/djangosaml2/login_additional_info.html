@@ -1,0 +1,14 @@
+{% extends "account/base_manage.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "Add Your Email to Complete Your Account Setup" %}</h1>
+<p>{% trans "It looks like we didn't receive your email from your identity provider." %}</p>
+<p>{% trans "Please enter your email address below to complete setting up your account." %}</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" class="button" value="{% trans "Save Email Address and Continue" %}">
+</form>
+<p><a class="button" href="{% url 'radius:saml2_logout' %}">{% trans "Logout" %}</a></p>
+{% endblock %}

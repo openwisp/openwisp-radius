@@ -1,0 +1,174 @@
+# OpenWISP RADIUS
+# Copyright (C) 2021
+# This file is distributed under the same license as the PACKAGE package.
+# Federico Capoano support@openwisp.io, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Language: sl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: openwisp_radius/api/serializers.py:71
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Vpisani prijavni podatki niso veljavni. Preverite podatke in poskusite znova."
+
+#: openwisp_radius/api/serializers.py:74
+msgid "Must include \"username\" and \"password\"."
+msgstr "Vsebovati mora \"uporabniško ime\" in \"geslo\"."
+
+#: openwisp_radius/api/serializers.py:355
+#: openwisp_radius/api/serializers.py:383
+msgid "This field is required."
+msgstr "Obvezno polje."
+
+#: openwisp_radius/api/serializers.py:363
+msgid "A user is already registered with this phone number."
+msgstr "Uporabnik, registriran s to telefonsko številko, žUporabnike obstaja."
+
+#: openwisp_radius/api/serializers.py:447
+msgid "The new phone number must be different than the old one."
+msgstr "Nova telefonska številka mora biti drugačna od prejšnje."
+
+#: openwisp_radius/api/views.py:129
+#, python-brace-format
+msgid ""
+"The user {username} is not member of organization {organization}."
+msgstr ""
+"Uporabnik {username} ni član organizacije {organization}."
+
+#: openwisp_radius/api/views.py:459
+msgid "The email field is required."
+msgstr "E-naslov je obvezen."
+
+#: openwisp_radius/api/views.py:570
+msgid "No verification code found in the system for this user."
+msgstr "Za tega uporabnika ni potrditvene kode."
+
+#: openwisp_radius/api/views.py:577
+msgid "Invalid code."
+msgstr "Neveljavna koda."
+
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Počakajte, preden zahtevate nov žeton SMS."
+
+#: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
+#: openwisp_radius/base/models.py:883
+msgid "This field cannot be blank."
+msgstr "To polje ne sme biti prazno."
+
+#: openwisp_radius/base/models.py:1279
+msgid "Maximum daily limit reached."
+msgstr "Dnevna mejna vrednost je dosežena."
+
+#: openwisp_radius/base/models.py:1292
+msgid "Maximum daily limit reached from this IP address."
+msgstr "Dnevna mejna vrednost s tega IP naslova je dosežena."
+
+#: openwisp_radius/base/models.py:1307
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "Uporabnik {user} ni član nobene organizacije"
+
+#: openwisp_radius/base/models.py:1311
+#, python-brace-format
+msgid "{organization} verification code: {code}"
+msgstr "Potrditvena koda {organization}: {code}"
+
+#: openwisp_radius/base/models.py:1335
+msgid "This user has been already verified."
+msgstr "Ta uporabnik je že preverjen."
+
+#: openwisp_radius/base/models.py:1350
+msgid "Maximum number of attempts reached, request a new code."
+msgstr "Vnesli ste največje število dovoljenih poskusov, zahtevajte novo kodo."
+
+#: openwisp_radius/base/models.py:1364
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr "Potrditvena koda je potekla, zahtevajte novo kodo."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:2
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"To e -poštno sporočilo ste prejeli, ker ste zahtevali ponastavitev gesla za svoj"
+"uporabniški račun na\n"
+"%(site_name)s."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:10
+msgid "Your username, in case you've forgotten:"
+msgstr "Vaše uporabniško ime, če ste pozabili:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:12
+msgid "Best regards"
+msgstr "Lep pozdrav"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:14
+msgid ""
+"Please click on the button below to open a page where you can choose a new "
+"password:"
+msgstr ""
+"S klikom na spodnji gumb se bo odprla stran, na kateri boste lahko izbrali novo geslo:"
+
+#: openwisp_radius/api/serializers.py:378
+msgid "Reset password"
+msgstr "Obnova gesla"
+
+#: openwisp_radius/api/serializers.py:364
+#, python-format
+msgid "Password reset on %s"
+msgstr "Ponastavite geslo za %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "A new session has been started for your account:"
+msgstr "Začela se je nova seja vašega računa:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
+msgstr "Trajanje seje in prenos podatkov lahko spremljate ali kadar koli zaključite s klikom na naslednjo povezavo."
+
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Opomba: ta povezava velja samo %(sesame_max_age)s"
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Upravljanje seje"
+
+#: openwisp_radius/tasks.py:80
+msgid "New WiFi session started"
+msgstr "Začetek nove seje WiFi"
+
+#: templates/djangosaml2/login_additional_info.html:5
+msgid "Add Your Email to Complete Your Account Setup"
+msgstr "Dodajte svoj e-poštni naslov, da dokončate nastavitev računa"
+
+#: templates/djangosaml2/login_additional_info.html:6
+msgid ""
+"It looks like we didn't receive your email from your identity provider."
+msgstr ""
+"Videti je, da nismo prejeli vašega e-poštnega naslova od vašega ponudnika identitete."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Prosimo, vnesite svoj e-poštni naslov spodaj, da dokončate nastavitev računa."
+
+#: templates/djangosaml2/login_additional_info.html:10
+msgid "Save Email Address and Continue"
+msgstr "Shrani e-poštni naslov in nadaljuj"
+
+#: templates/djangosaml2/login_additional_info.html:12
+msgid "Logout"
+msgstr "Odjava"

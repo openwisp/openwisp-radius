@@ -1,0 +1,249 @@
+# OpenWISP Modification: This dictionary combines FreeRADIUS's RFC2865
+# and ChilliSpot dictionaries.
+# It excludes the "Vendor-Specific" attribute definition from RFC2865
+# due to limitations of the pyrad library. For more details,
+# check https://github.com/pyradius/pyrad/issues/173
+#
+# -*- text -*-
+# Copyright (C) 2019 The FreeRADIUS Server project and contributors
+# This work is licensed under CC-BY version 4.0 https://creativecommons.org/licenses/by/4.0
+#
+#	Attributes and values defined in RFC 2865.
+#	http://www.ietf.org/rfc/rfc2865.txt
+#
+#	$Id: 6e2319a96710c2a341e24133abd81fde98a6eb55 $
+#
+ATTRIBUTE	User-Name				1	string
+ATTRIBUTE	User-Password				2	string encrypt=1
+ATTRIBUTE	CHAP-Password				3	octets
+ATTRIBUTE	NAS-IP-Address				4	ipaddr
+ATTRIBUTE	NAS-Port				5	integer
+ATTRIBUTE	Service-Type				6	integer
+ATTRIBUTE	Framed-Protocol				7	integer
+ATTRIBUTE	Framed-IP-Address			8	ipaddr
+ATTRIBUTE	Framed-IP-Netmask			9	ipaddr
+ATTRIBUTE	Framed-Routing				10	integer
+ATTRIBUTE	Filter-Id				11	string
+ATTRIBUTE	Framed-MTU				12	integer
+ATTRIBUTE	Framed-Compression			13	integer
+ATTRIBUTE	Login-IP-Host				14	ipaddr
+ATTRIBUTE	Login-Service				15	integer
+ATTRIBUTE	Login-TCP-Port				16	integer
+# Attribute 17 is undefined
+ATTRIBUTE	Reply-Message				18	string
+ATTRIBUTE	Callback-Number				19	string
+ATTRIBUTE	Callback-Id				20	string
+# Attribute 21 is undefined
+ATTRIBUTE	Framed-Route				22	string
+ATTRIBUTE	Framed-IPX-Network			23	ipaddr
+ATTRIBUTE	State					24	octets
+ATTRIBUTE	Class					25	octets
+ATTRIBUTE	Session-Timeout				27	integer
+ATTRIBUTE	Idle-Timeout				28	integer
+ATTRIBUTE	Termination-Action			29	integer
+ATTRIBUTE	Called-Station-Id			30	string
+ATTRIBUTE	Calling-Station-Id			31	string
+ATTRIBUTE	NAS-Identifier				32	string
+ATTRIBUTE	Proxy-State				33	octets
+ATTRIBUTE	Login-LAT-Service			34	string
+ATTRIBUTE	Login-LAT-Node				35	string
+ATTRIBUTE	Login-LAT-Group				36	octets
+ATTRIBUTE	Framed-AppleTalk-Link			37	integer
+ATTRIBUTE	Framed-AppleTalk-Network		38	integer
+ATTRIBUTE	Framed-AppleTalk-Zone			39	string
+
+ATTRIBUTE	CHAP-Challenge				60	octets
+ATTRIBUTE	NAS-Port-Type				61	integer
+ATTRIBUTE	Port-Limit				62	integer
+ATTRIBUTE	Login-LAT-Port				63	string
+
+#
+#	Integer Translations
+#
+
+#	Service types
+
+VALUE	Service-Type			Login-User		1
+VALUE	Service-Type			Framed-User		2
+VALUE	Service-Type			Callback-Login-User	3
+VALUE	Service-Type			Callback-Framed-User	4
+VALUE	Service-Type			Outbound-User		5
+VALUE	Service-Type			Administrative-User	6
+VALUE	Service-Type			NAS-Prompt-User		7
+VALUE	Service-Type			Authenticate-Only	8
+VALUE	Service-Type			Callback-NAS-Prompt	9
+VALUE	Service-Type			Call-Check		10
+VALUE	Service-Type			Callback-Administrative	11
+
+#	Framed Protocols
+
+VALUE	Framed-Protocol			PPP			1
+VALUE	Framed-Protocol			SLIP			2
+VALUE	Framed-Protocol			ARAP			3
+VALUE	Framed-Protocol			Gandalf-SLML		4
+VALUE	Framed-Protocol			Xylogics-IPX-SLIP	5
+VALUE	Framed-Protocol			X.75-Synchronous	6
+
+#	Framed Routing Values
+
+VALUE	Framed-Routing			None			0
+VALUE	Framed-Routing			Broadcast		1
+VALUE	Framed-Routing			Listen			2
+VALUE	Framed-Routing			Broadcast-Listen	3
+
+#	Framed Compression Types
+
+VALUE	Framed-Compression		None			0
+VALUE	Framed-Compression		Van-Jacobson-TCP-IP	1
+VALUE	Framed-Compression		IPX-Header-Compression	2
+VALUE	Framed-Compression		Stac-LZS		3
+
+#	Login Services
+
+VALUE	Login-Service			Telnet			0
+VALUE	Login-Service			Rlogin			1
+VALUE	Login-Service			TCP-Clear		2
+VALUE	Login-Service			PortMaster		3
+VALUE	Login-Service			LAT			4
+VALUE	Login-Service			X25-PAD			5
+VALUE	Login-Service			X25-T3POS		6
+VALUE	Login-Service			TCP-Clear-Quiet		8
+
+#	Login-TCP-Port		(see /etc/services for more examples)
+
+VALUE	Login-TCP-Port			Telnet			23
+VALUE	Login-TCP-Port			Rlogin			513
+VALUE	Login-TCP-Port			Rsh			514
+
+#	Termination Options
+
+VALUE	Termination-Action		Default			0
+VALUE	Termination-Action		RADIUS-Request		1
+
+#	NAS Port Types
+
+VALUE	NAS-Port-Type			Async			0
+VALUE	NAS-Port-Type			Sync			1
+VALUE	NAS-Port-Type			ISDN			2
+VALUE	NAS-Port-Type			ISDN-V120		3
+VALUE	NAS-Port-Type			ISDN-V110		4
+VALUE	NAS-Port-Type			Virtual			5
+VALUE	NAS-Port-Type			PIAFS			6
+VALUE	NAS-Port-Type			HDLC-Clear-Channel	7
+VALUE	NAS-Port-Type			X.25			8
+VALUE	NAS-Port-Type			X.75			9
+VALUE	NAS-Port-Type			G.3-Fax			10
+VALUE	NAS-Port-Type			SDSL			11
+VALUE	NAS-Port-Type			ADSL-CAP		12
+VALUE	NAS-Port-Type			ADSL-DMT		13
+VALUE	NAS-Port-Type			IDSL			14
+VALUE	NAS-Port-Type			Ethernet		15
+VALUE	NAS-Port-Type			xDSL			16
+VALUE	NAS-Port-Type			Cable			17
+VALUE	NAS-Port-Type			Wireless-Other		18
+VALUE	NAS-Port-Type			Wireless-802.11		19
+
+#
+#	CoovaChilli captive portal
+#	http://coova.github.io/
+#
+
+VENDOR          CoovaChilli                   14559
+
+BEGIN-VENDOR	CoovaChilli
+
+ATTRIBUTE	CoovaChilli-Max-Input-Octets		1	integer
+ATTRIBUTE	CoovaChilli-Max-Output-Octets		2	integer
+ATTRIBUTE	CoovaChilli-Max-Total-Octets		3	integer
+ATTRIBUTE       CoovaChilli-Bandwidth-Max-Up        	4       integer
+ATTRIBUTE       CoovaChilli-Bandwidth-Max-Down      	5       integer
+ATTRIBUTE       CoovaChilli-Config                  	6       string
+ATTRIBUTE       CoovaChilli-Lang                    	7       string
+ATTRIBUTE       CoovaChilli-Version                 	8       string
+ATTRIBUTE       CoovaChilli-OriginalURL             	9       string
+ATTRIBUTE       CoovaChilli-Acct-View-Point             10	integer
+
+VALUE	CoovaChilli-Acct-View-Point CoovaChilli-NAS-View-Point	1
+VALUE	CoovaChilli-Acct-View-Point CoovaChilli-Client-View-Point 2
+
+ATTRIBUTE       CoovaChilli-Require-UAM		       11	string
+ATTRIBUTE       CoovaChilli-Require-Splash	       12	string
+ATTRIBUTE       CoovaChilli-Route-To-Interface	       13	string
+ATTRIBUTE       CoovaChilli-Config-File                 14       string
+
+ATTRIBUTE       CoovaChilli-Session-State       	       15	integer
+
+VALUE	CoovaChilli-Session-State Authorized       1
+VALUE	CoovaChilli-Session-State NotAuthorized    2
+VALUE	CoovaChilli-Session-State Started          3
+VALUE	CoovaChilli-Session-State Stopped          4
+VALUE	CoovaChilli-Session-State UserLogoutUrl          10
+VALUE	CoovaChilli-Session-State IdleTimeoutReached     11
+VALUE	CoovaChilli-Session-State TimeoutReached         12
+VALUE	CoovaChilli-Session-State LogoutTimeReached      13
+VALUE	CoovaChilli-Session-State InDataLimitReached     14
+VALUE	CoovaChilli-Session-State OutDataLimitReached    15
+VALUE	CoovaChilli-Session-State TotalDataLimitReached  16
+VALUE	CoovaChilli-Session-State LocationChanged	17
+
+ATTRIBUTE       CoovaChilli-Session-Id       	       16	string
+ATTRIBUTE       CoovaChilli-AP-Session-Id       	       17	string
+ATTRIBUTE       CoovaChilli-User-Agent       	       18	string
+ATTRIBUTE       CoovaChilli-Accept-Language     	       19	string
+
+ATTRIBUTE	CoovaChilli-Max-Input-Gigawords	       21	integer
+ATTRIBUTE	CoovaChilli-Max-Output-Gigawords	       22	integer
+ATTRIBUTE	CoovaChilli-Max-Total-Gigawords	       23	integer
+
+ATTRIBUTE	CoovaChilli-VLAN-Id		       24	integer
+ATTRIBUTE	CoovaChilli-Location		       25	string
+ATTRIBUTE	CoovaChilli-Old-Location		       26	string
+ATTRIBUTE	CoovaChilli-Location-Change-Count       27	integer
+
+ATTRIBUTE	CoovaChilli-Sys-Uptime		       40	integer
+ATTRIBUTE	CoovaChilli-Sys-LoadAvg		       41	string
+ATTRIBUTE	CoovaChilli-Sys-Memory		       42	string
+
+ATTRIBUTE       CoovaChilli-DHCP-Vendor-Class-Id	       50	octets
+ATTRIBUTE       CoovaChilli-DHCP-Client-Id	       51	octets
+ATTRIBUTE       CoovaChilli-DHCP-Options		       52	octets
+ATTRIBUTE       CoovaChilli-DHCP-Filename	       53	string
+ATTRIBUTE       CoovaChilli-DHCP-Hostname	       54	string
+ATTRIBUTE       CoovaChilli-DHCP-Server-Name	       55	string
+ATTRIBUTE       CoovaChilli-DHCP-Client-FQDN	       56	string
+ATTRIBUTE       CoovaChilli-DHCP-Parameter-Request-List 57	octets
+
+ATTRIBUTE       CoovaChilli-DHCP-IP-Address	       60	ipaddr
+ATTRIBUTE       CoovaChilli-DHCP-Netmask 	       61	ipaddr
+ATTRIBUTE       CoovaChilli-DHCP-DNS1 		       62	ipaddr
+ATTRIBUTE       CoovaChilli-DHCP-DNS2 		       63	ipaddr
+ATTRIBUTE       CoovaChilli-DHCP-Gateway		       64	ipaddr
+ATTRIBUTE       CoovaChilli-DHCP-Domain		       65	string
+ATTRIBUTE       CoovaChilli-DHCP-Relay		       66	ipaddr
+
+ATTRIBUTE       CoovaChilli-Inject-URL		       70	string
+
+ATTRIBUTE       CoovaChilli-PostAuthProxy-Address       75	ipaddr
+ATTRIBUTE       CoovaChilli-PostAuthProxy-Port	       76	integer
+
+ATTRIBUTE       CoovaChilli-Garden-Input-Octets	       80	integer
+ATTRIBUTE       CoovaChilli-Garden-Output-Octets	       81	integer
+ATTRIBUTE       CoovaChilli-Garden-Input-Gigawords      82	integer
+ATTRIBUTE       CoovaChilli-Garden-Output-Gigawords     83	integer
+ATTRIBUTE       CoovaChilli-Other-Input-Octets	       84	integer
+ATTRIBUTE       CoovaChilli-Other-Output-Octets	       85	integer
+ATTRIBUTE       CoovaChilli-Other-Input-Gigawords       86	integer
+ATTRIBUTE       CoovaChilli-Other-Output-Gigawords      87	integer
+
+# Configuration management parameters (CoovaChilli Only)
+ATTRIBUTE	CoovaChilli-UAM-Allowed			100	string
+ATTRIBUTE	CoovaChilli-MAC-Allowed			101	string
+ATTRIBUTE	CoovaChilli-Interval			102	integer
+
+# Inline with RFC 2882 use of VSE-Authorize-Only for remote config
+# Note that 14559 = 0x38df is used as prefix for the VSE.
+# This is recognized as the best (but bad) way of doing VSEs.
+# (CoovaChilli Only - CoovaChilli uses Service-Type = Administrative-User)
+VALUE	Service-Type			CoovaChilli-Authorize-Only 0x38df0001
+
+END-VENDOR	CoovaChilli

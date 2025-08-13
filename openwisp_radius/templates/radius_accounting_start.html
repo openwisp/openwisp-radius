@@ -1,0 +1,7 @@
+{% load i18n %}{% load l10n %}
+{% load humanize %}
+<div class="msg">
+<p>{% trans "A new session has been started for your account:" %} {{ user.get_username }}.</p>
+<p>{% trans "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below." %}</p>
+{% if sesame_max_age %}<p><b>{% blocktrans with sesame_max_age|naturaltime as sesame_max_age %}Note: this link is valid only for {{sesame_max_age}}{% endblocktrans %}.</b></p>{% endif %}
+</div>

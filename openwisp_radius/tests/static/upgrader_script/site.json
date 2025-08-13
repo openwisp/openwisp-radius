@@ -1,0 +1,34 @@
+[
+    {
+        "model": "sites.site",
+        "pk": 1,
+        "fields": {
+            "domain": "example.com",
+            "name": "example.com"
+        }
+    },
+    {
+        "model": "sites.site",
+        "pk": 2,
+        "fields": {
+            "domain": "sample.com",
+            "name": "sample.com"
+        }
+    },
+    {
+        "model": "sites.site",
+        "pk": 3,
+        "fields": {
+            "domain": "atb00ker.tk",
+            "name": "atb00ker.tk"
+        }
+    },
+    {
+        "model": "sites.site",
+        "pk": 4,
+        "fields": {
+            "domain": "openwisp.org",
+            "name": "openwisp.org"
+        }
+    }
+]

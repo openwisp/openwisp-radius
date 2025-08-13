@@ -1,0 +1,131 @@
+Social Login
+============
+
+.. important::
+
+    The social login feature is disabled by default.
+
+    In order to enable this feature you have to follow the :ref:`setup
+    instructions <radius_setup_social_login>` below and then activate it
+    via :ref:`global setting or from the admin interface
+    <openwisp_radius_social_registration_enabled>`.
+
+Social login is supported by generating an additional temporary token
+right after users perform the social sign-in, the user is then redirected
+to the captive page with two querystring parameters: ``username`` and
+``token``.
+
+The captive page must recognize these two parameters and automatically
+perform the submit action of the login form: ``username`` should obviously
+used for the username field, while ``token`` should be used for the
+password field.
+
+The internal REST API of OpenWISP RADIUS will recognize the token and
+authorize the user.
+
+This kind of implementation allows to implement the social login with any
+captive portal which already supports the RADIUS protocol because it's
+totally transparent for it, that is, the captive portal doesn't even know
+the user is signing-in with a social network.
+
+.. note::
+
+    If you're building a public wifi service, we suggest to take a look at
+    :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>`, which is
+    built to work with openwisp-radius.
+
+.. _radius_setup_social_login:
+
+Setup
+-----
+
+Ensure the your project ``settings.py`` contains the instructions shown in
+the example below, which shows how to configure the Facebook social login
+provider.
+
+.. include:: /partials/settings-note.rst
+
+.. code-block:: python
+
+    INSTALLED_APPS = [
+        # ... other apps ..
+        # apps needed for social login
+        "rest_framework.authtoken",
+        "django.contrib.sites",
+        "allauth",
+        "allauth.account",
+        "allauth.socialaccount",
+        # showing facebook as an example
+        # to configure social login with other social networks
+        # refer to the django-allauth documentation
+        "allauth.socialaccount.providers.facebook",
+    ]
+
+    SITE_ID = 1
+
+    # showing facebook as an example
+    # to configure social login with other social networks
+    # refer to the django-allauth documentation
+    SOCIALACCOUNT_PROVIDERS = {
+        "facebook": {
+            "METHOD": "oauth2",
+            "SCOPE": ["email", "public_profile"],
+            "AUTH_PARAMS": {"auth_type": "reauthenticate"},
+            "INIT_PARAMS": {"cookie": True},
+            "FIELDS": [
+                "id",
+                "email",
+                "name",
+                "first_name",
+                "last_name",
+                "verified",
+            ],
+            "VERIFIED_EMAIL": True,
+        }
+    }
+
+Ensure your main ``urls.py`` contains the ``allauth.urls``:
+
+.. code-block:: python
+
+    urlpatterns = [
+        # .. other urls ...
+        path("accounts/", include("allauth.urls")),
+    ]
+
+Configure the social account application
+----------------------------------------
+
+Refer to the django-allauth documentation to find out `how to complete the
+configuration of a sample Facebook login app
+<https://docs.allauth.org/en/latest/socialaccount/providers/facebook.html>`_.
+
+Captive page button example
+---------------------------
+
+Following the previous example configuration with Facebook, in your
+captive page you will need an HTML button similar to the ones in the
+following examples.
+
+This example needs the slug of the organization to assign the new user to
+the right organization:
+
+.. code-block:: html
+
+    <a href="https://openwisp2.mywifiproject.com/accounts/facebook/login/?next=%2Fradius%2Fsocial-login%2Fdefault%2F%3Fcp%3Dhttps%3A%2F%2Fcaptivepage.mywifiproject.com%2F%26last%3D"
+       class="button">Log in with Facebook
+    </a>
+
+Substitute ``openwisp2.mywifiproject.com``,
+``captivepage.mywifiproject.com`` and ``default`` with the hostname of
+your openwisp-radius instance, your captive page and the organization slug
+respectively.
+
+Alternatively, you can take a look at :doc:`OpenWISP WiFi Login Pages
+</wifi-login-pages/index>`, which provides buttons for Facebook, Google
+and Twitter by default.
+
+Settings
+--------
+
+See :ref:`social login related settings <radius_social_login_settings>`.

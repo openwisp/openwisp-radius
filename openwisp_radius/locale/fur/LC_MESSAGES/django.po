@@ -1,0 +1,174 @@
+# OpenWISP RADIUS
+# Copyright (C) 2021
+# This file is distributed under the same license as the PACKAGE package.
+# Federico Capoano support@openwisp.io, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Language: fur\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: openwisp_radius/api/serializers.py:71
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Lis credenziâls inseridis no son validis. Par plasê, controlâ e tornâ a provâ."
+
+#: openwisp_radius/api/serializers.py:74
+msgid "Must include \"username\" and \"password\"."
+msgstr "Al à di includi “non utent” e ”password”."
+
+#: openwisp_radius/api/serializers.py:355
+#: openwisp_radius/api/serializers.py:383
+msgid "This field is required."
+msgstr "Il cjamp al è obligatori."
+
+#: openwisp_radius/api/serializers.py:363
+msgid "A user is already registered with this phone number."
+msgstr "Al esist za un utent regjistrât cun chest numar di telefon."
+
+#: openwisp_radius/api/serializers.py:447
+msgid "The new phone number must be different than the old one."
+msgstr "Il numar di telefon gnûf nol pues jessi compagn di chel precedent."
+
+#: openwisp_radius/api/views.py:129
+#, python-brace-format
+msgid ""
+"The user {username} is not member of organization {organization}."
+msgstr ""
+"L'utent {username} nol è membri de organizazion {organization}."
+
+#: openwisp_radius/api/views.py:459
+msgid "The email field is required."
+msgstr "Il cjamp email al è obligatori."
+
+#: openwisp_radius/api/views.py:570
+msgid "No verification code found in the system for this user."
+msgstr "Par chest utent nol è stât cjatât un codiç di verifiche."
+
+#: openwisp_radius/api/views.py:577
+msgid "Invalid code."
+msgstr "Codiç no valit."
+
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Attendi prima di richiedere un altro token SMS."
+
+#: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
+#: openwisp_radius/base/models.py:883
+msgid "This field cannot be blank."
+msgstr "Il cjamp nol pues jessi vueit."
+
+#: openwisp_radius/base/models.py:1279
+msgid "Maximum daily limit reached."
+msgstr "Limit massim pe zornade superât."
+
+#: openwisp_radius/base/models.py:1292
+msgid "Maximum daily limit reached from this IP address."
+msgstr "Limit massim pe zornade superât par cheste direzion IP."
+
+#: openwisp_radius/base/models.py:1307
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "L’utent {user} nol è membri di nissune organizazion."
+
+#: openwisp_radius/base/models.py:1311
+#, python-brace-format
+msgid "{organization} verification code: {code}"
+msgstr "Codiç di verifiche {organization}: {code}"
+
+#: openwisp_radius/base/models.py:1335
+msgid "This user has been already verified."
+msgstr "L’utent al è za stât verificât."
+
+#: openwisp_radius/base/models.py:1350
+msgid "Maximum number of attempts reached, request a new code."
+msgstr ""
+"Si à passât il numar massim di tentatîfs permetûts, domandâ la spedizion di un "
+"codiç gnûf."
+
+#: openwisp_radius/base/models.py:1364
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr "Il codiç di verifiche al è scjadût, domandâ la spedizion di un codiç gnûf."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:2
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"Tu âs ricevût cheste email parcè che tu âs domandât la reimpostazion de password "
+"pal to account utent su\n"
+"%(site_name)s."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:10
+msgid "Your username, in case you've forgotten:"
+msgstr "Non utent dismenteât:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:12
+msgid "Best regards"
+msgstr "Salûts di rispiet"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:14
+msgid ""
+"Please click on the button below to open a page where you can choose a new "
+"password:"
+msgstr "Fâ clic sul boton in bas par vierzi une pagjine là che si pues sielzi une gnove password:"
+
+#: openwisp_radius/api/serializers.py:378
+msgid "Reset password"
+msgstr "Resete la password"
+
+#: openwisp_radius/api/serializers.py:364
+#, python-format
+msgid "Password reset on %s"
+msgstr "Sielç une gnove password su %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "A new session has been started for your account:"
+msgstr "E je stade inviade une gnove session pal to account:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
+msgstr "Tu puedis monitorâ il consum di timp e trafic de tô session o sierâ la session in cualsisedi moment clicant su chest link."
+
+#: openwisp_radius/templates/radius_accounting_start.html:5
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Note: chest link al è valit dome par %(sesame_max_age)s"
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Gjestìs session"
+
+#: openwisp_radius/tasks.py:80
+msgid "New WiFi session started"
+msgstr "Gnove session WiFi scomençade"
+
+#: templates/djangosaml2/login_additional_info.html:5
+msgid "Add Your Email to Complete Your Account Setup"
+msgstr "Zonte il vuestri indirìs di email par completâ la configurazion dal conto"
+
+#: templates/djangosaml2/login_additional_info.html:6
+msgid ""
+"It looks like we didn't receive your email from your identity provider."
+msgstr ""
+"Al somee che no vin rivât il vuestri indirìs di email dal vuestri fornitôr di identitât."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Par plasê, inserì il vuestri indirìs di email chi sot par completâ la configurazion dal conto."
+
+#: templates/djangosaml2/login_additional_info.html:10
+msgid "Save Email Address and Continue"
+msgstr "Salve il indirìs di email e continúe"
+
+#: templates/djangosaml2/login_additional_info.html:12
+msgid "Logout"
+msgstr "Jesî"

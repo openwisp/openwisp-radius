@@ -1,0 +1,19 @@
+version: 2
+
+# Build all formats
+formats: all
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.8"
+
+sphinx:
+  configuration: docs/source/conf.py
+
+python:
+  install:
+    - requirements: requirements-test.txt
+    - method: pip
+      path: .[saml,openvpn_status]
+

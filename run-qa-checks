@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+echo ''
+echo 'Compiling translations'
+cd openwisp_radius
+django-admin compilemessages
+cd ..
+
+echo ''
+echo 'Running checks for openwisp-radius'
+openwisp-qa-check \
+        --csslinter \
+        --jslinter \
+        --migration-path "./openwisp_radius/migrations"
+
+echo ''
+echo 'Running checks for SAMPLE_APP'
+SAMPLE_APP=1 openwisp-qa-check \
+        --skip-isort \
+        --skip-flake8 \
+        --skip-black \
+        --skip-checkmigrations \
+        --skip-checkendline \
+        --skip-checkcommit \
+        --migration-path "./tests/openwisp2/sample_radius/migrations
+                          ./tests/openwisp2/sample_users/migrations"

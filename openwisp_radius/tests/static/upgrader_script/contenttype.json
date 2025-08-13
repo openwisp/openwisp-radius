@@ -1,0 +1,194 @@
+[
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 1,
+        "fields": {
+            "app_label": "auth",
+            "model": "permission"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 2,
+        "fields": {
+            "app_label": "auth",
+            "model": "group"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 3,
+        "fields": {
+            "app_label": "auth",
+            "model": "user"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 4,
+        "fields": {
+            "app_label": "contenttypes",
+            "model": "contenttype"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 5,
+        "fields": {
+            "app_label": "sessions",
+            "model": "session"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 6,
+        "fields": {
+            "app_label": "admin",
+            "model": "logentry"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 7,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "nas"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 8,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusaccounting"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 9,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiuscheck"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 10,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusgroupcheck"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 11,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusgroupreply"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 12,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiuspostauth"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 13,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusreply"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 14,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiususergroup"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 15,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusbatch"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 16,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiusgroup"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 17,
+        "fields": {
+            "app_label": "django_freeradius",
+            "model": "radiustoken"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 18,
+        "fields": {
+            "app_label": "authtoken",
+            "model": "token"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 19,
+        "fields": {
+            "app_label": "sites",
+            "model": "site"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 20,
+        "fields": {
+            "app_label": "account",
+            "model": "emailaddress"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 21,
+        "fields": {
+            "app_label": "account",
+            "model": "emailconfirmation"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 22,
+        "fields": {
+            "app_label": "socialaccount",
+            "model": "socialaccount"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 23,
+        "fields": {
+            "app_label": "socialaccount",
+            "model": "socialapp"
+        }
+    },
+    {
+        "model": "contenttypes.contenttype",
+        "pk": 24,
+        "fields": {
+            "app_label": "socialaccount",
+            "model": "socialtoken"
+        }
+    }
+]

@@ -1,0 +1,174 @@
+# OpenWISP RADIUS
+# Copyright (C) 2021
+# This file is distributed under the same license as the PACKAGE package.
+# Federico Capoano support@openwisp.io, 2021.
+#
+msgid ""
+msgstr ""
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: openwisp_radius/api/serializers.py:71
+msgid ""
+"The credentials entered are not valid. Please double-check and try again."
+msgstr ""
+"Le credenziali inserite non sono valide. Si prega di controllare e riprovare."
+
+#: openwisp_radius/api/serializers.py:74
+msgid "Must include \"username\" and \"password\"."
+msgstr "Deve includere \"nome utente\" e \"password\"."
+
+#: openwisp_radius/api/serializers.py:355
+#: openwisp_radius/api/serializers.py:383
+msgid "This field is required."
+msgstr "Il campo è obbligatorio."
+
+#: openwisp_radius/api/serializers.py:363
+msgid "A user is already registered with this phone number."
+msgstr "Esiste già un utente registrato con questo numero di telefono."
+
+#: openwisp_radius/api/serializers.py:447
+msgid "The new phone number must be different than the old one."
+msgstr "Il nuovo numero di telefono deve essere diverso da quello precedente."
+
+#: openwisp_radius/api/views.py:129
+#, python-brace-format
+msgid ""
+"The user {username} is not member of organization {organization}."
+msgstr "L'utente {username} non appartiene all'organizzazione {organization}."
+
+#: openwisp_radius/api/views.py:459
+msgid "The email field is required."
+msgstr "Il campo email è obbligatorio."
+
+#: openwisp_radius/api/views.py:570
+msgid "No verification code found in the system for this user."
+msgstr "Per questo utente non è stato trovato un codice di verifica."
+
+#: openwisp_radius/api/views.py:577
+msgid "Invalid code."
+msgstr "Codice non valido."
+
+#: openwisp_radius/api/views.py:636
+msgid "Wait before requesting another SMS token."
+msgstr "Attendi prima di richiedere un altro token SMS."
+
+#: openwisp_radius/base/models.py:145 openwisp_radius/base/models.py:879
+#: openwisp_radius/base/models.py:883
+msgid "This field cannot be blank."
+msgstr "Questo campo non può essere vuoto."
+
+#: openwisp_radius/base/models.py:1279
+msgid "Maximum daily limit reached."
+msgstr "Limite giornaliero massimo raggiunto."
+
+#: openwisp_radius/base/models.py:1292
+msgid "Maximum daily limit reached from this IP address."
+msgstr "Limite giornaliero massimo raggiunto per questo indirizzo IP."
+
+#: openwisp_radius/base/models.py:1307
+#, python-brace-format
+msgid "The user {user} is not member of any organization"
+msgstr "L'utente {user} non appartiene ad alcuna organizzazione"
+
+#: openwisp_radius/base/models.py:1311
+#, python-brace-format
+msgid "{organization} verification code: {code}"
+msgstr "Codice di verifica {organization}: {code}"
+
+#: openwisp_radius/base/models.py:1335
+msgid "This user has been already verified."
+msgstr "L'utente è già stato verificato."
+
+#: openwisp_radius/base/models.py:1350
+msgid "Maximum number of attempts reached, request a new code."
+msgstr ""
+"Numero massimo di tentativi consentiti raggiunto, richiedi l'invio di un nuovo "
+"codice."
+
+#: openwisp_radius/base/models.py:1364
+msgid ""
+"This verification code has expired, Please send a new code and try again."
+msgstr "Il codice di verifica è scaduto, richiedi l'invio di un nuovo codice."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:2
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at\n"
+"%(site_name)s."
+msgstr ""
+"Hai ricevuto questa email perché hai richiesto la reimpostazione della password "
+"per il tuo account utente su\n"
+"%(site_name)s."
+
+#: openwisp_radius/templates/custom_password_reset_email.html:10
+msgid "Your username, in case you've forgotten:"
+msgstr "Il tuo nome utente, in caso l'avessi dimenticato:"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:12
+msgid "Best regards"
+msgstr "Distinti saluti"
+
+#: openwisp_radius/templates/custom_password_reset_email.html:14
+msgid ""
+"Please click on the button below to open a page where you can choose a new "
+"password:"
+msgstr ""
+"Fare clic sul pulsante in basso per aprire una pagina in cui è possibile scegliere una nuova password:"
+
+#: openwisp_radius/api/serializers.py:378
+msgid "Reset password"
+msgstr "Resetta la password"
+
+#: openwisp_radius/api/serializers.py:364
+#, python-format
+msgid "Password reset on %s"
+msgstr "Reimposta password su %s"
+
+#: openwisp_radius/templates/radius_accounting_start.html:3
+msgid "A new session has been started for your account:"
+msgstr "È stata avviata una nuova sessione per il tuo account:"
+
+#: openwisp_radius/templates/radius_accounting_start.html:4
+msgid "You can review your session to find out how much time and/or traffic has been used or you can terminate the session at any time by clicking on the button below."
+msgstr "Puoi monitorare il consumo di tempo e traffico della tua sessione o terminare la sessione in qualsiasi momento cliccando sul collegamento seguente."
+
+#: openwisp_radius/templates/radius_accounting_start.html:6
+msgid "Note: this link is valid only for %(sesame_max_age)s"
+msgstr "Nota: questo link scadrá %(sesame_max_age)s"
+
+#: openwisp_radius/tasks.py:75
+msgid "Manage Session"
+msgstr "Gestisci sessione"
+
+#: openwisp_radius/tasks.py:80
+msgid "New WiFi session started"
+msgstr "Nuova sessione WiFi iniziata"
+
+#: templates/djangosaml2/login_additional_info.html:5
+msgid "Add Your Email to Complete Your Account Setup"
+msgstr "Aggiungi la tua email per completare la configurazione del tuo account"
+
+#: templates/djangosaml2/login_additional_info.html:6
+msgid ""
+"It looks like we didn't receive your email from your identity provider."
+msgstr ""
+"Sembra che non abbiamo ricevuto il tuo indirizzo email dal tuo provider di identità."
+
+#: templates/djangosaml2/login_additional_info.html:7
+msgid ""
+"Please enter your email address below to complete setting up your account."
+msgstr ""
+"Per favore, inserisci il tuo indirizzo email qui sotto per completare la configurazione del tuo account."
+
+#: templates/djangosaml2/login_additional_info.html:10
+msgid "Save Email Address and Continue"
+msgstr "Salva l'indirizzo email e continua"
+
+#: templates/djangosaml2/login_additional_info.html:12
+msgid "Logout"
+msgstr "Esci"
