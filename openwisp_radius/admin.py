@@ -587,7 +587,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
 
 
 OrganizationAdmin.save_on_top = True
-OrganizationAdmin.inlines.insert(2, OrganizationRadiusSettingsInline)
+OrganizationAdmin.inlines.append(OrganizationRadiusSettingsInline)
 
 # avoid cluttering the admin with too many models, leave only the
 # minimum required to configure social login and check if it's working
