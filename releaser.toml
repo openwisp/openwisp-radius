@@ -1,0 +1,3 @@
+repo = "openwisp/openwisp-radius"
+version_path = "openwisp_radius/__init__.py"
+changelog_path = "CHANGES.rst"
