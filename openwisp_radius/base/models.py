@@ -208,9 +208,24 @@ class AutoGroupnameMixin(object):
         if self.group:
             self.groupname = self.group.name
         elif not self.groupname:
+            if hasattr(self, '_state') and self._state.adding and not self.pk:
+                pass
+            else:
+                raise ValidationError(
+                    {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
+                )
+    
+    def save(self, *args, **kwargs):
+        """
+        Ensure groupname is set correctly before saving
+        """
+        if self.group and not self.groupname:
+            self.groupname = self.group.name
+        elif not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+        super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
@@ -230,14 +245,23 @@ class AttributeValidationMixin(object):
         """
         checks if the check or reply attribute is unique
         """
-        model = type(self).__name__
-        if (
-            load_model(model)
-            .objects.filter(**self._get_validation_queryset_kwargs())
-            .exclude(pk=self.pk)
-            .exists()
-        ):
-            raise ValidationError({"attribute": self._get_error_message()})
+        if hasattr(self, '_state') and self._state.adding and not self.pk:
+            return super().clean()
+        
+        try:
+            model = type(self).__name__
+            if (
+                load_model(model)
+                .objects.filter(**self._get_validation_queryset_kwargs())
+                .exclude(pk=self.pk)
+                .exists()
+            ):
+                raise ValidationError({"attribute": self._get_error_message()})
+        except ValueError as e:
+            if "Model instances passed to related filters must be saved" in str(e):
+                pass
+            else:
+                raise
         return super().clean()
 
 
@@ -245,7 +269,6 @@ class UserAttributeValidationMixin(AttributeValidationMixin):
     def _get_validation_queryset_kwargs(self):
         kwargs = dict(user=self.user, attribute=self.attribute)
         org = getattr(self, "organization", None)
-        # only add `organization` key if it exists
         if org:
             kwargs["organization"] = org
         return kwargs
