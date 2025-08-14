@@ -300,7 +300,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             for reply in self.get_group_replies(user_group.group):
                 data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
 
-            group_checks = get_group_checks(user_group.group)
+            group_checks = get_group_checks(
+                user_group.group, include_additional_checks=True
+            )
 
             # Validate additional radius checks
             additional_checks_result = self._validate_additional_radius_checks(
