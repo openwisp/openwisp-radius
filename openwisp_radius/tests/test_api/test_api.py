@@ -1069,6 +1069,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn("checks", response.data)
             checks = response.data["checks"]
+            self.assertEqual(len(checks), 2)
             self.assertDictEqual(
                 dict(checks[0]),
                 {

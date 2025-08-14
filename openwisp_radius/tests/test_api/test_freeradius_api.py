@@ -1614,7 +1614,7 @@ class TestTransactionFreeradiusApi(
         with mock.patch.object(
             app_settings, "ADDITIONAL_RADIUS_CHECKS", ["Custom-Check"]
         ):
-            group_checks = get_group_checks(group)
+            group_checks = get_group_checks(group, include_additional_checks=True)
             self.assertIn("Custom-Check", group_checks)
             self.assertEqual(group_checks["Custom-Check"].value, "test-value")
 
