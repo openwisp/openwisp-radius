@@ -250,12 +250,13 @@ def get_user_group(user, organization_id):
     )
 
 
-def get_group_checks(group):
+def get_group_checks(group, include_additional_checks=False):
     """
     Retrieves a dictionary of checks for the given group.
 
     Parameters:
         group (Group): The group object for which to retrieve the checks.
+        include_additional_checks (bool): Whether to include additional radius checks.
 
     Returns:
         dict: A dictionary of group checks with the attribute as the key and
@@ -265,10 +266,16 @@ def get_group_checks(group):
     instead of once per each counter in use.
     """
 
-    if not app_settings.COUNTERS:
+    if not app_settings.COUNTERS and (
+        not include_additional_checks or not app_settings.ADDITIONAL_RADIUS_CHECKS
+    ):
         return
 
-    check_attributes = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys()
+    check_attributes = set(app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys())
+    # Add additional radius checks to the list of attributes to query
+    if include_additional_checks:
+        check_attributes.update(app_settings.ADDITIONAL_RADIUS_CHECKS)
+
     group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
     result = {}
     for group_check in group_checks:
