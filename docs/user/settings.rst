@@ -418,15 +418,8 @@ through the REST API.
 
 **Default**: ``True``
 
-This setting controls whether the :doc:`Simultaneous-Use
-<simultaneous_use>` RADIUS check is validated during authorization. When
-enabled, it enforces per-user concurrent session limits as defined in the
-user's RADIUS group.
-
-Since this feature is enabled by default, you only need to change this
-setting if you want to disable simultaneous-use enforcement.
-
-To disable the feature, configure the setting as following:
+Allows disabling the :doc:`Simultaneous-Use <simultaneous_use>` feature,
+e.g.:
 
 .. code-block:: python
 
