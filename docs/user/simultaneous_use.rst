@@ -1,21 +1,23 @@
-Limiting concurrent sessions (Simultaneous-Use)
-===============================================
+Limiting concurrent sessions (``Simultaneous-Use``)
+===================================================
 
-``Simultaneous-Use`` is a RADIUS feature that limits how many sessions a
-user can have active at the same time. If the user reaches the configured
-limit and tries to start another session, the new session is rejected with
-the following message
+``Simultaneous-Use`` is a FreeRADIUS feature that restricts how many
+sessions a user can keep active at the same time. When the maximum limit
+is reached and the user attempts to start another session from a different
+client device, the authorization is rejected with the following RADIUS
+reply message:
 
 .. code-block:: text
 
     You are already logged in - access denied
 
-While FreeRADIUS can enforce this check via its ``sql`` module, it does
-not handle multi-tenancy. As a result, if a user belongs to multiple
-organizations with different session limits, it may apply an incorrect
-limit. To avoid this, OpenWISP RADIUS enforces ``Simultaneous-Use`` in its
-authorization API, ensuring the correct limit is applied according to the
-user's organization.
+FreeRADIUS can enforce this check through its ``sql`` module, but that's
+not multi-tenant aware: this can cause issues when a user belongs to
+multiple organizations with different session limits, potentially
+resulting in wrong limits being applied.
+
+To address this, OpenWISP RADIUS provides a multi-tenant aware
+``Simultaneous-Use`` check in its authorization REST API endpoint.
 
 Configuring Simultaneous-Use Check
 ----------------------------------
@@ -57,9 +59,13 @@ following these steps:
 
 8. Click on **Save and continue editing** at the bottom of the page.
 
-Disabling Simultaneous-Use Enforcement
---------------------------------------
+Disabling the ``Simultaneous-Use`` check
+----------------------------------------
 
-Simultaneous-Use enforcement is enabled by default. You can disable it
-using the :ref:`OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED
+The ``Simultaneous-Use`` feature is **enabled by default**.
+
+It can be disabled with the :ref:`OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED
 <openwisp_radius_simultaneous_use_enabled>` setting.
+
+This is useful if you already rely on another FreeRADIUS module to enforce
+``Simultaneous-Use`` and do not need the OpenWISP implementation.
