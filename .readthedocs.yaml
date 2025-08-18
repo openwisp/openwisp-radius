@@ -16,4 +16,3 @@ python:
     - requirements: requirements-test.txt
     - method: pip
       path: .[saml,openvpn_status]
-
