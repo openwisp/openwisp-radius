@@ -300,19 +300,17 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             for reply in self.get_group_replies(user_group.group):
                 data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
 
-            group_checks = get_group_checks(
-                user_group.group, include_additional_checks=True
-            )
+            group_checks = get_group_checks(user_group.group)
 
-            # Validate additional radius checks
-            additional_checks_result = self._validate_additional_radius_checks(
-                group_checks, user, organization_id
+            # Validated simultaneous use
+            simultaneous_use = self._check_simultaneous_use(
+                user, group_checks, organization_id
             )
-            if additional_checks_result is not None:
-                return additional_checks_result
+            if simultaneous_use is not None:
+                return simultaneous_use
 
             # Execute counter checks
-            counter_result = self._execute_counter_checks(
+            counter_result = self._check_counters(
                 data, user, user_group.group, group_checks
             )
             if counter_result is not None:
@@ -320,42 +318,27 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         return data, self.accept_status
 
-    def _validate_additional_radius_checks(self, group_checks, user, organization_id):
-        """
-        Validates additional RADIUS checks like Simultaneous-Use
-        Returns rejection response if validation fails, None if validation passes
-        """
-        for check_name in app_settings.ADDITIONAL_RADIUS_CHECKS:
-            group_check = group_checks.pop(check_name, None)
-            if not group_check:
-                continue
-
-            if check_name == "Simultaneous-Use":
-                # Check for simultaneous use
-                if self._check_simultaneous_use(user, group_check):
-                    data = self.reject_attributes.copy()
-                    if "Reply-Message" not in data:
-                        data["Reply-Message"] = (
-                            "You are already logged in - access denied"
-                        )
-                    return data, self.reject_status
-        return None
-
-    def _check_simultaneous_use(self, user, group_check):
+    def _check_simultaneous_use(self, user, group_checks, organization_id):
         """
         Check if user has exceeded simultaneous use limit
         Returns True if limit is exceeded, False otherwise
         """
-        max_simultaneous = int(group_check.value)
-        if max_simultaneous <= 0:
-            return False
-        # Count open sessions for this user
+        if (check := group_checks.get("Simultaneous-Use")) is None or (
+            max_simultaneous := int(check.value)
+        ) <= 0:
+            return None
         open_sessions = RadiusAccounting.objects.filter(
-            username=user.username, stop_time__isnull=True
+            username=user.username,
+            organization_id=organization_id,
+            stop_time__isnull=True,
         ).count()
-        return open_sessions >= max_simultaneous
+        if open_sessions >= max_simultaneous:
+            data = self.reject_attributes.copy()
+            if "Reply-Message" not in data:
+                data["Reply-Message"] = "You are already logged in - access denied"
+            return data, self.reject_status
 
-    def _execute_counter_checks(self, data, user, group, group_checks):
+    def _check_counters(self, data, user, group, group_checks):
         """
         Execute counter checks and return rejection response if any quota is exceeded
         Returns None if all checks pass
