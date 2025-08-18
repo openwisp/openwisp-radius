@@ -1446,7 +1446,7 @@ class TestTransactionFreeradiusApi(
         org2 = self._create_org(name="org2")
         self._create_org_user(organization=org2, user=user)
 
-        with self.subTest("Test authorization within simultaneous use limit"):
+        with self.subTest("Authorization within simultaneous use limit"):
             simultaneous_use_check = self._create_radius_groupcheck(
                 group=group,
                 groupname=group.name,
@@ -1471,7 +1471,7 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
-        with self.subTest("Test authorization exceeding simultaneous use limit"):
+        with self.subTest("Authorization exceeding simultaneous use limit"):
             RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
                 value="1"
             )
@@ -1485,7 +1485,7 @@ class TestTransactionFreeradiusApi(
                 "You are already logged in - access denied",
             )
 
-        with self.subTest("Test closed sessions are ignored"):
+        with self.subTest("Closed sessions are ignored"):
             # Keep limit at 1 and Close all previously open sessions
             RadiusAccounting.objects.filter(stop_time=None).update(
                 stop_time="2025-08-12T23:00:24.020460+01:00"
@@ -1496,7 +1496,7 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
-        with self.subTest("Test open session in different org is ignored"):
+        with self.subTest("Open session in different org is ignored"):
             # Keep limit at 1 and create an open session for the user in org2
             self._create_radius_accounting(
                 **{
@@ -1513,7 +1513,7 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
-        with self.subTest("Test zero limit allows unlimited simultaneous sessions"):
+        with self.subTest("Zero limit allows unlimited simultaneous sessions"):
             RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
                 value="0"
             )

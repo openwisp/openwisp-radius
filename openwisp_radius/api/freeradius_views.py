@@ -302,7 +302,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             group_checks = get_group_checks(user_group.group)
 
-            # Validated simultaneous use
+            # Validate simultaneous use
             simultaneous_use = self._check_simultaneous_use(
                 user, group_checks, organization_id
             )
@@ -321,11 +321,14 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
     def _check_simultaneous_use(self, user, group_checks, organization_id):
         """
         Check if user has exceeded simultaneous use limit
-        Returns True if limit is exceeded, False otherwise
+
+        Returns rejection response if limit is exceeded
         """
         if (check := group_checks.get("Simultaneous-Use")) is None or (
             max_simultaneous := int(check.value)
         ) <= 0:
+            # Exit early if the `Simultaneous-Use` check is not defined
+            # in the RadiusGroup or if it permits unlimited concurrent sessions.
             return None
         open_sessions = RadiusAccounting.objects.filter(
             username=user.username,
