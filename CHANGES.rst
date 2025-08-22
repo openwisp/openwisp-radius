@@ -6,6 +6,16 @@ Version 1.2.0 [Unreleased]
 
 Work in progress.
 
+Version 1.1.2 [2025-08-18]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- FreeRADIUS API: forgive empty ``input_octets``/``output_octets``
+- Exclude ``location_id`` from ``radius_acc`` extra_tags if missing
+- Optimized query for RADIUS monitoring dashboard charts
+
 Version 1.1.1 [2025-01-31]
 --------------------------
 

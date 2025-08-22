@@ -328,7 +328,7 @@ class UserRadiusUsageSerializer(serializers.Serializer):
         user_group = get_user_group(obj, organization.pk)
         if not user_group:
             raise Http404
-        group_checks = get_group_checks(user_group.group).values()
+        group_checks = get_group_checks(user_group.group, counters_only=True).values()
         checks_data = UserGroupCheckSerializer(
             group_checks, many=True, context={"user": obj, "group": user_group.group}
         ).data
