@@ -113,6 +113,7 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
         "location": "disabled",
     },
 )
+SIMULTANEOUS_USE_ENABLED = get_settings_value("SIMULTANEOUS_USE_ENABLED", True)
 
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS

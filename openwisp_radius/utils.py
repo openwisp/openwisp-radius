@@ -250,12 +250,13 @@ def get_user_group(user, organization_id):
     )
 
 
-def get_group_checks(group):
+def get_group_checks(group, counters_only=False):
     """
     Retrieves a dictionary of checks for the given group.
 
     Parameters:
         group (Group): The group object for which to retrieve the checks.
+        counters_only (bool): Whether to only include counter checks.
 
     Returns:
         dict: A dictionary of group checks with the attribute as the key and
@@ -264,11 +265,17 @@ def get_group_checks(group):
     Used to query the DB for group checks only once
     instead of once per each counter in use.
     """
-
-    if not app_settings.COUNTERS:
+    add_simultaneous_use_check = (
+        app_settings.SIMULTANEOUS_USE_ENABLED and not counters_only
+    )
+    if not app_settings.COUNTERS and not add_simultaneous_use_check:
         return
 
-    check_attributes = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys()
+    check_attributes = set(app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys())
+    # Add additional radius checks to the list of attributes to query
+    if add_simultaneous_use_check:
+        check_attributes.add("Simultaneous-Use")
+
     group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
     result = {}
     for group_check in group_checks:
