@@ -304,7 +304,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             # Validate simultaneous use
             simultaneous_use = self._check_simultaneous_use(
-                user, group_checks, organization_id
+                data, user, group_checks, organization_id
             )
             if simultaneous_use is not None:
                 return simultaneous_use
@@ -318,7 +318,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         return data, self.accept_status
 
-    def _check_simultaneous_use(self, user, group_checks, organization_id):
+    def _check_simultaneous_use(self, data, user, group_checks, organization_id):
         """
         Check if user has exceeded simultaneous use limit
 
@@ -336,7 +336,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             stop_time__isnull=True,
         ).count()
         if open_sessions >= max_simultaneous:
-            data = self.reject_attributes.copy()
+            data.update(self.reject_attributes.copy())
             if "Reply-Message" not in data:
                 data["Reply-Message"] = "You are already logged in - access denied"
             return data, self.reject_status

@@ -1443,6 +1443,13 @@ class TestTransactionFreeradiusApi(
     def test_authorize_simultaneous_use(self):
         user = self._get_org_user().user
         group = user.radiususergroup_set.first().group
+        self._create_radius_groupreply(
+            group=group,
+            groupname=group.name,
+            attribute="Idle-Timeout",
+            op="=",
+            value="240",
+        )
         org2 = self._create_org(name="org2")
         self._create_org_user(organization=org2, user=user)
 
@@ -1483,6 +1490,10 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(
                 response.data["Reply-Message"],
                 "You are already logged in - access denied",
+            )
+            self.assertEqual(
+                response.data["Idle-Timeout"],
+                {"op": "=", "value": "240"},
             )
 
         with self.subTest("Closed sessions are ignored"):
