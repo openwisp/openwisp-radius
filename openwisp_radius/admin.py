@@ -463,18 +463,17 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         )
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
-            request, obj
-        )
+        readonly_fields = super().get_readonly_fields(request, obj)
         if obj:
-            return (
+            return readonly_fields + (
                 "strategy",
+                "organization",
                 "prefix",
                 "csvfile",
                 "number_of_users",
                 "users",
                 "expiration_date",
-            ) + readonly_fields
+            )
         return readonly_fields
 
 
