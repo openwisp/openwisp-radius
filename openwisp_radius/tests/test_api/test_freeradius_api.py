@@ -1134,14 +1134,65 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     def test_coova_accounting_on_200(self):
-        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        nas_ip = "192.168.182.1"
+
+        session1 = self._create_radius_accounting(
+            **{
+                "unique_id": "session1_unique",
+                "session_id": "session1",
+                "nas_ip_address": nas_ip,
+                "username": "user1",
+                "calling_station_id": "AA:BB:CC:DD:EE:11",
+                "stop_time": None,
+            }
+        )
+
+        session2 = self._create_radius_accounting(
+            **{
+                "unique_id": "session2_unique",
+                "session_id": "session2",
+                "nas_ip_address": nas_ip,
+                "username": "user2",
+                "calling_station_id": "AA:BB:CC:DD:EE:22",
+                "stop_time": None,
+            }
+        )
+
+        closed_session = self._create_radius_accounting(
+            **{
+                "unique_id": "closed_session_unique",
+                "session_id": "closed_session",
+                "nas_ip_address": nas_ip,
+                "username": "user3",
+                "calling_station_id": "AA:BB:CC:DD:EE:33",
+                "stop_time": "2018-04-10T09:50:00.000000+00:00",
+            }
+        )
+
+        other_nas_session = self._create_radius_accounting(
+            **{
+                "unique_id": "other_nas_unique",
+                "session_id": "other_nas_session",
+                "nas_ip_address": "192.168.1.100",
+                "username": "user4",
+                "calling_station_id": "AA:BB:CC:DD:EE:44",
+                "stop_time": None,
+            }
+        )
+
+        self.assertEqual(RadiusAccounting.objects.count(), 4)
+        open_sessions_before = RadiusAccounting.objects.filter(
+            stop_time__isnull=True
+        ).count()
+        self.assertEqual(open_sessions_before, 3)
+
         data = {
             "status_type": "Accounting-On",
             "session_id": "",
             "unique_id": "569533dad629d47d8b122826d3ed7f3d",
             "username": "",
             "realm": "",
-            "nas_ip_address": "192.168.182.1",
+            "nas_ip_address": nas_ip,
             "nas_port_id": "",
             "nas_port_type": "Wireless-802.11",
             "session_time": "",
@@ -1163,7 +1214,29 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
-        self.assertEqual(RadiusAccounting.objects.count(), 0)
+
+        session1.refresh_from_db()
+        session2.refresh_from_db()
+        closed_session.refresh_from_db()
+        other_nas_session.refresh_from_db()
+
+        self.assertIsNotNone(session1.stop_time)
+        self.assertIsNotNone(session2.stop_time)
+        self.assertEqual(session1.terminate_cause, "NAS-Reboot")
+        self.assertEqual(session2.terminate_cause, "NAS-Reboot")
+
+        self.assertIsNone(other_nas_session.stop_time)
+
+        self.assertEqual(
+            closed_session.stop_time.isoformat(), "2018-04-10T09:50:00+00:00"
+        )
+
+        self.assertEqual(RadiusAccounting.objects.count(), 4)
+
+        open_sessions_after = RadiusAccounting.objects.filter(
+            stop_time__isnull=True
+        ).count()
+        self.assertEqual(open_sessions_after, 1)
 
     @freeze_time(START_DATE)
     def test_coova_accounting_off_200(self):
@@ -1197,14 +1270,137 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
 
+    @freeze_time(START_DATE)
+    def test_accounting_on_no_nas_ip(self):
+        """Test Accounting-On packet without nas_ip_address is handled gracefully"""
+        data = {
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "569533dad629d47d8b122826d3ed7f3d",
+            "username": "",
+            "realm": "",
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+        }
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+
+    @freeze_time(START_DATE)
+    def test_accounting_on_no_open_sessions(self):
+        """Test Accounting-On packet when no open sessions exist for the NAS"""
+        nas_ip = "192.168.1.1"
+
+        closed_session = self._create_radius_accounting(
+            **{
+                "unique_id": "closed_unique",
+                "session_id": "closed_session",
+                "nas_ip_address": nas_ip,
+                "username": "user1",
+                "stop_time": "2018-04-10T09:50:00.000000+00:00",
+            }
+        )
+
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+        data = {
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "accounting_on_unique",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": nas_ip,
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+        }
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        closed_session.refresh_from_db()
+        self.assertEqual(
+            closed_session.stop_time.isoformat(), "2018-04-10T09:50:00+00:00"
+        )
+
+    @freeze_time(START_DATE)
+    def test_accounting_on_multi_org(self):
+        """Test Accounting-On only affects sessions in the same organization"""
+        nas_ip = "192.168.1.1"
+
+        org2 = self._get_org("org2")
+
+        session1 = self._create_radius_accounting(
+            **{
+                "unique_id": "session1_unique",
+                "session_id": "session1",
+                "nas_ip_address": nas_ip,
+                "username": "user1",
+                "organization": self.default_org,
+                "stop_time": None,
+            }
+        )
+
+        session2 = self._create_radius_accounting(
+            **{
+                "unique_id": "session2_unique",
+                "session_id": "session2",
+                "nas_ip_address": nas_ip,
+                "username": "user2",
+                "organization": org2,
+                "stop_time": None,
+            }
+        )
+
+        self.assertEqual(RadiusAccounting.objects.count(), 2)
+
+        data = {
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "accounting_on_unique",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": nas_ip,
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+        }
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+
+        session1.refresh_from_db()
+        session2.refresh_from_db()
+
+        self.assertIsNotNone(session1.stop_time)
+        self.assertEqual(session1.terminate_cause, "NAS-Reboot")
+
+        self.assertIsNone(session2.stop_time)
+
     def test_accounting_when_nas_using_pfsense_started(self):
+        nas_ip = "10.0.0.14"
+
+        session = self._create_radius_accounting(
+            **{
+                "unique_id": "existing_session",
+                "session_id": "existing_session",
+                "nas_ip_address": nas_ip,
+                "username": "testuser",
+                "stop_time": None,
+            }
+        )
+
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
         data = {
             "status_type": "Accounting-On",
             "session_id": "",
             "unique_id": "bc184fc97e3d58a9583d2ca5bc2ee210",
             "username": "",
             "realm": "",
-            "nas_ip_address": "10.0.0.14",
+            "nas_ip_address": nas_ip,
             "nas_port_id": "",
             "nas_port_type": "",
             "session_time": "",
@@ -1221,10 +1417,15 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
+            HTTP_AUTHORIZATION=self.auth_header,
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
+
+        session.refresh_from_db()
+        self.assertIsNotNone(session.stop_time)
+        self.assertEqual(session.terminate_cause, "NAS-Reboot")
 
     def test_get_authorize_view(self):
         url = f'{reverse("radius:authorize")}{self.token_querystring}'
