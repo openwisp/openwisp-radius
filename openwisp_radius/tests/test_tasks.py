@@ -201,7 +201,7 @@ class TestTasks(FileMixin, BaseTestCase):
             email = mail.outbox.pop()
             self.assertRegex(
                 "".join(email.alternatives[0][0].splitlines()),
-                '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
+                r'<a href=".*?sesame=.*">.*Manage Session.*</a>',
             )
             self.assertIn(
                 "A new session has been started for your account:" f" {user.username}",
@@ -239,9 +239,10 @@ class TestTasks(FileMixin, BaseTestCase):
             user.language = "it"
             user.save(update_fields=["language"])
             tasks.send_login_email.delay(accounting_data)
+            email = mail.outbox.pop()
             self.assertRegex(
                 "".join(email.alternatives[0][0].splitlines()),
-                '<a href=".*?sesame=.*">.*Manage Session.*<\/a>',
+                r'<a href=".*?sesame=.*">.*Manage Session.*</a>',
             )
             self.assertEqual(translation_activate.call_args_list[0][0][0], "it")
             self.assertEqual(
