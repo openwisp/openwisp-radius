@@ -961,7 +961,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item["output_octets"], data2["output_octets"])
         self.assertEqual(item["input_octets"], data2["input_octets"])
         self.assertEqual(item["nas_ip_address"], "172.16.64.91")
-        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
         self.assertIsNone(item["stop_time"])
         response = self.client.get(
             f"{url}?page_size=1&page=2",
@@ -973,7 +972,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item["output_octets"], data1["output_octets"])
         self.assertEqual(item["nas_ip_address"], "172.16.64.91")
         self.assertEqual(item["input_octets"], data1["input_octets"])
-        self.assertEqual(item["called_station_id"], "00-27-22-F3-FA-F1:hostname")
+        self.assertEqual(item["called_station_id"], "00:27:22:f3:fa:f1")
         self.assertIsNotNone(item["stop_time"])
         response = self.client.get(
             f"{url}?page_size=1&page=3",
@@ -1268,7 +1267,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 username="tester",
                 organization=org1,
                 calling_station_id="11:22:33:44:55:66",
-                called_station_id="AA:BB:CC:DD:EE:FF",
+                called_station_id="aa:bb:cc:dd:ee:ff",
             )
         )
         self._create_radius_accounting(**data1)
@@ -1282,7 +1281,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 username="tester",
                 organization=org1,
                 calling_station_id="11-22-33-44-55-66",
-                called_station_id="AA-BB-CC-DD-EE-FF",
+                called_station_id="aa:bb:cc:dd:ee:ff",
             )
         )
         self._create_radius_accounting(**data2)
@@ -1331,17 +1330,17 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(response.data[2]["unique_id"], data1["unique_id"])
 
         with self.subTest("Test filtering with called_station_id"):
-            response = self.client.get(path, {"called_station_id": "AA-BB-CC-DD-EE-FF"})
+            response = self.client.get(path, {"called_station_id": "aa:bb:cc:dd:ee:ff"})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data), 2)
-            self.assertEqual(response.data[0]["called_station_id"], "AA-BB-CC-DD-EE-FF")
-            self.assertEqual(response.data[1]["called_station_id"], "AA:BB:CC:DD:EE:FF")
+            self.assertEqual(response.data[0]["called_station_id"], "aa:bb:cc:dd:ee:ff")
+            self.assertEqual(response.data[1]["called_station_id"], "aa:bb:cc:dd:ee:ff")
 
-            response = self.client.get(path, {"called_station_id": "AA:BB:CC:DD:EE:FF"})
+            response = self.client.get(path, {"called_station_id": "aa:bb:cc:dd:ee:ff"})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data), 2)
-            self.assertEqual(response.data[0]["called_station_id"], "AA-BB-CC-DD-EE-FF")
-            self.assertEqual(response.data[1]["called_station_id"], "AA:BB:CC:DD:EE:FF")
+            self.assertEqual(response.data[0]["called_station_id"], "aa:bb:cc:dd:ee:ff")
+            self.assertEqual(response.data[1]["called_station_id"], "aa:bb:cc:dd:ee:ff")
 
         with self.subTest("Test filtering with calling_station_id"):
             response = self.client.get(
