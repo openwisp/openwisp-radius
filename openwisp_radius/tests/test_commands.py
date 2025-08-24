@@ -486,7 +486,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
 
         with self.subTest("Test session with unique_id does not exist"):
             with patch("logging.Logger.warning") as mocked_logger:
@@ -521,7 +521,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 )
             radius_acc1.refresh_from_db()
             radius_acc2.refresh_from_db()
-            self.assertEqual(radius_acc1.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc1.called_station_id, "cc:cc:cc:cc:cc:0c")
             self.assertNotEqual(radius_acc2.called_station_id, "CC-CC-CC-CC-CC-0C")
 
         with self.subTest("Test stop time is None"):
@@ -532,9 +532,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(
-                radius_acc.called_station_id, rad_options["called_station_id"]
-            )
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
 
     @capture_any_output()
     @patch.object(
@@ -563,4 +561,4 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
