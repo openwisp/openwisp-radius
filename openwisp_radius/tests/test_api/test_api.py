@@ -812,7 +812,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertRegex(
             "".join(email.alternatives[0][0].splitlines()),
-            '<a href=".*">.*Reset password.*<\/a>',
+            r'<a href=".*">.*Reset password.*</a>',
         )
         self.assertNotIn('<img src=""', email.alternatives[0][0])
         url_kwargs = {
