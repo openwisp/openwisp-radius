@@ -411,6 +411,20 @@ authorize the request with other freeradius modules.
 Set this to ``True`` if you are performing authorization exclusively
 through the REST API.
 
+.. _openwisp_radius_simultaneous_use_enabled:
+
+``OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+Allows disabling the :doc:`Simultaneous-Use <simultaneous_use>` feature,
+e.g.:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = False
+
 ``OPENWISP_RADIUS_API_ACCOUNTING_AUTO_GROUP``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

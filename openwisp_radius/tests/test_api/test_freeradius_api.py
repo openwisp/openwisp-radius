@@ -30,6 +30,8 @@ RadiusToken = load_model("RadiusToken")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusPostAuth = load_model("RadiusPostAuth")
 RadiusGroupReply = load_model("RadiusGroupReply")
+RadiusGroupCheck = load_model("RadiusGroupCheck")
+RadiusGroup = load_model("RadiusGroup")
 RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
@@ -1344,7 +1346,7 @@ class TestTransactionFreeradiusApi(
 
         with self.subTest("Counters disabled"):
             with mock.patch.object(app_settings, "COUNTERS", []):
-                with self.assertNumQueries(6):
+                with self.assertNumQueries(7):
                     response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(response.status_code, 200)
                 expected = {
@@ -1436,6 +1438,139 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data, truncated_accept_response)
+
+    @mock.patch.object(app_settings, "SIMULTANEOUS_USE_ENABLED", True)
+    def test_authorize_simultaneous_use(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        self._create_radius_groupreply(
+            group=group,
+            groupname=group.name,
+            attribute="Idle-Timeout",
+            op="=",
+            value="240",
+        )
+        org2 = self._create_org(name="org2")
+        self._create_org_user(organization=org2, user=user)
+
+        with self.subTest("Authorization within simultaneous use limit"):
+            simultaneous_use_check = self._create_radius_groupcheck(
+                group=group,
+                groupname=group.name,
+                attribute="Simultaneous-Use",
+                op=":=",
+                value="2",
+            )
+
+            # Create one open session (within limit of 2)
+            acct_data = self.acct_post_data
+            acct_data.update(
+                {
+                    "username": user.username,
+                    "unique_id": "test_session_1",
+                    "stop_time": None,
+                }
+            )
+            self._create_radius_accounting(**acct_data)
+
+            # Authorization should succeed
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        with self.subTest("Authorization exceeding simultaneous use limit"):
+            RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
+                value="1"
+            )
+
+            # Already have one open session (at the limit of 1)
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(response.data["control:Auth-Type"], "Reject")
+            self.assertEqual(
+                response.data["Reply-Message"],
+                "You are already logged in - access denied",
+            )
+            self.assertEqual(
+                response.data["Idle-Timeout"],
+                {"op": "=", "value": "240"},
+            )
+
+        with self.subTest("Closed sessions are ignored"):
+            # Keep limit at 1 and Close all previously open sessions
+            RadiusAccounting.objects.filter(stop_time=None).update(
+                stop_time="2025-08-12T23:00:24.020460+01:00"
+            )
+
+            # Authorization should succeed (closed sessions don't count)
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        with self.subTest("Open session in different org is ignored"):
+            # Keep limit at 1 and create an open session for the user in org2
+            self._create_radius_accounting(
+                **{
+                    **self.acct_post_data,
+                    "username": user.username,
+                    "unique_id": "test_session_org2",
+                    "stop_time": None,
+                    "organization": org2,
+                }
+            )
+
+            # Authorization should succeed (session in different org doesn't count)
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        with self.subTest("Zero limit allows unlimited simultaneous sessions"):
+            RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
+                value="0"
+            )
+
+            # Create multiple open sessions
+            acct_data.update(
+                {
+                    "username": user.username,
+                    "stop_time": None,
+                    "session_time": 1,
+                    "input_octets": 0,
+                    "output_octets": 0,
+                }
+            )
+            for i in range(2, 4):  # Create 2 more sessions (total 3)
+                acct_data["unique_id"] = f"test_session_{i}"
+                self._create_radius_accounting(**acct_data)
+
+            # Authorization should still succeed with unlimited sessions
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+    @mock.patch.object(app_settings, "SIMULTANEOUS_USE_ENABLED", False)
+    @mock.patch("openwisp_radius.api.freeradius_views.RadiusAccounting.objects.count")
+    def test_authorize_simultaneous_use_disabled_in_settings(self, mocked_count):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        self._create_radius_groupcheck(
+            group=group,
+            groupname=group.name,
+            attribute="Simultaneous-Use",
+            op=":=",
+            value="1",
+        )
+
+        # Create an open session that would normally exceed limit
+        acct_data = self.acct_post_data
+        acct_data.update({"username": user.username, "stop_time": None})  # Open session
+        self._create_radius_accounting(**acct_data)
+
+        # Authorization should succeed (check is disabled)
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+        mocked_count.assert_not_called()
 
     def test_authorize_radius_token_200(self):
         self._get_org_user()

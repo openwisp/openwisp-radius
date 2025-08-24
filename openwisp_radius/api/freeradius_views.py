@@ -302,40 +302,82 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             group_checks = get_group_checks(user_group.group)
 
-            for Counter in app_settings.COUNTERS:
-                group_check = group_checks.get(Counter.check_name)
-                if not group_check:
-                    continue
-                try:
-                    counter = Counter(
-                        user=user, group=user_group.group, group_check=group_check
-                    )
-                    remaining = counter.check()
-                except SkipCheck:
-                    continue
-                # if max is reached send access rejected + reply message
-                except MaxQuotaReached as max_quota:
-                    data.update(self.reject_attributes.copy())
-                    if "Reply-Message" not in data:
-                        data["Reply-Message"] = max_quota.reply_message
-                    return data, self.max_quota_status
-                # avoid crashing on unexpected runtime errors
-                except Exception as e:
-                    logger.exception(f'Got exception "{e}" while executing {counter}')
-                    continue
-                if remaining is None:
-                    continue
-                reply_name = counter.reply_name
-                # send remaining value in RADIUS reply, if needed.
-                # This emulates the implementation of sqlcounter in freeradius
-                # which sends the reply message only if the value is smaller
-                # than what was defined to a previous reply message
-                if reply_name not in data or remaining < self._get_reply_value(
-                    data, counter
-                ):
-                    data[reply_name] = remaining
+            # Validate simultaneous use
+            simultaneous_use = self._check_simultaneous_use(
+                data, user, group_checks, organization_id
+            )
+            if simultaneous_use is not None:
+                return simultaneous_use
+
+            # Execute counter checks
+            counter_result = self._check_counters(
+                data, user, user_group.group, group_checks
+            )
+            if counter_result is not None:
+                return counter_result
 
         return data, self.accept_status
+
+    def _check_simultaneous_use(self, data, user, group_checks, organization_id):
+        """
+        Check if user has exceeded simultaneous use limit
+
+        Returns rejection response if limit is exceeded
+        """
+        if (check := group_checks.get("Simultaneous-Use")) is None or (
+            max_simultaneous := int(check.value)
+        ) <= 0:
+            # Exit early if the `Simultaneous-Use` check is not defined
+            # in the RadiusGroup or if it permits unlimited concurrent sessions.
+            return None
+        open_sessions = RadiusAccounting.objects.filter(
+            username=user.username,
+            organization_id=organization_id,
+            stop_time__isnull=True,
+        ).count()
+        if open_sessions >= max_simultaneous:
+            data.update(self.reject_attributes.copy())
+            if "Reply-Message" not in data:
+                data["Reply-Message"] = "You are already logged in - access denied"
+            return data, self.reject_status
+
+    def _check_counters(self, data, user, group, group_checks):
+        """
+        Execute counter checks and return rejection response if any quota is exceeded
+        Returns None if all checks pass
+        """
+        for Counter in app_settings.COUNTERS:
+            group_check = group_checks.get(Counter.check_name)
+            if not group_check:
+                continue
+            try:
+                counter = Counter(user=user, group=group, group_check=group_check)
+                remaining = counter.check()
+            except SkipCheck:
+                continue
+            # if max is reached send access rejected + reply message
+            except MaxQuotaReached as max_quota:
+                data.update(self.reject_attributes.copy())
+                if "Reply-Message" not in data:
+                    data["Reply-Message"] = max_quota.reply_message
+                return data, self.max_quota_status
+            # avoid crashing on unexpected runtime errors
+            except Exception as e:
+                logger.exception(f'Got exception "{e}" while executing {counter}')
+                continue
+            if remaining is None:
+                continue
+            reply_name = counter.reply_name
+            # send remaining value in RADIUS reply, if needed.
+            # This emulates the implementation of sqlcounter in freeradius
+            # which sends the reply message only if the value is smaller
+            # than what was defined to a previous reply message
+            if reply_name not in data or remaining < self._get_reply_value(
+                data, counter
+            ):
+                data[reply_name] = remaining
+
+        return None
 
     @staticmethod
     def _get_reply_value(data, counter):
