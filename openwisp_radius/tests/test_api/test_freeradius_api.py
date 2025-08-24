@@ -20,8 +20,8 @@ from openwisp_utils.tests import capture_any_output, catch_signal
 from ... import registration
 from ... import settings as app_settings
 from ...api.freeradius_views import logger as freeradius_api_logger
-from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...base.models import sanitize_mac_address
+from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
@@ -406,7 +406,9 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             if key == "called_station_id":
                 # Both values should be sanitized for comparison
                 ra_value = sanitize_mac_address(ra_value) if ra_value else ra_value
-                data_value = sanitize_mac_address(data_value) if data_value else data_value
+                data_value = (
+                    sanitize_mac_address(data_value) if data_value else data_value
+                )
             _type = type(ra_value)
             if _type != type(data_value):
                 data_value = _type(data_value)
@@ -1853,7 +1855,9 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     username="tester",
                     stop_time__isnull=False,
                     nas_ip_address=acct_post_data["nas_ip_address"],
-                    called_station_id=sanitize_mac_address(acct_post_data["called_station_id"]),
+                    called_station_id=sanitize_mac_address(
+                        acct_post_data["called_station_id"]
+                    ),
                 ).count(),
                 1,
             )
@@ -2188,42 +2192,6 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
             response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data["detail"], test_fail_msg)
-
-    def test_ip_from_radsetting_valid(self):
-        with mock.patch(self.freeradius_hosts_path, []):
-            radsetting = OrganizationRadiusSettings.objects.get(
-                organization=self._get_org()
-            )
-        radsetting.freeradius_allowed_hosts = "127.0.0.1"
-        radsetting.save()
-        response = self.client.post(reverse("radius:authorize"), self.params)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    def test_ip_from_setting_valid(self):
-        response = self.client.post(reverse("radius:authorize"), self.params)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-
-    @capture_any_output()
-    def test_ip_from_radsetting_not_exist(self):
-        org2 = self._create_org(**{"name": "test", "slug": "test"})
-        user = self._create_user(username="org2-tester", email="tester@org2.com")
-        self._create_org_user(**{"organization": org2, "user": user})
-        params = self.params.copy()
-        params["username"] = "org2-tester"
-        response = self.client.post(
-            reverse("radius:user_auth_token", args=[org2.slug]), params
-        )
-        self.assertEqual(response.status_code, 200)
-        with self.subTest("FREERADIUS_ALLOWED_HOSTS is 127.0.0.1"):
-            response = self.client.post(reverse("radius:authorize"), params)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
-        with self.subTest("Empty Settings"), mock.patch(self.freeradius_hosts_path, []):
-            response = self.client.post(reverse("radius:authorize"), params)
-            self.assertEqual(response.status_code, 403)
-            self.assertEqual(response.data["detail"], self.fail_msg)
 
     def test_ip_from_radsetting_valid(self):
         with mock.patch(self.freeradius_hosts_path, []):
