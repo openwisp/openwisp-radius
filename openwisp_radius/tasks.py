@@ -16,6 +16,7 @@ from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
 from . import settings as app_settings
+from .counters.exceptions import MaxQuotaReached
 from .radclient.client import RadClient
 from .utils import get_one_time_login_url, load_model
 
@@ -147,15 +148,22 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
                 )
 
     def get_radius_reply_name_and_value(user, check):
-        Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute]
-        counter = Counter(user=user, group=check.group, group_check=check)
         try:
+            Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute]
+            counter = Counter(user=user, group=check.group, group_check=check)
             value = counter.check()
             return counter.reply_name, value
-        except KeyError:
-            return check.attribute, check.value
         except Exception as e:
-            logger.exception(f"Got {e} while CoA for counter {Counter}")
+            # Ignore MaxQuotaReached and KeyError exceptions:
+            # - MaxQuotaReached: raised by Counter.check() when user has
+            #       reached their quota
+            # - KeyError: raised when the check attribute is not in
+            #       CHECK_ATTRIBUTE_COUNTERS_MAP
+            if not isinstance(e, (MaxQuotaReached, KeyError)):
+                logger.exception(
+                    f"Got {e} while executing counter for {check.attribute} check."
+                )
+            return check.attribute, check.value
 
     def get_radius_attributes(user):
         attributes = {}

@@ -1,3 +1,4 @@
+import logging
 import os
 from unittest import mock
 from uuid import UUID, uuid4
@@ -16,6 +17,7 @@ from openwisp_users.tests.utils import TestMultitenantAdminMixin
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from .. import settings as app_settings
+from ..counters.exceptions import MaxQuotaReached
 from ..radclient.client import RadClient
 from ..tasks import perform_change_of_authorization
 from ..utils import (
@@ -918,7 +920,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
     @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=False)
     @mock.patch("logging.Logger.warning")
     def test_perform_change_of_authorization_celery_task_failures(
-        self, mocked_logger, *args
+        self, mocked_logger, mocked_radclient
     ):
         mocked_user_id = uuid4()
         mocked_old_group_id = uuid4()
@@ -1018,6 +1020,73 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 f'Failed to perform CoA for "{session.unique_id}"'
                 f' RadiusAccounting object of "{user}" user'
             )
+
+        mocked_radclient.reset_mock()
+        with self.subTest("Counter.check() raises Exception"):
+            with mock.patch(
+                "openwisp_radius.counters.base.BaseCounter.check",
+                side_effect=Exception("Test exception"),
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                mocked_radclient.assert_called_once_with(
+                    {
+                        "Max-Daily-Session": "10800",
+                        "Max-Daily-Session-Traffic": "3000000000",
+                        "User-Name": "tester",
+                    }
+                )
+                mocked_exception.assert_called_with(
+                    "Got Test exception while executing counter for"
+                    " Max-Daily-Session-Traffic check."
+                )
+
+        mocked_radclient.reset_mock()
+        with self.subTest("Counter.check() raises MaxQuotaReached"):
+            with mock.patch(
+                "openwisp_radius.counters.base.BaseCounter.check",
+                side_effect=MaxQuotaReached(
+                    message="MaxQuotaReached",
+                    level="info",
+                    logger=logging,
+                    reply_message="reply MaxQuotaReached",
+                ),
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                mocked_radclient.assert_called_once_with(
+                    {
+                        "Max-Daily-Session": "10800",
+                        "Max-Daily-Session-Traffic": "3000000000",
+                        "User-Name": "tester",
+                    }
+                )
+                mocked_exception.assert_not_called()
+
+        mocked_radclient.reset_mock()
+        with self.subTest("RADIUS Attribute absent from CHECK_ATTRIBUTE_COUNTERS_MAP"):
+            with mock.patch(
+                "openwisp_radius.tasks.app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP", {}
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                mocked_radclient.assert_called_once_with(
+                    {
+                        "Max-Daily-Session": "10800",
+                        "Max-Daily-Session-Traffic": "3000000000",
+                        "User-Name": "tester",
+                    }
+                )
+                mocked_exception.assert_not_called()
 
     @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=True)
     @capture_stderr()
