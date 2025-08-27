@@ -153,13 +153,12 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
             counter = Counter(user=user, group=check.group, group_check=check)
             value = counter.check()
             return counter.reply_name, value
+        except MaxQuotaReached:
+            return check.attribute, 0
         except Exception as e:
-            # Ignore MaxQuotaReached and KeyError exceptions:
-            # - MaxQuotaReached: raised by Counter.check() when user has
-            #       reached their quota
-            # - KeyError: raised when the check attribute is not in
-            #       CHECK_ATTRIBUTE_COUNTERS_MAP
-            if not isinstance(e, (MaxQuotaReached, KeyError)):
+            # KeyError is raised when the check attribute is not in
+            # CHECK_ATTRIBUTE_COUNTERS_MAP
+            if not isinstance(e, KeyError):
                 logger.exception(
                     f"Got {e} while executing counter for {check.attribute} check."
                 )

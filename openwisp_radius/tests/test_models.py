@@ -1062,8 +1062,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 )
                 mocked_radclient.assert_called_once_with(
                     {
-                        "Max-Daily-Session": "10800",
-                        "Max-Daily-Session-Traffic": "3000000000",
+                        "Max-Daily-Session": "0",
+                        "Max-Daily-Session-Traffic": "0",
                         "User-Name": "tester",
                     }
                 )
