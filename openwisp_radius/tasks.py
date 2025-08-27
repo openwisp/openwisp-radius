@@ -231,32 +231,3 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
                 f' RadiusAccounting object of "{user}" user'
             )
     RadiusAccounting.objects.bulk_update(updated_sessions, fields=["groupname"])
-
-
-@shared_task(base=OpenwispCeleryTask)
-def handle_accounting_on(organization_id, nas_ip_address):
-    """
-    Handle Accounting-On packets by closing stale sessions for the NAS.
-
-    This task is executed asynchronously to avoid blocking the API response
-    and to prevent performance issues when there are many sessions to close.
-
-    Args:
-        organization_id: UUID of the organization
-        nas_ip_address: IP address of the NAS
-
-    Returns:
-        Number of sessions closed
-    """
-    RadiusAccounting = load_model("RadiusAccounting")
-
-    closed_sessions_count = RadiusAccounting.close_nas_sessions(
-        organization_id=organization_id, nas_ip_address=nas_ip_address
-    )
-
-    logger.info(
-        f"Accounting-On: Closed {closed_sessions_count} stale sessions "
-        f"for NAS {nas_ip_address} in organization {organization_id}"
-    )
-
-    return closed_sessions_count
