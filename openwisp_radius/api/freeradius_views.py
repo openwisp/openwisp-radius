@@ -506,13 +506,15 @@ class AccountingView(ListCreateAPIView):
         if status_type in UNSUPPORTED_STATUS_TYPES:
             return Response(None)
         if status_type == "Accounting-On":
-            closed_count = RadiusAccounting.close_stale_sessions_for_nas(
-                nas_ip=data.get("nas_ip_address"), organization_id=self.request.auth
+            called_station_id = data.get("called_station_id")
+            closed_count = RadiusAccounting.close_stale_sessions_by_called_station_id(
+                called_station_id=called_station_id,
+                organization_id=self.request.auth,
             )
             if closed_count:
                 logger.info(
-                    f"Closed {closed_count} stale session(s) for NAS "
-                    f'{data.get("nas_ip_address")} in organization '
+                    f"Closed {closed_count} stale session(s) for device with "
+                    f"Called-Station-Id {called_station_id} in organization "
                     f"{self.request.auth} due to receiving an "
                     "Accounting-On packet."
                 )

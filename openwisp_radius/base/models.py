@@ -558,16 +558,18 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.save()
 
     @classmethod
-    def close_stale_sessions_for_nas(cls, nas_ip, organization_id):
-        if not nas_ip or not organization_id:
+    def close_stale_sessions_by_called_station_id(
+        cls, called_station_id, organization_id
+    ):
+        if not called_station_id or not organization_id:
             return 0
         stale_sessions = cls.objects.filter(
-            nas_ip_address=nas_ip,
+            called_station_id=called_station_id,
             organization_id=organization_id,
             stop_time__isnull=True,
         )
         closed_count = stale_sessions.update(
-            stop_time=now(), terminate_cause="Stale-Session"
+            stop_time=now(), terminate_cause="NAS Reboot"
         )
         return closed_count
 

@@ -1287,7 +1287,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         stale_session_data.update(
             {
                 "unique_id": "stale-session-1",
-                "nas_ip_address": "10.0.0.1",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
                 "username": stale_user.username,
                 "stop_time": None,
             }
@@ -1301,7 +1301,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         other_session_data.update(
             {
                 "unique_id": "other-session-1",
-                "nas_ip_address": "10.0.0.2",
+                "called_station_id": "11-22-33-44-55-66",
                 "username": other_user.username,
                 "stop_time": None,
             }
@@ -1314,7 +1314,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # Simulate Accounting-On packet from the first NAS
         accounting_on_data = {
             "status_type": "Accounting-On",
-            "nas_ip_address": "10.0.0.1",
+            "called_station_id": "AA-BB-CC-DD-EE-FF",
             "unique_id": "accounting-on-packet-id",
         }
         response = self.post_json(accounting_on_data)
@@ -1326,34 +1326,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         stale_session.refresh_from_db()
         self.assertIsNotNone(stale_session.stop_time)
-        self.assertEqual(stale_session.terminate_cause, "Stale-Session")
+        self.assertEqual(stale_session.terminate_cause, "NAS Reboot")
 
         other_session.refresh_from_db()
         self.assertIsNone(other_session.stop_time)
-
-    @freeze_time(START_DATE)
-    def test_accounting_on_no_nas_ip(self):
-        stale_session_data = self.acct_post_data.copy()
-        stale_session_data.update(
-            {
-                "unique_id": "stale-session-1",
-                "nas_ip_address": "10.0.0.1",
-                "stop_time": None,
-            }
-        )
-        stale_session = self._create_radius_accounting(**stale_session_data)
-        self.assertIsNone(stale_session.stop_time)
-
-        # Simulate Accounting-On packet without NAS IP
-        accounting_on_data = {
-            "status_type": "Accounting-On",
-            "unique_id": "accounting-on-packet-id",
-        }
-        response = self.post_json(accounting_on_data)
-        self.assertEqual(response.status_code, 200)
-
-        stale_session.refresh_from_db()
-        self.assertIsNone(stale_session.stop_time)
 
 
 class TestTransactionFreeradiusApi(
