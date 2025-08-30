@@ -204,6 +204,8 @@ class AutoGroupnameMixin(object):
         """
         automatically sets groupname
         """
+        if self.group and not self.group.pk:
+            return
         super().clean()
         if self.group:
             self.groupname = self.group.name
@@ -211,6 +213,14 @@ class AutoGroupnameMixin(object):
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+
+    def save(self, *args, **kwargs):
+        """
+        Ensure groupname is populated from the group relation before saving.
+        """
+        if self.group:
+            self.groupname = self.group.name
+        super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
