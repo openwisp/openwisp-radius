@@ -1221,6 +1221,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
+            HTTP_AUTHORIZATION=self.auth_header,
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -1277,6 +1278,58 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()), 0)
+
+    @freeze_time(START_DATE)
+    def test_accounting_on_closes_stale_sessions(self):
+        stale_user = self._create_user(username="stale_user", email="stale@user.com")
+        self._create_org_user(user=stale_user)
+        stale_session_data = self.acct_post_data.copy()
+        stale_session_data.update(
+            {
+                "unique_id": "stale-session-1",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "username": stale_user.username,
+                "stop_time": None,
+            }
+        )
+        stale_session = self._create_radius_accounting(**stale_session_data)
+        self.assertIsNone(stale_session.stop_time)
+
+        other_user = self._create_user(username="other_user", email="other@user.com")
+        self._create_org_user(user=other_user)
+        other_session_data = self.acct_post_data.copy()
+        other_session_data.update(
+            {
+                "unique_id": "other-session-1",
+                "called_station_id": "11-22-33-44-55-66",
+                "username": other_user.username,
+                "stop_time": None,
+            }
+        )
+        other_session = self._create_radius_accounting(**other_session_data)
+        self.assertIsNone(other_session.stop_time)
+
+        self.assertEqual(RadiusAccounting.objects.count(), 2)
+
+        # Simulate Accounting-On packet from the first NAS
+        accounting_on_data = {
+            "status_type": "Accounting-On",
+            "called_station_id": "AA-BB-CC-DD-EE-FF",
+            "unique_id": "accounting-on-packet-id",
+        }
+        response = self.post_json(accounting_on_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+
+        self.assertEqual(RadiusAccounting.objects.count(), 2)
+
+        stale_session.refresh_from_db()
+        self.assertIsNotNone(stale_session.stop_time)
+        self.assertEqual(stale_session.terminate_cause, "NAS-Reboot")
+
+        other_session.refresh_from_db()
+        self.assertIsNone(other_session.stop_time)
 
 
 class TestTransactionFreeradiusApi(

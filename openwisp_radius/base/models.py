@@ -557,6 +557,22 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.terminate_cause = "Session Timeout"
             session.save()
 
+    @classmethod
+    def close_stale_sessions_by_called_station_id(
+        cls, called_station_id, organization_id
+    ):
+        if not called_station_id or not organization_id:
+            return 0
+        stale_sessions = cls.objects.filter(
+            called_station_id=called_station_id,
+            organization_id=organization_id,
+            stop_time__isnull=True,
+        )
+        closed_count = stale_sessions.update(
+            stop_time=now(), terminate_cause="NAS-Reboot"
+        )
+        return closed_count
+
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
     name = models.CharField(
