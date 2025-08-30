@@ -1326,7 +1326,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         stale_session.refresh_from_db()
         self.assertIsNotNone(stale_session.stop_time)
-        self.assertEqual(stale_session.terminate_cause, "NAS Reboot")
+        self.assertEqual(stale_session.terminate_cause, "NAS-Reboot")
 
         other_session.refresh_from_db()
         self.assertIsNone(other_session.stop_time)
