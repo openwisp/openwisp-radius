@@ -46,7 +46,8 @@ RE_MAC_ADDR = re.compile(
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
 # Accounting-Off is not implemented and hence ignored right now
 # may be implemented in the future
-UNSUPPORTED_STATUS_TYPES = ["Accounting-Off"]
+# Accounting-On is used to close stale sessions
+SPECIAL_STATUS_TYPES = ["Accounting-On", "Accounting-Off"]
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
@@ -78,16 +79,17 @@ class AccountingFilter(filters.FilterSet):
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
-    def _get_ip_list(self, uuid):
-        if f"ip-{uuid}" in cache:
+    def _get_ip_list(self, uuid=None):
+        ip_list = None
+        if uuid and f"ip-{uuid}" in cache:
             ip_list = cache.get(f"ip-{uuid}")
-        else:
+        elif uuid:
             try:
                 ip_list = OrganizationRadiusSettings.objects.get(
                     organization__pk=uuid
                 ).freeradius_allowed_hosts_list
             except OrganizationRadiusSettings.DoesNotExist:
-                ip_list = None
+                pass
             else:
                 cache.set(f"ip-{uuid}", ip_list)
         return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
@@ -168,8 +170,8 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
         if not uuid and not token:
-            if request.data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
-                return
+            if request.data.get("status_type", None) in SPECIAL_STATUS_TYPES:
+                return self._check_client_ip_and_return(request, uuid)
             username = request.data.get("username") or request.query_params.get(
                 "username"
             )
@@ -499,15 +501,15 @@ class AccountingView(ListCreateAPIView):
         does not return any JSON response so that freeradius will avoid
         processing the response without generating warnings
         """
-        if request.user.is_anonymous and request.auth is None:
-            return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
         status_type = data.get("status_type", None)
-        if status_type in UNSUPPORTED_STATUS_TYPES:
-            return Response(None)
-        if status_type == "Accounting-On":
-            self._handle_accounting_on(data)
-            return Response(None)
+        # Special Cases
+        if (
+            request.user.is_anonymous and request.auth is None
+        ) or status_type in SPECIAL_STATUS_TYPES:
+            if status_type == "Accounting-On":
+                self._handle_accounting_on(data)
+            return Response(status=status.HTTP_200_OK)
         # Create or Update
         try:
             instance = self.get_queryset().get(unique_id=data.get("unique_id"))
@@ -547,8 +549,7 @@ class AccountingView(ListCreateAPIView):
         """
         called_station_id = data.get("called_station_id")
         closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
-            called_station_id=called_station_id,
-            organization_id=self.request.auth,
+            called_station_id=called_station_id
         )
         if closed_count:
             logger.info(

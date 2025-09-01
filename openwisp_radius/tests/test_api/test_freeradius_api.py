@@ -1221,7 +1221,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
-            HTTP_AUTHORIZATION=self.auth_header,
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -1311,10 +1310,29 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # Simulate Accounting-On packet from the first NAS
         accounting_on_data = {
             "status_type": "Accounting-On",
+            "session_id": "c2bc87808f568e3c",
+            "unique_id": "2d124bdc1d269430629970d5f0bb7113",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "192.168.0.4",
+            "nas_port_id": "0",
+            "nas_port_type": "",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
             "called_station_id": "AA-BB-CC-DD-EE-FF",
-            "unique_id": "accounting-on-packet-id",
+            "calling_station_id": "",
+            "terminate_cause": "",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "",
         }
-        response = self.post_json(accounting_on_data)
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(accounting_on_data),
+            content_type="application/json",
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 2)
