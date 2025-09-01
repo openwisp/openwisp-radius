@@ -44,9 +44,9 @@ RE_MAC_ADDR = re.compile(
     "^{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}[:-]{0}".format("[a-f0-9]{2}"), re.I
 )
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
-# Accounting-On and Accounting-Off are not implemented and
-# hence  ignored right now - may be implemented in the future
-UNSUPPORTED_STATUS_TYPES = ["Accounting-On", "Accounting-Off"]
+# Accounting-Off is not implemented and hence ignored right now
+# may be implemented in the future
+UNSUPPORTED_STATUS_TYPES = ["Accounting-Off"]
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
@@ -502,7 +502,11 @@ class AccountingView(ListCreateAPIView):
         if request.user.is_anonymous and request.auth is None:
             return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
-        if data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
+        status_type = data.get("status_type", None)
+        if status_type in UNSUPPORTED_STATUS_TYPES:
+            return Response(None)
+        if status_type == "Accounting-On":
+            self._handle_accounting_on(data)
             return Response(None)
         # Create or Update
         try:
@@ -532,6 +536,27 @@ class AccountingView(ListCreateAPIView):
             serializer.update(instance, acct_data)
             self.send_radius_accounting_signal(serializer.validated_data)
             return Response(None)
+
+    def _handle_accounting_on(self, data):
+        """
+        When NAS devices are cold rebooted,
+        they may not close active sessions,
+        which can cause issues with Simultaneous-Use.
+        For this reason, OpenWISP closes any open session from
+        the same NAS when it receives an Accounting-On request.
+        """
+        called_station_id = data.get("called_station_id")
+        closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+            called_station_id=called_station_id,
+            organization_id=self.request.auth,
+        )
+        if closed_count:
+            logger.info(
+                f"Closed {closed_count} stale session(s) for device with "
+                f"Called-Station-Id {called_station_id} in organization "
+                f"{self.request.auth} due to receiving an "
+                "Accounting-On packet."
+            )
 
     def _is_interim_update_corner_case(self, error, data):
         """
