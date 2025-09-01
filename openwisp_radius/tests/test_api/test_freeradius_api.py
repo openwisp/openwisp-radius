@@ -1294,7 +1294,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         stale_session = self._create_radius_accounting(**stale_session_data)
         self.assertIsNone(stale_session.stop_time)
-
         other_user = self._create_user(username="other_user", email="other@user.com")
         self._create_org_user(user=other_user)
         other_session_data = self.acct_post_data.copy()
@@ -1308,9 +1307,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         other_session = self._create_radius_accounting(**other_session_data)
         self.assertIsNone(other_session.stop_time)
-
         self.assertEqual(RadiusAccounting.objects.count(), 2)
-
         # Simulate Accounting-On packet from the first NAS
         accounting_on_data = {
             "status_type": "Accounting-On",
@@ -1318,16 +1315,13 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "unique_id": "accounting-on-packet-id",
         }
         response = self.post_json(accounting_on_data)
-
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
-
         self.assertEqual(RadiusAccounting.objects.count(), 2)
-
         stale_session.refresh_from_db()
         self.assertIsNotNone(stale_session.stop_time)
         self.assertEqual(stale_session.terminate_cause, "NAS-Reboot")
-
+        # Session from other NAS unaffected
         other_session.refresh_from_db()
         self.assertIsNone(other_session.stop_time)
 
