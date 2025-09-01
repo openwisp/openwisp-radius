@@ -549,12 +549,12 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 | (Q(update_time=None) & Q(start_time__lt=older_than))
             )
         )
-        for session in sessions:
+        for session in sessions.iterator():
             # calculate seconds in between two dates
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
-            session.terminate_cause = "Session Timeout"
+            session.terminate_cause = "Session-Timeout"
             session.save()
 
     @classmethod
