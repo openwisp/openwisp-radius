@@ -200,17 +200,26 @@ class AutoUsernameMixin(object):
 
 
 class AutoGroupnameMixin(object):
+    def _set_groupname(self):
+        if self.group:
+            self.groupname = self.group.name
+
     def clean(self):
         """
         automatically sets groupname
         """
+        if self.group and not self.group.pk:
+            return
         super().clean()
-        if self.group:
-            self.groupname = self.group.name
-        elif not self.groupname:
+        self._set_groupname()
+        if not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+
+    def save(self, *args, **kwargs):
+        self._set_groupname()
+        return super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
