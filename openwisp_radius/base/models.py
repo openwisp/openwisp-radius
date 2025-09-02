@@ -219,7 +219,7 @@ class AutoGroupnameMixin(object):
 
     def save(self, *args, **kwargs):
         self._set_groupname()
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
