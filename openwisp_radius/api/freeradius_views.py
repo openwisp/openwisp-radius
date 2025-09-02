@@ -519,7 +519,7 @@ class AccountingView(ListCreateAPIView):
                 serializer.is_valid(raise_exception=True)
             except ValidationError as error:
                 if self._is_interim_update_corner_case(error, data):
-                    return Response(None)
+                    return Response(status=status.HTTP_200_OK)
                 raise error
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             try:
@@ -527,17 +527,17 @@ class AccountingView(ListCreateAPIView):
             # on large systems using mac auth roaming this could happen
             except IntegrityError:
                 logger.info(f"Ignoring duplicate session {acct_data}")
-                return Response(None, status=200)
+                return Response(status=status.HTTP_200_OK)
             headers = self.get_success_headers(serializer.data)
             self.send_radius_accounting_signal(serializer.validated_data)
-            return Response(None, status=201, headers=headers)
+            return Response(status=status.HTTP_201_CREATED, headers=headers)
         else:
             serializer = self.get_serializer(instance, data=data, partial=False)
             serializer.is_valid(raise_exception=True)
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.update(instance, acct_data)
             self.send_radius_accounting_signal(serializer.validated_data)
-            return Response(None)
+            return Response(status=status.HTTP_200_OK)
 
     def _handle_accounting_on(self, data):
         """
