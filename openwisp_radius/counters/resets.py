@@ -36,8 +36,10 @@ def _monthly(user=None):
 def _monthly_subscription(user):
     dt = _today()
     day_joined = user.date_joined.day
+    # subscription cycle starts on the day of month the user joined
     start = datetime(dt.year, dt.month, day_joined)
-    if start > datetime.fromordinal(dt.toordinal()):
+    # if the start date is in the future, shift to previous month
+    if start > datetime(dt.year, dt.month, dt.day):
         start = start - relativedelta(months=1)
     end = datetime(start.year, start.month, day_joined) + relativedelta(months=1)
     return _timestamp(start, end)

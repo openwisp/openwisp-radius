@@ -559,13 +559,29 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 | (Q(update_time=None) & Q(start_time__lt=older_than))
             )
         )
-        for session in sessions:
+        for session in sessions.iterator():
             # calculate seconds in between two dates
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
-            session.terminate_cause = "Session Timeout"
+            session.terminate_cause = "Session-Timeout"
             session.save()
+
+    @classmethod
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
+        """
+        Called during RADIUS Accounting-On.
+        """
+        if not called_station_id:
+            return 0
+        stale_sessions = cls.objects.filter(
+            called_station_id=called_station_id,
+            stop_time__isnull=True,
+        )
+        closed_count = stale_sessions.update(
+            stop_time=now(), terminate_cause="NAS-Reboot"
+        )
+        return closed_count
 
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
