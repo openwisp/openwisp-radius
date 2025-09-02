@@ -200,6 +200,10 @@ class AutoUsernameMixin(object):
 
 
 class AutoGroupnameMixin(object):
+    def _set_groupname(self):
+        if self.group:
+            self.groupname = self.group.name
+
     def clean(self):
         """
         automatically sets groupname
@@ -207,19 +211,14 @@ class AutoGroupnameMixin(object):
         if self.group and not self.group.pk:
             return
         super().clean()
-        if self.group:
-            self.groupname = self.group.name
-        elif not self.groupname:
+        self._set_groupname()
+        if not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
 
     def save(self, *args, **kwargs):
-        """
-        Ensure groupname is populated from the group relation before saving.
-        """
-        if self.group:
-            self.groupname = self.group.name
+        self._set_groupname()
         super().save(*args, **kwargs)
 
 
