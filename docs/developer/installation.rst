@@ -20,8 +20,19 @@ Install the system dependencies:
 .. code-block:: shell
 
     sudo apt update
-    sudo apt install -y sqlite3 libsqlite3-dev libpq-dev
-    sudo apt install -y xmlsec1
+    sudo apt install xmlsec1 gettext \
+        sqlite3 \
+        # the dependencies below are needed
+        # to test the integration with
+        # OpenWISP Monitoring
+        fping \
+        gdal-bin \
+        libproj-dev \
+        libgeos-dev \
+        libspatialite-dev \
+        spatialite-bin \
+        libsqlite3-mod-spatialite
+    # for selenium tests
     sudo apt install -y chromium-browser
 
 Fork and clone the forked repository:
@@ -36,11 +47,12 @@ Navigate into the cloned repository:
 
     cd openwisp-radius/
 
-Launch Redis:
+Launch Redis (and InfluxDB for the :doc:`integration with OpenWISP
+Monitoring </radius/user/radius_monitoring>`):
 
 .. code-block:: shell
 
-    docker compose up -d redis
+    docker compose up -d redis influxdb
 
 Setup and activate a virtual-environment (we'll be using `virtualenv
 <https://pypi.org/project/virtualenv/>`_):
@@ -95,7 +107,7 @@ Run tests with:
 
 .. code-block:: shell
 
-    ./runtests.py --parallel
+    ./runtests
 
 Run quality assurance tests with:
 
@@ -136,7 +148,7 @@ Migrating an existing freeradius database
 -----------------------------------------
 
 If you already have a freeradius 3 database with the default schema, you
-should be able to use it with openwisp-radius (and extended apps) easily:
+should be able to use it with OpenWISP RADIUS (and extended apps) easily:
 
 1. first of all, back up your existing database;
 2. configure django to connect to your existing database;
