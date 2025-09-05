@@ -2,10 +2,9 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase
 from pyrad.client import Client, Timeout
-from pyrad.packet import CoAACK, CoANAK
+from pyrad.packet import CoAACK, CoANAK, DisconnectACK, DisconnectNAK, DisconnectRequest
 
-from .. import settings as app_settings
-from ..radclient.client import CoaPacket, RadClient
+from ..radclient.client import CoaPacket, DisconnectPacket, RadClient
 
 
 class TestRadClient(TestCase):
@@ -13,23 +12,6 @@ class TestRadClient(TestCase):
         return RadClient(
             host="127.0.0.1",
             radsecret="testing",
-        )
-
-    def test_clean_attributes(self):
-        client = self._get_client()
-        attrs = {
-            "Max-Daily-Session-Traffic": "3000000",
-            "Max-Daily-Session": "10800",
-            "WISPr-Bandwidth-Max-Down": "30000",
-        }
-        cleaned_attrs = client.clean_attributes(attrs)
-        self.assertEqual(
-            cleaned_attrs,
-            {
-                "Session-Timeout": "10800",
-                app_settings.TRAFFIC_COUNTER_REPLY_NAME: "3000000",
-                "WISPr-Bandwidth-Max-Down": "30000",
-            },
         )
 
     @patch("logging.Logger.info")
@@ -76,3 +58,57 @@ class TestRadClient(TestCase):
         self.assertEqual(encoded_values, ("Session-Timeout", ""))
         encoded_values = packet._EncodeKeyValues(*("Session-Timeout", "10"))
         self.assertEqual(encoded_values, (27, [b"\x00\x00\x00\n"]))
+
+    def test_disconnect_packet(self):
+        client = self._get_client()
+        packet = DisconnectPacket(dict=client.client.dict)
+
+        self.assertEqual(packet.code, DisconnectRequest)
+        encoded_values = packet._EncodeKeyValues(*("User-Name", ""))
+        self.assertEqual(encoded_values, (1, [b""]))
+        encoded_values = packet._EncodeKeyValues(*("User-Name", "testuser"))
+        self.assertEqual(encoded_values, (1, [b"testuser"]))
+
+    @patch("logging.Logger.info")
+    def test_perform_disconnect(self, mocked_logger):
+        client = self._get_client()
+        attrs = {
+            "User-Name": "testuser",
+        }
+        mocked_disconnect_ack = Mock()
+        mocked_disconnect_ack.code = DisconnectACK
+        mocked_disconnect_nak = Mock()
+        mocked_disconnect_nak.code = DisconnectNAK
+
+        with self.subTest("Test request timed out"):
+            with patch.object(Client, "_SendPacket", side_effect=Timeout):
+                result = client.perform_disconnect(attrs)
+                self.assertEqual(result, False)
+            mocked_logger.assert_called_with(
+                f"Failed to perform Disconnect with {client.client.server}"
+                f" with payload {attrs}. Error: Disconnect request timed out."
+            )
+
+        mocked_logger.reset_mock()
+        with self.subTest("Test DisconnectACK"):
+            with patch.object(
+                Client, "_SendPacket", return_value=mocked_disconnect_ack
+            ):
+                result = client.perform_disconnect(attrs)
+                self.assertEqual(result, True)
+            mocked_logger.assert_called_with(
+                f"DisconnectACK received from {client.client.server} "
+                f"for payload: {attrs}"
+            )
+
+        mocked_logger.reset_mock()
+        with self.subTest("Test DisconnectNAK"):
+            with patch.object(
+                Client, "_SendPacket", return_value=mocked_disconnect_nak
+            ):
+                result = client.perform_disconnect(attrs)
+                self.assertEqual(result, False)
+            mocked_logger.assert_called_with(
+                f"DisconnectNAK received from {client.client.server} "
+                f"for payload: {attrs}"
+            )

@@ -1,3 +1,4 @@
+import logging
 import os
 from unittest import mock
 from uuid import UUID, uuid4
@@ -16,6 +17,7 @@ from openwisp_users.tests.utils import TestMultitenantAdminMixin
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from .. import settings as app_settings
+from ..counters.exceptions import MaxQuotaReached
 from ..radclient.client import RadClient
 from ..tasks import perform_change_of_authorization
 from ..utils import (
@@ -915,10 +917,11 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         self._change_radius_user_group(user, org)
         mocked_task.assert_not_called()
 
+    @mock.patch.object(RadClient, "perform_disconnect", return_value=False)
     @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=False)
     @mock.patch("logging.Logger.warning")
     def test_perform_change_of_authorization_celery_task_failures(
-        self, mocked_logger, *args
+        self, mocked_logger, mocked_coa, mocked_disconnect
     ):
         mocked_user_id = uuid4()
         mocked_old_group_id = uuid4()
@@ -948,7 +951,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 new_group_id=mocked_new_group_id,
             )
             mocked_logger.assert_called_once_with(
-                f'The user with "{user.id}" ID does not have any open'
+                f'The user "{user.username} <{user.email}>" does not have any open'
                 " RadiusAccounting sessions. Skipping CoA operation."
             )
         mocked_logger.reset_mock()
@@ -1019,6 +1022,67 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 f' RadiusAccounting object of "{user}" user'
             )
 
+        mocked_coa.reset_mock()
+        with self.subTest("Counter.check() raises Exception"):
+            with mock.patch(
+                "openwisp_radius.counters.base.BaseCounter.check",
+                side_effect=Exception("Test exception"),
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                # All counters raised exception, we cannot proceed with CoA
+                mocked_coa.assert_not_called()
+                counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[
+                    "Max-Daily-Session-Traffic"
+                ]
+                mocked_exception.assert_called_with(
+                    f'Got exception "Test exception" while executing '
+                    f"{counter.counter_name}(user={user.username}, "
+                    f"group={user_group}, organization_id={org.id.hex})"
+                )
+
+        mocked_coa.reset_mock()
+        with self.subTest("Counter.check() raises MaxQuotaReached"):
+            with mock.patch(
+                "openwisp_radius.counters.base.BaseCounter.check",
+                side_effect=MaxQuotaReached(
+                    message="MaxQuotaReached",
+                    level="info",
+                    logger=logging,
+                    reply_message="reply MaxQuotaReached",
+                ),
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                mocked_coa.assert_not_called()
+                mocked_disconnect.assert_called_once_with(
+                    {
+                        "User-Name": "tester",
+                    }
+                )
+                mocked_exception.assert_not_called()
+
+        mocked_coa.reset_mock()
+        mocked_disconnect.reset_mock()
+        with self.subTest("RADIUS Attribute absent from CHECK_ATTRIBUTE_COUNTERS_MAP"):
+            with mock.patch(
+                "openwisp_radius.tasks.app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP", {}
+            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                perform_change_of_authorization(
+                    user_id=user.id,
+                    old_group_id=power_user_group.id,
+                    new_group_id=user_group.id,
+                )
+                mocked_coa.assert_not_called()
+                mocked_disconnect.assert_not_called()
+                mocked_exception.assert_not_called()
+
     @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=True)
     @capture_stderr()
     def test_change_of_authorization(self, mocked_radclient, *args):
@@ -1042,6 +1106,12 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         power_user_group = RadiusGroup.objects.get(
             organization=org, name=f"{org.slug}-power-users"
         )
+        self._create_radius_groupreply(
+            group=restricted_user_group,
+            attribute="Idle-Timeout",
+            op="=",
+            value="300",
+        )
 
         # RadiusGroup is changed to a power user.
         # Limitations set by the previous RadiusGroup
@@ -1053,6 +1123,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 "User-Name": user.username,
                 "Session-Timeout": "",
                 "CoovaChilli-Max-Total-Octets": "",
+                "Idle-Timeout": "",
             }
         )
         rad_acct.refresh_from_db()
@@ -1069,6 +1140,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 "User-Name": user.username,
                 "Session-Timeout": "10800",
                 "CoovaChilli-Max-Total-Octets": "3000000000",
+                "Idle-Timeout": "300",
             }
         )
         rad_acct.refresh_from_db()
