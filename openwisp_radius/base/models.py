@@ -865,6 +865,18 @@ def _get_csv_file_location(instance, filename):
 
 
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+    BATCH_STATUS_CHOICES = (
+        (PENDING, _("Pending")),
+        (PROCESSING, _("Processing")),
+        (COMPLETED, _("Completed")),
+        (FAILED, _("Failed")),
+    )
+
     strategy = models.CharField(
         _("strategy"),
         max_length=16,
@@ -912,6 +924,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         null=True,
         blank=True,
         help_text=_("If left blank users will never expire"),
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=BATCH_STATUS_CHOICES,
+        default=PENDING,
+        db_index=True,
     )
 
     class Meta:

@@ -26,4 +26,13 @@ def get_urls(api_views=None, social_views=None, saml_views=None):
 # urls are not registered, yet we want to get url reverse
 # using urlconf we still want radius to be our namespace.
 namespace = "radius"
-urlpatterns = [path("", include((get_urls(), namespace), namespace=namespace))]
+urlpatterns = [
+    path("", include((get_urls(), namespace), namespace=namespace)),
+    path(
+        "",
+        include(
+            ("openwisp_notifications.urls", "openwisp_notifications"),
+            namespace="notifications",
+        ),
+    ),
+]

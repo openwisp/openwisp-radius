@@ -3,7 +3,9 @@ import logging
 from datetime import timedelta
 
 import swapper
+from asgiref.sync import async_to_sync
 from celery import shared_task
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import management
@@ -231,3 +233,37 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
                 f' RadiusAccounting object of "{user}" user'
             )
     RadiusAccounting.objects.bulk_update(updated_sessions, fields=["groupname"])
+
+
+@shared_task
+def process_radius_batch(batch_id, number_of_users=None):
+    RadiusBatch = load_model("RadiusBatch")
+    channel_layer = get_channel_layer()
+    group_name = f"radius_batch_{batch_id}"
+    batch = None
+
+    try:
+        batch = RadiusBatch.objects.get(pk=batch_id)
+        batch.status = "processing"
+        batch.save(update_fields=["status"])
+
+        if batch.strategy == "prefix":
+            batch.prefix_add(batch.prefix, number_of_users)
+        elif batch.strategy == "csv":
+            batch.csvfile_upload()
+
+        batch.status = "completed"
+        batch.save(update_fields=["status"])
+    except Exception:
+        logger.error("RadiusBatch %s failed:", batch_id, exc_info=True)
+        if batch:
+            batch.status = "failed"
+            batch.save(update_fields=["status"])
+    finally:
+        if batch and channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                group_name, {"type": "batch_status_update", "status": batch.status}
+            )
+        elif not channel_layer:
+            logger.warning("Skipping WebSocket notification.")
+            # TODO: openwisp-notifications notify

@@ -53,6 +53,7 @@ from ..exceptions import (
     SmsAttemptCooldownException,
     UserAlreadyVerified,
 )
+from ..tasks import process_radius_batch
 from ..utils import generate_pdf, get_organization_radius_settings, load_model
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
@@ -108,17 +109,42 @@ class BatchView(ThrottledAPIMixin, CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
-            num_of_users = valid_data.pop("number_of_users", None)
-            valid_data["organization"] = valid_data.pop("organization_slug", None)
-            batch = serializer.create(valid_data)
+            num_of_users = valid_data.get("number_of_users", 0)
             strategy = valid_data.get("strategy")
-            if strategy == "csv":
-                batch.csvfile_upload()
-                response = RadiusBatchSerializer(batch, context={"request": request})
+            organization = valid_data.pop("organization_slug", None)
+
+            valid_data.pop("number_of_users", None)
+            batch = serializer.save(organization=organization)
+
+            is_async = (
+                strategy == "prefix"
+                and num_of_users >= app_settings.BATCH_ASYNC_THRESHOLD
+            ) or (strategy == "csv")
+
+            if is_async:
+                process_radius_batch.delay(batch.pk, number_of_users=num_of_users)
+                response_serializer = RadiusBatchSerializer(
+                    batch, context={"request": request}
+                )
+                return Response(
+                    response_serializer.data, status=status.HTTP_202_ACCEPTED
+                )
             else:
-                batch.prefix_add(valid_data.get("prefix"), num_of_users)
-                response = RadiusBatchSerializer(batch, context={"request": request})
-            return Response(response.data, status=status.HTTP_201_CREATED)
+                batch.status = "processing"
+                batch.save(update_fields=["status"])
+                if strategy == "prefix":
+                    batch.prefix_add(valid_data.get("prefix"), num_of_users)
+                elif strategy == "csv":
+                    batch.csvfile_upload()
+                batch.status = "completed"
+                batch.save(update_fields=["status"])
+                response_serializer = RadiusBatchSerializer(
+                    batch, context={"request": request}
+                )
+                return Response(
+                    response_serializer.data, status=status.HTTP_201_CREATED
+                )
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

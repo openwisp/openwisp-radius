@@ -7,6 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -24,6 +25,7 @@ from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm
 from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
+from .tasks import process_radius_batch
 from .utils import load_model
 
 Nas = load_model("Nas")
@@ -338,6 +340,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         "name",
         "organization",
         "strategy",
+        "status",
         "expiration_date",
         "created",
         "modified",
@@ -353,6 +356,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         "expiration_date",
         "created",
         "modified",
+        "status",
     ]
     list_filter = [
         "strategy",
@@ -399,19 +403,32 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         return fields
 
     def save_model(self, request, obj, form, change):
+        if change:
+            super().save_model(request, obj, form, change)
+            return
+
+        # Save the object initially to get a PK
+        super().save_model(request, obj, form, change)
+
         data = form.cleaned_data
         strategy = data.get("strategy")
-        if not change:
-            if strategy == "csv":
-                if data.get("csvfile", False):
-                    csvfile = data.get("csvfile")
-                    obj.csvfile_upload(csvfile)
-            elif strategy == "prefix":
-                prefix = data.get("prefix")
-                n = data.get("number_of_users")
-                obj.prefix_add(prefix, n)
+        num_users = data.get("number_of_users", 0)
+        is_async = (
+            strategy == "prefix" and num_users >= app_settings.BATCH_ASYNC_THRESHOLD
+        ) or (strategy == "csv" and data.get("csvfile"))
+
+        if is_async:
+            process_radius_batch.delay(obj.pk, number_of_users=num_users)
         else:
-            obj.save()
+            # Synchronous processing for small batches
+            obj.status = "processing"
+            obj.save(update_fields=["status"])
+            if strategy == "prefix":
+                obj.prefix_add(data.get("prefix"), num_users)
+            elif strategy == "csv":
+                obj.csvfile_upload()
+            obj.status = "completed"
+            obj.save(update_fields=["status"])
 
     def delete_model(self, request, obj):
         obj.users.all().delete()
@@ -466,7 +483,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
             request, obj
         )
-        if obj:
+        if obj and obj.status != "pending":
             return (
                 "strategy",
                 "prefix",
@@ -474,8 +491,34 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "number_of_users",
                 "users",
                 "expiration_date",
+                "name",
+                "organization",
+                "status",
             ) + readonly_fields
-        return readonly_fields
+        elif obj:
+            return ("status",) + readonly_fields
+        return ("status",) + readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status == "processing":
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if obj.status == "pending":
+            msg = _(
+                'The batch user creation "%(name)s" was added successfully '
+                "and is now being processed in the background."
+            ) % {"name": str(obj)}
+            self.message_user(request, msg, messages.SUCCESS)
+            if post_url_continue is None:
+                post_url_continue = reverse(
+                    f"admin:{self.opts.app_label}_{self.opts.model_name}_change",
+                    args=(obj.pk,),
+                    current_app=self.admin_site.name,
+                )
+            return redirect(post_url_continue)
+        return super().response_add(request, obj, post_url_continue)
 
 
 # Inlines for UserAdmin & OrganizationAdmin

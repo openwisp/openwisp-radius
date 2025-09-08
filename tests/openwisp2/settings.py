@@ -19,6 +19,7 @@ OPENWISP_RADIUS_COA_ENABLED = True
 OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ["+44", "+39", "+237", "+595"]
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -41,6 +42,8 @@ INSTALLED_APPS = [
     # social login
     "allauth.socialaccount.providers.facebook",
     "allauth.socialaccount.providers.google",
+    # openwisp notifications
+    "openwisp_notifications",
     # openwisp radius
     "openwisp_radius",
     # openwisp2 admin theme
@@ -58,6 +61,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "openwisp2.integrations",
     "djangosaml2",
+    "channels",
     # 'debug_toolbar',
 ]
 
@@ -117,6 +121,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "openwisp_utils.admin_theme.context_processor.menu_groups",
+                "openwisp_notifications.context_processors.notification_api_settings",
             ],
         },
     }
@@ -311,6 +316,27 @@ else:
 
 OPENWISP_USERS_AUTH_API = True
 
+ASGI_APPLICATION = "openwisp2.routing.application"
+
+if TESTING:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [f"redis://{redis_host}/7"]},
+        }
+    }
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/6",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }
+
 if os.environ.get("MONITORING_INTEGRATION", False):
     INSTALLED_APPS.insert(
         INSTALLED_APPS.index("django.contrib.sites"),
@@ -323,8 +349,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
     INSTALLED_APPS.insert(
         INSTALLED_APPS.index("rest_framework.authtoken"), "rest_framework_gis"
     )
-    INSTALLED_APPS.insert(0, "daphne")
-    INSTALLED_APPS.append("channels")
     dj_rest_auth_index = INSTALLED_APPS.index("dj_rest_auth")
     INSTALLED_APPS = (
         INSTALLED_APPS[:dj_rest_auth_index]
@@ -337,7 +361,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
             "openwisp_monitoring.device",
             "openwisp_monitoring.check",
             "nested_admin",
-            "openwisp_notifications",
             "flat_json_widget",
             "openwisp_ipam",
             "sortedm2m",
@@ -346,9 +369,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
             "import_export",
         ]
         + INSTALLED_APPS[dj_rest_auth_index:]
-    )
-    TEMPLATES[0]["OPTIONS"]["context_processors"].append(
-        "openwisp_notifications.context_processors.notification_api_settings"
     )
 
     TIMESERIES_DATABASE = {
@@ -361,27 +381,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
     }
     EXTENDED_APPS = ["django_x509", "django_loci"]
 
-    ASGI_APPLICATION = "openwisp2.routing.application"
-    if TESTING:
-        CHANNEL_LAYERS = {
-            "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
-        }
-    else:
-        CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels_redis.core.RedisChannelLayer",
-                "CONFIG": {"hosts": [f"redis://{redis_host}/7"]},
-            }
-        }
-        CACHES = {
-            "default": {
-                "BACKEND": "django_redis.cache.RedisCache",
-                "LOCATION": "redis://127.0.0.1:6379/6",
-                "OPTIONS": {
-                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                },
-            }
-        }
     DATABASES["default"]["ENGINE"] = "openwisp_utils.db.backends.spatialite"
     CELERY_BEAT_SCHEDULE.update(
         {
