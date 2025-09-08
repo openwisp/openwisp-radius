@@ -34,6 +34,13 @@ urlpatterns = [
     path("accounts/", include("openwisp_users.accounts.urls")),
     radius_urls,
     path(
+        "",
+        include(
+            ("openwisp_notifications.urls", "openwisp_notifications"),
+            namespace="notifications",
+        ),
+    ),
+    path(
         "captive-portal-mock/login/",
         views.captive_portal_login,
         name="captive_portal_login_mock",
