@@ -69,6 +69,17 @@ class TestRadClient(TestCase):
         encoded_values = packet._EncodeKeyValues(*("User-Name", "testuser"))
         self.assertEqual(encoded_values, (1, [b"testuser"]))
 
+    @patch("logging.Logger.warning")
+    def test_coa_packet_add_attribute_error_handling(self, mocked_logger):
+        client = self._get_client()
+        packet = CoaPacket(dict=client.client.dict)
+        packet.AddAttribute("User-Name", "testuser")
+        packet.AddAttribute("Unknown-Attribute", "test-value")
+        mocked_logger.assert_called_with(
+            "RADIUS attribute 'Unknown-Attribute' not found in dictionary"
+        )
+        self.assertEqual(len(packet), 1)
+
     @patch("logging.Logger.info")
     def test_perform_disconnect(self, mocked_logger):
         client = self._get_client()

@@ -21,6 +21,14 @@ class CoaPacket(BaseCoAPacket):
             return (key, values)
         return super()._EncodeKeyValues(key, values)
 
+    def AddAttribute(self, key, value):
+        try:
+            return super().AddAttribute(key, value)
+        except KeyError:
+            # Skip attributes not found in the dictionary
+            logger.warning(f"RADIUS attribute '{key}' not found in dictionary")
+            pass
+
 
 class DisconnectPacket(BaseCoAPacket):
     def __init__(self, code=DisconnectRequest, *args, **kwargs):

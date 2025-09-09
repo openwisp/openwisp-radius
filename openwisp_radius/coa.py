@@ -72,7 +72,7 @@ class ChangeOfAuthorizationManager:
                 attributes[reply] = ""
 
         # Include replies from the RadiusGroupChecks for the new group
-        group_checks = get_group_checks(new_group, counters_only=True)
+        group_checks = get_group_checks(new_group)
         if group_checks:
             check_results = execute_counter_checks(user, new_group, group_checks)
             for reply, value in check_results.items():
@@ -124,7 +124,7 @@ class ChangeOfAuthorizationManager:
             )
             return
 
-        attributes = {"User-Name": user.username}
+        attributes = {}
         func = "perform_change_of_authorization"
         operation = "CoA"
         try:
@@ -157,6 +157,7 @@ class ChangeOfAuthorizationManager:
                 )
                 continue
 
+            attributes["User-Name"] = session.username
             client = RadClient(
                 host=session.nas_ip_address,
                 radsecret=radsecret,
