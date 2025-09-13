@@ -25,7 +25,6 @@ from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm
 from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
-from .tasks import process_radius_batch
 from .utils import load_model
 
 Nas = load_model("Nas")
@@ -410,25 +409,8 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         # Save the object initially to get a PK
         super().save_model(request, obj, form, change)
 
-        data = form.cleaned_data
-        strategy = data.get("strategy")
-        num_users = data.get("number_of_users", 0)
-        is_async = (
-            strategy == "prefix" and num_users >= app_settings.BATCH_ASYNC_THRESHOLD
-        ) or (strategy == "csv" and data.get("csvfile"))
-
-        if is_async:
-            process_radius_batch.delay(obj.pk, number_of_users=num_users)
-        else:
-            # Synchronous processing for small batches
-            obj.status = "processing"
-            obj.save(update_fields=["status"])
-            if strategy == "prefix":
-                obj.prefix_add(data.get("prefix"), num_users)
-            elif strategy == "csv":
-                obj.csvfile_upload()
-            obj.status = "completed"
-            obj.save(update_fields=["status"])
+        num_users = form.cleaned_data.get("number_of_users", 0)
+        obj.schedule_processing(number_of_users=num_users)
 
     def delete_model(self, request, obj):
         obj.users.all().delete()

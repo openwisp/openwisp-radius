@@ -10,6 +10,8 @@ from io import StringIO
 import django
 import phonenumbers
 import swapper
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -30,6 +32,7 @@ from openwisp_radius.registration import (
     REGISTRATION_METHOD_CHOICES,
     get_registration_choices,
 )
+from openwisp_radius.tasks import process_radius_batch
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 from openwisp_utils.fields import (
@@ -1081,6 +1084,48 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def _remove_files(self):
         if self.csvfile:
             self.csvfile.storage.delete(self.csvfile.name)
+
+    def schedule_processing(self, number_of_users=0):
+        is_async = (
+            self.strategy == "prefix"
+            and number_of_users >= app_settings.BATCH_ASYNC_THRESHOLD
+        ) or (self.strategy == "csv" and self.csvfile)
+
+        if is_async:
+            process_radius_batch.delay(self.pk, number_of_users=number_of_users)
+        else:
+            self.process(number_of_users=number_of_users)
+        return is_async
+
+    def process(self, number_of_users=0):
+        channel_layer = get_channel_layer()
+        group_name = f"radius_batch_{self.pk}"
+
+        try:
+            self.status = self.PROCESSING
+            self.save(update_fields=["status"])
+
+            if self.strategy == "prefix":
+                self.prefix_add(self.prefix, number_of_users)
+            elif self.strategy == "csv":
+                self.csvfile_upload()
+
+            self.status = self.COMPLETED
+            self.save(update_fields=["status"])
+        except Exception:
+            logger.error(
+                "RadiusBatch %s failed during processing:", self.pk, exc_info=True
+            )
+            self.status = self.FAILED
+            self.save(update_fields=["status"])
+        finally:
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    group_name, {"type": "batch_status_update", "status": self.status}
+                )
+            else:
+                logger.warning("Skipping WebSocket notification.")
+                # TODO: openwisp-notifications
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
