@@ -25,6 +25,7 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
+from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 
@@ -1097,7 +1098,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             self.process(number_of_users=number_of_users)
         return is_async
 
-    def process(self, number_of_users=0):
+    def process(self, number_of_users=0, is_async=False):
         channel_layer = get_channel_layer()
         group_name = f"radius_batch_{self.pk}"
 
@@ -1112,6 +1113,14 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
             self.status = self.COMPLETED
             self.save(update_fields=["status"])
+
+            if is_async:
+                notify.send(
+                    sender=self.organization,
+                    type="batch_processing_completed",
+                    target=self.organization,
+                )
+
         except Exception:
             logger.error(
                 "RadiusBatch %s failed during processing:", self.pk, exc_info=True
@@ -1125,7 +1134,6 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                 )
             else:
                 logger.warning("Skipping WebSocket notification.")
-                # TODO: openwisp-notifications
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):

@@ -244,7 +244,7 @@ def process_radius_batch(batch_id, number_of_users=None):
         return
 
     try:
-        batch.process(number_of_users=number_of_users)
+        batch.process(number_of_users=number_of_users, is_async=True)
     except SoftTimeLimitExceeded:
         logger.error(
             "soft time limit hit while executing "
