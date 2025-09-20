@@ -60,6 +60,13 @@ For example:
 
     ./manage.py cleanup_stale_radacct 15
 
+If you need to clean up stale sessions more aggressively, you can use
+hours instead of days:
+
+.. code-block:: shell
+
+    ./manage.py cleanup_stale_radacct --number_of_hours=4
+
 ``deactivate_expired_users``
 ----------------------------
 

@@ -40,7 +40,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertEqual(session.terminate_cause, "Session Timeout")
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest(
             "Test start_time older than specified time but update_time is recent"
@@ -67,16 +67,28 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertEqual(session.terminate_cause, "Session Timeout")
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
+
+        with self.subTest("Test start_time and update_time older than specified hours"):
+            options["unique_id"] = "120"
+            options["update_time"] = "2017-06-10 10:50:00"
+            options["start_time"] = "2017-06-10 10:50:00"
+            self._create_radius_accounting(**options)
+            call_command("cleanup_stale_radacct", number_of_hours=4)
+            session = RadiusAccounting.objects.get(unique_id="120")
+            self.assertNotEqual(session.stop_time, None)
+            self.assertNotEqual(session.session_time, None)
+            self.assertEqual(session.update_time, session.stop_time)
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest("Test does not affect closed session"):
-            options["unique_id"] = "120"
+            options["unique_id"] = "121"
             options["start_time"] = "2017-06-10 10:50:00"
             options["update_time"] = "2017-06-10 10:55:00"
             options["stop_time"] = "2017-06-10 10:55:00"
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", 1)
-            session = RadiusAccounting.objects.get(unique_id="120")
+            session = RadiusAccounting.objects.get(unique_id="121")
             self.assertEqual(
                 session.stop_time.astimezone(get_default_timezone()).strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -84,7 +96,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 "2017-06-10 10:55:00",
             )
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertNotEqual(session.terminate_cause, "Session Timeout")
+            self.assertNotEqual(session.terminate_cause, "Session-Timeout")
 
     @capture_any_output()
     def test_delete_old_postauth_command(self):

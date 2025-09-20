@@ -200,17 +200,26 @@ class AutoUsernameMixin(object):
 
 
 class AutoGroupnameMixin(object):
+    def _set_groupname(self):
+        if self.group:
+            self.groupname = self.group.name
+
     def clean(self):
         """
         automatically sets groupname
         """
+        if self.group and not self.group.pk:
+            return
         super().clean()
-        if self.group:
-            self.groupname = self.group.name
-        elif not self.groupname:
+        self._set_groupname()
+        if not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+
+    def save(self, *args, **kwargs):
+        self._set_groupname()
+        return super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
@@ -529,8 +538,15 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         return self.unique_id
 
     @classmethod
-    def close_stale_sessions(cls, days):
-        older_than = timezone.now() - timedelta(days=days)
+    def close_stale_sessions(cls, days=None, hours=None):
+        if hours:
+            delta = timedelta(hours=hours)
+        elif days:
+            delta = timedelta(days=days)
+        else:
+            raise ValueError("Missing `days` or `hours`")
+        # determine limit date time
+        older_than = timezone.now() - delta
         # If the "update_time" is recent, then the session is not closed
         # even when the "start_time" is older than the specified time.
         # The "start_time" of a session is only checked when the
@@ -542,13 +558,29 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 | (Q(update_time=None) & Q(start_time__lt=older_than))
             )
         )
-        for session in sessions:
+        for session in sessions.iterator():
             # calculate seconds in between two dates
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
-            session.terminate_cause = "Session Timeout"
+            session.terminate_cause = "Session-Timeout"
             session.save()
+
+    @classmethod
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
+        """
+        Called during RADIUS Accounting-On.
+        """
+        if not called_station_id:
+            return 0
+        stale_sessions = cls.objects.filter(
+            called_station_id=called_station_id,
+            stop_time__isnull=True,
+        )
+        closed_count = stale_sessions.update(
+            stop_time=now(), terminate_cause="NAS-Reboot"
+        )
+        return closed_count
 
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):

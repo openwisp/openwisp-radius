@@ -18,9 +18,7 @@
       // Strip the timezone from the dateTimeString.
       // This is done to show the time in server's timezone
       // because RadiusAccounting admin also shows the time in server's timezone.
-      let strippedDateTime = new Date(
-        dateTimeString.replace(/[-+]\d{2}:\d{2}$/, ""),
-      );
+      let strippedDateTime = new Date(dateTimeString.replace(/[-+]\d{2}:\d{2}$/, ""));
       return strippedDateTime.toLocaleString();
     }
 
