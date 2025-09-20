@@ -77,11 +77,13 @@ class OpenwispRadiusConfig(ApiAppConfig):
                 "level": "success",
                 "verb": _("was successfully processed"),
                 "message": _(
-                    'The batch user creation "[{notification.target}]({notification.target_link})" '
+                    "The batch user creation "
+                    '"[{notification.target}]({notification.target_link})" '
                     "{notification.verb}."
                 ),
                 "email_subject": _(
-                    '[{site.name}] SUCCESS: Batch user creation "{notification.target}" '
+                    "[{site.name}] SUCCESS: Batch user creation "
+                    '"{notification.target}" '
                     "{notification.verb}"
                 ),
             },
