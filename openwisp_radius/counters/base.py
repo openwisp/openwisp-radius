@@ -79,7 +79,7 @@ class BaseCounter(ABC):
 
     def get_reset_timestamps(self):
         try:
-            return resets[self.reset](self.user)
+            return resets[self.reset](self.user, self)
         except KeyError:
             raise SkipCheck(
                 message=f'Reset time with key "{self.reset}" not available.',

@@ -11,14 +11,14 @@ def _timestamp(start, end):
     return int(start.timestamp()), int(end.timestamp())
 
 
-def _daily(user=None):
+def _daily(user=None, counter=None):
     dt = _today()
     start = datetime(dt.year, dt.month, dt.day)
     end = datetime(dt.year, dt.month, dt.day) + timedelta(days=1)
     return _timestamp(start, end)
 
 
-def _weekly(user=None):
+def _weekly(user=None, counter=None):
     dt = _today()
     start = dt - timedelta(days=dt.weekday())
     start = datetime(start.year, start.month, start.day)
@@ -26,7 +26,7 @@ def _weekly(user=None):
     return _timestamp(start, end)
 
 
-def _monthly(user=None):
+def _monthly(user=None, counter=None):
     dt = _today()
     start = datetime(dt.year, dt.month, 1)
     end = datetime(dt.year, dt.month, 1) + relativedelta(months=1)
@@ -45,7 +45,7 @@ def _monthly_subscription(user):
     return _timestamp(start, end)
 
 
-def _never(user=None):
+def _never(user=None, counter=None):
     return 0, None
 
 
