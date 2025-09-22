@@ -35,11 +35,10 @@ class ChangeOfAuthorizationManager:
         qs = Nas.objects.filter(organization_id=rad_acct.organization_id).only(
             "name", "secret"
         )
+        nas_ip_address = ipaddress.ip_address(rad_acct.nas_ip_address)
         for nas in qs.iterator():
             try:
-                if ipaddress.ip_address(
-                    rad_acct.nas_ip_address
-                ) in ipaddress.ip_network(nas.name):
+                if nas_ip_address in ipaddress.ip_network(nas.name):
                     return nas.secret
             except ValueError:
                 logger.warning(
@@ -49,7 +48,7 @@ class ChangeOfAuthorizationManager:
     def get_radius_attributes(self, user, old_group_id, new_group):
         """
         Get RADIUS attributes for CoA operation including both checks and replies.
-        Returns dict of attributes and boolean indicating if disconnect is needed.
+        Returns dict of attributes.
         """
         attributes = {}
         old_group = (
@@ -100,27 +99,44 @@ class ChangeOfAuthorizationManager:
             )
             return
 
+        try:
+            new_rad_group = (
+                RadiusGroup.objects.prefetch_related(
+                    "radiusgroupcheck_set", "radiusgroupreply_set"
+                )
+                .select_related("organization", "organization__radius_settings")
+                .get(id=new_group_id)
+            )
+        except RadiusGroup.DoesNotExist:
+            logger.warning(
+                f'Failed to find RadiusGroup with "{new_group_id}" ID.'
+                " Skipping CoA operation."
+            )
+            return
+
+        org_radius_settings = new_rad_group.organization.radius_settings
+        # The coa_enabled value is provided by a FallbackBooleanChoiceField on the
+        # model instance and cannot be reliably evaluated inside queryset filters.
+        # Evaluate it here on the resolved model instance instead of trying to
+        # filter at the database level.
+        if not org_radius_settings.coa_enabled:
+            logger.info(
+                f'CoA is disabled for "{new_rad_group.organization}" organization.'
+                " Skipping CoA operation."
+            )
+            return
+
         # Check if user has open RadiusAccounting sessions
         open_sessions = RadiusAccounting.objects.filter(
             username=user.username,
+            organization_id=new_rad_group.organization_id,
             stop_time__isnull=True,
-        ).select_related("organization", "organization__radius_settings")
+        )
 
         if not open_sessions:
             logger.warning(
                 f'The user "{user.username} <{user.email}>" does not have any open'
                 " RadiusAccounting sessions. Skipping CoA operation."
-            )
-            return
-
-        try:
-            new_rad_group = RadiusGroup.objects.prefetch_related(
-                "radiusgroupcheck_set", "radiusgroupreply_set"
-            ).get(id=new_group_id)
-        except RadiusGroup.DoesNotExist:
-            logger.warning(
-                f'Failed to find RadiusGroup with "{new_group_id}".'
-                " Skipping CoA operation."
             )
             return
 
@@ -145,9 +161,6 @@ class ChangeOfAuthorizationManager:
 
         updated_sessions = []
         for session in open_sessions:
-            if not session.organization.radius_settings.coa_enabled:
-                continue
-
             radsecret = self.get_radsecret_from_radacct(session)
             if not radsecret:
                 logger.warning(

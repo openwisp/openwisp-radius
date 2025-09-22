@@ -947,8 +947,8 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         with self.subTest("Test user session closed after scheduling of task"):
             perform_change_of_authorization(
                 user_id=user.id,
-                old_group_id=mocked_old_group_id,
-                new_group_id=mocked_new_group_id,
+                old_group_id=user_group.id,
+                new_group_id=power_user_group.id,
             )
             mocked_logger.assert_called_once_with(
                 f'The user "{user.username} <{user.email}>" does not have any open'
@@ -965,7 +965,7 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
                 new_group_id=mocked_new_group_id,
             )
             mocked_logger.assert_called_once_with(
-                f'Failed to find RadiusGroup with "{mocked_new_group_id}".'
+                f'Failed to find RadiusGroup with "{mocked_new_group_id}" ID.'
                 " Skipping CoA operation."
             )
         mocked_logger.reset_mock()
@@ -1169,6 +1169,53 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         user_radiususergroup.group = power_user_group
         user_radiususergroup.save()
         mocked_radclient.assert_not_called()
+
+    @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=True)
+    def test_sessions_with_multiple_orgs(self, mocked_radclient):
+        org1 = self._get_org()
+        org2 = self._get_org("org2")
+        user = self._get_user_with_org()
+        self._create_org_user(user=user, organization=org2)
+        self.assertEqual(user.radiususergroup_set.count(), 2)
+        nas_options = {
+            "organization": org1,
+            "short_name": "test1",
+            "type": "Virtual",
+            "secret": "testing123",
+        }
+        self._create_nas(name="10.8.0.0/24", **nas_options)
+        org2_session = self._create_radius_accounting(
+            user,
+            org2,
+            options={"nas_ip_address": "10.9.0.1", "groupname": f"{org2.slug}-users"},
+        )
+        org1_session = self._create_radius_accounting(
+            user,
+            org1,
+            options={
+                "nas_ip_address": "10.8.0.1",
+                "unique_id": "114",
+                "groupname": f"{org1.slug}-users",
+            },
+        )
+        user_radiususergroup = user.radiususergroup_set.get(group__organization=org1)
+        org1_power_user_group = RadiusGroup.objects.get(
+            organization=org1, name=f"{org1.slug}-power-users"
+        )
+        user_radiususergroup.group = org1_power_user_group
+        user_radiususergroup.save()
+
+        mocked_radclient.assert_called_once_with(
+            {
+                "Session-Timeout": "",
+                "CoovaChilli-Max-Total-Octets": "",
+                "User-Name": "tester",
+            }
+        )
+        org1_session.refresh_from_db()
+        self.assertEqual(org1_session.groupname, org1_power_user_group.name)
+        org2_session.refresh_from_db()
+        self.assertEqual(org2_session.groupname, f"{org2.slug}-users")
 
 
 del BaseTestCase
