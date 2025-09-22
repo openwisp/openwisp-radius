@@ -348,7 +348,7 @@ def execute_counter_checks(
         # returned a single value instead of a tuple/list when there was
         # only one reply name defined.
         # We need to handle this case to avoid breaking existing counters.
-        if not isinstance(results, tuple):
+        if not isinstance(results, (list, tuple)):
             results = (results,)
         # We need to map the value to the correct reply name.
         # This allows counters to define multiple reply names.
