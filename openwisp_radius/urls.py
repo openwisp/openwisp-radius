@@ -9,7 +9,7 @@ from .social.urls import get_social_urls
 def get_urls(api_views=None, social_views=None, saml_views=None):
     """
     Returns a list of urlpatterns
-    Arguements:
+    Arguments:
         api_views(optional): views for Radius API
         social_view(optional): views for social login (if enabled)
         saml_views(optional): views for saml login (if enabled)

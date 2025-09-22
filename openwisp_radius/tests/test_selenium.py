@@ -1,14 +1,19 @@
+import pytest
+from channels.testing import ChannelsLiveServerTestCase
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
+from openwisp_radius import tasks
 from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests.selenium import SeleniumTestMixin
 
 from ..utils import load_model
-from . import FileMixin
+from . import CreateRadiusObjectsMixin, FileMixin
 
 User = get_user_model()
 
@@ -199,3 +204,50 @@ class BasicTest(
         # Verify that the users were created
         queryset = User.objects.filter(username__startswith="csv-user")
         self.assertEqual(queryset.count(), 3)
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+@tag("selenium_tests")
+@tag("no_parallel")
+class TestRadiusBatchWebSockets(
+    SeleniumTestMixin,
+    CreateRadiusObjectsMixin,
+    FileMixin,
+    ChannelsLiveServerTestCase,
+):
+    def setUp(self):
+        super().setUp()
+        self.org = self._create_org()
+        self.login()
+
+    def test_batch_change_view_reloads_on_status_update(self):
+        batch = self._create_radius_batch(
+            name="websocket-test-batch",
+            strategy="prefix",
+            prefix="ws-test-",
+            organization=self.org,
+            status="processing",
+        )
+
+        change_url = reverse(
+            "admin:openwisp_radius_radiusbatch_change", args=[batch.pk]
+        )
+        self.open(change_url)
+
+        processing_message_element = self.wait_for_visibility(
+            By.CSS_SELECTOR, ".ow-alert-info b", 10
+        )
+        self.assertIn("Processing:", processing_message_element.text)
+
+        tasks.process_radius_batch(batch.pk, number_of_users=0)
+
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.staleness_of(processing_message_element)
+        )
+
+        completed_message_element = self.wait_for_visibility(
+            By.CSS_SELECTOR, ".ow-alert-success b", 10
+        )
+        self.assertIn("Completed:", completed_message_element.text)
+        self.assertEqual(len(self.get_browser_logs()), 0)

@@ -319,7 +319,17 @@ OPENWISP_USERS_AUTH_API = True
 ASGI_APPLICATION = "openwisp2.routing.application"
 
 if TESTING:
-    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    DATABASES["default"]["TEST"] = {
+        "NAME": os.path.join(BASE_DIR, "test_openwisp_radius.db"),
+    }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("localhost", 6379)],
+            },
+        }
+    }
 else:
     CHANNEL_LAYERS = {
         "default": {

@@ -12,15 +12,15 @@
 
 {% block content %}
     {% if original.status == 'processing' %}
-        <div>
+        <div class="ow-alert-info">
             <p><b>{% trans 'Processing:' %}</b> {% trans 'This batch is currently being processed. This page will update automatically when the operation is complete.' %}</p>
         </div>
     {% elif original.status == 'failed' %}
-        <div>
+        <div class="ow-alert-error">
             <p><b>{% trans 'Failed:' %}</b> {% trans 'This batch operation failed. Please check the system logs for details or use the "Re-process" action.' %}</p>
         </div>
     {% elif original.status == 'completed' %}
-        <div>
+        <div class="ow-alert-success">
             <p><b>{% trans 'Completed:' %}</b> {% trans 'This batch operation has completed successfully.' %}</p>
         </div>
     {% endif %}

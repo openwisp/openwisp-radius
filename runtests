@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
-coverage run runtests.py --parallel > /dev/null 2>&1 || ./runtests.py
-SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
-MONITORING_INTEGRATION=1 coverage run runtests.py
+coverage run runtests.py --parallel \
+  \ --exclude-tag=no_parallel >/dev/null 2>&1 || ./runtests.py --exclude-tag=no_parallel
+SAMPLE_APP=1 coverage run ./runtests.py --parallel \
+  \ --exclude-tag=no_parallel --exclude-tag=selenium_tests >/dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py \
+  \ --exclude-tag=no_parallel --exclude-tag=selenium_tests
+MONITORING_INTEGRATION=1 coverage run runtests.py \
+  --exclude-tag=no_parallel \
+  --exclude-tag=selenium_tests
+coverage run runtests.py --tag=no_parallel
 coverage combine
 coverage xml
