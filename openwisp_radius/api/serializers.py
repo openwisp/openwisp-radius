@@ -33,7 +33,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import (
     get_group_checks,
@@ -304,9 +304,10 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
                 group=self.context["group"],
                 group_check=obj,
             )
-            return counter.consumed()
-        except MaxQuotaReached:
-            return int(obj.value)
+            consumed = counter.consumed()
+            if consumed > int(obj.value):
+                consumed = int(obj.value)
+            return consumed
         except (SkipCheck, ValueError, KeyError):
             return None
 

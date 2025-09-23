@@ -1170,6 +1170,44 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 },
             )
 
+        data3 = self.acct_post_data
+        data3.update(
+            dict(
+                session_id="40111117",
+                unique_id="12234f70",
+                input_octets=1000000000,
+                output_octets=1000000000,
+                username="tester",
+            )
+        )
+        self._create_radius_accounting(**data3)
+
+        with self.subTest("User consumed more than allowed limit"):
+            response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("checks", response.data)
+            checks = response.data["checks"]
+            self.assertDictEqual(
+                dict(checks[0]),
+                {
+                    "attribute": "Max-Daily-Session",
+                    "op": ":=",
+                    "value": "10800",
+                    "result": 783,
+                    "type": "seconds",
+                },
+            )
+            self.assertDictEqual(
+                dict(checks[1]),
+                {
+                    "attribute": "Max-Daily-Session-Traffic",
+                    "op": ":=",
+                    "value": "3000000000",
+                    "result": 3000000000,
+                    "type": "bytes",
+                },
+            )
+
         with self.subTest("Test user does not have RadiusUserGroup"):
             RadiusUserGroup.objects.all().delete()
             response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)
