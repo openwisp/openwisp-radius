@@ -396,8 +396,9 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     number_of_users.short_description = _("number of users")
 
     def get_fields(self, request, obj=None):
-        fields = super().get_fields(request, obj)[:]
+        fields = super().get_fields(request, obj)
         if not obj:
+            fields = fields[:]
             fields.remove("users")
             fields.remove("status")
         return fields
