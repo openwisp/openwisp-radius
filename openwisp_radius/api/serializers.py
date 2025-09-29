@@ -391,7 +391,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     )
     pdf_link = serializers.SerializerMethodField(
         help_text=(
-            "Downlaod link to PDF file containing user credentials. "
+            "Download link to the PDF file containing user credentials. "
             "Provided only for `prefix` strategy.`"
         ),
         required=False,
