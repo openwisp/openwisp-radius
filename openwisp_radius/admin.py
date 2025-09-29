@@ -347,6 +347,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     fields = [
         "strategy",
         "organization",
+        "status",
         "name",
         "csvfile",
         "prefix",
@@ -355,7 +356,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         "expiration_date",
         "created",
         "modified",
-        "status",
     ]
     list_filter = [
         "strategy",
