@@ -242,7 +242,6 @@ def process_radius_batch(batch_id, number_of_users=None):
     except ObjectDoesNotExist as e:
         logger.warning(f'process_radius_batch("{batch_id}") failed: {e}')
         return
-
     try:
         batch.process(number_of_users=number_of_users, is_async=True)
     except SoftTimeLimitExceeded:

@@ -13,9 +13,9 @@ class RadiusBatchConsumer(AsyncJsonWebsocketConsumer):
             return RadiusBatch.objects.filter(pk=batch_id).exists()
         # For non-superusers, check their managed organizations
         try:
-            RadiusBatch.objects.get(
+            RadiusBatch.objects.filter(
                 pk=batch_id, organization__in=user.organizations_managed
-            )
+            ).exists()
             return True
         except ObjectDoesNotExist:
             return False

@@ -7,7 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import redirect
+from django.http import HttpResponseRedirect
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -405,10 +405,8 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         if change:
             super().save_model(request, obj, form, change)
             return
-
         # Save the object initially to get a PK
         super().save_model(request, obj, form, change)
-
         num_users = form.cleaned_data.get("number_of_users", 0)
         obj.schedule_processing(number_of_users=num_users)
 
@@ -487,20 +485,24 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         return super().has_delete_permission(request, obj)
 
     def response_add(self, request, obj, post_url_continue=None):
-        if obj.status == "pending":
-            msg = _(
-                'The batch user creation "%(name)s" was added successfully '
-                "and is now being processed in the background."
-            ) % {"name": str(obj)}
+        if obj.status != "pending":
+            return super().response_add(request, obj, post_url_continue)
+        opts = self.model._meta
+        msg = _(
+            'The batch user creation "{obj}" was added successfully '
+            "and is now being processed in the background."
+        ).format(obj=obj)
+        if "_continue" in request.POST:
             self.message_user(request, msg, messages.SUCCESS)
-            if post_url_continue is None:
-                post_url_continue = reverse(
-                    f"admin:{self.opts.app_label}_{self.opts.model_name}_change",
-                    args=(obj.pk,),
-                    current_app=self.admin_site.name,
-                )
-            return redirect(post_url_continue)
-        return super().response_add(request, obj, post_url_continue)
+            post_url_continue = reverse(
+                f"admin:{opts.app_label}_{opts.model_name}_change",
+                args=(obj.pk,),
+                current_app=self.admin_site.name,
+            )
+            return HttpResponseRedirect(post_url_continue)
+        else:
+            self.message_user(request, msg, messages.SUCCESS)
+            return self.response_post_save_add(request, obj)
 
 
 # Inlines for UserAdmin & OrganizationAdmin

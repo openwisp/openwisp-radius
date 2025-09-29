@@ -4,7 +4,6 @@ from allauth.socialaccount.apps import SocialAccountConfig
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
-from openwisp_notifications.types import register_notification_type
 from swapper import get_model_name
 
 from openwisp_utils.admin_theme.menu import register_menu_group
@@ -55,7 +54,6 @@ class OpenwispRadiusConfig(ApiAppConfig):
         from . import checks  # noqa
 
         super().ready(*args, **kwargs)
-        self.register_notification_types()
         self.connect_signals()
         self.regiser_menu_groups()
 
@@ -67,28 +65,6 @@ class OpenwispRadiusConfig(ApiAppConfig):
                 app_settings.SAML_REGISTRATION_METHOD_LABEL,
                 strong_identity=True,
             )
-
-    def register_notification_types(self):
-        RadiusBatch = load_model("RadiusBatch")
-        register_notification_type(
-            "batch_processing_completed",
-            {
-                "verbose_name": _("Batch Processing Completed"),
-                "level": "success",
-                "verb": _("was successfully processed"),
-                "message": _(
-                    "The batch user creation "
-                    '"[{notification.target}]({notification.target_link})" '
-                    "{notification.verb}."
-                ),
-                "email_subject": _(
-                    "[{site.name}] SUCCESS: Batch user creation "
-                    '"{notification.target}" '
-                    "{notification.verb}"
-                ),
-            },
-            models=[RadiusBatch],
-        )
 
     def connect_signals(self):
         Organization = swapper.load_model("openwisp_users", "Organization")

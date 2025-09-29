@@ -1,4 +1,4 @@
-{% extends 'admin/change_form.html' %}
+{% extends "admin/change_form.html" %}
 {% load i18n %}
 
 {% block object-tools-items %}
@@ -10,20 +10,26 @@
     {{ block.super }}
 {% endblock %}
 
-{% block content %}
-    {% if original.status == 'processing' %}
-        <div class="ow-alert-info">
-            <p><b>{% trans 'Processing:' %}</b> {% trans 'This batch is currently being processed. This page will update automatically when the operation is complete.' %}</p>
-        </div>
-    {% elif original.status == 'failed' %}
-        <div class="ow-alert-error">
-            <p><b>{% trans 'Failed:' %}</b> {% trans 'This batch operation failed. Please check the system logs for details or use the "Re-process" action.' %}</p>
-        </div>
-    {% elif original.status == 'completed' %}
-        <div class="ow-alert-success">
-            <p><b>{% trans 'Completed:' %}</b> {% trans 'This batch operation has completed successfully.' %}</p>
-        </div>
+{% block messages %}
+    {{ block.super }}
+    {% if original.status == "processing" or original.status == "failed" or original.status == "completed" %}
+        <ul class="messagelist">
+            {% if original.status == "processing" %}
+                <li class="warning">
+                    <b>{% trans "Processing:" %}</b>
+                    {% trans "This batch is currently being processed. This page will update automatically when the operation is complete." %}
+                </li>
+            {% elif original.status == "failed" %}
+                <li class="error">
+                    <b>{% trans "Failed:" %}</b>
+                    {% trans "This batch operation failed. Please check the system logs for details and retry." %}
+                </li>
+            {% endif %}
+        </ul>
     {% endif %}
+{% endblock %}
+
+{% block content %}
     {{ block.super }}
 {% endblock %}
 
@@ -38,23 +44,23 @@
     {{ block.super }}
     <script>
         (function($) {
-            const batchStatus = '{{ original.status }}';
-            if (batchStatus === 'processing') {
-                const batchId = '{{ original.pk }}';
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsPath = protocol + '//' + window.location.host + '/ws/radius/batch/' + batchId + '/';
+            const batchStatus = "{{ original.status }}";
+            if (batchStatus === "processing") {
+                const batchId = "{{ original.pk }}";
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsPath = protocol + "//" + window.location.host + "/ws/radius/batch/" + batchId + "/";
                 const socket = new WebSocket(wsPath);
 
                 socket.onmessage = function(e) {
                     const data = JSON.parse(e.data);
-                    if (data.status === 'completed' || data.status === 'failed') {
+                    if (data.status === "completed" || data.status === "failed") {
                         socket.close();
                         window.location.reload();
                     }
                 };
 
                 socket.onclose = function(e) {
-                    console.log('RadiusBatch status socket closed.');
+                    console.log("RadiusBatch status socket closed.");
                 };
             }
         })(django.jQuery);

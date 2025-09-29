@@ -66,7 +66,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(RadiusBatch.objects.count(), 0)
 
-    def test_batch_csv_202(self):
+    def test_batch_csv_201(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         self.assertEqual(User.objects.count(), 0)
         text = "user,cleartext$abcd,email@gmail.com,firstname,lastname"
@@ -78,7 +78,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
         os.remove(path_csv)
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(RadiusBatch.objects.count(), 1)
         self.assertEqual(User.objects.count(), 2)
 
@@ -576,7 +576,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with open(path_csv, "rt") as file:
             data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response_json = json.loads(response.content)
         org = Organization.objects.get(pk=response_json["organization"])
         pdf_url = reverse(

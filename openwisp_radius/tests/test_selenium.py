@@ -229,25 +229,20 @@ class TestRadiusBatchWebSockets(
             organization=self.org,
             status="processing",
         )
-
         change_url = reverse(
             "admin:openwisp_radius_radiusbatch_change", args=[batch.pk]
         )
         self.open(change_url)
-
         processing_message_element = self.wait_for_visibility(
-            By.CSS_SELECTOR, ".ow-alert-info b", 10
+            By.CSS_SELECTOR, ".messagelist .warning", 10
         )
         self.assertIn("Processing:", processing_message_element.text)
-
         tasks.process_radius_batch(batch.pk, number_of_users=0)
-
         WebDriverWait(self.web_driver, 10).until(
             expected_conditions.staleness_of(processing_message_element)
         )
-
-        completed_message_element = self.wait_for_visibility(
-            By.CSS_SELECTOR, ".ow-alert-success b", 10
+        status_field = (By.CSS_SELECTOR, "div.field-status .readonly")
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.text_to_be_present_in_element(status_field, "Completed")
         )
-        self.assertIn("Completed:", completed_message_element.text)
         self.assertEqual(len(self.get_browser_logs()), 0)

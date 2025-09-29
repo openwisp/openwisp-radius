@@ -888,6 +888,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         db_index=True,
         help_text=_("Import users from a CSV or generate using a prefix"),
     )
+    status = models.CharField(
+        max_length=16,
+        choices=BATCH_STATUS_CHOICES,
+        default=PENDING,
+        db_index=True,
+    )
     name = models.CharField(
         verbose_name=_("name"),
         max_length=128,
@@ -928,12 +934,6 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         null=True,
         blank=True,
         help_text=_("If left blank users will never expire"),
-    )
-    status = models.CharField(
-        max_length=16,
-        choices=BATCH_STATUS_CHOICES,
-        default=PENDING,
-        db_index=True,
     )
 
     class Meta:
@@ -1087,10 +1087,20 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             self.csvfile.storage.delete(self.csvfile.name)
 
     def schedule_processing(self, number_of_users=0):
-        is_async = (
-            self.strategy == "prefix"
-            and number_of_users >= app_settings.BATCH_ASYNC_THRESHOLD
-        ) or (self.strategy == "csv" and self.csvfile)
+        items_to_process = 0
+        if self.strategy == "prefix":
+            items_to_process = number_of_users
+        elif self.strategy == "csv" and self.csvfile:
+            try:
+                csv_data = self.csvfile.read()
+                decoded_data = decode_byte_data(csv_data)
+                items_to_process = sum(1 for row in csv.reader(StringIO(decoded_data)))
+                self.csvfile.seek(0)
+            except Exception as e:
+                logger.error(f"Could not count rows in CSV for batch {self.pk}: {e}")
+                items_to_process = app_settings.BATCH_ASYNC_THRESHOLD
+
+        is_async = items_to_process >= app_settings.BATCH_ASYNC_THRESHOLD
 
         if is_async:
             process_radius_batch.delay(self.pk, number_of_users=number_of_users)
@@ -1101,39 +1111,47 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def process(self, number_of_users=0, is_async=False):
         channel_layer = get_channel_layer()
         group_name = f"radius_batch_{self.pk}"
-
         try:
             self.status = self.PROCESSING
             self.save(update_fields=["status"])
-
             if self.strategy == "prefix":
                 self.prefix_add(self.prefix, number_of_users)
             elif self.strategy == "csv":
                 self.csvfile_upload()
-
             self.status = self.COMPLETED
             self.save(update_fields=["status"])
-
             if is_async:
                 notify.send(
+                    type="generic_message",
+                    level="success",
+                    message=_(
+                        f"The batch creation operation for '{self.name}' "
+                        "has completed successfully."
+                    ),
                     sender=self.organization,
-                    type="batch_processing_completed",
-                    target=self.organization,
+                    target=self,
+                    description=_(f"Number of users processed: {self.users.count()}."),
                 )
-
-        except Exception:
+        except Exception as e:
             logger.error(
                 "RadiusBatch %s failed during processing:", self.pk, exc_info=True
             )
             self.status = self.FAILED
             self.save(update_fields=["status"])
+            notify.send(
+                type="generic_message",
+                level="error",
+                message=_(f"The batch creation operation for '{self.name}' failed."),
+                sender=self.organization,
+                target=self,
+                description=_(
+                    f"An error occurred while processing the batch.\n\n" f"Error: {e}"
+                ),
+            )
         finally:
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    group_name, {"type": "batch_status_update", "status": self.status}
-                )
-            else:
-                logger.warning("Skipping WebSocket notification.")
+            async_to_sync(channel_layer.group_send)(
+                group_name, {"type": "batch_status_update", "status": self.status}
+            )
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):

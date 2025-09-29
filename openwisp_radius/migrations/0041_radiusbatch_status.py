@@ -3,11 +3,6 @@
 from django.db import migrations, models
 
 
-def set_existing_batches_completed(apps, schema_editor):
-    RadiusBatch = apps.get_model("openwisp_radius", "RadiusBatch")
-    RadiusBatch.objects.all().update(status="completed")
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -30,5 +25,4 @@ class Migration(migrations.Migration):
                 max_length=16,
             ),
         ),
-        migrations.RunPython(set_existing_batches_completed, migrations.RunPython.noop),
     ]

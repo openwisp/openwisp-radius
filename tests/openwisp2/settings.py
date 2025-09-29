@@ -319,9 +319,10 @@ OPENWISP_USERS_AUTH_API = True
 ASGI_APPLICATION = "openwisp2.routing.application"
 
 if TESTING:
-    DATABASES["default"]["TEST"] = {
-        "NAME": os.path.join(BASE_DIR, "test_openwisp_radius.db"),
-    }
+    if "--exclude-tag=no_parallel" not in sys.argv:
+        DATABASES["default"]["TEST"] = {
+            "NAME": os.path.join(BASE_DIR, "test_openwisp_radius.db"),
+        }
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",

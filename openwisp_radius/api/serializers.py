@@ -441,7 +441,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = RadiusBatch
         fields = "__all__"
-        read_only_fields = ("created", "modified", "user_credentials", "status")
+        read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):
