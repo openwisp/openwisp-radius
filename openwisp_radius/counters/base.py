@@ -25,13 +25,14 @@ class BaseCounter(ABC):
         # BACKWARD COMPATIBILITY: In previous versions of openwisp-radius,
         # the Counter.reply_name was a string instead of a tuple. Thus,
         # we need to convert it to a tuple if it's a string.
-        if not hasattr(self, "reply_name"):
+        reply_name = getattr(self, "reply_name", None)
+        if not reply_name:
             raise NotImplementedError(
                 "Counter classes must define 'reply_names' property."
             )
-        if isinstance(self.reply_name, str):
-            return (self.reply_name,)
-        return self.reply_name
+        if isinstance(reply_name, str):
+            return (reply_name,)
+        return reply_name
 
     @property
     @abstractmethod
