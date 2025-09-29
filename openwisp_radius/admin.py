@@ -399,6 +399,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         fields = super().get_fields(request, obj)[:]
         if not obj:
             fields.remove("users")
+            fields.remove("status")
         return fields
 
     def save_model(self, request, obj, form, change):
