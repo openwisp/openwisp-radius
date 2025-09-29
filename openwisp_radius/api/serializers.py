@@ -111,6 +111,9 @@ class AuthorizeSerializer(serializers.Serializer):
         max_length=User._meta.get_field("username").max_length, write_only=True
     )
     password = serializers.CharField(style={"input_type": "password"}, write_only=True)
+    calling_station_id = serializers.CharField(
+        max_length=253, required=False, allow_blank=True, write_only=True
+    )
 
 
 class RadiusPostAuthSerializer(serializers.ModelSerializer):

@@ -179,16 +179,26 @@ class ApiTokenMixin(BasePostParamsMixin):
         options.update(**kwargs)
         return options
 
-    def _authorize_user(self, username="tester", password="tester", auth_header=None):
+    def _authorize_user(
+        self,
+        username="tester",
+        password="tester",
+        auth_header=None,
+        calling_station_id=None,
+    ):
+        payload = {"username": username, "password": password}
+        if calling_station_id is not None:
+            payload["calling_station_id"] = calling_station_id
+            
         if auth_header:
             return self.client.post(
                 reverse("radius:authorize"),
-                {"username": username, "password": password},
+                payload,
                 HTTP_AUTHORIZATION=auth_header,
             )
         return self.client.post(
             reverse("radius:authorize"),
-            {"username": username, "password": password},
+            payload,
         )
 
     def _login_and_obtain_auth_token(
