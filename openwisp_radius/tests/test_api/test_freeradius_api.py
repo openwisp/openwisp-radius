@@ -15,14 +15,14 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 
-from openwisp_utils.tests import capture_any_output, catch_signal
+from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
 
 from ... import registration
 from ... import settings as app_settings
-from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
+from ...utils import logger as utils_logger
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
@@ -1425,7 +1425,7 @@ class TestTransactionFreeradiusApi(
             reply.value = "broken"
             reply.save(update_fields=["value"])
             mocked_check.return_value = 1200
-            with mock.patch.object(freeradius_api_logger, "warning") as mocked_warning:
+            with mock.patch.object(utils_logger, "warning") as mocked_warning:
                 response = self._authorize_user(auth_header=self.auth_header)
                 mocked_warning.assert_called_once_with(
                     'Session-Timeout value ("broken") cannot be converted to integer.'
@@ -1464,7 +1464,7 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @capture_any_output()
+    @capture_stderr()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
         truncated_accept_response = {"control:Auth-Type": "Accept"}

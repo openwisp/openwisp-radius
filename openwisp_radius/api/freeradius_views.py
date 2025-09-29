@@ -1,6 +1,5 @@
 import ipaddress
 import logging
-import math
 import re
 
 import drf_link_header_pagination
@@ -30,9 +29,15 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import registration
 from .. import settings as app_settings
 from ..counters.base import BaseCounter
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import MaxQuotaReached
 from ..signals import radius_accounting_success
-from ..utils import get_group_checks, get_user_group, load_model
+from ..utils import (
+    execute_counter_checks,
+    get_group_checks,
+    get_group_replies,
+    get_user_group,
+    load_model,
+)
 from .serializers import (
     AuthorizeSerializer,
     RadiusAccountingSerializer,
@@ -299,8 +304,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         user_group = get_user_group(user, organization_id)
 
         if user_group:
-            for reply in self.get_group_replies(user_group.group):
-                data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
+            # Use utility function to get group replies
+            group_replies = get_group_replies(user_group.group)
+            data.update(group_replies)
 
             group_checks = get_group_checks(user_group.group)
 
@@ -348,53 +354,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         Execute counter checks and return rejection response if any quota is exceeded
         Returns None if all checks pass
         """
-        for Counter in app_settings.COUNTERS:
-            group_check = group_checks.get(Counter.check_name)
-            if not group_check:
-                continue
-            try:
-                counter = Counter(user=user, group=group, group_check=group_check)
-                remaining = counter.check()
-            except SkipCheck:
-                continue
+        try:
+            counter_replies = execute_counter_checks(
+                user, group, group_checks, existing_replies=data
+            )
+            # Merge counter replies into data
+            data.update(counter_replies)
+        except MaxQuotaReached as max_quota:
             # if max is reached send access rejected + reply message
-            except MaxQuotaReached as max_quota:
-                data.update(self.reject_attributes.copy())
-                if "Reply-Message" not in data:
-                    data["Reply-Message"] = max_quota.reply_message
-                return data, self.max_quota_status
-            # avoid crashing on unexpected runtime errors
-            except Exception as e:
-                logger.exception(f'Got exception "{e}" while executing {counter}')
-                continue
-            if remaining is None:
-                continue
-            reply_name = counter.reply_name
-            # send remaining value in RADIUS reply, if needed.
-            # This emulates the implementation of sqlcounter in freeradius
-            # which sends the reply message only if the value is smaller
-            # than what was defined to a previous reply message
-            if reply_name not in data or remaining < self._get_reply_value(
-                data, counter
-            ):
-                data[reply_name] = remaining
+            data.update(self.reject_attributes.copy())
+            if "Reply-Message" not in data:
+                data["Reply-Message"] = max_quota.reply_message
+            return data, self.max_quota_status
 
         return None
-
-    @staticmethod
-    def _get_reply_value(data, counter):
-        value = data[counter.reply_name]["value"]
-        try:
-            return int(value)
-        except ValueError:
-            logger.warning(
-                f'{counter.reply_name} value ("{value}") '
-                "cannot be converted to integer."
-            )
-            return math.inf
-
-    def get_group_replies(self, group):
-        return group.radiusgroupreply_set.all()
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
