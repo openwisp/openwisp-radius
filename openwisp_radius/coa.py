@@ -98,7 +98,6 @@ class ChangeOfAuthorizationManager:
                 f'Failed to find user with "{user_id}" ID. Skipping CoA operation.'
             )
             return
-
         try:
             new_rad_group = (
                 RadiusGroup.objects.prefetch_related(
@@ -113,7 +112,6 @@ class ChangeOfAuthorizationManager:
                 " Skipping CoA operation."
             )
             return
-
         org_radius_settings = new_rad_group.organization.radius_settings
         # The coa_enabled value is provided by a FallbackBooleanChoiceField on the
         # model instance and cannot be reliably evaluated inside queryset filters.
@@ -125,21 +123,18 @@ class ChangeOfAuthorizationManager:
                 " Skipping CoA operation."
             )
             return
-
         # Check if user has open RadiusAccounting sessions
         open_sessions = RadiusAccounting.objects.filter(
             username=user.username,
             organization_id=new_rad_group.organization_id,
             stop_time__isnull=True,
         )
-
         if not open_sessions:
             logger.warning(
                 f'The user "{user.username} <{user.email}>" does not have any open'
                 " RadiusAccounting sessions. Skipping CoA operation."
             )
             return
-
         attributes = {}
         func = "perform_change_of_authorization"
         operation = "CoA"
@@ -158,7 +153,6 @@ class ChangeOfAuthorizationManager:
         except MaxQuotaReached:
             func = "perform_disconnect"
             operation = "Disconnect"
-
         updated_sessions = []
         for session in open_sessions:
             radsecret = self.get_radsecret_from_radacct(session)
@@ -169,13 +163,11 @@ class ChangeOfAuthorizationManager:
                     " for this session."
                 )
                 continue
-
             attributes["User-Name"] = session.username
             client = RadClient(
                 host=session.nas_ip_address,
                 radsecret=radsecret,
             )
-
             result = getattr(client, func)(attributes)
             if result is True:
                 session.groupname = new_rad_group.name
@@ -185,7 +177,6 @@ class ChangeOfAuthorizationManager:
                     f'Failed to perform {operation} for "{session.unique_id}"'
                     f' RadiusAccounting object of "{user}" user'
                 )
-
         RadiusAccounting.objects.bulk_update(updated_sessions, fields=["groupname"])
 
 

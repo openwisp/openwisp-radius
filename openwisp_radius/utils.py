@@ -328,7 +328,6 @@ def execute_counter_checks(
         when provided. Format is { "reply_name": remaining_value }.
     """
     counter_data = existing_replies or {}
-
     for Counter in app_settings.COUNTERS:
         if (group_check := group_checks.get(Counter.check_name)) is None:
             continue
@@ -343,7 +342,6 @@ def execute_counter_checks(
                 continue
             if raise_quota_exceeded:
                 raise
-
         if remaining is None:
             continue
         reply_name = counter.reply_name
@@ -355,7 +353,6 @@ def execute_counter_checks(
             counter_data, counter
         ):
             counter_data[reply_name] = remaining
-
     return counter_data
 
 

@@ -27,7 +27,6 @@ class CoaPacket(BaseCoAPacket):
         except KeyError:
             # Skip attributes not found in the dictionary
             logger.warning(f"RADIUS attribute '{key}' not found in dictionary")
-            pass
 
 
 class DisconnectPacket(BaseCoAPacket):
@@ -74,7 +73,6 @@ class RadClient(object):
                 " timed out."
             )
             return False
-
         if response.code == success_code:
             logger.info(
                 f"{operation_name}ACK received from {self.client.server} "
