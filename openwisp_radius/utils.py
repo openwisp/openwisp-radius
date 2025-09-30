@@ -333,7 +333,7 @@ def execute_counter_checks(
             continue
         try:
             counter = Counter(user=user, group=group, group_check=group_check)
-            remaining = counter.check()
+            results = counter.check()
         except SkipCheck:
             continue
         except Exception as e:
@@ -342,32 +342,41 @@ def execute_counter_checks(
                 continue
             if raise_quota_exceeded:
                 raise
-        if remaining is None:
+        if results is None:
             continue
-        reply_name = counter.reply_name
-        # Send remaining value in RADIUS reply, if needed.
-        # This emulates the implementation of sqlcounter in freeradius
-        # which sends the reply message only if the value is smaller
-        # than what was defined to a previous reply message
-        if reply_name not in counter_data or remaining < _get_reply_value(
-            counter_data, counter
-        ):
-            counter_data[reply_name] = remaining
+        # BACKWARD COMPATIBILITY: The previous implementation of counters
+        # returned a single value instead of a tuple/list when there was
+        # only one reply name defined.
+        # We need to handle this case to avoid breaking existing counters.
+        if not isinstance(results, (list, tuple)):
+            results = (results,)
+        # We need to map the value to the correct reply name.
+        # This allows counters to define multiple reply names.
+        for reply_name, value in zip(counter.reply_names, results):
+            # Send remaining value in RADIUS reply, if needed.
+            # This emulates the implementation of sqlcounter in freeradius
+            # which sends the reply message only if the value is smaller
+            # than what was defined to a previous reply message
+            if reply_name not in counter_data or value < _get_reply_value(
+                counter_data, reply_name
+            ):
+                counter_data[reply_name] = value
+
     return counter_data
 
 
-def _get_reply_value(data, counter):
+def _get_reply_value(data, reply_name):
     """
     Helper function to get reply value from counter data for comparison.
 
     Args:
         data: Dictionary containing RADIUS attributes
-        counter: Counter instance
+        reply_name: Name of the reply attribute
 
     Returns:
         int or float: Reply value as integer, or math.inf if conversion fails
     """
-    reply_entry = data.get(counter.reply_name, {})
+    reply_entry = data.get(reply_name, {})
     value = reply_entry.get("value")
     if value is None:
         return math.inf
@@ -375,7 +384,7 @@ def _get_reply_value(data, counter):
         return int(value)
     except (ValueError, TypeError):
         logger.warning(
-            f'{counter.reply_name} value ("{value}") ' "cannot be converted to integer."
+            f'{reply_name} value ("{value}") cannot be converted to integer.'
         )
         return math.inf
 
