@@ -20,6 +20,7 @@ User = get_user_model()
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 
 
+@tag("selenium_tests")
 class BasicTest(
     SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
 ):
@@ -49,8 +50,7 @@ class BasicTest(
         # Select the previously created organization
         option = self.find_element(
             By.XPATH,
-            "//li[contains(@class, 'select2-results__option') and "
-            "text()='test org']",
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
             10,
         )
         option.click()
@@ -92,8 +92,7 @@ class BasicTest(
         organization.click()
         option = self.find_element(
             By.XPATH,
-            "//li[contains(@class, 'select2-results__option') and "
-            "text()='test org']",
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
             10,
         )
         option.click()
@@ -140,8 +139,7 @@ class BasicTest(
         organization.click()
         option = self.find_element(
             By.XPATH,
-            "//li[contains(@class, 'select2-results__option') and "
-            "text()='test org']",
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
             10,
         )
         option.click()
@@ -184,8 +182,7 @@ class BasicTest(
         organization.click()
         option = self.find_element(
             By.XPATH,
-            "//li[contains(@class, 'select2-results__option') and "
-            "text()='test org']",
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
             10,
         )
         option.click()

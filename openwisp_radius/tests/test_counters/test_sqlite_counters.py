@@ -28,14 +28,14 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
     def test_time_counter_no_sessions(self):
         opts = self._get_kwargs("Max-Daily-Session")
         counter = DailyCounter(**opts)
-        self.assertEqual(counter.check(), int(opts["group_check"].value))
+        self.assertEqual(counter.check(), (int(opts["group_check"].value),))
 
     def test_time_counter_with_sessions(self):
         opts = self._get_kwargs("Max-Daily-Session")
         counter = DailyCounter(**opts)
         self._create_radius_accounting(**_acct_data)
         expected = int(opts["group_check"].value) - int(_acct_data["session_time"])
-        self.assertEqual(counter.check(), expected)
+        self.assertEqual(counter.check(), (expected,))
         _acct_data2 = _acct_data.copy()
         _acct_data2.update({"session_id": "2", "unique_id": "2", "session_time": "500"})
         self._create_radius_accounting(**_acct_data2)
@@ -43,7 +43,7 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
             _acct_data2["session_time"]
         )
         expected = int(opts["group_check"].value) - session_time
-        self.assertEqual(counter.check(), expected)
+        self.assertEqual(counter.check(), (expected,))
 
     @capture_any_output()
     def test_counter_skip_exceptions(self):
@@ -88,7 +88,7 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
     def test_traffic_counter_no_sessions(self):
         opts = self._get_kwargs("Max-Daily-Session-Traffic")
         counter = DailyTrafficCounter(**opts)
-        self.assertEqual(counter.check(), int(opts["group_check"].value))
+        self.assertEqual(counter.check(), (int(opts["group_check"].value),))
 
     def test_traffic_counter_with_sessions(self):
         opts = self._get_kwargs("Max-Daily-Session-Traffic")
@@ -98,13 +98,13 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
         self._create_radius_accounting(**acct)
         traffic = int(acct["input_octets"]) + int(acct["output_octets"])
         expected = int(opts["group_check"].value) - traffic
-        self.assertEqual(counter.check(), expected)
+        self.assertEqual(counter.check(), (expected,))
 
     def test_traffic_counter_reply_and_check_name(self):
         opts = self._get_kwargs("Max-Daily-Session-Traffic")
         counter = DailyTrafficCounter(**opts)
         self.assertEqual(counter.check_name, "Max-Daily-Session-Traffic")
-        self.assertEqual(counter.reply_name, "CoovaChilli-Max-Total-Octets")
+        self.assertEqual(counter.reply_names[0], "CoovaChilli-Max-Total-Octets")
 
     def test_monthly_traffic_counter_with_sessions(self):
         rg = RadiusGroup.objects.filter(name="test-org-users").first()
@@ -121,7 +121,7 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
         self._create_radius_accounting(**acct)
         traffic = int(acct["input_octets"]) + int(acct["output_octets"])
         expected = int(opts["group_check"].value) - traffic
-        self.assertEqual(counter.check(), expected)
+        self.assertEqual(counter.check(), (expected,))
 
 
 del BaseTransactionTestCase
