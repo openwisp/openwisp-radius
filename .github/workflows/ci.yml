@@ -8,8 +8,6 @@ on:
   pull_request:
     branches:
       - master
-      # TODO: Remove before merging
-      - issues/643-coa
 
 jobs:
   build:

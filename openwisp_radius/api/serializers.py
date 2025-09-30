@@ -305,8 +305,9 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
                 group_check=obj,
             )
             consumed = counter.consumed()
-            if consumed > int(obj.value):
-                consumed = int(obj.value)
+            value = int(obj.value)
+            if consumed > value:
+                consumed = value
             return consumed
         except (SkipCheck, ValueError, KeyError):
             return None

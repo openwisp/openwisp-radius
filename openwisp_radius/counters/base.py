@@ -80,7 +80,7 @@ class BaseCounter(ABC):
 
     def get_reset_timestamps(self):
         try:
-            return resets[self.reset](self.user, self)
+            return resets[self.reset](self.user, counter=self)
         except KeyError:
             raise SkipCheck(
                 message=f'Reset time with key "{self.reset}" not available.',
@@ -101,7 +101,7 @@ class BaseCounter(ABC):
         # or if nothing is returned (no sessions present), return zero
         return row[0] or 0
 
-    def check(self, gigawords=True):
+    def check(self):
         if not self.group_check:
             raise SkipCheck(
                 message=(
