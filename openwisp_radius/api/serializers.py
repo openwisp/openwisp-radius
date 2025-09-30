@@ -414,7 +414,11 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def get_pdf_link(self, obj):
-        if isinstance(obj, RadiusBatch) and obj.strategy == "prefix":
+        if (
+            isinstance(obj, RadiusBatch)
+            and obj.strategy == "prefix"
+            and obj.status == RadiusBatch.COMPLETED
+        ):
             request = self.context.get("request")
             return request.build_absolute_uri(
                 reverse(

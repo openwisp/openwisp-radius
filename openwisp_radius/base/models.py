@@ -1099,9 +1099,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             except Exception as e:
                 logger.error(f"Could not count rows in CSV for batch {self.pk}: {e}")
                 items_to_process = app_settings.BATCH_ASYNC_THRESHOLD
-
         is_async = items_to_process >= app_settings.BATCH_ASYNC_THRESHOLD
-
         if is_async:
             process_radius_batch.delay(self.pk, number_of_users=number_of_users)
         else:
@@ -1125,7 +1123,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                     type="generic_message",
                     level="success",
                     message=_(
-                        f"The batch creation operation for '{self.name}' "
+                        f'The batch creation operation for "{self.name}" '
                         "has completed successfully."
                     ),
                     sender=self.organization,
@@ -1141,7 +1139,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             notify.send(
                 type="generic_message",
                 level="error",
-                message=_(f"The batch creation operation for '{self.name}' failed."),
+                message=_(f'The batch creation operation for "{self.name}" failed.'),
                 sender=self.organization,
                 target=self,
                 description=_(
