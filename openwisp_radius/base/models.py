@@ -1098,8 +1098,10 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                 self.csvfile.seek(0)
             except Exception as e:
                 logger.error(f"Could not count rows in CSV for batch {self.pk}: {e}")
-                items_to_process = app_settings.BATCH_ASYNC_THRESHOLD
-        is_async = items_to_process >= app_settings.BATCH_ASYNC_THRESHOLD
+                items_to_process = app_settings.OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD
+        is_async = (
+            items_to_process >= app_settings.OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD
+        )
         if is_async:
             process_radius_batch.delay(self.pk, number_of_users=number_of_users)
         else:

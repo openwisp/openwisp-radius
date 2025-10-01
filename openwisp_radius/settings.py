@@ -244,4 +244,6 @@ if not hasattr(settings, "OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG"):
     ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["select_related"].extend(
         ["registered_user"]
     )
-BATCH_ASYNC_THRESHOLD = get_settings_value("BATCH_ASYNC_THRESHOLD", 15)
+OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD = get_settings_value(
+    "OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD", 15
+)
