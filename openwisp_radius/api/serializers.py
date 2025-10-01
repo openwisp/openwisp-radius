@@ -33,7 +33,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import (
     get_group_checks,
@@ -310,12 +310,11 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
                 group=self.context["group"],
                 group_check=obj,
             )
-            # Python can handle 64 bit numbers and
-            # hence we don't need to display Gigawords
-            remaining = counter.check(gigawords=False)
-            return int(obj.value) - remaining
-        except MaxQuotaReached:
-            return int(obj.value)
+            consumed = counter.consumed()
+            value = int(obj.value)
+            if consumed > value:
+                consumed = value
+            return consumed
         except (SkipCheck, ValueError, KeyError):
             return None
 
