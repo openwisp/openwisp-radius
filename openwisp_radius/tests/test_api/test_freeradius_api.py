@@ -1609,8 +1609,12 @@ class TestTransactionFreeradiusApi(
                 auth_header=self.auth_header, calling_station_id=new_device
             )
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response.data["control:Auth-Type"], "Reject")
-            # Now authorize from the same 'other_device' and same NAS: should be allowed per mentor rule
+            self.assertEqual(
+                response.data["control:Auth-Type"],
+                "Reject",
+            )
+            # Now authorize from the same 'other_device' and same NAS:
+            # should be allowed per mentor rule
             response = self._authorize_user(
                 auth_header=self.auth_header,
                 called_station_id=self.acct_post_data["called_station_id"],

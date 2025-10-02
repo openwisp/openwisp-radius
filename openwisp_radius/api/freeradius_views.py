@@ -325,8 +325,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 user,
                 group_checks,
                 organization_id,
-                called_station_id,
-                calling_station_id,
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
             )
             if simultaneous_use is not None:
                 return simultaneous_use
