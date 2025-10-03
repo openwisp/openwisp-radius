@@ -376,9 +376,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 called_station_id=called_station_id,
                 calling_station_id=calling_station_id,
             )
-
         open_sessions = open_sessions.count()
-
         if open_sessions >= max_simultaneous:
             data.update(self.reject_attributes.copy())
             if "Reply-Message" not in data:

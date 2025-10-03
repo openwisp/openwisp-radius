@@ -183,16 +183,15 @@ class ApiTokenMixin(BasePostParamsMixin):
         self,
         username="tester",
         password="tester",
-        auth_header=None,
         called_station_id=None,
         calling_station_id=None,
+        auth_header=None,
     ):
         payload = {"username": username, "password": password}
         if called_station_id is not None:
             payload["called_station_id"] = called_station_id
         if calling_station_id is not None:
             payload["calling_station_id"] = calling_station_id
-
         if auth_header:
             return self.client.post(
                 reverse("radius:authorize"),
