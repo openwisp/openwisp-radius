@@ -299,6 +299,9 @@ REST_AUTH = {
 
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "email_confirmation_success"
 ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "email_confirmation_success"
+# disable allauth ratelimiting during automated tests
+if TESTING:
+    ACCOUNT_RATE_LIMITS = False
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # use the uuid because the slug can change
