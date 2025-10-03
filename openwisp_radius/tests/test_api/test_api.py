@@ -571,7 +571,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with self.subTest(
             "pdf_link is None in initial 202 Accepted response for async batch"
         ):
-            large_user_count = app_settings.OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD + 1
+            large_user_count = app_settings.BATCH_ASYNC_THRESHOLD + 1
             async_data = self._radius_batch_prefix_data(
                 name="async-pdf-link-test", number_of_users=large_user_count
             )
