@@ -15,14 +15,14 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 
-from openwisp_utils.tests import capture_any_output, catch_signal
+from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
 
 from ... import registration
 from ... import settings as app_settings
-from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
+from ...utils import logger as utils_logger
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
@@ -1221,7 +1221,6 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             self._acct_url,
             data=json.dumps(data),
-            HTTP_AUTHORIZATION=self.auth_header,
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -1311,10 +1310,29 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # Simulate Accounting-On packet from the first NAS
         accounting_on_data = {
             "status_type": "Accounting-On",
+            "session_id": "c2bc87808f568e3c",
+            "unique_id": "2d124bdc1d269430629970d5f0bb7113",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "192.168.0.4",
+            "nas_port_id": "0",
+            "nas_port_type": "",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
             "called_station_id": "AA-BB-CC-DD-EE-FF",
-            "unique_id": "accounting-on-packet-id",
+            "calling_station_id": "",
+            "terminate_cause": "",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "",
         }
-        response = self.post_json(accounting_on_data)
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(accounting_on_data),
+            content_type="application/json",
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 2)
@@ -1407,7 +1425,7 @@ class TestTransactionFreeradiusApi(
             reply.value = "broken"
             reply.save(update_fields=["value"])
             mocked_check.return_value = 1200
-            with mock.patch.object(freeradius_api_logger, "warning") as mocked_warning:
+            with mock.patch.object(utils_logger, "warning") as mocked_warning:
                 response = self._authorize_user(auth_header=self.auth_header)
                 mocked_warning.assert_called_once_with(
                     'Session-Timeout value ("broken") cannot be converted to integer.'
@@ -1446,7 +1464,7 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @capture_any_output()
+    @capture_stderr()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
         truncated_accept_response = {"control:Auth-Type": "Accept"}

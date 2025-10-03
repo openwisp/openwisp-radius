@@ -200,17 +200,26 @@ class AutoUsernameMixin(object):
 
 
 class AutoGroupnameMixin(object):
+    def _set_groupname(self):
+        if self.group:
+            self.groupname = self.group.name
+
     def clean(self):
         """
         automatically sets groupname
         """
+        if self.group and not self.group.pk:
+            return
         super().clean()
-        if self.group:
-            self.groupname = self.group.name
-        elif not self.groupname:
+        self._set_groupname()
+        if not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+
+    def save(self, *args, **kwargs):
+        self._set_groupname()
+        return super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
@@ -558,15 +567,14 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.save()
 
     @classmethod
-    def _close_stale_sessions_on_nas_boot(cls, called_station_id, organization_id):
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
         """
         Called during RADIUS Accounting-On.
         """
-        if not called_station_id or not organization_id:
+        if not called_station_id:
             return 0
         stale_sessions = cls.objects.filter(
             called_station_id=called_station_id,
-            organization_id=organization_id,
             stop_time__isnull=True,
         )
         closed_count = stale_sessions.update(

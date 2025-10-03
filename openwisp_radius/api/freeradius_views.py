@@ -1,6 +1,5 @@
 import ipaddress
 import logging
-import math
 import re
 
 import drf_link_header_pagination
@@ -30,9 +29,15 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import registration
 from .. import settings as app_settings
 from ..counters.base import BaseCounter
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import MaxQuotaReached
 from ..signals import radius_accounting_success
-from ..utils import get_group_checks, get_user_group, load_model
+from ..utils import (
+    execute_counter_checks,
+    get_group_checks,
+    get_group_replies,
+    get_user_group,
+    load_model,
+)
 from .serializers import (
     AuthorizeSerializer,
     RadiusAccountingSerializer,
@@ -46,7 +51,8 @@ RE_MAC_ADDR = re.compile(
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
 # Accounting-Off is not implemented and hence ignored right now
 # may be implemented in the future
-UNSUPPORTED_STATUS_TYPES = ["Accounting-Off"]
+# Accounting-On is used to close stale sessions
+SPECIAL_STATUS_TYPES = ["Accounting-On", "Accounting-Off"]
 logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
@@ -78,16 +84,17 @@ class AccountingFilter(filters.FilterSet):
 
 
 class FreeradiusApiAuthentication(BaseAuthentication):
-    def _get_ip_list(self, uuid):
-        if f"ip-{uuid}" in cache:
+    def _get_ip_list(self, uuid=None):
+        ip_list = None
+        if uuid and f"ip-{uuid}" in cache:
             ip_list = cache.get(f"ip-{uuid}")
-        else:
+        elif uuid:
             try:
                 ip_list = OrganizationRadiusSettings.objects.get(
                     organization__pk=uuid
                 ).freeradius_allowed_hosts_list
             except OrganizationRadiusSettings.DoesNotExist:
-                ip_list = None
+                pass
             else:
                 cache.set(f"ip-{uuid}", ip_list)
         return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
@@ -168,8 +175,8 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         self.check_organization(request)
         uuid, token = self.get_uuid_token(request)
         if not uuid and not token:
-            if request.data.get("status_type", None) in UNSUPPORTED_STATUS_TYPES:
-                return
+            if request.data.get("status_type", None) in SPECIAL_STATUS_TYPES:
+                return self._check_client_ip_and_return(request, uuid)
             username = request.data.get("username") or request.query_params.get(
                 "username"
             )
@@ -297,8 +304,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         user_group = get_user_group(user, organization_id)
 
         if user_group:
-            for reply in self.get_group_replies(user_group.group):
-                data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
+            # Use utility function to get group replies
+            group_replies = get_group_replies(user_group.group)
+            data.update(group_replies)
 
             group_checks = get_group_checks(user_group.group)
 
@@ -346,53 +354,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         Execute counter checks and return rejection response if any quota is exceeded
         Returns None if all checks pass
         """
-        for Counter in app_settings.COUNTERS:
-            group_check = group_checks.get(Counter.check_name)
-            if not group_check:
-                continue
-            try:
-                counter = Counter(user=user, group=group, group_check=group_check)
-                remaining = counter.check()
-            except SkipCheck:
-                continue
+        try:
+            counter_replies = execute_counter_checks(
+                user, group, group_checks, existing_replies=data
+            )
+            # Merge counter replies into data
+            data.update(counter_replies)
+        except MaxQuotaReached as max_quota:
             # if max is reached send access rejected + reply message
-            except MaxQuotaReached as max_quota:
-                data.update(self.reject_attributes.copy())
-                if "Reply-Message" not in data:
-                    data["Reply-Message"] = max_quota.reply_message
-                return data, self.max_quota_status
-            # avoid crashing on unexpected runtime errors
-            except Exception as e:
-                logger.exception(f'Got exception "{e}" while executing {counter}')
-                continue
-            if remaining is None:
-                continue
-            reply_name = counter.reply_name
-            # send remaining value in RADIUS reply, if needed.
-            # This emulates the implementation of sqlcounter in freeradius
-            # which sends the reply message only if the value is smaller
-            # than what was defined to a previous reply message
-            if reply_name not in data or remaining < self._get_reply_value(
-                data, counter
-            ):
-                data[reply_name] = remaining
+            data.update(self.reject_attributes.copy())
+            if "Reply-Message" not in data:
+                data["Reply-Message"] = max_quota.reply_message
+            return data, self.max_quota_status
 
         return None
-
-    @staticmethod
-    def _get_reply_value(data, counter):
-        value = data[counter.reply_name]["value"]
-        try:
-            return int(value)
-        except ValueError:
-            logger.warning(
-                f'{counter.reply_name} value ("{value}") '
-                "cannot be converted to integer."
-            )
-            return math.inf
-
-    def get_group_replies(self, group):
-        return group.radiusgroupreply_set.all()
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
@@ -499,15 +474,15 @@ class AccountingView(ListCreateAPIView):
         does not return any JSON response so that freeradius will avoid
         processing the response without generating warnings
         """
-        if request.user.is_anonymous and request.auth is None:
-            return Response(status=status.HTTP_200_OK)
         data = request.data.copy()
         status_type = data.get("status_type", None)
-        if status_type in UNSUPPORTED_STATUS_TYPES:
-            return Response(None)
-        if status_type == "Accounting-On":
-            self._handle_accounting_on(data)
-            return Response(None)
+        # Special Cases
+        if (
+            request.user.is_anonymous and request.auth is None
+        ) or status_type in SPECIAL_STATUS_TYPES:
+            if status_type == "Accounting-On":
+                self._handle_accounting_on(data)
+            return Response(status=status.HTTP_200_OK)
         # Create or Update
         try:
             instance = self.get_queryset().get(unique_id=data.get("unique_id"))
@@ -517,7 +492,7 @@ class AccountingView(ListCreateAPIView):
                 serializer.is_valid(raise_exception=True)
             except ValidationError as error:
                 if self._is_interim_update_corner_case(error, data):
-                    return Response(None)
+                    return Response(status=status.HTTP_200_OK)
                 raise error
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             try:
@@ -525,17 +500,17 @@ class AccountingView(ListCreateAPIView):
             # on large systems using mac auth roaming this could happen
             except IntegrityError:
                 logger.info(f"Ignoring duplicate session {acct_data}")
-                return Response(None, status=200)
+                return Response(status=status.HTTP_200_OK)
             headers = self.get_success_headers(serializer.data)
             self.send_radius_accounting_signal(serializer.validated_data)
-            return Response(None, status=201, headers=headers)
+            return Response(status=status.HTTP_201_CREATED, headers=headers)
         else:
             serializer = self.get_serializer(instance, data=data, partial=False)
             serializer.is_valid(raise_exception=True)
             acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             serializer.update(instance, acct_data)
             self.send_radius_accounting_signal(serializer.validated_data)
-            return Response(None)
+            return Response(status=status.HTTP_200_OK)
 
     def _handle_accounting_on(self, data):
         """
@@ -547,8 +522,7 @@ class AccountingView(ListCreateAPIView):
         """
         called_station_id = data.get("called_station_id")
         closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
-            called_station_id=called_station_id,
-            organization_id=self.request.auth,
+            called_station_id=called_station_id
         )
         if closed_count:
             logger.info(
