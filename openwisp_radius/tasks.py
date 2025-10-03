@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import swapper
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core import management
 from django.core.exceptions import ObjectDoesNotExist
@@ -125,3 +126,21 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
     from .coa import coa_manager
 
     coa_manager.perform_change_of_authorization(user_id, old_group_id, new_group_id)
+
+
+@shared_task(soft_time_limit=7200)
+def process_radius_batch(batch_id, number_of_users=None):
+    RadiusBatch = load_model("RadiusBatch")
+    try:
+        batch = RadiusBatch.objects.get(pk=batch_id)
+    except ObjectDoesNotExist as e:
+        logger.warning(f'process_radius_batch("{batch_id}") failed: {e}')
+        return
+    try:
+        batch.process(number_of_users=number_of_users, is_async=True)
+    except SoftTimeLimitExceeded:
+        logger.error(
+            "soft time limit hit while executing "
+            f"process for {batch} "
+            f"(ID: {batch_id})"
+        )

@@ -520,6 +520,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -602,6 +606,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -1212,6 +1220,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -1289,6 +1301,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
                 "_continue": True,
             }
         )

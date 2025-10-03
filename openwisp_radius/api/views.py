@@ -108,17 +108,17 @@ class BatchView(ThrottledAPIMixin, CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
-            num_of_users = valid_data.pop("number_of_users", None)
-            valid_data["organization"] = valid_data.pop("organization_slug", None)
-            batch = serializer.create(valid_data)
-            strategy = valid_data.get("strategy")
-            if strategy == "csv":
-                batch.csvfile_upload()
-                response = RadiusBatchSerializer(batch, context={"request": request})
-            else:
-                batch.prefix_add(valid_data.get("prefix"), num_of_users)
-                response = RadiusBatchSerializer(batch, context={"request": request})
-            return Response(response.data, status=status.HTTP_201_CREATED)
+            num_of_users = valid_data.get("number_of_users", 0)
+            organization = valid_data.pop("organization_slug", None)
+            valid_data.pop("number_of_users", None)
+            batch = serializer.save(organization=organization)
+            is_async = batch.schedule_processing(number_of_users=num_of_users)
+            batch.refresh_from_db()
+            response_serializer = self.get_serializer(batch)
+            status_code = (
+                status.HTTP_202_ACCEPTED if is_async else status.HTTP_201_CREATED
+            )
+            return Response(response_serializer.data, status=status_code)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

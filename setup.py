@@ -35,6 +35,10 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
+        (
+            "openwisp-notifications"
+            " @ https://github.com/openwisp/openwisp-notifications/tarball/1.2"
+        ),
         "openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/1.2",
         (
             "openwisp-utils[rest,celery]"
