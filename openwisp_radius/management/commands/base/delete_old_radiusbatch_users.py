@@ -33,13 +33,9 @@ class BaseDeleteOldRadiusBatchUsersCommand(BaseCommand):
             days = 30 * options["older_than_months"]
         else:
             days = BATCH_DELETE_EXPIRED
-        threshold_date = now() - timedelta(days=days)
-
-        threshold_date_only = threshold_date.date()
-
-        batches = RadiusBatch.objects.filter(expiration_date__lt=threshold_date_only)
-        time_period = threshold_date.strftime("%Y-%m-%d %H:%M:%S")
-
+        threshold_date = (now() - timedelta(days=days)).date()
+        batches = RadiusBatch.objects.filter(expiration_date__lt=threshold_date)
         for b in batches:
             b.delete()
+        time_period = threshold_date.strftime("%Y-%m-%d %H:%M:%S")
         self.stdout.write(f"Deleted accounts older than {time_period}")
