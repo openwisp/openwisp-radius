@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import get_default_timezone, now
+from freezegun import freeze_time
 from netaddr import EUI, mac_unix
 from openvpn_status.models import Routing
 
@@ -13,7 +14,7 @@ from openwisp_utils.tests import capture_any_output, capture_stdout
 
 from .. import settings as app_settings
 from ..utils import load_model
-from . import _RADACCT, CallCommandMixin, FileMixin
+from . import _RADACCT, _TEST_DATE, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
 
 User = get_user_model()
@@ -164,8 +165,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command("deactivate_expired_users")
         self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
+    @freeze_time(_TEST_DATE)
     @capture_stdout()
-    def test_delete_old_radiusbatch_users_command(self):
+    def test_delete_old_radiusbatch_users_command(self, subtest_id=None):
         # Create RadiusBatch users that expired more than 18 months ago
         path = self._get_path("static/test_batch.csv")
         options = dict(
@@ -214,9 +216,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
         with self.subTest("Test executing command with both arguments"):
             options["name"] = "test3"
-            call_command("batch_add_users", **options)
+            self._call_command("batch_add_users", **options)
             call_command(
-                "delete_old_radiusbatch_users", older_than_days=9, older_than_months=12
+                "delete_old_radiusbatch_users",
+                older_than_days=9,
+                older_than_months=12,
             )
             # Users that expired more than 9 days ago should be deleted
             self.assertEqual(get_user_model().objects.all().count(), 0)
