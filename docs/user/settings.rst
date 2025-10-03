@@ -111,8 +111,8 @@ The default encryption format for storing radius check values.
 A list of disabled encryption formats, by default all formats are enabled
 in order to keep backward compatibility with legacy systems.
 
-``BATCH_ASYNC_THRESHOLD``
-~~~~~~~~~~~~~~~~~~~~~~~~~
+``OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Default**: ``15``
 
