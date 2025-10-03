@@ -396,7 +396,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     )
     pdf_link = serializers.SerializerMethodField(
         help_text=(
-            "Downlaod link to PDF file containing user credentials. "
+            "Download link to the PDF file containing user credentials. "
             "Provided only for `prefix` strategy.`"
         ),
         required=False,
@@ -411,9 +411,19 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         write_only=True,
         min_value=1,
     )
+    status = serializers.CharField(read_only=True)
+
+    def create(self, validated_data):
+        validated_data.pop("organization_slug", None)
+        validated_data.pop("number_of_users", None)
+        return super().create(validated_data)
 
     def get_pdf_link(self, obj):
-        if isinstance(obj, RadiusBatch) and obj.strategy == "prefix":
+        if (
+            isinstance(obj, RadiusBatch)
+            and obj.strategy == "prefix"
+            and obj.status == RadiusBatch.COMPLETED
+        ):
             request = self.context.get("request")
             return request.build_absolute_uri(
                 reverse(
@@ -440,7 +450,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = RadiusBatch
         fields = "__all__"
-        read_only_fields = ("created", "modified", "user_credentials")
+        read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):

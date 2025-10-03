@@ -47,6 +47,14 @@ class GetEditFormInlineMixin(object):
                     "radius_settings-MAX_NUM_FORMS": 0,
                 }
             )
+        params.update(
+            {
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
+            }
+        )
         return params
 
     def _get_user_edit_form_inline_params(self, user, organization):

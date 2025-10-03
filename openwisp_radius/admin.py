@@ -7,6 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseRedirect
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -338,6 +339,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         "name",
         "organization",
         "strategy",
+        "status",
         "expiration_date",
         "created",
         "modified",
@@ -345,6 +347,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     fields = [
         "strategy",
         "organization",
+        "status",
         "name",
         "csvfile",
         "prefix",
@@ -393,25 +396,21 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     number_of_users.short_description = _("number of users")
 
     def get_fields(self, request, obj=None):
-        fields = super().get_fields(request, obj)[:]
+        fields = super().get_fields(request, obj)
         if not obj:
+            fields = fields[:]
             fields.remove("users")
+            fields.remove("status")
         return fields
 
     def save_model(self, request, obj, form, change):
-        data = form.cleaned_data
-        strategy = data.get("strategy")
-        if not change:
-            if strategy == "csv":
-                if data.get("csvfile", False):
-                    csvfile = data.get("csvfile")
-                    obj.csvfile_upload(csvfile)
-            elif strategy == "prefix":
-                prefix = data.get("prefix")
-                n = data.get("number_of_users")
-                obj.prefix_add(prefix, n)
-        else:
-            obj.save()
+        if change:
+            super().save_model(request, obj, form, change)
+            return
+        # Save the object initially to get a PK
+        super().save_model(request, obj, form, change)
+        num_users = form.cleaned_data.get("number_of_users", 0)
+        obj.schedule_processing(number_of_users=num_users)
 
     def delete_model(self, request, obj):
         obj.users.all().delete()
@@ -466,7 +465,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
             request, obj
         )
-        if obj:
+        if obj and obj.status != "pending":
             return (
                 "strategy",
                 "prefix",
@@ -474,8 +473,38 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "number_of_users",
                 "users",
                 "expiration_date",
+                "name",
+                "organization",
+                "status",
             ) + readonly_fields
-        return readonly_fields
+        elif obj:
+            return ("status",) + readonly_fields
+        return ("status",) + readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status == "processing":
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if obj.status != "pending":
+            return super().response_add(request, obj, post_url_continue)
+        opts = self.model._meta
+        msg = _(
+            'The batch user creation "{obj}" was added successfully '
+            "and is now being processed in the background."
+        ).format(obj=obj)
+        if "_continue" in request.POST:
+            self.message_user(request, msg, messages.SUCCESS)
+            post_url_continue = reverse(
+                f"admin:{opts.app_label}_{opts.model_name}_change",
+                args=(obj.pk,),
+                current_app=self.admin_site.name,
+            )
+            return HttpResponseRedirect(post_url_continue)
+        else:
+            self.message_user(request, msg, messages.SUCCESS)
+            return self.response_post_save_add(request, obj)
 
 
 # Inlines for UserAdmin & OrganizationAdmin

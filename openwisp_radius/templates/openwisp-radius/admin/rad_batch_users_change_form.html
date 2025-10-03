@@ -1,10 +1,68 @@
-{% extends 'admin/change_form.html' %}
+{% extends "admin/change_form.html" %}
 {% load i18n %}
+
 {% block object-tools-items %}
-{% if download_rad_batch_pdf_url %}
-<li>
-    <a href="{{ download_rad_batch_pdf_url }}" id="downloadpdflink">{% trans "Download User Credentials" %}</a>
-</li>
-{% endif %}
-{{ block.super }}
+    {% if download_rad_batch_pdf_url %}
+        <li>
+            <a href="{{ download_rad_batch_pdf_url }}" id="downloadpdflink">{% trans "Download User Credentials" %}</a>
+        </li>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}
+
+{% block messages %}
+    {{ block.super }}
+    {% if original.status == "processing" or original.status == "failed" or original.status == "completed" %}
+        <ul class="messagelist">
+            {% if original.status == "processing" %}
+                <li class="warning">
+                    <b>{% trans "Processing:" %}</b>
+                    {% trans "This batch is currently being processed. This page will update automatically when the operation is complete." %}
+                </li>
+            {% elif original.status == "failed" %}
+                <li class="error">
+                    <b>{% trans "Failed:" %}</b>
+                    {% trans "This batch operation failed. Please check the system logs for details and retry." %}
+                </li>
+            {% endif %}
+        </ul>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+    {% if add %}
+        {{ block.super }}
+    {% else %}
+    {% endif %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+    {{ block.super }}
+    <script>
+        (function($) {
+            const batchStatus = "{{ original.status }}";
+            if (batchStatus === "processing") {
+                const batchId = "{{ original.pk }}";
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsPath = protocol + "//" + window.location.host + "/ws/radius/batch/" + batchId + "/";
+                const socket = new WebSocket(wsPath);
+
+                socket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    if (data.status === "completed" || data.status === "failed") {
+                        socket.close();
+                        window.location.reload();
+                    }
+                };
+
+                socket.onclose = function(e) {
+                    console.log("RadiusBatch status socket closed.");
+                };
+            }
+        })(django.jQuery);
+    </script>
 {% endblock %}

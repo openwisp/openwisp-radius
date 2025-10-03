@@ -111,6 +111,18 @@ The default encryption format for storing radius check values.
 A list of disabled encryption formats, by default all formats are enabled
 in order to keep backward compatibility with legacy systems.
 
+``OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``15``
+
+When the number of users to be generated in batch user creation is greater
+than or equal to this value, the operation will be executed as a
+background task (asynchronously) using Celery. This prevents timeouts and
+keeps the user interface responsive when creating a large number of users.
+For batches smaller than the threshold, users will be created immediately
+(synchronously).
+
 ``OPENWISP_RADIUS_BATCH_DEFAULT_PASSWORD_LENGTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

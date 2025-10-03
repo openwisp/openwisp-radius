@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from unittest import mock
+from uuid import UUID
 
 import swapper
 from allauth.account.forms import default_token_generator
@@ -22,6 +23,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
     RadiusUserSerializer,
     UserGroupCheckSerializer,
@@ -78,7 +80,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
         os.remove(path_csv)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(RadiusBatch.objects.count(), 1)
         self.assertEqual(User.objects.count(), 2)
 
@@ -566,6 +568,24 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.client.force_login(self._get_admin())
             pdf_response = self.client.get(pdf_link)
             self.assertEqual(pdf_response.status_code, 200)
+        with self.subTest(
+            "pdf_link is None in initial 202 Accepted response for async batch"
+        ):
+            large_user_count = app_settings.BATCH_ASYNC_THRESHOLD + 1
+            async_data = self._radius_batch_prefix_data(
+                name="async-pdf-link-test", number_of_users=large_user_count
+            )
+            with mock.patch(
+                "openwisp_radius.tasks.process_radius_batch.delay"
+            ) as mock_delay:
+                response = self._radius_batch_post_request(async_data)
+                self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+                self.assertIn("pdf_link", response.json())
+                self.assertIsNone(response.json()["pdf_link"])
+                batch_id = response.json()["id"]
+                mock_delay.assert_called_once_with(
+                    UUID(batch_id), number_of_users=large_user_count
+                )
 
     def test_batch_csv_pdf_link_404(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
@@ -576,7 +596,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with open(path_csv, "rt") as file:
             data = self._radius_batch_csv_data(csvfile=file)
             response = self._radius_batch_post_request(data)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response_json = json.loads(response.content)
         org = Organization.objects.get(pk=response_json["organization"])
         pdf_url = reverse(
