@@ -1561,78 +1561,51 @@ class TestTransactionFreeradiusApi(
                 {"op": "=", "value": "240"},
             )
 
+        simultaneous_use_check.refresh_from_db(fields=["value"])
         with self.subTest("Same device reauth on same NAS is allowed"):
-            # keep limit > 0 to enable Simultaneous-Use logic without tripping the limit
-            RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
-                value="2"
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
             )
-            # create an open session from a specific device and NAS
-            device_mac = "00:11:22:33:44:55"
-            called_id = "AA-BB-CC-DD-EE-FF:nas-host"
-            self._create_radius_accounting(
-                **{
-                    **self.acct_post_data,
-                    "username": user.username,
-                    "unique_id": "test_session_same_device",
-                    "stop_time": None,
-                    "calling_station_id": device_mac,
-                    "called_station_id": called_id,
-                }
-            )
-            # attempt authorization from same device and same NAS should be allowed
+
+            # Re-authentication from the same device and NAS should be allowed
             response = self._authorize_user(
                 auth_header=self.auth_header,
-                called_station_id=called_id,
-                calling_station_id=device_mac,
+                extra_payload={
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                    "calling_station_id": self.acct_post_data["calling_station_id"],
+                },
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
-        with self.subTest("Exclude current device from Simultaneous-Use count"):
-            # Set limit to 1 and create one open session from a different device
-            RadiusGroupCheck.objects.filter(id=simultaneous_use_check.id).update(
-                value="1"
+        simultaneous_use_check.refresh_from_db(fields=["value"])
+        with self.subTest("Authorization from different device on same NAS is denied"):
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
             )
-            other_device = "aa:bb:cc:dd:ee:ff"
-            self._create_radius_accounting(
-                **{
-                    **self.acct_post_data,
-                    "username": user.username,
-                    "unique_id": "test_session_other_device",
-                    "stop_time": None,
-                    "calling_station_id": other_device,
-                }
-            )
-            # Authorize from a new device: should be rejected because limit is 1
-            new_device = "11:22:33:44:55:66"
+
             response = self._authorize_user(
-                auth_header=self.auth_header, calling_station_id=new_device
+                auth_header=self.auth_header,
+                extra_payload={
+                    "calling_station_id": "11:22:33:44:55:66",
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                },
             )
             self.assertEqual(response.status_code, 401)
             self.assertEqual(
                 response.data["control:Auth-Type"],
                 "Reject",
             )
-            # Now authorize from the same 'other_device' and same NAS:
-            # should be allowed per mentor rule
-            response = self._authorize_user(
-                auth_header=self.auth_header,
-                called_station_id=self.acct_post_data["called_station_id"],
-                calling_station_id=other_device,
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data["control:Auth-Type"], "Accept")
-            # Close other_device session and authorize from new_device: should accept
-            RadiusAccounting.objects.filter(
-                username=user.username,
-                calling_station_id=other_device,
-                stop_time=None,
-            ).update(stop_time="2025-08-12T23:00:24.020460+01:00")
-            response = self._authorize_user(
-                auth_header=self.auth_header, calling_station_id=new_device
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
         with self.subTest("Closed sessions are ignored"):
             # Keep limit at 1 and Close all previously open sessions
@@ -1806,7 +1779,9 @@ class TestTransactionFreeradiusApi(
             self._test_authorize_with_user_auth_helper(user.phone_number, "tester")
 
         with self.subTest("Test authorization failure"):
-            r = self._authorize_user("thisuserdoesnotexist", "tester", self.auth_header)
+            r = self._authorize_user(
+                "thisuserdoesnotexist", "tester", auth_header=self.auth_header
+            )
             self.assertEqual(r.status_code, 200)
             self.assertEqual(r.data, None)
 

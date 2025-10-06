@@ -188,28 +188,16 @@ class ApiTokenMixin(BasePostParamsMixin):
         return options
 
     def _authorize_user(
-        self,
-        username="tester",
-        password="tester",
-        called_station_id=None,
-        calling_station_id=None,
-        auth_header=None,
+        self, username="tester", password="tester", extra_payload=None, auth_header=None
     ):
-        payload = {"username": username, "password": password}
-        if called_station_id is not None:
-            payload["called_station_id"] = called_station_id
-        if calling_station_id is not None:
-            payload["calling_station_id"] = calling_station_id
+        extra_payload = extra_payload or {}
+        opts = {
+            "path": reverse("radius:authorize"),
+            "data": {"username": username, "password": password, **extra_payload},
+        }
         if auth_header:
-            return self.client.post(
-                reverse("radius:authorize"),
-                payload,
-                HTTP_AUTHORIZATION=auth_header,
-            )
-        return self.client.post(
-            reverse("radius:authorize"),
-            payload,
-        )
+            opts["HTTP_AUTHORIZATION"] = auth_header
+        return self.client.post(**opts)
 
     def _login_and_obtain_auth_token(
         self, username="tester", password="tester", organization=None

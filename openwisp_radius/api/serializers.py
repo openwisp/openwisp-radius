@@ -112,10 +112,10 @@ class AuthorizeSerializer(serializers.Serializer):
     )
     password = serializers.CharField(style={"input_type": "password"}, write_only=True)
     called_station_id = serializers.CharField(
-        max_length=253, required=False, allow_blank=True, write_only=True
+        max_length=253, required=False, allow_blank=False, write_only=True
     )
     calling_station_id = serializers.CharField(
-        max_length=253, required=False, allow_blank=True, write_only=True
+        max_length=253, required=False, allow_blank=False, write_only=True
     )
 
 

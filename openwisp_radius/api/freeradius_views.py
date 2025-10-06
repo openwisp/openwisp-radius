@@ -366,10 +366,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             organization_id=organization_id,
             stop_time__isnull=True,
         )
-
         # In some corner cases, RADIUS accounting sessions
         # can remain open even though the user is not authenticated
-        # on the NAS anymore, for this reason, we shall allow reauthentication
+        # on the NAS anymore, for this reason, we shall allow re-authentication
         # of the same client on the same NAS.
         if called_station_id and calling_station_id:
             open_sessions = open_sessions.exclude(
