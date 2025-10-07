@@ -140,7 +140,7 @@ for the available configuration values.
         uri = "${..connect_uri}/api/v1/freeradius/authorize/"
         method = 'post'
         body = 'json'
-        data = '{"username": "%{User-Name}", "password": "%{User-Password}"}'
+        data = '{"username": "%{User-Name}", "password": "%{User-Password}", "called_station_id": "%{Called-Station-ID}", "calling_station_id": "%{Calling-Station-ID}"}'
         tls = ${..tls}
     }
 
