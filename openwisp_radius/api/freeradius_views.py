@@ -268,9 +268,16 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get("username")
         password = serializer.validated_data.get("password")
+        called_station_id = serializer.validated_data.get("called_station_id")
+        calling_station_id = serializer.validated_data.get("calling_station_id")
         user = self.get_user(request, username, password)
         if user and self.authenticate_user(request, user, password):
-            data, status = self.get_replies(user, organization_id=request.auth)
+            data, status = self.get_replies(
+                user,
+                organization_id=request.auth,
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
+            )
             return Response(data, status=status)
         if app_settings.API_AUTHORIZE_REJECT:
             return Response(self.reject_attributes, status=self.reject_status)
@@ -296,7 +303,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             return user
         return None
 
-    def get_replies(self, user, organization_id):
+    def get_replies(
+        self, user, organization_id, called_station_id=None, calling_station_id=None
+    ):
         """
         Returns user group replies and executes counter checks
         """
@@ -312,7 +321,12 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
             # Validate simultaneous use
             simultaneous_use = self._check_simultaneous_use(
-                data, user, group_checks, organization_id
+                data,
+                user,
+                group_checks,
+                organization_id,
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
             )
             if simultaneous_use is not None:
                 return simultaneous_use
@@ -326,7 +340,15 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         return data, self.accept_status
 
-    def _check_simultaneous_use(self, data, user, group_checks, organization_id):
+    def _check_simultaneous_use(
+        self,
+        data,
+        user,
+        group_checks,
+        organization_id,
+        called_station_id=None,
+        calling_station_id=None,
+    ):
         """
         Check if user has exceeded simultaneous use limit
 
@@ -338,11 +360,22 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             # Exit early if the `Simultaneous-Use` check is not defined
             # in the RadiusGroup or if it permits unlimited concurrent sessions.
             return None
+
         open_sessions = RadiusAccounting.objects.filter(
             username=user.username,
             organization_id=organization_id,
             stop_time__isnull=True,
-        ).count()
+        )
+        # In some corner cases, RADIUS accounting sessions
+        # can remain open even though the user is not authenticated
+        # on the NAS anymore, for this reason, we shall allow re-authentication
+        # of the same client on the same NAS.
+        if called_station_id and calling_station_id:
+            open_sessions = open_sessions.exclude(
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
+            )
+        open_sessions = open_sessions.count()
         if open_sessions >= max_simultaneous:
             data.update(self.reject_attributes.copy())
             if "Reply-Message" not in data:

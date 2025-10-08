@@ -1561,6 +1561,52 @@ class TestTransactionFreeradiusApi(
                 {"op": "=", "value": "240"},
             )
 
+        simultaneous_use_check.refresh_from_db(fields=["value"])
+        with self.subTest("Same device reauth on same NAS is allowed"):
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
+            )
+
+            # Re-authentication from the same device and NAS should be allowed
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                    "calling_station_id": self.acct_post_data["calling_station_id"],
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        simultaneous_use_check.refresh_from_db(fields=["value"])
+        with self.subTest("Authorization from different device on same NAS is denied"):
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
+            )
+
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "calling_station_id": "11:22:33:44:55:66",
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                },
+            )
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(
+                response.data["control:Auth-Type"],
+                "Reject",
+            )
+
         with self.subTest("Closed sessions are ignored"):
             # Keep limit at 1 and Close all previously open sessions
             RadiusAccounting.objects.filter(stop_time=None).update(
@@ -1733,7 +1779,9 @@ class TestTransactionFreeradiusApi(
             self._test_authorize_with_user_auth_helper(user.phone_number, "tester")
 
         with self.subTest("Test authorization failure"):
-            r = self._authorize_user("thisuserdoesnotexist", "tester", self.auth_header)
+            r = self._authorize_user(
+                "thisuserdoesnotexist", "tester", auth_header=self.auth_header
+            )
             self.assertEqual(r.status_code, 200)
             self.assertEqual(r.data, None)
 
