@@ -18,12 +18,11 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import ProtectedError, Q
+from django.db.models import JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
-from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
 from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
@@ -1021,7 +1020,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         for user in users_list:
             user.full_clean()
             self.save_user(user)
-        self.user_credentials = json.dumps(user_credentials)
+        self.user_credentials = user_credentials
         self.full_clean()
         self.save()
 
