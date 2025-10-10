@@ -28,11 +28,4 @@ def get_urls(api_views=None, social_views=None, saml_views=None):
 namespace = "radius"
 urlpatterns = [
     path("", include((get_urls(), namespace), namespace=namespace)),
-    path(
-        "",
-        include(
-            ("openwisp_notifications.urls", "openwisp_notifications"),
-            namespace="notifications",
-        ),
-    ),
 ]
