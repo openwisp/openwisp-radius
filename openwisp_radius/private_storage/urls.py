@@ -16,5 +16,13 @@ def get_private_store_urls():
             urljoin(app_settings.CSV_URL_PATH, "<path:path>"),
             views.rad_batch_csv_download_view,
             name="serve_private_file",
-        )
+        ),
+        path(
+            urljoin(
+                app_settings.CSV_URL_PATH,
+                "<slug:slug>/batch/<uuid:pk>/csv/<str:filename>/",
+            ),
+            views.RadiusBatchCsvDownloadAPIView.as_view(),
+            name="radius_organization_batch_csv_read",
+        ),
     ]
