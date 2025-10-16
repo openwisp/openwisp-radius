@@ -48,7 +48,12 @@
             if (batchStatus === "processing") {
                 const batchId = "{{ original.pk }}";
                 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                const wsPath = protocol + "//" + window.location.host + "/ws/radius/batch/" + batchId + "/";
+                {% if RADIUS_API_BASEURL != "/" %}
+                  const baseUrl = "{{ RADIUS_API_BASEURL }}";
+                {% else %}
+                  const baseUrl = protocol + "//" + window.location.host;
+                {% endif %}
+                const wsPath = baseUrl + "/ws/radius/batch/" + batchId + "/";
                 const socket = new WebSocket(wsPath);
 
                 socket.onmessage = function(e) {

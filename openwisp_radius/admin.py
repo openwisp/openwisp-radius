@@ -435,6 +435,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             if RADIUS_API_BASEURL:
                 batch_pdf_api_url = urljoin(RADIUS_API_BASEURL, batch_pdf_api_url)
             extra_context["download_rad_batch_pdf_url"] = batch_pdf_api_url
+        extra_context["RADIUS_API_BASEURL"] = RADIUS_API_BASEURL
         return super().change_view(
             request,
             object_id,
