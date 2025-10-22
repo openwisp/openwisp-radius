@@ -53,7 +53,6 @@ setup(
         "weasyprint>=65,<68",
         "dj-rest-auth>=6.0,<7.1",
         "django-sendsms~=0.5.0",
-        "jsonfield~=3.1.0",
         "django-private-storage~=3.1.0",
         "django-ipware>=5.0,<7.1",
         "pyrad~=2.4",
