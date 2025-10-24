@@ -1814,6 +1814,55 @@ class TestTransactionFreeradiusApi(
                 ),
             )
 
+    def test_authorize_optional_fields(self):
+        username = "tester"
+        password = "tester"
+        self._create_user(
+            username=username,
+            email="tester@gmail.com",
+            password="password",
+        )
+        authorize_path = reverse("radius:authorize")
+        payload = {"username": username, "password": password}
+        with self.subTest("Test without called and calling station id"):
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        with self.subTest("Test with empty called and calling station id"):
+            payload.update(
+                {
+                    "called_station_id": "",
+                    "calling_station_id": "",
+                }
+            )
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        with self.subTest("Test with called and calling station id"):
+            payload.update(
+                {
+                    "called_station_id": "00-11-22-33-44-55",
+                    "calling_station_id": "66-55-44-33-22-11",
+                }
+            )
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
     def test_user_auth_token_disposed_after_auth(self):
         self._get_org_user()
         rad_token = self._login_and_obtain_auth_token()
