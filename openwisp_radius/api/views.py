@@ -62,6 +62,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -84,6 +85,7 @@ RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroup = load_model("RadiusGroup")
 RadiusGroupCheck = load_model("RadiusGroupCheck")
 auth_backend = UsersAuthenticationBackend()
 
@@ -846,3 +848,19 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 
 
 radius_accounting = RadiusAccountingView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of RADIUS groups for the organizations managed by the user.
+        """,
+    ),
+)
+class RadiusGroupListView(ListAPIView):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.all().order_by("name")
+
+
+radius_group_list = RadiusGroupListView.as_view()
