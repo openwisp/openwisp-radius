@@ -1073,6 +1073,18 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
+    def test_radius_group_list(self):
+        """Should return 200 and list all groups"""
+        self._create_radius_group(name="Group A")
+        self._create_radius_group(name="Group B")
+        url = reverse("radius:radius_group_list")
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = [g["name"] for g in response.json()]
+        self.assertIn("test-org-Group A", data)
+        self.assertIn("test-org-Group B", data)
+
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_user_radius_usage_view(self):
