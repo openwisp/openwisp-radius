@@ -820,7 +820,7 @@ This API endpoint allows to use the features described in
     This API endpoint allows to use the features described in
     :doc:`importing_users` and :doc:`generating_users`.
 
-Responds only to **POST**, used to save a ``RadiusBatch`` instance.
+Responds only to **POST**, used to create a ``RadiusBatch`` instance.
 
 It is possible to generate the users of the ``RadiusBatch`` with two
 different strategies: csv or prefix.
@@ -855,6 +855,50 @@ When using this strategy, in the response you can find the field
 ``[['username', 'password'], ['sample_user', 'BBuOb5sN']]``) and the field
 ``pdf_link`` which can be used to download a PDF file containing the user
 credentials.
+
+Batch retrieve and update
+++++++++++++++++++++++++++
+
+.. code-block:: text
+
+    /api/v1/radius/batch/<id>/
+
+Responds to **GET**, **PUT**, and **PATCH** methods.
+
+Used to retrieve or update a ``RadiusBatch`` instance.
+
+.. note::
+
+    The ``organization`` field is **read-only** for existing batch objects
+    and cannot be changed via the API. This is intentional as changing
+    the organization after batch creation would be inconsistent.
+
+Parameters for **GET**:
+
+===== ===========
+Param Description
+===== ===========
+id    UUID of the batch
+===== ===========
+
+Parameters for **PUT**/**PATCH** (only certain fields can be updated):
+
+=============== ================================================
+Param           Description
+=============== ================================================
+name            Name of the operation
+expiration_date Date of expiration of the users (can be updated)
+=============== ================================================
+
+Fields that are **read-only** and cannot be updated:
+
+- ``organization`` - Cannot be changed after creation
+- ``strategy`` - Cannot be changed after creation
+- ``csvfile`` - Cannot be changed after creation
+- ``prefix`` - Cannot be changed after creation
+- ``users`` - Managed automatically
+- ``user_credentials`` - Generated automatically
+- ``created``, ``modified`` - Timestamps
 
 Batch CSV Download
 ++++++++++++++++++
