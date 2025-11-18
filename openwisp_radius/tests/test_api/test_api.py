@@ -1073,6 +1073,111 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
+    def _get_admin_auth_header(self):
+        """Helper method to get admin authentication header"""
+        login_payload = {"username": "admin", "password": "tester"}
+        login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
+        login_response = self.client.post(login_url, data=login_payload)
+        return f"Bearer {login_response.json()['key']}"
+
+    def test_batch_update_organization_readonly(self):
+        """
+        Test that organization field is readonly when updating RadiusBatch objects
+        """
+        data = self._radius_batch_prefix_data()
+        response = self._radius_batch_post_request(data)
+        self.assertEqual(response.status_code, 201)
+        batch = RadiusBatch.objects.get()
+        original_org = batch.organization
+
+        new_org = self._create_org(**{"name": "new-org", "slug": "new-org"})
+
+        header = self._get_admin_auth_header()
+
+        url = reverse("radius:batch_detail", args=[batch.pk])
+        update_data = {
+            "name": "updated-batch-name",
+            "organization": str(new_org.pk),
+        }
+        response = self.client.patch(
+            url,
+            json.dumps(update_data),
+            HTTP_AUTHORIZATION=header,
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        batch.refresh_from_db()
+        self.assertEqual(batch.organization, original_org)
+        self.assertEqual(batch.name, "updated-batch-name")
+
+    def test_batch_retrieve_and_update_api(self):
+        """
+        Test retrieving and updating RadiusBatch objects via API
+        """
+        data = self._radius_batch_prefix_data()
+        response = self._radius_batch_post_request(data)
+        self.assertEqual(response.status_code, 201)
+        batch = RadiusBatch.objects.get()
+
+        header = self._get_admin_auth_header()
+
+        url = reverse("radius:batch_detail", args=[batch.pk])
+        response = self.client.get(url, HTTP_AUTHORIZATION=header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], batch.name)
+        self.assertEqual(str(response.data["organization"]), str(batch.organization.pk))
+
+        update_data = {
+            "name": "updated-batch-name",
+            "strategy": "prefix",
+            "prefix": batch.prefix,
+            "organization_slug": batch.organization.slug,
+        }
+        response = self.client.put(
+            url,
+            json.dumps(update_data),
+            HTTP_AUTHORIZATION=header,
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        batch.refresh_from_db()
+        self.assertEqual(batch.name, "updated-batch-name")
+
+    def test_batch_update_permissions(self):
+        """
+        Test that proper permissions are required for updating RadiusBatch objects
+        """
+        data = self._radius_batch_prefix_data()
+        response = self._radius_batch_post_request(data)
+        self.assertEqual(response.status_code, 201)
+        batch = RadiusBatch.objects.get()
+
+        url = reverse("radius:batch_detail", args=[batch.pk])
+
+        response = self.client.patch(url, {"name": "new-name"})
+        self.assertEqual(response.status_code, 401)
+
+        user = self._get_user()
+        user_token = Token.objects.create(user=user)
+        header = f"Bearer {user_token.key}"
+        response = self.client.patch(
+            url,
+            json.dumps({"name": "new-name"}),
+            HTTP_AUTHORIZATION=header,
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+        header = self._get_admin_auth_header()
+        response = self.client.patch(
+            url,
+            json.dumps({"name": "new-name"}),
+            HTTP_AUTHORIZATION=header,
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_user_radius_usage_view(self):

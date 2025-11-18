@@ -453,6 +453,48 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
+class RadiusBatchUpdateSerializer(RadiusBatchSerializer):
+    """
+    Serializer for updating RadiusBatch objects.
+    Makes the organization field readonly for existing objects.
+    """
+
+    organization_slug = RadiusOrganizationField(
+        help_text=("Slug of the organization for creating radius batch."),
+        required=False,
+        label="organization",
+        slug_field="slug",
+        write_only=True,
+    )
+
+    def validate(self, data):
+        """
+        Simplified validation for partial updates.
+        Only validates essential fields based on strategy.
+        Ignores organization_slug if provided since organization is readonly.
+        """
+        # Remove organization_slug from data if provided (should not be changeable)
+        data.pop("organization_slug", None)
+
+        strategy = data.get("strategy") or (self.instance and self.instance.strategy)
+
+        if (
+            strategy == "prefix"
+            and "number_of_users" in data
+            and not data.get("number_of_users")
+        ):
+            raise serializers.ValidationError(
+                {"number_of_users": _("The field number_of_users cannot be empty")}
+            )
+
+        return serializers.ModelSerializer.validate(self, data)
+
+    class Meta:
+        model = RadiusBatch
+        fields = "__all__"
+        read_only_fields = ("created", "modified", "user_credentials", "organization")
+
+
 class PasswordResetSerializer(BasePasswordResetSerializer):
     input = serializers.CharField()
     email = None
