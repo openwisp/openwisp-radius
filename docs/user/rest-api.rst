@@ -857,7 +857,7 @@ When using this strategy, in the response you can find the field
 credentials.
 
 Batch retrieve and update
-++++++++++++++++++++++++++
++++++++++++++++++++++++++
 
 .. code-block:: text
 
@@ -870,16 +870,16 @@ Used to retrieve or update a ``RadiusBatch`` instance.
 .. note::
 
     The ``organization`` field is **read-only** for existing batch objects
-    and cannot be changed via the API. This is intentional as changing
-    the organization after batch creation would be inconsistent.
+    and cannot be changed via the API. This is intentional as changing the
+    organization after batch creation would be inconsistent.
 
 Parameters for **GET**:
 
-===== ===========
+===== =================
 Param Description
-===== ===========
+===== =================
 id    UUID of the batch
-===== ===========
+===== =================
 
 Parameters for **PUT**/**PATCH** (only certain fields can be updated):
 

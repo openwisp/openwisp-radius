@@ -475,7 +475,7 @@ class RadiusBatchUpdateSerializer(RadiusBatchSerializer):
         """
         # Remove organization_slug from data if provided (should not be changeable)
         data.pop("organization_slug", None)
-        
+
         strategy = data.get("strategy") or (self.instance and self.instance.strategy)
 
         if (
