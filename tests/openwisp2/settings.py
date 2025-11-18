@@ -293,10 +293,8 @@ OPENWISP_RADIUS_EXTRA_NAS_TYPES = (("cisco", "Cisco Router"),)
 
 REST_AUTH = {
     "SESSION_LOGIN": False,
-    "PASSWORD_RESET_SERIALIZER": (
-        "openwisp_radius.api.serializers.PasswordResetSerializer"
-    ),
-    "REGISTER_SERIALIZER": ("openwisp_radius.api.serializers.RegisterSerializer"),
+    "PASSWORD_RESET_SERIALIZER": "openwisp_radius.api.serializers.PasswordResetSerializer",
+    "REGISTER_SERIALIZER": "openwisp_radius.api.serializers.RegisterSerializer",
 }
 
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "email_confirmation_success"
@@ -307,13 +305,9 @@ if TESTING:
 
 # OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 #     # use the uuid because the slug can change
-#     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': (
-#     #     'https://org.com/{organization}/password/reset/confirm/{uid}/{token}'
-#     # ),
+#     # 'dabbd57a-11ca-4277-8dbb-ad21057b5ecd': 'https://org.com/{organization}/password/reset/confirm/{uid}/{token}',
 #     # fallback in case the specific org page is not defined
-#     '__all__': (
-#         'https://example.com/{{organization}/password/reset/confirm/{uid}/{token}'
-#     ),
+#     '__all__': 'https://example.com/{{organization}/password/reset/confirm/{uid}/{token}',
 # }
 
 if TESTING:
@@ -406,10 +400,7 @@ if os.environ.get("MONITORING_INTEGRATION", False):
     CELERY_BEAT_SCHEDULE.update(
         {
             "write_user_registration_metrics": {
-                "task": (
-                    "openwisp_radius.integrations.monitoring.tasks."
-                    "write_user_registration_metrics"
-                ),
+                "task": "openwisp_radius.integrations.monitoring.tasks.write_user_registration_metrics",
                 "schedule": timedelta(hours=1),
                 "args": None,
                 "relative": True,
@@ -472,10 +463,7 @@ except ImportError:
 
 # local settings must be imported before test runner otherwise they'll be ignored
 try:
-    try:
-        from .local_settings import *  # noqa: F403,F401
-    except ImportError:
-        pass
+    from .local_settings import *
 except ImportError:
     pass
 

@@ -857,7 +857,7 @@ When using this strategy, in the response you can find the field
 credentials.
 
 Batch retrieve and update
-++++++++++++++++++++++++++
++++++++++++++++++++++++++
 
 .. code-block:: text
 
@@ -870,35 +870,20 @@ Used to retrieve or update a ``RadiusBatch`` instance.
 .. note::
 
     The ``organization`` field is **read-only** for existing batch objects
-    and cannot be changed via the API. This is intentional as changing
-    the organization after batch creation would be inconsistent.
+    and cannot be changed via the API. This is intentional as changing the
+    organization after batch creation would be inconsistent.
 
 Parameters for **GET**:
 
-===== ===========
+===== =================
 Param Description
-===== ===========
+===== =================
 id    UUID of the batch
-===== ===========
+===== =================
 
-Parameters for **PUT**/**PATCH** (only certain fields can be updated):
-
-=============== ================================================
-Param           Description
-=============== ================================================
-name            Name of the operation
-expiration_date Date of expiration of the users (can be updated)
-=============== ================================================
-
-Fields that are **read-only** and cannot be updated:
-
-- ``organization`` - Cannot be changed after creation
-- ``strategy`` - Cannot be changed after creation
-- ``csvfile`` - Cannot be changed after creation
-- ``prefix`` - Cannot be changed after creation
-- ``users`` - Managed automatically
-- ``user_credentials`` - Generated automatically
-- ``created``, ``modified`` - Timestamps
+The ``organization`` field is the only field that is explicitly
+**read-only** and cannot be updated via this endpoint. All other editable
+fields can be modified through **PUT** or **PATCH** requests.
 
 Batch CSV Download
 ++++++++++++++++++

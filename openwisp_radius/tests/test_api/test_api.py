@@ -1561,6 +1561,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         login_payload = {"username": "admin", "password": "tester"}
         login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         return f"Bearer {login_response.json()['key']}"
 
     def test_batch_update_organization_readonly(self):

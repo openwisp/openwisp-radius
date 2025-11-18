@@ -16,9 +16,8 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 blank=True,
                 default=True,
-                help_text=(
-                    "Whether the registration API endpoint should be enabled or not"
-                ),
+                help_text="Whether the registration API endpoint should be enabled or "
+                "not",
                 null=True,
             ),
         ),
@@ -28,9 +27,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 blank=True,
                 default=None,
-                help_text=(
-                    "Whether the registration using SAML should be enabled or not"
-                ),
+                help_text="Whether the registration using SAML should be enabled or not",
                 null=True,
                 verbose_name=_("SAML registration enabled"),
             ),
@@ -41,10 +38,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 blank=True,
                 default=None,
-                help_text=(
-                    "Whether the registration using social applications should be "
-                    "enabled or not"
-                ),
+                help_text="Whether the registration using social applications should be enabled or not",
                 null=True,
             ),
         ),

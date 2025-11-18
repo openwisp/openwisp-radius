@@ -389,13 +389,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         with self.subTest(
             "User does not has OrganizationUser and RegisteredUser object"
         ):
-            admin = self._get_admin()
-            try:
-                reg_user = RegisteredUser.objects.get(user=admin)
-                reg_user.method = ""
-                reg_user.save()
-            except RegisteredUser.DoesNotExist:
-                pass
+            self._get_admin()
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()

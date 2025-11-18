@@ -531,15 +531,11 @@ class RadiusBatchUpdateSerializer(RadiusBatchSerializer):
 
     def validate(self, data):
         """
-        Simplified validation for partial updates.
-        Only validates essential fields based on strategy.
+        Validates partial updates while preserving model-level validation.
         Ignores organization_slug if provided since organization is readonly.
         """
-        # Remove organization_slug from data if provided (should not be changeable)
         data.pop("organization_slug", None)
-        
         strategy = data.get("strategy") or (self.instance and self.instance.strategy)
-
         if (
             strategy == "prefix"
             and "number_of_users" in data
@@ -548,8 +544,18 @@ class RadiusBatchUpdateSerializer(RadiusBatchSerializer):
             raise serializers.ValidationError(
                 {"number_of_users": _("The field number_of_users cannot be empty")}
             )
-
-        return serializers.ModelSerializer.validate(self, data)
+        validated_data = serializers.ModelSerializer.validate(self, data)
+        # Run model-level validation (full_clean) for update
+        if self.instance:
+            batch_data = {
+                field: validated_data.get(field, getattr(self.instance, field))
+                for field in validated_data
+            }
+            batch_data.pop("number_of_users", None)
+            for field, value in batch_data.items():
+                setattr(self.instance, field, value)
+            self.instance.full_clean()
+        return validated_data
 
     class Meta:
         model = RadiusBatch

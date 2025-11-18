@@ -463,9 +463,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         )
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
-            request, obj
-        )
+        readonly_fields = super().get_readonly_fields(request, obj)
         if obj and obj.status != "pending":
             return (
                 "strategy",
@@ -476,7 +474,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "users",
                 "expiration_date",
                 "name",
-                "organization",
                 "status",
             ) + readonly_fields
         elif obj:
