@@ -19,7 +19,17 @@
       // This is done to show the time in server's timezone
       // because RadiusAccounting admin also shows the time in server's timezone.
       let strippedDateTime = new Date(dateTimeString.replace(/[-+]\d{2}:\d{2}$/, ""));
-      return strippedDateTime.toLocaleString();
+      const locale = djangoLocale.replace("_", "-");
+      const options = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      };
+      return strippedDateTime.toLocaleString(locale, options);
     }
 
     function fetchRadiusSessions() {
