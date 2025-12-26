@@ -847,3 +847,10 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 
 
 radius_accounting = RadiusAccountingView.as_view()
+
+try:
+    from ..integrations.monitoring.views import MonitoringAccountingView
+
+    monitoring_accounting = MonitoringAccountingView.as_view()
+except ImportError:
+    monitoring_accounting = None

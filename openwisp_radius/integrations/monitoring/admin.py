@@ -25,7 +25,7 @@ class DeviceAdmin(BaseDeviceAdmin):
         ctx.update(
             {
                 "radius_accounting_api_endpoint": reverse(
-                    "radius:radius_accounting_list"
+                    "radius:monitoring_accounting_list"
                 ),
                 "radius_accounting": reverse(
                     f"admin:{RadiusAccounting._meta.app_label}"

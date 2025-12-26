@@ -14,24 +14,6 @@
     const deviceMac = encodeURIComponent($("#id_mac_address").val()),
       apiEndpoint = `${radiusAccountingApiEndpoint}?called_station_id=${deviceMac}`;
 
-    function getFormattedDateTimeString(dateTimeString) {
-      // Strip the timezone from the dateTimeString.
-      // This is done to show the time in server's timezone
-      // because RadiusAccounting admin also shows the time in server's timezone.
-      let strippedDateTime = new Date(dateTimeString.replace(/[-+]\d{2}:\d{2}$/, ""));
-      const locale = djangoLocale.replace("_", "-");
-      const options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      };
-      return strippedDateTime.toLocaleString(locale, options);
-    }
-
     function fetchRadiusSessions() {
       if ($("#radius-session-tbody").children().length) {
         // Don't fetch if RADIUS sessions are already present
@@ -68,11 +50,8 @@
           );
 
           response.forEach((element, index) => {
-            element.start_time = getFormattedDateTimeString(element.start_time);
             if (!element.stop_time) {
               element.stop_time = `<strong>${onlineMsg}</strong>`;
-            } else {
-              element.stop_time = getFormattedDateTimeString(element.stop_time);
             }
             $("#radius-session-tbody").append(
               `<tr class="form-row has_original dynamic-radiussession_set" id="radiussession_set-${index}">
