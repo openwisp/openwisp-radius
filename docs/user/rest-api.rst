@@ -297,7 +297,7 @@ Accounting
     /api/v1/freeradius/accounting/
 
 GET
-...
+^^^
 
 Returns a list of accounting objects
 
@@ -338,7 +338,7 @@ Returns a list of accounting objects
     ]
 
 POST
-....
+^^^^
 
 Add or update accounting information (start, interim-update, stop); does
 not return any JSON response so that freeradius will avoid processing the
@@ -374,7 +374,7 @@ framed_ip_address     framed IP address
 ===================== =====================
 
 Pagination
-''''''''''
+""""""""""
 
 Pagination is provided using a Link header pagination. Check `here for
 more information about traversing with pagination
@@ -397,7 +397,7 @@ more information about traversing with pagination
     parameter.
 
 Filters
-'''''''
+"""""""
 
 The JSON objects returned using the GET endpoint can be filtered/queried
 using specific parameters.
@@ -490,7 +490,7 @@ is disabled for a particular org, an empty string will be acceptable.
 .. _radius_registering_to_multiple_organizations:
 
 Registering to Multiple Organizations
-.....................................
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An **HTTP 409** response will be returned if an existing user tries to
 register on a URL of a different organization (because the account already
