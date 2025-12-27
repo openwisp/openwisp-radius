@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+
+# Standard tests
+coverage run runtests.py --parallel \
+  --exclude-tag=no_parallel >/dev/null 2>&1 \
+|| ./runtests.py --exclude-tag=no_parallel
+
+# Test extensibility
+SAMPLE_APP=1 coverage run ./runtests.py --parallel \
+  --exclude-tag=no_parallel \
+  --exclude-tag=selenium_tests >/dev/null 2>&1 \
+|| SAMPLE_APP=1 ./runtests.py \
+  --exclude-tag=no_parallel \
+  --exclude-tag=selenium_tests
+
+# Test integration with monitoring module
+MONITORING_INTEGRATION=1 coverage run runtests.py \
+  --exclude-tag=no_parallel \
+  --exclude-tag=selenium_tests
+
+# Tests which cannot be run in parallel mode (eg: selenium tets)
+coverage run runtests.py --tag=no_parallel
+
+coverage combine
+coverage xml

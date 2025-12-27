@@ -216,6 +216,8 @@ class TestAdditionInfoView(TestSamlMixin, TestCase):
     def test_user_has_no_email(self):
         user = self._create_user()
         User.objects.filter(pk=user.pk).update(email="")
+        user.emailaddress_set.all().delete()
+        user.refresh_from_db()
         self.client.force_login(user)
         url = f"{self.view_path}?next=https://captive-portal.example.com/login/"
         response = self.client.get(url)

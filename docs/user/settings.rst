@@ -111,6 +111,18 @@ The default encryption format for storing radius check values.
 A list of disabled encryption formats, by default all formats are enabled
 in order to keep backward compatibility with legacy systems.
 
+``OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``15``
+
+When the number of users to be generated in batch user creation is greater
+than or equal to this value, the operation will be executed as a
+background task (asynchronously) using Celery. This prevents timeouts and
+keeps the user interface responsive when creating a large number of users.
+For batches smaller than the threshold, users will be created immediately
+(synchronously).
+
 ``OPENWISP_RADIUS_BATCH_DEFAULT_PASSWORD_LENGTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -410,6 +422,20 @@ authorize the request with other freeradius modules.
 
 Set this to ``True`` if you are performing authorization exclusively
 through the REST API.
+
+.. _openwisp_radius_simultaneous_use_enabled:
+
+``OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+Allows disabling the :doc:`Simultaneous-Use <simultaneous_use>` feature,
+e.g.:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_SIMULTANEOUS_USE_ENABLED = False
 
 ``OPENWISP_RADIUS_API_ACCOUNTING_AUTO_GROUP``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,5 +1,6 @@
 import csv
 import logging
+import math
 import os
 from datetime import timedelta
 from io import BytesIO, StringIO
@@ -19,6 +20,7 @@ from sendsms.signals import sms_post_send
 from weasyprint import HTML
 
 from . import settings as app_settings
+from .counters.exceptions import MaxQuotaReached, SkipCheck
 
 SESSION_TIME_ATTRIBUTE = "Max-Daily-Session"
 SESSION_TRAFFIC_ATTRIBUTE = "Max-Daily-Session-Traffic"
@@ -250,12 +252,13 @@ def get_user_group(user, organization_id):
     )
 
 
-def get_group_checks(group):
+def get_group_checks(group, counters_only=False):
     """
     Retrieves a dictionary of checks for the given group.
 
     Parameters:
         group (Group): The group object for which to retrieve the checks.
+        counters_only (bool): Whether to only include counter checks.
 
     Returns:
         dict: A dictionary of group checks with the attribute as the key and
@@ -264,16 +267,126 @@ def get_group_checks(group):
     Used to query the DB for group checks only once
     instead of once per each counter in use.
     """
-
-    if not app_settings.COUNTERS:
+    add_simultaneous_use_check = (
+        app_settings.SIMULTANEOUS_USE_ENABLED and not counters_only
+    )
+    if not app_settings.COUNTERS and not add_simultaneous_use_check:
         return
 
-    check_attributes = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys()
+    check_attributes = set(app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP.keys())
+    # Add additional radius checks to the list of attributes to query
+    if add_simultaneous_use_check:
+        check_attributes.add("Simultaneous-Use")
+
     group_checks = group.radiusgroupcheck_set.filter(attribute__in=check_attributes)
     result = {}
     for group_check in group_checks:
         result[group_check.attribute] = group_check
     return result
+
+
+def get_group_replies(group):
+    """
+    Get all RADIUS replies from the given RadiusGroup.
+
+    Args:
+        group: RadiusGroup object
+
+    Returns:
+        dict: Dictionary of RADIUS attributes with format:
+              {"attribute_name": {"op": "operator", "value": "value"}}
+              Returns empty dict if group is None
+    """
+    data = {}
+    if group:
+        for reply in group.radiusgroupreply_set.all():
+            data[reply.attribute] = {"op": reply.op, "value": reply.value}
+    return data
+
+
+def execute_counter_checks(
+    user, group, group_checks, existing_replies=None, raise_quota_exceeded=True
+):
+    """
+    Execute counter checks for all counters and return counter replies.
+
+    This function will raise MaxQuotaReached exceptions raised by counters
+    if raise_quota_exceeded is True (default); if False, it will suppress them
+    and add the counter replies to the returned dict.
+
+    Args:
+        user: User instance.
+        group: RadiusGroup instance.
+        group_checks: dict mapping check attribute names to RadiusGroupCheck objects.
+        existing_replies (dict or None): Optional existing RADIUS replies to merge with.
+            If provided, counter replies will be added/updated in this dict.
+        raise_quota_exceeded (bool): If True (default) propagate MaxQuotaReached
+            exceptions raised by counters; if False suppress them.
+
+    Returns:
+        dict: Dictionary of counter reply attributes, merged with existing_replies
+        when provided. Format is { "reply_name": remaining_value }.
+    """
+    counter_data = existing_replies or {}
+    for Counter in app_settings.COUNTERS:
+        if (group_check := group_checks.get(Counter.check_name)) is None:
+            continue
+        try:
+            counter = Counter(user=user, group=group, group_check=group_check)
+            results = counter.check()
+        except SkipCheck:
+            continue
+        except Exception as e:
+            if not isinstance(e, MaxQuotaReached):
+                logger.exception(f'Got exception "{e}" while executing {counter}')
+                continue
+            if raise_quota_exceeded:
+                raise
+        if results is None:
+            continue
+        # BACKWARD COMPATIBILITY: The previous implementation of counters
+        # returned a single value instead of a tuple/list when there was
+        # only one reply name defined.
+        # We need to handle this case to avoid breaking existing counters.
+        if not isinstance(results, (list, tuple)):
+            results = (results,)
+        # We need to map the value to the correct reply name.
+        # This allows counters to define multiple reply names.
+        for reply_name, value in zip(counter.reply_names, results):
+            # Send remaining value in RADIUS reply, if needed.
+            # This emulates the implementation of sqlcounter in freeradius
+            # which sends the reply message only if the value is smaller
+            # than what was defined to a previous reply message
+            if reply_name not in counter_data or value < _get_reply_value(
+                counter_data, reply_name
+            ):
+                counter_data[reply_name] = value
+
+    return counter_data
+
+
+def _get_reply_value(data, reply_name):
+    """
+    Helper function to get reply value from counter data for comparison.
+
+    Args:
+        data: Dictionary containing RADIUS attributes
+        reply_name: Name of the reply attribute
+
+    Returns:
+        int or float: Reply value as integer, or math.inf if conversion fails
+    """
+    reply_entry = data.get(reply_name, {})
+    value = reply_entry.get("value")
+    if value is None:
+        return math.inf
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        logger.warning(
+            f'{reply_name} value ("{value}") cannot be converted to integer.'
+        )
+        return math.inf
 
 
 def get_one_time_login_url(user, organization):

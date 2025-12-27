@@ -42,6 +42,37 @@ class TestBaseCounter(TestCounterMixin, BaseTransactionTestCase):
             BaseCounter(**opts)
         self.assertIn("abstract class BaseCounter", str(ctx.exception))
 
+    def test_reply_name_backward_compatibility(self):
+        options = self._get_kwargs("Session-Timeout")
+
+        class BackwardCompatibleCounter(BaseCounter):
+            check_name = "Max-Daily-Session"
+            counter_name = "BackwardCompatibleCounter"
+            reset = "daily"
+            sql = "SELECT 1"
+
+            def get_sql_params(self, start_time, end_time):
+                return []
+
+        with self.subTest("Counter does not implement reply_names or reply_name"):
+            counter = BackwardCompatibleCounter(**options)
+            with self.assertRaises(NotImplementedError) as ctx:
+                counter.reply_names
+            self.assertIn(
+                "Counter classes must define 'reply_names' property.",
+                str(ctx.exception),
+            )
+
+        BackwardCompatibleCounter.reply_name = "Session-Timeout"
+        with self.subTest("Counter does not implement reply_names, uses reply_name"):
+            counter = BackwardCompatibleCounter(**options)
+            self.assertEqual(counter.reply_names, ("Session-Timeout",))
+
+        BackwardCompatibleCounter.reply_name = ("Session-Timeout",)
+        with self.subTest("Counter implements reply_names as tuple"):
+            counter = BackwardCompatibleCounter(**options)
+            self.assertEqual(counter.reply_names, ("Session-Timeout",))
+
     @freeze_time("2021-11-03T08:21:44-04:00")
     def test_resets(self):
         with self.subTest("daily"):

@@ -35,14 +35,22 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        "openwisp-users @ https://github.com/openwisp/openwisp-users/tarball/1.2",
         (
-            "openwisp-utils[rest,celery]"
-            " @ https://github.com/openwisp/openwisp-utils/tarball/1.2"
+            "openwisp-notifications @"
+            "https://github.com/openwisp/openwisp-notifications/"
+            "archive/refs/heads/1.3.tar.gz"
+        ),
+        (
+            "openwisp-users @"
+            "https://github.com/openwisp/openwisp-users/archive/refs/heads/1.3.tar.gz"
+        ),
+        (
+            "openwisp-utils[rest,celery] @"
+            "https://github.com/openwisp/openwisp-utils/archive/refs/heads/1.3.tar.gz"
         ),
         "passlib~=1.7.1",
         "djangorestframework-link-header-pagination~=0.1.1",
-        "weasyprint~=65.0",
+        "weasyprint>=65,<67",
         "dj-rest-auth>=6.0,<7.1",
         "django-sendsms~=0.5.0",
         "jsonfield~=3.1.0",
@@ -55,11 +63,11 @@ setup(
     ],
     extras_require={
         # https://github.com/IdentityPython/djangosaml2/issues/414
-        "saml": ["djangosaml2==1.10.1"],
+        "saml": ["djangosaml2==1.11.1"],
         "openvpn_status": ["openvpn-status~=0.2.1"],
     },
     classifiers=[
-        "Development Status :: 5 - Production/Stable ",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: System :: Networking",

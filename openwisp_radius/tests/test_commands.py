@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import get_default_timezone, now
+from freezegun import freeze_time
 from netaddr import EUI, mac_unix
 from openvpn_status.models import Routing
 
@@ -13,7 +14,7 @@ from openwisp_utils.tests import capture_any_output, capture_stdout
 
 from .. import settings as app_settings
 from ..utils import load_model
-from . import _RADACCT, CallCommandMixin, FileMixin
+from . import _RADACCT, _TEST_DATE, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
 
 User = get_user_model()
@@ -40,7 +41,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertEqual(session.terminate_cause, "Session Timeout")
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest(
             "Test start_time older than specified time but update_time is recent"
@@ -67,16 +68,28 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertNotEqual(session.stop_time, None)
             self.assertNotEqual(session.session_time, None)
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertEqual(session.terminate_cause, "Session Timeout")
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
+
+        with self.subTest("Test start_time and update_time older than specified hours"):
+            options["unique_id"] = "120"
+            options["update_time"] = "2017-06-10 10:50:00"
+            options["start_time"] = "2017-06-10 10:50:00"
+            self._create_radius_accounting(**options)
+            call_command("cleanup_stale_radacct", number_of_hours=4)
+            session = RadiusAccounting.objects.get(unique_id="120")
+            self.assertNotEqual(session.stop_time, None)
+            self.assertNotEqual(session.session_time, None)
+            self.assertEqual(session.update_time, session.stop_time)
+            self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest("Test does not affect closed session"):
-            options["unique_id"] = "120"
+            options["unique_id"] = "121"
             options["start_time"] = "2017-06-10 10:50:00"
             options["update_time"] = "2017-06-10 10:55:00"
             options["stop_time"] = "2017-06-10 10:55:00"
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", 1)
-            session = RadiusAccounting.objects.get(unique_id="120")
+            session = RadiusAccounting.objects.get(unique_id="121")
             self.assertEqual(
                 session.stop_time.astimezone(get_default_timezone()).strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -84,7 +97,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 "2017-06-10 10:55:00",
             )
             self.assertEqual(session.update_time, session.stop_time)
-            self.assertNotEqual(session.terminate_cause, "Session Timeout")
+            self.assertNotEqual(session.terminate_cause, "Session-Timeout")
 
     @capture_any_output()
     def test_delete_old_postauth_command(self):
@@ -152,8 +165,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         call_command("deactivate_expired_users")
         self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
+    @freeze_time(_TEST_DATE)
     @capture_stdout()
-    def test_delete_old_radiusbatch_users_command(self):
+    def test_delete_old_radiusbatch_users_command(self, subtest_id=None):
         # Create RadiusBatch users that expired more than 18 months ago
         path = self._get_path("static/test_batch.csv")
         options = dict(
@@ -202,9 +216,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
         with self.subTest("Test executing command with both arguments"):
             options["name"] = "test3"
-            call_command("batch_add_users", **options)
+            self._call_command("batch_add_users", **options)
             call_command(
-                "delete_old_radiusbatch_users", older_than_days=9, older_than_months=12
+                "delete_old_radiusbatch_users",
+                older_than_days=9,
+                older_than_months=12,
             )
             # Users that expired more than 9 days ago should be deleted
             self.assertEqual(get_user_model().objects.all().count(), 0)

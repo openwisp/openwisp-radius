@@ -11,14 +11,14 @@ def _timestamp(start, end):
     return int(start.timestamp()), int(end.timestamp())
 
 
-def _daily(user=None):
+def _daily(user=None, **kwargs):
     dt = _today()
     start = datetime(dt.year, dt.month, dt.day)
     end = datetime(dt.year, dt.month, dt.day) + timedelta(days=1)
     return _timestamp(start, end)
 
 
-def _weekly(user=None):
+def _weekly(user=None, **kwargs):
     dt = _today()
     start = dt - timedelta(days=dt.weekday())
     start = datetime(start.year, start.month, start.day)
@@ -26,24 +26,26 @@ def _weekly(user=None):
     return _timestamp(start, end)
 
 
-def _monthly(user=None):
+def _monthly(user=None, **kwargs):
     dt = _today()
     start = datetime(dt.year, dt.month, 1)
     end = datetime(dt.year, dt.month, 1) + relativedelta(months=1)
     return _timestamp(start, end)
 
 
-def _monthly_subscription(user):
+def _monthly_subscription(user, **kwargs):
     dt = _today()
     day_joined = user.date_joined.day
+    # subscription cycle starts on the day of month the user joined
     start = datetime(dt.year, dt.month, day_joined)
-    if start > datetime.fromordinal(dt.toordinal()):
+    # if the start date is in the future, shift to previous month
+    if start > datetime(dt.year, dt.month, dt.day):
         start = start - relativedelta(months=1)
     end = datetime(start.year, start.month, day_joined) + relativedelta(months=1)
     return _timestamp(start, end)
 
 
-def _never(user=None):
+def _never(user=None, **kwargs):
     return 0, None
 
 

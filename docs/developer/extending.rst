@@ -90,11 +90,13 @@ Now you need to add ``myradius`` to ``INSTALLED_APPS`` in your
         # social login
         "allauth.socialaccount.providers.facebook",  # optional, can be removed if social login is not needed
         "allauth.socialaccount.providers.google",  # optional, can be removed if social login is not needed
-        # SAML login
-        "djangosaml2",  # optional, can be removed if SAML login is not needed
+        # openwisp notifications
+        "openwisp_notifications",
         # openwisp
         # 'myradius', <-- replace with your app-name here
         "openwisp_users",
+        # SAML login
+        "djangosaml2",  # optional, can be removed if SAML login is not needed
         "private_storage",
         "drf_yasg",
     ]
@@ -105,7 +107,8 @@ Now you need to add ``myradius`` to ``INSTALLED_APPS`` in your
 
     AUTHENTICATION_BACKENDS = (
         "openwisp_users.backends.UsersAuthenticationBackend",
-        "openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend",  # optional, can be removed if SAML login is not needed
+        "openwisp_radius.saml.backends.OpenwispRadiusSaml2Backend",
+        "sesame.backends.ModelBackend",
     )
 
 4. Add ``EXTENDED_APPS``
@@ -154,6 +157,8 @@ Add ``openwisp_utils.loaders.DependencyLoader`` to ``TEMPLATES`` in your
                     "django.template.context_processors.request",
                     "django.contrib.auth.context_processors.auth",
                     "django.contrib.messages.context_processors.messages",
+                    "openwisp_utils.admin_theme.context_processor.menu_groups",
+                    "openwisp_notifications.context_processors.notification_api_settings",
                 ],
             },
         }
@@ -445,9 +450,10 @@ comments):
     urlpatterns = [
         # ... other urls in your project ...
         path("admin/", admin.site.urls),
-        # openwisp-radius urls
+        # URLs of other OpenWISP modules
         path("accounts/", include("openwisp_users.accounts.urls")),
         path("api/v1/", include("openwisp_utils.api.urls")),
+        path("", include("openwisp_notifications.urls", namespace="notifications")),
         # Use only when extending views (discussed below)
         # path('', include((get_urls(api_views, social_views, saml_views), 'radius'), namespace='radius')),
         # Remove when extending views

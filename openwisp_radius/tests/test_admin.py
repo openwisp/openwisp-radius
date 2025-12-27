@@ -520,6 +520,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -602,6 +606,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -1212,6 +1220,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
             }
         )
 
@@ -1289,6 +1301,10 @@ class TestAdmin(
                 "radius_settings-0-id": radsetting.pk,
                 "radius_settings-0-organization": org.pk,
                 "radius_settings-0-password_reset_url": PASSWORD_RESET_URL,
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
                 "_continue": True,
             }
         )
@@ -1494,3 +1510,57 @@ class TestAdmin(
         with self.subTest("test radius group is registered"):
             html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)
+
+
+class TestRadiusGroupAdmin(BaseTestCase):
+    def setUp(self):
+        self.organization = self._create_org()
+        self.admin = self._create_admin()
+        self.organization.add_user(self.admin, is_admin=True)
+        self.client.force_login(self.admin)
+
+    def test_add_radiusgroup_with_inline_check_succeeds(self):
+        add_url = reverse("admin:openwisp_radius_radiusgroup_add")
+
+        post_data = {
+            # Main RadiusGroup form
+            "organization": self.organization.pk,
+            "name": "test-group-with-inline",
+            "description": "A test group created with an inline check",
+            # Inline RadiusGroupCheck formset
+            "radiusgroupcheck_set-TOTAL_FORMS": "1",
+            "radiusgroupcheck_set-INITIAL_FORMS": "0",
+            "radiusgroupcheck_set-0-attribute": "Max-Daily-Session",
+            "radiusgroupcheck_set-0-op": ":=",
+            "radiusgroupcheck_set-0-value": "3600",
+            # Inline RadiusGroupReply formset
+            "radiusgroupreply_set-TOTAL_FORMS": "1",
+            "radiusgroupreply_set-INITIAL_FORMS": "0",
+            "radiusgroupreply_set-0-attribute": "Session-Timeout",
+            "radiusgroupreply_set-0-op": "=",
+            "radiusgroupreply_set-0-value": "1800",
+        }
+
+        response = self.client.post(add_url, data=post_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        final_group_name = f"{self.organization.slug}-test-group-with-inline"
+
+        self.assertContains(response, "The group")
+        self.assertContains(response, f"{final_group_name}</a>")
+        self.assertContains(response, "was added successfully.")
+
+        self.assertTrue(RadiusGroup.objects.filter(name=final_group_name).exists())
+        group = RadiusGroup.objects.get(name=final_group_name)
+
+        self.assertEqual(group.radiusgroupcheck_set.count(), 1)
+        check = group.radiusgroupcheck_set.first()
+        self.assertEqual(check.attribute, "Max-Daily-Session")
+        self.assertEqual(check.value, "3600")
+        self.assertEqual(check.groupname, group.name)
+
+        self.assertEqual(group.radiusgroupreply_set.count(), 1)
+        reply = group.radiusgroupreply_set.first()
+        self.assertEqual(reply.attribute, "Session-Timeout")
+        self.assertEqual(reply.value, "1800")
+        self.assertEqual(reply.groupname, group.name)

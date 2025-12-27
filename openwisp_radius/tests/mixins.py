@@ -47,6 +47,14 @@ class GetEditFormInlineMixin(object):
                     "radius_settings-MAX_NUM_FORMS": 0,
                 }
             )
+        params.update(
+            {
+                "notification_settings-TOTAL_FORMS": 0,
+                "notification_settings-INITIAL_FORMS": 0,
+                "notification_settings-MIN_NUM_FORMS": 0,
+                "notification_settings-MAX_NUM_FORMS": 1,
+            }
+        )
         return params
 
     def _get_user_edit_form_inline_params(self, user, organization):
@@ -179,17 +187,17 @@ class ApiTokenMixin(BasePostParamsMixin):
         options.update(**kwargs)
         return options
 
-    def _authorize_user(self, username="tester", password="tester", auth_header=None):
+    def _authorize_user(
+        self, username="tester", password="tester", extra_payload=None, auth_header=None
+    ):
+        extra_payload = extra_payload or {}
+        opts = {
+            "path": reverse("radius:authorize"),
+            "data": {"username": username, "password": password, **extra_payload},
+        }
         if auth_header:
-            return self.client.post(
-                reverse("radius:authorize"),
-                {"username": username, "password": password},
-                HTTP_AUTHORIZATION=auth_header,
-            )
-        return self.client.post(
-            reverse("radius:authorize"),
-            {"username": username, "password": password},
-        )
+            opts["HTTP_AUTHORIZATION"] = auth_header
+        return self.client.post(**opts)
 
     def _login_and_obtain_auth_token(
         self, username="tester", password="tester", organization=None
