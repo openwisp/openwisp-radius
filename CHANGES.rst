@@ -1,10 +1,80 @@
 Change log
 ==========
 
-Version 1.2.0 [Unreleased]
+Version 1.3.0 [unreleased]
 --------------------------
 
 Work in progress.
+
+Version 1.2.0 [2025-10-24]
+--------------------------
+
+Features
+~~~~~~~~
+
+- Added support for simultaneous-use `#615
+  <https://github.com/openwisp/openwisp-radius/issues/615>`_.
+- Added Called/Calling-Station-Id to the authorize API for improved
+  Simultaneous-Use accuracy `#648
+  <https://github.com/openwisp/openwisp-radius/issues/648>`_.
+- Close stale sessions on Accounting-On requests `#617
+  <https://github.com/openwisp/openwisp-radius/issues/617>`_.
+- Added ``--number_of_hours`` option to ``cleanup_stale_radacct`` command.
+
+Changes
+~~~~~~~
+
+Other changes
++++++++++++++
+
+- Large batch user creation operations are now executed asynchronously
+  `#608 <https://github.com/openwisp/openwisp-radius/issues/608>`_.
+- Allowed counters to return multiple replies `#634
+  <https://github.com/openwisp/openwisp-radius/issues/634>`_.
+- Included RADIUS replies of the new group in Change of Authorization
+  (CoA) requests `#643
+  <https://github.com/openwisp/openwisp-radius/issues/643>`_.
+- Added handling of ``MaxQuotaReached`` in CoA: users who exceed their
+  limits now receive a Disconnect Message instead of a CoA Request `#643
+  <https://github.com/openwisp/openwisp-radius/issues/643>`_.
+- Refactored CoA logic to reuse counter and attribute handling from
+  ``AuthorizeView._check_counters`` for improved maintainability `#643
+  <https://github.com/openwisp/openwisp-radius/issues/643>`_.
+- Allowed overriding configured RADIUS replies on ``MaxQuotaReached``.
+
+Dependencies
+++++++++++++
+
+- Bumped ``openwisp-users~=1.2.0``.
+- Bumped ``openwisp-utils~=1.2.0``.
+- Bumped ``weasyprint>=65,<67``.
+- Bumped ``dj-rest-auth>=6.0,<7.1``.
+- Bumped ``django-ipware>=5.0,<7.1``.
+- Added support for Django ``5.x``.
+- Added support for Python ``3.11``, ``3.12``, and ``3.13``.
+- Dropped support for Django ``3.2`` and ``4.1``.
+- Dropped support for Python ``3.8``.
+
+Bugfixes
+~~~~~~~~
+
+- Fixed timezone handling in ``delete_old_radiusbatch_users`` command
+  `#611 <https://github.com/openwisp/openwisp-radius/issues/611>`_.
+- Fixed creation of ``RadiusGroup`` objects with related Group Checks or
+  Group Replies from the admin `#604
+  <https://github.com/openwisp/openwisp-radius/issues/604>`_.
+- Fixed SMS message templates not being picked up by ``makemessages``
+  `#510 <https://github.com/openwisp/openwisp-radius/issues/510>`_.
+
+Version 1.1.2 [2025-08-18]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- FreeRADIUS API: forgive empty ``input_octets``/``output_octets``
+- Exclude ``location_id`` from ``radius_acc`` extra_tags if missing
+- Optimized query for RADIUS monitoring dashboard charts
 
 Version 1.1.1 [2025-01-31]
 --------------------------

@@ -1,11 +1,10 @@
-import ipaddress
 import logging
 from datetime import timedelta
 
 import swapper
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core import management
 from django.core.exceptions import ObjectDoesNotExist
 from django.template import loader
@@ -16,7 +15,6 @@ from openwisp_utils.admin_theme.email import send_email
 from openwisp_utils.tasks import OpenwispCeleryTask
 
 from . import settings as app_settings
-from .radclient.client import RadClient
 from .utils import get_one_time_login_url, load_model
 
 logger = logging.getLogger(__name__)
@@ -28,8 +26,8 @@ def delete_old_radacct(number_of_days=365):
 
 
 @shared_task
-def cleanup_stale_radacct(number_of_days=365):
-    management.call_command("cleanup_stale_radacct", number_of_days)
+def cleanup_stale_radacct(number_of_days=365, number_of_hours=0):
+    management.call_command("cleanup_stale_radacct", number_of_days, number_of_hours)
 
 
 @shared_task
@@ -125,109 +123,24 @@ def send_login_email(accounting_data):
 
 @shared_task
 def perform_change_of_authorization(user_id, old_group_id, new_group_id):
-    RadiusAccounting = load_model("RadiusAccounting")
-    RadiusGroupCheck = load_model("RadiusGroupCheck")
-    RadiusGroup = load_model("RadiusGroup")
-    Nas = load_model("Nas")
-    User = get_user_model()
+    from .coa import coa_manager
 
-    def get_radsecret_from_radacct(rad_acct):
-        qs = Nas.objects.filter(organization_id=rad_acct.organization_id).only(
-            "name", "secret"
-        )
-        for nas in qs.iterator():
-            try:
-                if ipaddress.ip_address(
-                    rad_acct.nas_ip_address
-                ) in ipaddress.ip_network(nas.name):
-                    return nas.secret
-            except ValueError:
-                logger.warning(
-                    f'Failed to parse NAS IP network for "{nas.id}" object. Skipping!'
-                )
+    coa_manager.perform_change_of_authorization(user_id, old_group_id, new_group_id)
 
-    def get_radius_reply_name_and_value(user, check):
-        Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[check.attribute]
-        counter = Counter(user=user, group=check.group, group_check=check)
-        try:
-            value = counter.check()
-            return counter.reply_name, value
-        except KeyError:
-            return check.attribute, check.value
-        except Exception as e:
-            logger.exception(f"Got {e} while CoA for counter {Counter}")
 
-    def get_radius_attributes(user):
-        attributes = {}
-        rad_group_checks = RadiusGroupCheck.objects.filter(group_id=new_group_id)
-        if rad_group_checks:
-            for check in rad_group_checks:
-                reply_name, value = get_radius_reply_name_and_value(user, check)
-                attributes[reply_name] = f"{value}"
-        elif (
-            not rad_group_checks
-            and RadiusGroup.objects.filter(id=new_group_id).exists()
-        ):
-            # The new group does not have any limitations.
-            # Unset attributes set by the previous group.
-            rad_group_checks = RadiusGroupCheck.objects.filter(group_id=old_group_id)
-            for check in rad_group_checks:
-                reply_name, _ = get_radius_reply_name_and_value(user, check)
-                attributes[reply_name] = ""
-        return attributes
-
+@shared_task(soft_time_limit=7200)
+def process_radius_batch(batch_id, number_of_users=None):
+    RadiusBatch = load_model("RadiusBatch")
     try:
-        user = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
-        logger.warning(
-            f'Failed to find user with "{user_id}" ID. Skipping CoA operation.'
-        )
-        return
-    # Check if user has open RadiusAccounting sessions
-    open_sessions = RadiusAccounting.objects.filter(
-        username=user.username, stop_time__isnull=True
-    ).select_related("organization", "organization__radius_settings")
-    if not open_sessions:
-        logger.warning(
-            f'The user with "{user_id}" ID does not have any open'
-            " RadiusAccounting sessions. Skipping CoA operation."
-        )
+        batch = RadiusBatch.objects.get(pk=batch_id)
+    except ObjectDoesNotExist as e:
+        logger.warning(f'process_radius_batch("{batch_id}") failed: {e}')
         return
     try:
-        new_rad_group = RadiusGroup.objects.only("name").get(id=new_group_id)
-    except RadiusGroup.DoesNotExist:
-        logger.warning(
-            f'Failed to find RadiusGroup with "{new_group_id}".'
-            " Skipping CoA operation."
+        batch.process(number_of_users=number_of_users, is_async=True)
+    except SoftTimeLimitExceeded:
+        logger.error(
+            "soft time limit hit while executing "
+            f"process for {batch} "
+            f"(ID: {batch_id})"
         )
-        return
-    else:
-        attributes = get_radius_attributes(user)
-
-    attributes["User-Name"] = user.username
-    updated_sessions = []
-    for session in open_sessions:
-        if not session.organization.radius_settings.coa_enabled:
-            continue
-        radsecret = get_radsecret_from_radacct(session)
-        if not radsecret:
-            logger.warning(
-                f'Failed to find RADIUS secret for "{session.unique_id}"'
-                " RadiusAccounting object. Skipping CoA operation"
-                " for this session."
-            )
-            continue
-        client = RadClient(
-            host=session.nas_ip_address,
-            radsecret=radsecret,
-        )
-        result = client.perform_change_of_authorization(attributes)
-        if result is True:
-            session.groupname = new_rad_group.name
-            updated_sessions.append(session)
-        else:
-            logger.warning(
-                f'Failed to perform CoA for "{session.unique_id}"'
-                f' RadiusAccounting object of "{user}" user'
-            )
-    RadiusAccounting.objects.bulk_update(updated_sessions, fields=["groupname"])

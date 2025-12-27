@@ -48,10 +48,17 @@ urlpatterns = [
 urlpatterns += staticfiles_urlpatterns()
 
 if os.environ.get("MONITORING_INTEGRATION"):
-    urlpatterns = [
+    urlpatterns += [
         path("", include("openwisp_controller.urls")),
         path("", include("openwisp_monitoring.urls")),
-    ] + urlpatterns
+    ]
+else:
+    # openwisp_controller.urls ships notification URLs,
+    # if monitoring integration is not enabled we need
+    # to add the URLs here
+    urlpatterns += [
+        path("", include("openwisp_notifications.urls", namespace="notifications")),
+    ]
 
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
     import debug_toolbar

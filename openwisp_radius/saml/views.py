@@ -2,8 +2,8 @@ import logging
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import swapper
+from allauth.account.internal.flows import email_verification
 from allauth.account.models import EmailAddress
-from allauth.account.utils import send_email_confirmation
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model, logout
@@ -148,7 +148,7 @@ class LoginAdditionalInfoView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         user = form.save()
-        send_email_confirmation(self.request, user, signup=True, email=user.email)
+        email_verification.send_verification_email_for_user(self.request, user)
         return self.get_response()
 
     def is_user_profile_complete(self):

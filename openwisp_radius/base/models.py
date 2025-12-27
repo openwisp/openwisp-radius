@@ -10,6 +10,8 @@ from io import StringIO
 import django
 import phonenumbers
 import swapper
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -23,6 +25,7 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
+from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 
@@ -30,6 +33,7 @@ from openwisp_radius.registration import (
     REGISTRATION_METHOD_CHOICES,
     get_registration_choices,
 )
+from openwisp_radius.tasks import process_radius_batch
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
 from openwisp_utils.fields import (
@@ -200,17 +204,26 @@ class AutoUsernameMixin(object):
 
 
 class AutoGroupnameMixin(object):
+    def _set_groupname(self):
+        if self.group:
+            self.groupname = self.group.name
+
     def clean(self):
         """
         automatically sets groupname
         """
+        if self.group and not self.group.pk:
+            return
         super().clean()
-        if self.group:
-            self.groupname = self.group.name
-        elif not self.groupname:
+        self._set_groupname()
+        if not self.group and not self.groupname:
             raise ValidationError(
                 {"groupname": _NOT_BLANK_MESSAGE, "group": _NOT_BLANK_MESSAGE}
             )
+
+    def save(self, *args, **kwargs):
+        self._set_groupname()
+        return super().save(*args, **kwargs)
 
 
 class AttributeValidationMixin(object):
@@ -529,8 +542,15 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         return self.unique_id
 
     @classmethod
-    def close_stale_sessions(cls, days):
-        older_than = timezone.now() - timedelta(days=days)
+    def close_stale_sessions(cls, days=None, hours=None):
+        if hours:
+            delta = timedelta(hours=hours)
+        elif days:
+            delta = timedelta(days=days)
+        else:
+            raise ValueError("Missing `days` or `hours`")
+        # determine limit date time
+        older_than = timezone.now() - delta
         # If the "update_time" is recent, then the session is not closed
         # even when the "start_time" is older than the specified time.
         # The "start_time" of a session is only checked when the
@@ -542,13 +562,29 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 | (Q(update_time=None) & Q(start_time__lt=older_than))
             )
         )
-        for session in sessions:
+        for session in sessions.iterator():
             # calculate seconds in between two dates
             session.session_time = (now() - session.start_time).total_seconds()
             session.stop_time = now()
             session.update_time = session.stop_time
-            session.terminate_cause = "Session Timeout"
+            session.terminate_cause = "Session-Timeout"
             session.save()
+
+    @classmethod
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
+        """
+        Called during RADIUS Accounting-On.
+        """
+        if not called_station_id:
+            return 0
+        stale_sessions = cls.objects.filter(
+            called_station_id=called_station_id,
+            stop_time__isnull=True,
+        )
+        closed_count = stale_sessions.update(
+            stop_time=now(), terminate_cause="NAS-Reboot"
+        )
+        return closed_count
 
 
 class AbstractNas(OrgMixin, TimeStampedEditableModel):
@@ -833,12 +869,30 @@ def _get_csv_file_location(instance, filename):
 
 
 class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+    BATCH_STATUS_CHOICES = (
+        (PENDING, _("Pending")),
+        (PROCESSING, _("Processing")),
+        (COMPLETED, _("Completed")),
+        (FAILED, _("Failed")),
+    )
+
     strategy = models.CharField(
         _("strategy"),
         max_length=16,
         choices=_STRATEGIES,
         db_index=True,
         help_text=_("Import users from a CSV or generate using a prefix"),
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=BATCH_STATUS_CHOICES,
+        default=PENDING,
+        db_index=True,
     )
     name = models.CharField(
         verbose_name=_("name"),
@@ -1032,6 +1086,71 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def _remove_files(self):
         if self.csvfile:
             self.csvfile.storage.delete(self.csvfile.name)
+
+    def schedule_processing(self, number_of_users=0):
+        items_to_process = 0
+        if self.strategy == "prefix":
+            items_to_process = number_of_users
+        elif self.strategy == "csv" and self.csvfile:
+            try:
+                csv_data = self.csvfile.read()
+                decoded_data = decode_byte_data(csv_data)
+                items_to_process = sum(1 for row in csv.reader(StringIO(decoded_data)))
+                self.csvfile.seek(0)
+            except Exception as e:
+                logger.error(f"Could not count rows in CSV for batch {self.pk}: {e}")
+                items_to_process = app_settings.BATCH_ASYNC_THRESHOLD
+        is_async = items_to_process >= app_settings.BATCH_ASYNC_THRESHOLD
+        if is_async:
+            process_radius_batch.delay(self.pk, number_of_users=number_of_users)
+        else:
+            self.process(number_of_users=number_of_users)
+        return is_async
+
+    def process(self, number_of_users=0, is_async=False):
+        channel_layer = get_channel_layer()
+        group_name = f"radius_batch_{self.pk}"
+        try:
+            self.status = self.PROCESSING
+            self.save(update_fields=["status"])
+            if self.strategy == "prefix":
+                self.prefix_add(self.prefix, number_of_users)
+            elif self.strategy == "csv":
+                self.csvfile_upload()
+            self.status = self.COMPLETED
+            self.save(update_fields=["status"])
+            if is_async:
+                notify.send(
+                    type="generic_message",
+                    level="success",
+                    message=_(
+                        f'The batch creation operation for "{self.name}" '
+                        "has completed successfully."
+                    ),
+                    sender=self.organization,
+                    target=self,
+                    description=_(f"Number of users processed: {self.users.count()}."),
+                )
+        except Exception as e:
+            logger.error(
+                "RadiusBatch %s failed during processing:", self.pk, exc_info=True
+            )
+            self.status = self.FAILED
+            self.save(update_fields=["status"])
+            notify.send(
+                type="generic_message",
+                level="error",
+                message=_(f'The batch creation operation for "{self.name}" failed.'),
+                sender=self.organization,
+                target=self,
+                description=_(
+                    f"An error occurred while processing the batch.\n\n" f"Error: {e}"
+                ),
+            )
+        finally:
+            async_to_sync(channel_layer.group_send)(
+                group_name, {"type": "batch_status_update", "status": self.status}
+            )
 
 
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):

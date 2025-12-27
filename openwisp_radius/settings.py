@@ -16,12 +16,6 @@ DEBUG = settings.DEBUG
 
 
 def get_settings_value(option, default):
-    if hasattr(settings, f"DJANGO_FREERADIUS_{option}"):  # pragma: no cover
-        logger.warning(
-            f"DJANGO_FREERADIUS_{option} setting is deprecated. It will be "
-            f"removed in the future, please use OPENWISP_RADIUS_{option} instead."
-        )
-        return getattr(settings, f"DJANGO_FREERADIUS_{option}")
     return getattr(settings, f"OPENWISP_RADIUS_{option}", default)
 
 
@@ -102,7 +96,7 @@ ALLOW_FIXED_LINE_OR_MOBILE = get_settings_value("ALLOW_FIXED_LINE_OR_MOBILE", Fa
 REGISTRATION_API_ENABLED = get_settings_value("REGISTRATION_API_ENABLED", True)
 NEEDS_IDENTITY_VERIFICATION = get_settings_value("NEEDS_IDENTITY_VERIFICATION", False)
 SMS_MESSAGE_TEMPLATE = get_settings_value(
-    "SMS_MESSAGE_TEMPLATE", "{organization} verification code: {code}"
+    "SMS_MESSAGE_TEMPLATE", _("{organization} verification code: {code}")
 )
 OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
     "OPTIONAL_REGISTRATION_FIELDS",
@@ -113,6 +107,7 @@ OPTIONAL_REGISTRATION_FIELDS = get_settings_value(
         "location": "disabled",
     },
 )
+SIMULTANEOUS_USE_ENABLED = get_settings_value("SIMULTANEOUS_USE_ENABLED", True)
 
 try:  # pragma: no cover
     assert PASSWORD_RESET_URLS
@@ -243,3 +238,4 @@ if not hasattr(settings, "OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG"):
     ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["select_related"].extend(
         ["registered_user"]
     )
+BATCH_ASYNC_THRESHOLD = get_settings_value("BATCH_ASYNC_THRESHOLD", 15)
