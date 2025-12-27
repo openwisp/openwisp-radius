@@ -985,16 +985,17 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def add(self, reader, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
         users_list = []
         generated_passwords = []
-        for row in reader:
-            if len(row) == 5:
-                user, password = self.get_or_create_user(
-                    row, users_list, password_length
-                )
-                users_list.append(user)
-                if password:
-                    generated_passwords.append(password)
-        for user in users_list:
-            self.save_user(user)
+        with transaction.atomic():
+            for row in reader:
+                if len(row) == 5:
+                    user, password = self.get_or_create_user(
+                        row, users_list, password_length
+                    )
+                    users_list.append(user)
+                    if password:
+                        generated_passwords.append(password)
+            for user in users_list:
+                self.save_user(user)
         for element in generated_passwords:
             username, password, user_email = element
             send_mail(
