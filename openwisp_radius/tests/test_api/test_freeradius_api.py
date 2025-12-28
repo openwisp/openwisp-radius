@@ -15,14 +15,14 @@ from django.utils.crypto import get_random_string
 from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 
-from openwisp_utils.tests import capture_any_output, catch_signal
+from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
 
 from ... import registration
 from ... import settings as app_settings
-from ...api.freeradius_views import logger as freeradius_api_logger
 from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
+from ...utils import logger as utils_logger
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
@@ -1425,7 +1425,7 @@ class TestTransactionFreeradiusApi(
             reply.value = "broken"
             reply.save(update_fields=["value"])
             mocked_check.return_value = 1200
-            with mock.patch.object(freeradius_api_logger, "warning") as mocked_warning:
+            with mock.patch.object(utils_logger, "warning") as mocked_warning:
                 response = self._authorize_user(auth_header=self.auth_header)
                 mocked_warning.assert_called_once_with(
                     'Session-Timeout value ("broken") cannot be converted to integer.'
@@ -1464,7 +1464,7 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
-    @capture_any_output()
+    @capture_stderr()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
         truncated_accept_response = {"control:Auth-Type": "Accept"}
@@ -1559,6 +1559,52 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(
                 response.data["Idle-Timeout"],
                 {"op": "=", "value": "240"},
+            )
+
+        simultaneous_use_check.refresh_from_db(fields=["value"])
+        with self.subTest("Same device reauth on same NAS is allowed"):
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
+            )
+
+            # Re-authentication from the same device and NAS should be allowed
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                    "calling_station_id": self.acct_post_data["calling_station_id"],
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        simultaneous_use_check.refresh_from_db(fields=["value"])
+        with self.subTest("Authorization from different device on same NAS is denied"):
+            # User already has one open session (at the limit of 1)
+            self.assertEqual(simultaneous_use_check.value, "1")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(
+                    username=user.username, stop_time=None
+                ).count(),
+                1,
+            )
+
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "calling_station_id": "11:22:33:44:55:66",
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                },
+            )
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(
+                response.data["control:Auth-Type"],
+                "Reject",
             )
 
         with self.subTest("Closed sessions are ignored"):
@@ -1733,7 +1779,9 @@ class TestTransactionFreeradiusApi(
             self._test_authorize_with_user_auth_helper(user.phone_number, "tester")
 
         with self.subTest("Test authorization failure"):
-            r = self._authorize_user("thisuserdoesnotexist", "tester", self.auth_header)
+            r = self._authorize_user(
+                "thisuserdoesnotexist", "tester", auth_header=self.auth_header
+            )
             self.assertEqual(r.status_code, 200)
             self.assertEqual(r.data, None)
 
@@ -1765,6 +1813,55 @@ class TestTransactionFreeradiusApi(
                     "the organization UUID and API token."
                 ),
             )
+
+    def test_authorize_optional_fields(self):
+        username = "tester"
+        password = "tester"
+        self._create_user(
+            username=username,
+            email="tester@gmail.com",
+            password="password",
+        )
+        authorize_path = reverse("radius:authorize")
+        payload = {"username": username, "password": password}
+        with self.subTest("Test without called and calling station id"):
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        with self.subTest("Test with empty called and calling station id"):
+            payload.update(
+                {
+                    "called_station_id": "",
+                    "calling_station_id": "",
+                }
+            )
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        with self.subTest("Test with called and calling station id"):
+            payload.update(
+                {
+                    "called_station_id": "00-11-22-33-44-55",
+                    "calling_station_id": "66-55-44-33-22-11",
+                }
+            )
+            response = self.client.post(
+                authorize_path,
+                payload,
+                HTTP_AUTHORIZATION=self.auth_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
 
     def test_user_auth_token_disposed_after_auth(self):
         self._get_org_user()

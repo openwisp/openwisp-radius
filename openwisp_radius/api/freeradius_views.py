@@ -1,6 +1,5 @@
 import ipaddress
 import logging
-import math
 import re
 
 import drf_link_header_pagination
@@ -30,9 +29,15 @@ from openwisp_users.backends import UsersAuthenticationBackend
 from .. import registration
 from .. import settings as app_settings
 from ..counters.base import BaseCounter
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import MaxQuotaReached
 from ..signals import radius_accounting_success
-from ..utils import get_group_checks, get_user_group, load_model
+from ..utils import (
+    execute_counter_checks,
+    get_group_checks,
+    get_group_replies,
+    get_user_group,
+    load_model,
+)
 from .serializers import (
     AuthorizeSerializer,
     RadiusAccountingSerializer,
@@ -263,9 +268,16 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get("username")
         password = serializer.validated_data.get("password")
+        called_station_id = serializer.validated_data.get("called_station_id")
+        calling_station_id = serializer.validated_data.get("calling_station_id")
         user = self.get_user(request, username, password)
         if user and self.authenticate_user(request, user, password):
-            data, status = self.get_replies(user, organization_id=request.auth)
+            data, status = self.get_replies(
+                user,
+                organization_id=request.auth,
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
+            )
             return Response(data, status=status)
         if app_settings.API_AUTHORIZE_REJECT:
             return Response(self.reject_attributes, status=self.reject_status)
@@ -291,7 +303,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             return user
         return None
 
-    def get_replies(self, user, organization_id):
+    def get_replies(
+        self, user, organization_id, called_station_id=None, calling_station_id=None
+    ):
         """
         Returns user group replies and executes counter checks
         """
@@ -299,14 +313,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         user_group = get_user_group(user, organization_id)
 
         if user_group:
-            for reply in self.get_group_replies(user_group.group):
-                data.update({reply.attribute: {"op": reply.op, "value": reply.value}})
+            # Use utility function to get group replies
+            group_replies = get_group_replies(user_group.group)
+            data.update(group_replies)
 
             group_checks = get_group_checks(user_group.group)
 
             # Validate simultaneous use
             simultaneous_use = self._check_simultaneous_use(
-                data, user, group_checks, organization_id
+                data,
+                user,
+                group_checks,
+                organization_id,
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
             )
             if simultaneous_use is not None:
                 return simultaneous_use
@@ -320,7 +340,15 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         return data, self.accept_status
 
-    def _check_simultaneous_use(self, data, user, group_checks, organization_id):
+    def _check_simultaneous_use(
+        self,
+        data,
+        user,
+        group_checks,
+        organization_id,
+        called_station_id=None,
+        calling_station_id=None,
+    ):
         """
         Check if user has exceeded simultaneous use limit
 
@@ -332,11 +360,22 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             # Exit early if the `Simultaneous-Use` check is not defined
             # in the RadiusGroup or if it permits unlimited concurrent sessions.
             return None
+
         open_sessions = RadiusAccounting.objects.filter(
             username=user.username,
             organization_id=organization_id,
             stop_time__isnull=True,
-        ).count()
+        )
+        # In some corner cases, RADIUS accounting sessions
+        # can remain open even though the user is not authenticated
+        # on the NAS anymore, for this reason, we shall allow re-authentication
+        # of the same client on the same NAS.
+        if called_station_id and calling_station_id:
+            open_sessions = open_sessions.exclude(
+                called_station_id=called_station_id,
+                calling_station_id=calling_station_id,
+            )
+        open_sessions = open_sessions.count()
         if open_sessions >= max_simultaneous:
             data.update(self.reject_attributes.copy())
             if "Reply-Message" not in data:
@@ -348,53 +387,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         Execute counter checks and return rejection response if any quota is exceeded
         Returns None if all checks pass
         """
-        for Counter in app_settings.COUNTERS:
-            group_check = group_checks.get(Counter.check_name)
-            if not group_check:
-                continue
-            try:
-                counter = Counter(user=user, group=group, group_check=group_check)
-                remaining = counter.check()
-            except SkipCheck:
-                continue
+        try:
+            counter_replies = execute_counter_checks(
+                user, group, group_checks, existing_replies=data
+            )
+            # Merge counter replies into data
+            data.update(counter_replies)
+        except MaxQuotaReached as max_quota:
             # if max is reached send access rejected + reply message
-            except MaxQuotaReached as max_quota:
-                data.update(self.reject_attributes.copy())
-                if "Reply-Message" not in data:
-                    data["Reply-Message"] = max_quota.reply_message
-                return data, self.max_quota_status
-            # avoid crashing on unexpected runtime errors
-            except Exception as e:
-                logger.exception(f'Got exception "{e}" while executing {counter}')
-                continue
-            if remaining is None:
-                continue
-            reply_name = counter.reply_name
-            # send remaining value in RADIUS reply, if needed.
-            # This emulates the implementation of sqlcounter in freeradius
-            # which sends the reply message only if the value is smaller
-            # than what was defined to a previous reply message
-            if reply_name not in data or remaining < self._get_reply_value(
-                data, counter
-            ):
-                data[reply_name] = remaining
+            data.update(self.reject_attributes.copy())
+            if "Reply-Message" not in data:
+                data["Reply-Message"] = max_quota.reply_message
+            return data, self.max_quota_status
 
         return None
-
-    @staticmethod
-    def _get_reply_value(data, counter):
-        value = data[counter.reply_name]["value"]
-        try:
-            return int(value)
-        except ValueError:
-            logger.warning(
-                f'{counter.reply_name} value ("{value}") '
-                "cannot be converted to integer."
-            )
-            return math.inf
-
-    def get_group_replies(self, group):
-        return group.radiusgroupreply_set.all()
 
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)

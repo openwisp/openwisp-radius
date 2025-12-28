@@ -16,12 +16,6 @@ DEBUG = settings.DEBUG
 
 
 def get_settings_value(option, default):
-    if hasattr(settings, f"DJANGO_FREERADIUS_{option}"):  # pragma: no cover
-        logger.warning(
-            f"DJANGO_FREERADIUS_{option} setting is deprecated. It will be "
-            f"removed in the future, please use OPENWISP_RADIUS_{option} instead."
-        )
-        return getattr(settings, f"DJANGO_FREERADIUS_{option}")
     return getattr(settings, f"OPENWISP_RADIUS_{option}", default)
 
 
@@ -244,3 +238,4 @@ if not hasattr(settings, "OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG"):
     ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["select_related"].extend(
         ["registered_user"]
     )
+BATCH_ASYNC_THRESHOLD = get_settings_value("BATCH_ASYNC_THRESHOLD", 15)

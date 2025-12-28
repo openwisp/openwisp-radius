@@ -1,5 +1,5 @@
-Limiting concurrent sessions (``Simultaneous-Use``)
-===================================================
+Limiting concurrent sessions
+============================
 
 ``Simultaneous-Use`` is a FreeRADIUS feature that restricts how many
 sessions a user can keep active at the same time. When the maximum limit

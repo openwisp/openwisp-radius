@@ -33,7 +33,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
-from ..counters.exceptions import MaxQuotaReached, SkipCheck
+from ..counters.exceptions import SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import (
     get_group_checks,
@@ -111,6 +111,12 @@ class AuthorizeSerializer(serializers.Serializer):
         max_length=User._meta.get_field("username").max_length, write_only=True
     )
     password = serializers.CharField(style={"input_type": "password"}, write_only=True)
+    called_station_id = serializers.CharField(
+        max_length=253, required=False, allow_blank=True, write_only=True
+    )
+    calling_station_id = serializers.CharField(
+        max_length=253, required=False, allow_blank=True, write_only=True
+    )
 
 
 class RadiusPostAuthSerializer(serializers.ModelSerializer):
@@ -304,12 +310,11 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
                 group=self.context["group"],
                 group_check=obj,
             )
-            # Python can handle 64 bit numbers and
-            # hence we don't need to display Gigawords
-            remaining = counter.check(gigawords=False)
-            return int(obj.value) - remaining
-        except MaxQuotaReached:
-            return int(obj.value)
+            consumed = counter.consumed()
+            value = int(obj.value)
+            if consumed > value:
+                consumed = value
+            return consumed
         except (SkipCheck, ValueError, KeyError):
             return None
 
@@ -391,7 +396,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     )
     pdf_link = serializers.SerializerMethodField(
         help_text=(
-            "Downlaod link to PDF file containing user credentials. "
+            "Download link to the PDF file containing user credentials. "
             "Provided only for `prefix` strategy.`"
         ),
         required=False,
@@ -406,9 +411,19 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         write_only=True,
         min_value=1,
     )
+    status = serializers.CharField(read_only=True)
+
+    def create(self, validated_data):
+        validated_data.pop("organization_slug", None)
+        validated_data.pop("number_of_users", None)
+        return super().create(validated_data)
 
     def get_pdf_link(self, obj):
-        if isinstance(obj, RadiusBatch) and obj.strategy == "prefix":
+        if (
+            isinstance(obj, RadiusBatch)
+            and obj.strategy == "prefix"
+            and obj.status == RadiusBatch.COMPLETED
+        ):
             request = self.context.get("request")
             return request.build_absolute_uri(
                 reverse(
@@ -435,7 +450,7 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = RadiusBatch
         fields = "__all__"
-        read_only_fields = ("created", "modified", "user_credentials")
+        read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
 class PasswordResetSerializer(BasePasswordResetSerializer):

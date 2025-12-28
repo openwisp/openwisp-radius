@@ -21,9 +21,18 @@ class BaseCounter(ABC):
         pass
 
     @property
-    @abstractmethod
-    def reply_name(self):  # pragma: no cover
-        pass
+    def reply_names(self):
+        # BACKWARD COMPATIBILITY: In previous versions of openwisp-radius,
+        # the Counter.reply_name was a string instead of a tuple. Thus,
+        # we need to convert it to a tuple if it's a string.
+        reply_name = getattr(self, "reply_name", None)
+        if not reply_name:
+            raise NotImplementedError(
+                "Counter classes must define 'reply_names' property."
+            )
+        if isinstance(reply_name, str):
+            return (reply_name,)
+        return reply_name
 
     @property
     @abstractmethod
@@ -43,7 +52,6 @@ class BaseCounter(ABC):
     # sqlcounter module, now we can translate it with gettext
     # or customize it (in new counter classes) if needed
     reply_message = _("Your maximum daily usage time has been reached")
-    gigawords = False
 
     def __init__(self, user, group, group_check):
         self.user = user
@@ -72,7 +80,7 @@ class BaseCounter(ABC):
 
     def get_reset_timestamps(self):
         try:
-            return resets[self.reset](self.user)
+            return resets[self.reset](self.user, counter=self)
         except KeyError:
             raise SkipCheck(
                 message=f'Reset time with key "{self.reset}" not available.',
@@ -93,7 +101,7 @@ class BaseCounter(ABC):
         # or if nothing is returned (no sessions present), return zero
         return row[0] or 0
 
-    def check(self, gigawords=gigawords):
+    def check(self):
         if not self.group_check:
             raise SkipCheck(
                 message=(
@@ -134,12 +142,15 @@ class BaseCounter(ABC):
                 reply_message=self.reply_message,
             )
 
-        return int(remaining)
+        return (int(remaining),)
+
+    def consumed(self):
+        return int(self.get_counter())
 
 
 class BaseDailyCounter(BaseCounter):
     check_name = "Max-Daily-Session"
-    reply_name = "Session-Timeout"
+    reply_names = ("Session-Timeout",)
     reset = "daily"
 
     def get_sql_params(self, start_time, end_time):
@@ -152,7 +163,7 @@ class BaseDailyCounter(BaseCounter):
 
 
 class BaseTrafficCounter(BaseCounter):
-    reply_name = app_settings.TRAFFIC_COUNTER_REPLY_NAME
+    reply_names = (app_settings.TRAFFIC_COUNTER_REPLY_NAME,)
 
     def get_sql_params(self, start_time, end_time):
         return [
