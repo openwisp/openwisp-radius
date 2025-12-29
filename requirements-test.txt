@@ -12,4 +12,3 @@ cssselect~=1.3.0
 openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/archive/refs/heads/1.3.tar.gz
 django-redis~=6.0.0
 mock-ssh-server~=0.9.1
-drf-spectacular
