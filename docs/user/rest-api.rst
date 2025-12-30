@@ -861,16 +861,25 @@ Batch CSV Download
 
 .. code-block:: text
 
-    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>
+    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>/
 
-Responds only to **GET**.
+Responds only to **GET**. Allows downloading the CSV export file for a
+specific RADIUS batch.
 
 Parameters:
 
-======== ===========
+======== =============================
 Param    Description
-======== ===========
-slug     string
-id       string
-filename string
-======== ===========
+======== =============================
+slug     string (organization slug)
+id       string (batch UUID)
+filename string (name of the CSV file)
+======== =============================
+
+Example:
+
+.. code-block:: shell
+
+    curl -X GET \
+        'http://127.0.0.1:8000/api/v1/radius/organization/default/batch/f4943c8a-462e-40ba-89b6-91a2541c9cf4/csv/test.csv/' \
+        -H 'Authorization: Bearer your-token-here'
