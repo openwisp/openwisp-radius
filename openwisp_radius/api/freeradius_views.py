@@ -28,6 +28,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import registration
 from .. import settings as app_settings
+from ..base.models import sanitize_mac_address
 from ..counters.base import BaseCounter
 from ..counters.exceptions import MaxQuotaReached
 from ..signals import radius_accounting_success
@@ -370,10 +371,12 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         # can remain open even though the user is not authenticated
         # on the NAS anymore, for this reason, we shall allow re-authentication
         # of the same client on the same NAS.
+        # Sanitize MAC addresses to ensure consistent comparison
+        # since the database stores sanitized values.
         if called_station_id and calling_station_id:
             open_sessions = open_sessions.exclude(
-                called_station_id=called_station_id,
-                calling_station_id=calling_station_id,
+                called_station_id=sanitize_mac_address(called_station_id),
+                calling_station_id=sanitize_mac_address(calling_station_id),
             )
         open_sessions = open_sessions.count()
         if open_sessions >= max_simultaneous:
