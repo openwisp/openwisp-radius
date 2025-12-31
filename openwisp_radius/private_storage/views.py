@@ -14,6 +14,7 @@ class RadiusBatchCsvDownloadView(PrivateStorageDetailView):
     model_file_field = "csvfile"
     slug_field = "csvfile"
     slug_url_kwarg = "path"
+    pk_url_kwarg = "pk"
 
     def can_access_file(self, private_file):
         user = private_file.request.user
@@ -29,7 +30,7 @@ class RadiusBatchCsvDownloadAPIView(APIView):
     @swagger_auto_schema(
         operation_id="radius_organization_batch_csv_read",
         operation_description=_(
-            "Allows downloading the CSV file used to import users for a"
+            "Allows downloading the CSV file used to import users for a "
             "specific batch user creation operation."
         ),
         responses={
@@ -39,7 +40,7 @@ class RadiusBatchCsvDownloadAPIView(APIView):
         },
         tags=["radius"],
     )
-    def get(self, request, slug, pk, *args, **kwargs):
+    def get(self, request, _slug, pk, *args, **kwargs):
         return rad_batch_csv_download_view(request, pk=pk, **kwargs)
 
 
