@@ -29,16 +29,9 @@ class RadiusBatchCsvDownloadAPIView(APIView):
     @swagger_auto_schema(
         operation_id="radius_organization_batch_csv_read",
         operation_description=_(
-            "Download the CSV export file for a specific RADIUS batch."
+            "Allows downloading the CSV file used to import users for a"
+            "specific batch user creation operation."
         ),
-        manual_parameters=[
-            openapi.Parameter(
-                "slug",
-                openapi.IN_PATH,
-                description=_("Organization slug"),
-                type=openapi.TYPE_STRING,
-            ),
-        ],
         responses={
             200: openapi.Response(
                 description=_("CSV file"), schema=openapi.Schema(type=openapi.TYPE_FILE)
@@ -46,5 +39,8 @@ class RadiusBatchCsvDownloadAPIView(APIView):
         },
         tags=["radius"],
     )
-    def get(self, request, slug, pk, filename, *args, **kwargs):
-        return rad_batch_csv_download_view(request, pk=pk, filename=filename, **kwargs)
+    def get(self, request, slug, pk, *args, **kwargs):
+        return rad_batch_csv_download_view(request, pk=pk, **kwargs)
+
+
+rad_batch_csv_download_api_view = RadiusBatchCsvDownloadAPIView.as_view()
