@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.urls import reverse
 
 from ..utils import load_model
@@ -143,6 +145,44 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
         )
         self.assertEqual(user.registered_user.is_verified, True)
         self.assertEqual(user.registered_user.method, "manual")
+
+
+class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
+    def test_csv_upload_total_rollback(self):
+        User = get_user_model()
+        org = self._get_org()
+        data = [
+            ["user_one", "pass123", "total@example.com", "John", "Doe"],
+            ["user_two", "pass123", "total@example.com", "Jane", "Doe"],
+        ]
+        batch = RadiusBatch(
+            name="total-rollback",
+            strategy="csv",
+            organization=org,
+            csvfile=self._get_csvfile(data),
+        )
+        with self.assertRaises(IntegrityError):
+            batch.csvfile_upload()
+
+        self.assertFalse(RadiusBatch.objects.filter(name="total-rollback").exists())
+        self.assertFalse(User.objects.filter(username="user_one").exists())
+
+    def test_add_method_internal_atomicity(self):
+        User = get_user_model()
+        org = self._get_org()
+        data = [
+            ["user_one", "pass123", "duplicate@example.com", "John", "Doe"],
+            ["user_two", "pass123", "duplicate@example.com", "Jane", "Doe"],
+        ]
+        batch = self._create_radius_batch(
+            name="atomic-integrity-test",
+            strategy="csv",
+            organization=org,
+            csvfile=self._get_csvfile(data),
+        )
+        with self.assertRaises(IntegrityError):
+            batch.add(data)
+        self.assertFalse(User.objects.filter(username="user_one").exists())
 
 
 del BaseTestCase
