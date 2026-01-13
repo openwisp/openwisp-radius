@@ -19,6 +19,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
+from django_filters import rest_framework as filters
 from django_filters.rest_framework import CharFilter, DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
@@ -26,6 +27,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
@@ -42,6 +44,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
+from openwisp_users.api.filters import OrganizationManagedFilter
 from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
@@ -850,17 +853,33 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 radius_accounting = RadiusAccountingView.as_view()
 
 
+class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusGroup
+        fields = OrganizationManagedFilter.Meta.fields
+
+
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
         operation_description="""
         Returns a list of RADIUS groups for the organizations managed by the user.
+        Supports:
+        - Filtering by organization
+        - Searching by group name
         """,
     ),
 )
 class RadiusGroupListView(ListAPIView):
     serializer_class = RadiusGroupSerializer
     queryset = RadiusGroup.objects.all().order_by("name")
+    filterset_class = RadiusGroupFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name"]
 
 
 radius_group_list = RadiusGroupListView.as_view()
