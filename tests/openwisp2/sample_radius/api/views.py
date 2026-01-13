@@ -24,6 +24,7 @@ from openwisp_radius.api.views import ValidateAuthTokenView as BaseValidateAuthT
 from openwisp_radius.api.views import (
     ValidatePhoneTokenView as BaseValidatePhoneTokenView,
 )
+from openwisp_radius.api.views import RadiusGroupListView
 
 
 class AuthorizeView(BaseAuthorizeView):
@@ -116,3 +117,4 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
 change_phone_number = ChangePhoneNumberView.as_view()
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 radius_accounting = RadiusAccountingView.as_view()
+radius_group_list = RadiusGroupListView.as_view()
