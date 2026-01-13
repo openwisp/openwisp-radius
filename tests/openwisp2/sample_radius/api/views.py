@@ -17,6 +17,7 @@ from openwisp_radius.api.views import (
 )
 from openwisp_radius.api.views import PasswordResetView as BasePasswordResetView
 from openwisp_radius.api.views import RadiusAccountingView as BaseRadiusAccountingView
+from openwisp_radius.api.views import RadiusGroupListView
 from openwisp_radius.api.views import RegisterView as BaseRegisterView
 from openwisp_radius.api.views import UserAccountingView as BaseUserAccountingView
 from openwisp_radius.api.views import UserRadiusUsageView as BaseUserRadiusUsageView
@@ -24,7 +25,6 @@ from openwisp_radius.api.views import ValidateAuthTokenView as BaseValidateAuthT
 from openwisp_radius.api.views import (
     ValidatePhoneTokenView as BaseValidatePhoneTokenView,
 )
-from openwisp_radius.api.views import RadiusGroupListView
 
 
 class AuthorizeView(BaseAuthorizeView):

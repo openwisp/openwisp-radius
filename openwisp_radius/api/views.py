@@ -874,7 +874,7 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
         """,
     ),
 )
-class RadiusGroupListView(ListAPIView):
+class RadiusGroupListView(ProtectedAPIMixin, FilterByOrganizationManaged, ListAPIView):
     serializer_class = RadiusGroupSerializer
     queryset = RadiusGroup.objects.all().order_by("name")
     filterset_class = RadiusGroupFilter
