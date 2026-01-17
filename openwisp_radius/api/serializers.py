@@ -335,7 +335,7 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
                 group=self.context["group"],
                 group_check=obj,
             )
-            start_time, end_time = counter.get_reset_timestamps()
+            _, end_time = counter.get_reset_timestamps()
             return end_time
         except (SkipCheck, ValueError, KeyError):
             return None
