@@ -8,7 +8,7 @@ def get_api_urls(api_views=None):
     if not api_views:
         api_views = views
     if app_settings.RADIUS_API:
-        return [
+        api_urls = [
             path("freeradius/authorize/", api_views.authorize, name="authorize"),
             path("freeradius/postauth/", api_views.postauth, name="postauth"),
             path("freeradius/accounting/", api_views.accounting, name="accounting"),
@@ -89,5 +89,14 @@ def get_api_urls(api_views=None):
                 name="radius_accounting_list",
             ),
         ]
+        if api_views.monitoring_accounting is not None:
+            api_urls.append(
+                path(
+                    "radius/monitoring/sessions/",
+                    api_views.monitoring_accounting,
+                    name="monitoring_accounting_list",
+                ),
+            )
+        return api_urls
     else:
         return []
