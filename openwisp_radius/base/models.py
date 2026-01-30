@@ -3,6 +3,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import string
 from datetime import timedelta
 from io import StringIO
@@ -25,6 +26,7 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from model_utils.fields import AutoLastModifiedField
+from netaddr import EUI, AddrFormatError
 from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
@@ -176,6 +178,41 @@ _LOGIN_URL_HELP_TEXT = _("Enter the URL where users can log in to the wifi servi
 _STATUS_URL_HELP_TEXT = _("Enter the URL where users can log out from the wifi service")
 _PASSWORD_RESET_URL_HELP_TEXT = _("Enter the URL where users can reset their password")
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
+
+
+def sanitize_mac_address(mac):
+    """
+    Sanitize a MAC address string to the colon-separated lowercase format.
+    If the input is not a valid MAC address, return it unchanged.
+
+    Handles various MAC address formats:
+    - 00:1A:2B:3C:4D:5E -> 00:1a:2b:3c:4d:5e
+    - 00-1A-2B-3C-4D-5E -> 00:1a:2b:3c:4d:5e
+    - 001A.2B3C.4D5E -> 00:1a:2b:3c:4d:5e
+    - 001A2B3C4D5E -> 00:1a:2b:3c:4d:5e
+    """
+    if not mac or not isinstance(mac, str):
+        return mac
+    try:
+        ipaddress.ip_address(mac)
+        return mac
+    except ValueError:
+        pass
+    mac_patterns = [
+        r"([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}",
+        r"([0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4}",
+        r"[0-9A-Fa-f]{12}",
+    ]
+    for pattern in mac_patterns:
+        match = re.search(pattern, mac)
+        if match:
+            mac_candidate = match.group(0)
+            try:
+                eui = EUI(mac_candidate)
+                return ":".join(["%02x" % x for x in eui.words]).lower()
+            except (AddrFormatError, ValueError, TypeError):
+                continue
+    return mac
 
 
 class AutoUsernameMixin(object):
@@ -528,6 +565,8 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
     )
 
     def save(self, *args, **kwargs):
+        if self.called_station_id:
+            self.called_station_id = sanitize_mac_address(self.called_station_id)
         if not self.start_time:
             self.start_time = now()
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
@@ -577,8 +616,9 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         """
         if not called_station_id:
             return 0
+        sanitized_called_station_id = sanitize_mac_address(called_station_id)
         stale_sessions = cls.objects.filter(
-            called_station_id=called_station_id,
+            called_station_id=sanitized_called_station_id,
             stop_time__isnull=True,
         )
         closed_count = stale_sessions.update(
