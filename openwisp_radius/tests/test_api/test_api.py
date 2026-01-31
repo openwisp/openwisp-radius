@@ -38,6 +38,7 @@ User = get_user_model()
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroup = load_model("RadiusGroup")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -1073,6 +1074,20 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
+    def _add_view_permission(self, user, model):
+        """
+        Add view permission for a model to a user, necessary for List Radius Group
+        """
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(model)
+        permission = Permission.objects.get(
+            codename=f"view_{model._meta.model_name}",
+            content_type=content_type,
+        )
+        user.user_permissions.add(permission)
+
     def test_radius_group_list(self):
         """
         Should return 200 and list all groups for managed organizations
@@ -1080,9 +1095,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         org = self._create_org(name="Test Org Group List")
         user = self._get_user()
-        self._create_org_user(
-            organization=org, user=user, role=OrganizationUser.ROLE_ADMIM
-        )
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_view_permission(user, RadiusGroup)
         self._create_radius_group(name="Group A", organization=org)
         self._create_radius_group(name="Group B", organization=org)
         self.client.force_login(user=user)
@@ -1104,7 +1118,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_radius_group(name="Group A", organization=org1)
         self._create_radius_group(name="Group B", organization=org2)
         user = self._get_user()
-        self._create_org_user(organization=org1, user=user)
+        self._create_org_user(organization=org1, user=user, is_admin=True)
+        self._add_view_permission(user, RadiusGroup)
         self.client.force_login(user=user)
         url = reverse("radius:radius_group_list")
         response = self.client.get(url, {"organization": org1.id})
@@ -1120,7 +1135,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         """
         org = self._create_org(name="Test Org Search")
         user = self._get_user()
-        self._create_org_user(organization=org, user=user)
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_view_permission(user, RadiusGroup)
         self._create_radius_group(name="Staff Group", organization=org)
         self._create_radius_group(name="Guest Group", organization=org)
         self.client.force_login(user=user)
