@@ -354,6 +354,25 @@ class RadiusGroupSerializer(serializers.ModelSerializer):
         fields = "__all__"
         ref_name = "radius_group_serializer"
 
+    def create(self, validated_data):
+        organization = validated_data["organization"]
+        name = validated_data["name"]
+
+        if not name.startswith(f"{organization.slug}-"):
+            validated_data["name"] = f"{organization.slug}-{name}"
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if "name" in validated_data:
+            org = instance.organization
+            name = validated_data["name"]
+
+            if not name.startswith(f"{org.slug}-"):
+                validated_data["name"] = f"{org.slug}-{name}"
+
+        return super().update(instance, validated_data)
+
 
 class UserSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(many=True)

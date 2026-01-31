@@ -32,7 +32,9 @@ from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
+    ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.permissions import (
     DjangoModelPermissions,
@@ -875,7 +877,17 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
         """,
     ),
 )
-class RadiusGroupListView(ProtectedAPIMixin, FilterByOrganizationManaged, ListAPIView):
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS group for an organization managed by the user.
+        """,
+    ),
+)
+class RadiusGroupListView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
+):
     serializer_class = RadiusGroupSerializer
     queryset = RadiusGroup.objects.all().order_by("name")
     filterset_class = RadiusGroupFilter
@@ -884,3 +896,45 @@ class RadiusGroupListView(ProtectedAPIMixin, FilterByOrganizationManaged, ListAP
 
 
 radius_group_list = RadiusGroupListView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+class RadiusGroupDetailView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
+):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.all().order_by("name")
+
+
+radius_group_detail = RadiusGroupDetailView.as_view()
