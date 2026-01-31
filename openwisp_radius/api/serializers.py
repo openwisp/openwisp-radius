@@ -365,7 +365,7 @@ class RadiusGroupSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if "name" in validated_data:
-            org = instance.organization
+            org = validated_data.get("organization", instance.organization)
             name = validated_data["name"]
 
             if not name.startswith(f"{org.slug}-"):
