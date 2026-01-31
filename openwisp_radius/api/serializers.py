@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 RadiusPostAuth = load_model("RadiusPostAuth")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
 RadiusToken = load_model("RadiusToken")
 RadiusGroupCheck = load_model("RadiusGroupCheck")
 RadiusUserGroup = load_model("RadiusUserGroup")
@@ -345,6 +346,32 @@ class GroupSerializer(serializers.ModelSerializer):
         model = Group
         fields = "__all__"
         ref_name = "radius_user_group_serializer"
+
+
+class RadiusGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RadiusGroup
+        fields = "__all__"
+        ref_name = "radius_group_serializer"
+
+    def create(self, validated_data):
+        organization = validated_data["organization"]
+        name = validated_data["name"]
+
+        if not name.startswith(f"{organization.slug}-"):
+            validated_data["name"] = f"{organization.slug}-{name}"
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if "name" in validated_data:
+            org = validated_data.get("organization", instance.organization)
+            name = validated_data["name"]
+
+            if not name.startswith(f"{org.slug}-"):
+                validated_data["name"] = f"{org.slug}-{name}"
+
+        return super().update(instance, validated_data)
 
 
 class UserSerializer(serializers.ModelSerializer):

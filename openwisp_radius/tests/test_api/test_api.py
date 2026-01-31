@@ -38,6 +38,7 @@ User = get_user_model()
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroup = load_model("RadiusGroup")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -1072,6 +1073,115 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 "value": "2000000000",
             },
         )
+
+    def _add_model_permission(self, user, model, action):
+        """action must be one of: 'view', 'add', 'change', 'delete'"""
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(model)
+        permission = Permission.objects.get(
+            codename=f"{action}_{model._meta.model_name}",
+            content_type=content_type,
+        )
+        user.user_permissions.add(permission)
+
+    def test_radius_group_list(self):
+        org = self._create_org(name="Test Org Group List")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "view")
+        self._create_radius_group(name="Group A", organization=org)
+        self._create_radius_group(name="Group B", organization=org)
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = [g["name"] for g in response.json()]
+
+        self.assertIn("test-org-group-list-Group A", data)
+        self.assertIn("test-org-group-list-Group B", data)
+
+    def test_radius_group_list_filter_by_organization(self):
+        org1 = self._create_org(name="Org 1")
+        org2 = self._create_org(name="Org 2")
+        self._create_radius_group(name="Group A", organization=org1)
+        self._create_radius_group(name="Group B", organization=org2)
+        user = self._get_user()
+        self._create_org_user(organization=org1, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "view")
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_list")
+        response = self.client.get(url, {"organization": org1.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = [g["name"] for g in response.json()]
+
+        self.assertIn("org-1-Group A", data)
+        self.assertNotIn("org-2-Group B", data)
+
+    def test_radius_group_list_search_by_name(self):
+        org = self._create_org(name="Test Org Search")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "view")
+        self._create_radius_group(name="Staff Group", organization=org)
+        self._create_radius_group(name="Guest Group", organization=org)
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_list")
+        response = self.client.get(url, {"search": "Staff"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = [g["name"] for g in response.json()]
+
+        self.assertIn("test-org-search-Staff Group", data)
+        self.assertNotIn("test-org-search-Guest Group", data)
+
+    def test_radius_group_create(self):
+        org = self._create_org(name="Test Org Create")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "add")
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_list")
+        response = self.client.post(
+            url,
+            {
+                "name": "New Group",
+                "organization": org.id,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "test-org-create-New Group")
+
+    def test_radius_group_patch(self):
+        org = self._create_org(name="Test Org Patch")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "change")
+        group = self._create_radius_group(name="Old Name", organization=org)
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_detail", args=[group.pk])
+        response = self.client.patch(
+            url,
+            {"name": "New Name"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["name"], "test-org-patch-New Name")
+
+    def test_radius_group_delete(self):
+        org = self._create_org(name="Test Org Delete")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._add_model_permission(user, RadiusGroup, "delete")
+        group = self._create_radius_group(name="To Be Deleted", organization=org)
+        self.client.force_login(user=user)
+        url = reverse("radius:radius_group_detail", args=[group.pk])
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(RadiusGroup.objects.filter(pk=group.pk).exists())
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):

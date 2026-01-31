@@ -874,3 +874,26 @@ slug     string
 id       string
 filename string
 ======== ===========
+
+List Radius Groups
+++++++++++++++++++
+
+This allows listing of Radius groups. It supports sorting by organization
+id and group name.
+
+.. code-block:: text
+
+    /api/v1/radius/group/
+    /api/v1/radius/group?search=<group_name>
+    /api/v1/radius/group?organization=<org_id>
+
+Responds only to **GET**.
+
+Parameters:
+
+============ ==========================
+Param        Description
+============ ==========================
+search       Search groups by name
+organization Filter organizations by id
+============ ==========================
