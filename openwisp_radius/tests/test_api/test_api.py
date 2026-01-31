@@ -1073,66 +1073,66 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
+
     def test_radius_group_list(self):
-        """Should return 200 and list all groups for managed organizations"""
+        """
+        Should return 200 and list all groups for managed organizations
+        """
 
-        org = self._create_org()
-        self._create_org_user(organization=org, user=self.user)
-
+        org = self._create_org(name="Test Org Group List")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user, role=OrganizationUser.ROLE_ADMIM)
         self._create_radius_group(name="Group A", organization=org)
         self._create_radius_group(name="Group B", organization=org)
-
-        self.client.force_authenticate(user=self.user)
-
+        self.client.force_login(user=user)
         url = reverse("radius:radius_group_list")
         response = self.client.get(url)
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
 
-        self.assertIn("test-org-Group A", data)
-        self.assertIn("test-org-Group B", data)
+        self.assertIn("test-org-group-list-Group A", data)
+        self.assertIn("test-org-group-list-Group B", data)
+
 
     def test_radius_group_list_filter_by_organization(self):
-        """Should return only groups of the specified organization"""
+        """
+        Should return only groups of the specified organization
+        """
 
         org1 = self._create_org(name="Org 1")
         org2 = self._create_org(name="Org 2")
-
         self._create_radius_group(name="Group A", organization=org1)
         self._create_radius_group(name="Group B", organization=org2)
-
-        self._create_org_user(organization=org1, user=self.user)
-        self.client.force_authenticate(user=self.user)
-
+        user = self._get_user()
+        self._create_org_user(organization=org1, user=user)
+        self.client.force_login(user=user)
         url = reverse("radius:radius_group_list")
         response = self.client.get(url, {"organization": org1.id})
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
 
         self.assertIn("org-1-Group A", data)
         self.assertNotIn("org-2-Group B", data)
 
+
     def test_radius_group_list_search_by_name(self):
-        """Should return only groups matching the search query"""
-
-        org = self._create_org()
-        self._create_org_user(organization=org, user=self.user)
-
+        """
+        Should return only groups matching the search query
+        """
+        org = self._create_org(name="Test Org Search")
+        user = self._get_user()
+        self._create_org_user(organization=org, user=user)
         self._create_radius_group(name="Staff Group", organization=org)
         self._create_radius_group(name="Guest Group", organization=org)
-
-        self.client.force_authenticate(user=self.user)
-
+        self.client.force_login(user=user)
         url = reverse("radius:radius_group_list")
         response = self.client.get(url, {"search": "Staff"})
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
 
-        self.assertIn("test-org-Staff Group", data)
-        self.assertNotIn("test-org-Guest Group", data)
+        self.assertIn("test-org-search-Staff Group", data)
+        self.assertNotIn("test-org-search-Guest Group", data)
+
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
