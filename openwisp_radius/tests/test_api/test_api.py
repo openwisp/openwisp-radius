@@ -1073,7 +1073,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
-
     def test_radius_group_list(self):
         """
         Should return 200 and list all groups for managed organizations
@@ -1081,7 +1080,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         org = self._create_org(name="Test Org Group List")
         user = self._get_user()
-        self._create_org_user(organization=org, user=user, role=OrganizationUser.ROLE_ADMIM)
+        self._create_org_user(
+            organization=org, user=user, role=OrganizationUser.ROLE_ADMIM
+        )
         self._create_radius_group(name="Group A", organization=org)
         self._create_radius_group(name="Group B", organization=org)
         self.client.force_login(user=user)
@@ -1092,7 +1093,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         self.assertIn("test-org-group-list-Group A", data)
         self.assertIn("test-org-group-list-Group B", data)
-
 
     def test_radius_group_list_filter_by_organization(self):
         """
@@ -1114,7 +1114,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIn("org-1-Group A", data)
         self.assertNotIn("org-2-Group B", data)
 
-
     def test_radius_group_list_search_by_name(self):
         """
         Should return only groups matching the search query
@@ -1132,7 +1131,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         self.assertIn("test-org-search-Staff Group", data)
         self.assertNotIn("test-org-search-Guest Group", data)
-
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
