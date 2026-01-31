@@ -258,6 +258,7 @@ class RegisterView(
 ):
     authentication_classes = tuple()
     permission_classes = (IsRegistrationEnabled,)
+    queryset = User.objects.none()
 
     def get_response_data(self, user):
         data = super().get_response_data(user)

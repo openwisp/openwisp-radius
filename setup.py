@@ -62,7 +62,6 @@ setup(
         "Exscript~=2.6.28",
     ],
     extras_require={
-        # https://github.com/IdentityPython/djangosaml2/issues/414
         "saml": ["djangosaml2==1.11.1"],
         "openvpn_status": ["openvpn-status~=0.2.1"],
     },
