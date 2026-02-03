@@ -79,3 +79,50 @@ class TestUtils(BaseTestCase):
                 str(context_manager.exception),
                 "Could not complete operation because of an internal misconfiguration",
             )
+
+    @capture_any_output()
+    def test_cross_organization_login_enabled(self):
+        org = self._create_org()
+        OrganizationRadiusSettings.objects.create(organization=org)
+
+        with self.subTest("Test cross-organization registration enabled set to True"):
+            org.radius_settings.cross_organization_login_enabled = True
+            self.assertEqual(
+                get_organization_radius_settings(
+                    org, "cross_organization_login_enabled"
+                ),
+                True,
+            )
+
+        with self.subTest("Test cross-organization registration enabled set to False"):
+            org.radius_settings.cross_organization_login_enabled = False
+            self.assertEqual(
+                get_organization_radius_settings(
+                    org, "cross_organization_login_enabled"
+                ),
+                False,
+            )
+
+        with self.subTest("Test cross-organization registration enabled set to None"):
+            org.radius_settings.cross_organization_login_enabled = None
+            org.radius_settings.save(update_fields=["cross_organization_login_enabled"])
+            org.radius_settings.refresh_from_db(
+                fields=["cross_organization_login_enabled"]
+            )
+            self.assertEqual(
+                get_organization_radius_settings(
+                    org, "cross_organization_login_enabled"
+                ),
+                app_settings.CROSS_ORGANIZATION_LOGIN_ENABLED,
+            )
+
+        with self.subTest("Test related radius setting does not exist"):
+            org.radius_settings = None
+            with self.assertRaises(APIException) as context_manager:
+                get_organization_radius_settings(
+                    org, "cross_organization_login_enabled"
+                )
+            self.assertEqual(
+                str(context_manager.exception),
+                "Could not complete operation because of an internal misconfiguration",
+            )

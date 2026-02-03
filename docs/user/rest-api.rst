@@ -513,6 +513,14 @@ also get membership of the new organization only if the organization has
 :ref:`user registration enabled
 <openwisp_radius_registration_api_enabled>`.
 
+.. note::
+
+    This behavior can be disabled globally by setting
+    :ref:`OPENWISP_RADIUS_CROSS_ORGANIZATION_LOGIN_ENABLED
+    <openwisp_radius_cross_organization_login_enabled>` to ``False`` in
+    your Django settings. When disabled, users cannot register to multiple
+    organizations via the login endpoint.
+
 .. _radius_reset_password:
 
 Reset password
@@ -622,10 +630,11 @@ recognize these users and trigger the appropriate response needed (e.g.:
 reject them or initiate account verification).
 
 If an existing user account tries to authenticate to an organization of
-which they're not member of, then they would be automatically added as
-members (if registration is enabled for that org). Please refer to
-:ref:`"Registering to Multiple Organizations"
-<radius_registering_to_multiple_organizations>`.
+which they're not a member, they will be automatically added as members
+only if the organization has both registration and cross-organization
+login enabled. Please refer to :ref:`"Registering to Multiple
+Organizations" <radius_registering_to_multiple_organizations>` for more
+information.
 
 This endpoint updates the user language preference field according to the
 ``Accept-Language`` HTTP header.
