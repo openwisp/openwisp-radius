@@ -182,6 +182,10 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
         with self.assertRaises(IntegrityError):
             batch.add(data)
         self.assertFalse(User.objects.filter(username="user_one").exists())
+        self.assertTrue(
+            RadiusBatch.objects.filter(name="atomic-integrity-test").exists()
+        )
+        self.assertEqual(batch.users.count(), 0)
 
 
 del BaseTestCase
