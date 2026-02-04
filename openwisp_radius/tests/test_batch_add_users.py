@@ -163,7 +163,6 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
         )
         with self.assertRaises(IntegrityError):
             batch.csvfile_upload()
-
         self.assertFalse(RadiusBatch.objects.filter(name="total-rollback").exists())
         self.assertFalse(User.objects.filter(username="user_one").exists())
 
