@@ -19,7 +19,12 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
-from django_filters.rest_framework import CharFilter, DjangoFilterBackend
+from django_filters.rest_framework import (
+    CharFilter,
+    DjangoFilterBackend,
+    FilterSet,
+    ModelChoiceFilter,
+)
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
@@ -30,8 +35,11 @@ from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
+    ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -62,6 +70,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusUserGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -847,3 +856,97 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 
 
 radius_accounting = RadiusAccountingView.as_view()
+
+
+class RadiusUserGroupFilter(FilterSet):
+    organization = ModelChoiceFilter(
+        field_name="group__organization", queryset=Organization.objects.all()
+    )
+    organization_slug = CharFilter(field_name="group__organization__slug")
+
+    class Meta:
+        model = RadiusUserGroup
+        fields = ["organization", "organization_slug", "user", "group"]
+
+
+class RadiusUserGroupPaginator(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of RADIUS user groups for the organizations managed by the user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS user group for an organization managed by the user.
+        """,
+    ),
+)
+class RadiusUserGroupListView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
+):
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
+        "username"
+    )
+    filterset_class = RadiusUserGroupFilter
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = RadiusUserGroupPaginator
+    organization_field = "group__organization"
+
+
+radius_user_group_list = RadiusUserGroupListView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS user group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+class RadiusUserGroupDetailView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
+):
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
+        "username"
+    )
+    organization_field = "group__organization"
+
+
+radius_user_group_detail = RadiusUserGroupDetailView.as_view()

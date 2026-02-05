@@ -871,3 +871,70 @@ users for a specific batch user creation operation. Example:
     curl -X GET \
         'http://127.0.0.1:8000/api/v1/radius/organization/default/batch/f4943c8a-462e-40ba-89b6-91a2541c9cf4/csv/' \
         -H 'Authorization: Bearer your-token-here'
+
+RADIUS User Groups API
+++++++++++++++++++++++
+
+.. code-block:: text
+
+    /api/v1/radius/user-group/
+
+GET
+^^^
+
+This allows listing of RADIUS user group relationships. It supports filtering
+by organization and user.
+
+.. code-block:: text
+
+    /api/v1/radius/user-group?user=<user_id>
+    /api/v1/radius/user-group?organization=<org_id>
+
+Parameters:
+
+============ ==========================
+Param        Description
+============ ==========================
+user         Filter by user UUID
+organization Filter organizations by id
+============ ==========================
+
+POST
+^^^^
+
+Creates a RADIUS user group relationship.
+
+============ ====================
+Param        Description
+============ ====================
+user         User UUID
+group        RADIUS group UUID
+priority     Priority
+============ ====================
+
+GET (detail)
+^^^^^^^^^^^^
+
+Returns a single RADIUS user group relationship by its UUID.
+
+.. code-block:: text
+
+    /api/v1/radius/user-group/<uuid>
+
+PATCH
+^^^^^
+
+Partially updates a RADIUS user group relationship identified by its UUID.
+
+============ ====================
+Param        Description
+============ ====================
+user         User UUID
+group        RADIUS group UUID
+priority     Priority
+============ ====================
+
+DELETE
+^^^^^^
+
+Deletes a RADIUS user group relationship identified by its UUID.

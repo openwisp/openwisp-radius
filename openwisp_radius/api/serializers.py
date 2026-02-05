@@ -29,7 +29,9 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
+from openwisp_users.api.mixins import FilterSerializerByOrgManaged
 from openwisp_users.backends import UsersAuthenticationBackend
+from openwisp_utils.api.serializers import ValidatedModelSerializer
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -338,6 +340,46 @@ class UserRadiusUsageSerializer(serializers.Serializer):
             group_checks, many=True, context={"user": obj, "group": user_group.group}
         ).data
         return {"checks": checks_data}
+
+
+class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSerializer):
+    organization_field = "group__organization"
+
+    class Meta:
+        model = RadiusUserGroup
+        fields = "__all__"
+        read_only_fields = ("username", "groupname", "created", "modified")
+        extra_kwargs = {"user": {"required": True}, "group": {"required": True}}
+
+    def filter_fields(self):
+        user = self.context["request"].user
+        if user.is_superuser or user.is_anonymous:
+            return
+        organization_filter = getattr(
+            user, getattr(self, "_user_attr", "organizations_managed"), []
+        )
+        if "group" in self.fields and not self.fields["group"].read_only:
+            self.fields["group"].allow_null = False
+            self.fields["group"].queryset = self.fields["group"].queryset.filter(
+                organization__in=organization_filter
+            )
+        if "user" in self.fields and not self.fields["user"].read_only:
+            self.fields["user"].allow_null = False
+            self.fields["user"].queryset = self.fields["user"].queryset.filter(
+                id__in=OrganizationUser.objects.filter(
+                    organization_id__in=organization_filter
+                ).values_list("user_id", flat=True)
+            )
+
+    def validate(self, data):
+        data = super().validate(data)
+        user = data.get("user") or (self.instance.user if self.instance else None)
+        group = data.get("group") or (self.instance.group if self.instance else None)
+        if user and group and not user.is_member(group.organization):
+            raise serializers.ValidationError(
+                {"user": _("The user is not a member of this organization")}
+            )
+        return data
 
 
 class GroupSerializer(serializers.ModelSerializer):
