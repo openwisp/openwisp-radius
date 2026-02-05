@@ -36,6 +36,7 @@ from rest_framework.generics import (
     RetrieveAPIView,
     RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -863,7 +864,12 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
 
     class Meta(OrganizationManagedFilter.Meta):
         model = RadiusGroup
-        fields = OrganizationManagedFilter.Meta.fields
+
+
+class RadiusGroupPaginator(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 @method_decorator(
@@ -871,9 +877,6 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
     decorator=swagger_auto_schema(
         operation_description="""
         Returns a list of RADIUS groups for the organizations managed by the user.
-        Supports:
-        - Filtering by organization
-        - Searching by group name
         """,
     ),
 )
@@ -889,10 +892,11 @@ class RadiusGroupListView(
     ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
 ):
     serializer_class = RadiusGroupSerializer
-    queryset = RadiusGroup.objects.all().order_by("name")
+    queryset = RadiusGroup.objects.order_by("name")
     filterset_class = RadiusGroupFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["name"]
+    pagination_class = RadiusGroupPaginator
 
 
 radius_group_list = RadiusGroupListView.as_view()
@@ -934,7 +938,7 @@ class RadiusGroupDetailView(
     ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
 ):
     serializer_class = RadiusGroupSerializer
-    queryset = RadiusGroup.objects.all().order_by("name")
+    queryset = RadiusGroup.objects.order_by("name")
 
 
 radius_group_detail = RadiusGroupDetailView.as_view()

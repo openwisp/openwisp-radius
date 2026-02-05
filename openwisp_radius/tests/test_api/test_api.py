@@ -14,6 +14,7 @@ from dj_rest_auth.tests.utils import (
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
@@ -1076,9 +1077,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def _add_model_permission(self, user, model, action):
         """action must be one of: 'view', 'add', 'change', 'delete'"""
-        from django.contrib.auth.models import Permission
-        from django.contrib.contenttypes.models import ContentType
-
         content_type = ContentType.objects.get_for_model(model)
         permission = Permission.objects.get(
             codename=f"{action}_{model._meta.model_name}",
@@ -1087,96 +1085,216 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         user.user_permissions.add(permission)
 
     def test_radius_group_list(self):
-        org = self._create_org(name="Test Org Group List")
-        user = self._get_user()
-        self._create_org_user(organization=org, user=user, is_admin=True)
-        self._add_model_permission(user, RadiusGroup, "view")
-        self._create_radius_group(name="Group A", organization=org)
-        self._create_radius_group(name="Group B", organization=org)
-        self.client.force_login(user=user)
-        url = reverse("radius:radius_group_list")
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = [g["name"] for g in response.json()]
-        self.assertIn("test-org-group-list-Group A", data)
-        self.assertIn("test-org-group-list-Group B", data)
-
-    def test_radius_group_list_filter_by_organization(self):
         org1 = self._create_org(name="Org 1")
         org2 = self._create_org(name="Org 2")
-        self._create_radius_group(name="Group A", organization=org1)
-        self._create_radius_group(name="Group B", organization=org2)
-        user = self._get_user()
-        self._create_org_user(organization=org1, user=user, is_admin=True)
-        self._add_model_permission(user, RadiusGroup, "view")
-        self.client.force_login(user=user)
+        user = self._create_user()
+        self._create_org_user(user=user, organization=org1, is_admin=True)
+        self.assertEqual(RadiusGroup.objects.filter(organization=org1).count(), 2)
+        self.assertEqual(RadiusGroup.objects.filter(organization=org2).count(), 2)
         url = reverse("radius:radius_group_list")
-        response = self.client.get(url, {"organization": org1.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = [g["name"] for g in response.json()]
-        self.assertIn("org-1-Group A", data)
-        self.assertNotIn("org-2-Group B", data)
 
-    def test_radius_group_list_search_by_name(self):
-        org = self._create_org(name="Test Org Search")
-        user = self._get_user()
-        self._create_org_user(organization=org, user=user, is_admin=True)
-        self._add_model_permission(user, RadiusGroup, "view")
-        self._create_radius_group(name="Staff Group", organization=org)
-        self._create_radius_group(name="Guest Group", organization=org)
+        with self.subTest("Test unauthenticated access"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 401)
+
         self.client.force_login(user=user)
-        url = reverse("radius:radius_group_list")
-        response = self.client.get(url, {"search": "Staff"})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = [g["name"] for g in response.json()]
-        self.assertIn("test-org-search-Staff Group", data)
-        self.assertNotIn("test-org-search-Guest Group", data)
+        with self.subTest("Test access without permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
 
-    def test_radius_group_create(self):
-        org = self._create_org(name="Test Org Create")
-        user = self._get_user()
-        self._create_org_user(organization=org, user=user, is_admin=True)
+            response = self.client.post(
+                url, {"name": "Test Group", "organization": org1.id}
+            )
+            self.assertEqual(response.status_code, 403)
+
+        self._add_model_permission(user, RadiusGroup, "view")
         self._add_model_permission(user, RadiusGroup, "add")
-        self.client.force_login(user=user)
-        url = reverse("radius:radius_group_list")
-        response = self.client.post(
-            url,
-            {
-                "name": "New Group",
-                "organization": org.id,
-            },
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["name"], "test-org-create-New Group")
 
-    def test_radius_group_patch(self):
-        org = self._create_org(name="Test Org Patch")
-        user = self._get_user()
-        self._create_org_user(organization=org, user=user, is_admin=True)
+        with self.subTest("Test basic list"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            data = response.data
+            self.assertEqual(data["count"], 2)
+            self.assertEqual(data["next"], None)
+            self.assertEqual(data["previous"], None)
+            results = data["results"]
+            self.assertEqual(len(results), 2)
+            result_ids = [item["id"] for item in results]
+            self.assertEqual(
+                RadiusGroup.objects.filter(
+                    id__in=result_ids, organization=org1
+                ).count(),
+                2,
+            )
+
+        with self.subTest("Test filtering by organization"):
+            response = self.client.get(url, {"organization": org1.id})
+            self.assertEqual(response.status_code, 200)
+            data = response.data
+            self.assertEqual(data["count"], 2)
+            results = data["results"]
+            self.assertEqual(len(results), 2)
+            result_ids = [item["id"] for item in results]
+            self.assertEqual(RadiusGroup.objects.filter(id__in=result_ids).count(), 2)
+
+        with self.subTest("Test search by name"):
+            response = self.client.get(url, {"search": "power-users"})
+            self.assertEqual(response.status_code, 200)
+            data = response.data
+            self.assertEqual(data["count"], 1)
+            results = data["results"]
+            self.assertEqual(results[0]["name"], "org-1-power-users")
+
+        with self.subTest("Test search no results"):
+            response = self.client.get(url, {"search": "Nonexistent"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data["results"]), 0)
+
+        with self.subTest("Create RADIUS group"):
+            response = self.client.post(
+                url,
+                {
+                    "name": "Unlimited",
+                    "organization": org1.id,
+                    "description": "Unlimited description",
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 201)
+            data = response.data
+            self.assertEqual(data["name"], "org-1-Unlimited")
+            self.assertEqual(data["description"], "Unlimited description")
+
+        with self.subTest("Create RadiusGroup with other organization"):
+            response = self.client.post(
+                url,
+                {
+                    "name": "Test Group Org2",
+                    "organization": org2.id,
+                    "description": "Test group description",
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 400)
+
+    def test_radius_group_detail(self):
+        org1 = self._create_org(name="Org 1")
+        org2 = self._create_org(name="Org 2")
+        user = self._create_user()
+        self._create_org_user(user=user, organization=org1, is_admin=True)
+        user.organizations_dict
+        group = RadiusGroup.objects.get(organization=org1, name="org-1-power-users")
+        url = reverse("radius:radius_group_detail", args=[group.pk])
+        with self.subTest("Test unauthenticated requests"):
+            # GET operation
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 401)
+            # PATCH operation
+            response = self.client.patch(
+                url,
+                {"description": "Patched description"},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 401)
+            # PUT operation
+            response = self.client.put(
+                url,
+                {
+                    "name": "Updated Group",
+                    "organization": org1.id,
+                    "description": "Updated description",
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 401)
+            # DELETE operation
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, 401)
+
+        self.client.force_login(user=user)
+        with self.subTest("Operations without permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+        self._add_model_permission(user, RadiusGroup, "view")
         self._add_model_permission(user, RadiusGroup, "change")
-        group = self._create_radius_group(name="Old Name", organization=org)
-        self.client.force_login(user=user)
-        url = reverse("radius:radius_group_detail", args=[group.pk])
-        response = self.client.patch(
-            url,
-            {"name": "New Name"},
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["name"], "test-org-patch-New Name")
-
-    def test_radius_group_delete(self):
-        org = self._create_org(name="Test Org Delete")
-        user = self._get_user()
-        self._create_org_user(organization=org, user=user, is_admin=True)
         self._add_model_permission(user, RadiusGroup, "delete")
-        group = self._create_radius_group(name="To Be Deleted", organization=org)
-        self.client.force_login(user=user)
-        url = reverse("radius:radius_group_detail", args=[group.pk])
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(RadiusGroup.objects.filter(pk=group.pk).exists())
+
+        with self.subTest("GET operation"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["name"], group.name)
+            self.assertEqual(data["description"], group.description)
+            self.assertEqual(data["id"], str(group.id))
+
+        with self.subTest("GET not found"):
+            fake_uuid = "00000000-0000-0000-0000-000000000000"
+            fake_url = reverse("radius:radius_group_detail", args=[fake_uuid])
+            response = self.client.get(fake_url)
+            self.assertEqual(response.status_code, 404)
+
+        with self.subTest("PATCH operation"):
+            response = self.client.patch(
+                url,
+                {"description": "Patched description"},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["description"], "Patched description")
+            self.assertEqual(data["name"], group.name)
+
+        with self.subTest("PUT operation"):
+            response = self.client.put(
+                url,
+                {
+                    "name": "Updated Group",
+                    "organization": org1.id,
+                    "description": "Updated description",
+                },
+                content_type="application/json",
+            )
+            print(response.data)
+            self.assertEqual(response.status_code, 200)
+            data = response.data
+            self.assertEqual(data["name"], "org-1-Updated Group")
+            self.assertEqual(data["description"], "Updated description")
+
+        with self.subTest("DELETE operation"):
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(RadiusGroup.objects.filter(pk=group.pk).count(), 0)
+
+        with self.subTest("Perform opertion on object of other organization"):
+            org2_group = RadiusGroup.objects.get(
+                organization=org2, name="org-2-power-users"
+            )
+            url_org2 = reverse("radius:radius_group_detail", args=[org2_group.pk])
+            # GET operation
+            response = self.client.get(url_org2)
+            self.assertEqual(response.status_code, 404)
+            # PATCH operation
+            response = self.client.patch(
+                url_org2,
+                {"description": "Patched description"},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 404)
+            # PUT operation
+            response = self.client.put(
+                url_org2,
+                {
+                    "name": "Updated Group",
+                    "organization": org1.id,
+                    "description": "Updated description",
+                },
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 404)
+            # DELETE operation
+            response = self.client.delete(url_org2)
+            self.assertEqual(response.status_code, 404)
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):

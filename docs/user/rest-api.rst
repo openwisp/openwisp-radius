@@ -893,7 +893,6 @@ id and group name.
     /api/v1/radius/group?search=<group_name>
     /api/v1/radius/group?organization=<org_id>
 
-
 Parameters:
 
 ============ ==========================
@@ -921,7 +920,6 @@ description  Description of group
     The group name is automatically prefixed with the organization slug
     when stored (for example: ``org-slug-Staff``).
 
-
 GET (detail)
 ^^^^^^^^^^^^
 
@@ -931,12 +929,10 @@ Returns a single RADIUS Group by its UUID.
 
     /api/v1/radius/group/<uuid>
 
-
 PATCH
 ^^^^^
 
 Partially updates a RADIUS group identified by its UUID.
-
 
 ============ ====================
 Param        Description
@@ -946,10 +942,7 @@ organization Organization UUID
 description  Description of group
 ============ ====================
 
-
 DELETE
 ^^^^^^
 
 Deletes a RADIUS group identified by its UUID.
-
-
