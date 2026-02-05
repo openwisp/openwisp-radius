@@ -890,14 +890,32 @@ id and group name.
     /api/v1/radius/group?search=<group_name>
     /api/v1/radius/group?organization=<org_id>
 
-Parameters:
+Filters
+"""""""
 
-============ ==========================
-Param        Description
-============ ==========================
-search       Search groups by name
-organization Filter organizations by id
-============ ==========================
+================= ============================
+Filter Parameter  Description
+================= ============================
+search            Search groups by name
+organization      Filter organizations by id
+organization_slug Filter organizations by slug
+================= ============================
+
+Pagination
+""""""""""
+
+Pagination is provided using page number pagination, the default page size
+is 20, which can be overridden using the ``page_size`` parameter (maximum
+100).
+
+.. code-block:: text
+
+    {
+        "count": 42,
+        "next": "http://example.com/api/v1/radius/group/?page=2",
+        "previous": null,
+        "results": [...]
+    }
 
 POST
 ^^^^
