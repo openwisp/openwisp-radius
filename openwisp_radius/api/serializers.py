@@ -29,7 +29,9 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
+from openwisp_users.api.mixins import FilterSerializerByOrgManaged
 from openwisp_users.backends import UsersAuthenticationBackend
+from openwisp_utils.api.serializers import ValidatedModelSerializer
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
@@ -48,6 +50,7 @@ logger = logging.getLogger(__name__)
 RadiusPostAuth = load_model("RadiusPostAuth")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
 RadiusToken = load_model("RadiusToken")
 RadiusGroupCheck = load_model("RadiusGroupCheck")
 RadiusUserGroup = load_model("RadiusUserGroup")
@@ -338,6 +341,28 @@ class UserRadiusUsageSerializer(serializers.Serializer):
             group_checks, many=True, context={"user": obj, "group": user_group.group}
         ).data
         return {"checks": checks_data}
+
+
+class RadiusGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSerializer):
+    class Meta:
+        model = RadiusGroup
+        fields = "__all__"
+        read_only_fields = ("created", "modified")
+
+    def validate(self, data):
+        """Validate and capture prefixed name from clean()."""
+        data = super().validate(data)
+        # For updates, ensure organization is in the data
+        if self.instance and "organization" not in data:
+            data["organization"] = self.instance.organization
+        # Only apply name prefixing if name is being changed or created
+        if "name" in data:
+            # Create a temporary instance to get the prefixed name
+            temp_instance = self.Meta.model(**data)
+            temp_instance.clean()
+            # Update data with the prefixed name
+            data["name"] = temp_instance.name
+        return data
 
 
 class GroupSerializer(serializers.ModelSerializer):
