@@ -875,19 +875,24 @@ id       string
 filename string
 ======== ===========
 
-List Radius Groups
-++++++++++++++++++
-
-This allows listing of Radius groups. It supports sorting by organization
-id and group name.
+RADIUS Groups API
++++++++++++++++++
 
 .. code-block:: text
 
     /api/v1/radius/group/
+
+GET
+^^^
+
+This allows listing of RADIUS groups. It supports sorting by organization
+id and group name.
+
+.. code-block:: text
+
     /api/v1/radius/group?search=<group_name>
     /api/v1/radius/group?organization=<org_id>
 
-Responds only to **GET**.
 
 Parameters:
 
@@ -897,3 +902,54 @@ Param        Description
 search       Search groups by name
 organization Filter organizations by id
 ============ ==========================
+
+POST
+^^^^
+
+Creates RADIUS Group.
+
+============ ====================
+Param        Description
+============ ====================
+name         Name of group
+organization Organization UUID
+description  Description of group
+============ ====================
+
+.. note::
+
+    The group name is automatically prefixed with the organization slug
+    when stored (for example: ``org-slug-Staff``).
+
+
+GET (detail)
+^^^^^^^^^^^^
+
+Returns a single RADIUS Group by its UUID.
+
+.. code-block:: text
+
+    /api/v1/radius/group/<uuid>
+
+
+PATCH
+^^^^^
+
+Partially updates a RADIUS group identified by its UUID.
+
+
+============ ====================
+Param        Description
+============ ====================
+name         Name of group
+organization Organization UUID
+description  Description of group
+============ ====================
+
+
+DELETE
+^^^^^^
+
+Deletes a RADIUS group identified by its UUID.
+
+

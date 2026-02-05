@@ -1098,7 +1098,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
-
         self.assertIn("test-org-group-list-Group A", data)
         self.assertIn("test-org-group-list-Group B", data)
 
@@ -1115,7 +1114,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.get(url, {"organization": org1.id})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
-
         self.assertIn("org-1-Group A", data)
         self.assertNotIn("org-2-Group B", data)
 
@@ -1131,7 +1129,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.get(url, {"search": "Staff"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = [g["name"] for g in response.json()]
-
         self.assertIn("test-org-search-Staff Group", data)
         self.assertNotIn("test-org-search-Guest Group", data)
 
@@ -1166,7 +1163,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             {"name": "New Name"},
             content_type="application/json",
         )
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["name"], "test-org-patch-New Name")
 
@@ -1179,7 +1175,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.client.force_login(user=user)
         url = reverse("radius:radius_group_detail", args=[group.pk])
         response = self.client.delete(url)
-
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RadiusGroup.objects.filter(pk=group.pk).exists())
 
