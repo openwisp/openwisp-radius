@@ -8,7 +8,7 @@ from Exscript.protocols import telnetlib
 from netaddr import EUI, mac_unix
 
 from .... import settings as app_settings
-from ....utils import load_model
+from ....utils import load_modelee
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             )
             return {}
         except Exception:
-            logger.warning(
+            logger.exception(
                 f"Error encountered while connecting to {host}:{port}. Skipping!"
             )
             return {}

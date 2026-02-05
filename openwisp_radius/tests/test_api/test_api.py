@@ -1075,14 +1075,16 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             },
         )
 
-    def _add_model_permission(self, user, model, action):
+    def _add_model_permission(self, user, model, actions):
         """action must be one of: 'view', 'add', 'change', 'delete'"""
         content_type = ContentType.objects.get_for_model(model)
-        permission = Permission.objects.get(
-            codename=f"{action}_{model._meta.model_name}",
-            content_type=content_type,
-        )
-        user.user_permissions.add(permission)
+        actions = actions or []
+        for action in actions:
+            permission = Permission.objects.get(
+                codename=f"{action}_{model._meta.model_name}",
+                content_type=content_type,
+            )
+            user.user_permissions.add(permission)
 
     def test_radius_group_list(self):
         org1 = self._create_org(name="Org 1")
@@ -1093,12 +1095,12 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusGroup.objects.filter(organization=org2).count(), 2)
         url = reverse("radius:radius_group_list")
 
-        with self.subTest("Test unauthenticated access"):
+        with self.subTest("Unauthenticated access"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
 
         self.client.force_login(user=user)
-        with self.subTest("Test access without permission"):
+        with self.subTest("Access without permission"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 403)
 
@@ -1107,10 +1109,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 403)
 
-        self._add_model_permission(user, RadiusGroup, "view")
-        self._add_model_permission(user, RadiusGroup, "add")
+        self._add_model_permission(user, RadiusGroup, ["view", "add"])
 
-        with self.subTest("Test basic list"):
+        with self.subTest("Basic list"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             data = response.data
@@ -1127,7 +1128,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 2,
             )
 
-        with self.subTest("Test filtering by organization"):
+        with self.subTest("Filtering by organization"):
             response = self.client.get(url, {"organization": org1.id})
             self.assertEqual(response.status_code, 200)
             data = response.data
@@ -1137,7 +1138,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             result_ids = [item["id"] for item in results]
             self.assertEqual(RadiusGroup.objects.filter(id__in=result_ids).count(), 2)
 
-        with self.subTest("Test search by name"):
+        with self.subTest("Search by name"):
             response = self.client.get(url, {"search": "power-users"})
             self.assertEqual(response.status_code, 200)
             data = response.data
@@ -1145,7 +1146,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             results = data["results"]
             self.assertEqual(results[0]["name"], "org-1-power-users")
 
-        with self.subTest("Test search no results"):
+        with self.subTest("Search returns no results"):
             response = self.client.get(url, {"search": "Nonexistent"})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data["results"]), 0)
@@ -1182,10 +1183,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         org2 = self._create_org(name="Org 2")
         user = self._create_user()
         self._create_org_user(user=user, organization=org1, is_admin=True)
-        user.organizations_dict
         group = RadiusGroup.objects.get(organization=org1, name="org-1-power-users")
         url = reverse("radius:radius_group_detail", args=[group.pk])
-        with self.subTest("Test unauthenticated requests"):
+        with self.subTest("Unauthenticated requests"):
             # GET operation
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
@@ -1216,9 +1216,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 403)
 
-        self._add_model_permission(user, RadiusGroup, "view")
-        self._add_model_permission(user, RadiusGroup, "change")
-        self._add_model_permission(user, RadiusGroup, "delete")
+        self._add_model_permission(user, RadiusGroup, ["view", "change", "delete"])
 
         with self.subTest("GET operation"):
             response = self.client.get(url)
@@ -1255,7 +1253,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
                 content_type="application/json",
             )
-            print(response.data)
             self.assertEqual(response.status_code, 200)
             data = response.data
             self.assertEqual(data["name"], "org-1-Updated Group")
@@ -1266,7 +1263,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(RadiusGroup.objects.filter(pk=group.pk).count(), 0)
 
-        with self.subTest("Perform opertion on object of other organization"):
+        with self.subTest("Perform operation on object of other organization"):
             org2_group = RadiusGroup.objects.get(
                 organization=org2, name="org-2-power-users"
             )
