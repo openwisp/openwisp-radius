@@ -1103,7 +1103,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         with self.subTest("Access without permission"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 403)
-
             response = self.client.post(
                 url, {"name": "Test Group", "organization": org1.id}
             )
