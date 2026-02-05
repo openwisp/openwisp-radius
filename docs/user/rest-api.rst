@@ -861,16 +861,13 @@ Batch CSV Download
 
 .. code-block:: text
 
-    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>
+    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/
 
-Responds only to **GET**.
+Responds only to **GET**. Allows downloading the CSV file used to import
+users for a specific batch user creation operation. Example:
 
-Parameters:
+.. code-block:: shell
 
-======== ===========
-Param    Description
-======== ===========
-slug     string
-id       string
-filename string
-======== ===========
+    curl -X GET \
+        'http://127.0.0.1:8000/api/v1/radius/organization/default/batch/f4943c8a-462e-40ba-89b6-91a2541c9cf4/csv/' \
+        -H 'Authorization: Bearer your-token-here'
