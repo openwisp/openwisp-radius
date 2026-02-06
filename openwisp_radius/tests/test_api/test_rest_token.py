@@ -251,6 +251,28 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn("key", response.data)
 
+    @capture_any_output()
+    def test_user_auth_token_cross_organization_login_disabled(self):
+        self._get_org_user()
+        org2 = self._create_org(name="org2")
+        OrganizationRadiusSettings.objects.create(
+            organization=org2, cross_organization_login_enabled=False
+        )
+        url = reverse("radius:user_auth_token", args=[org2.slug])
+        response = self.client.post(url, {"username": "tester", "password": "tester"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.data["detail"],
+            f"{org2} does not allow self registration of new accounts.",
+        )
+        # Ensure no OrganizationUser was created
+        self.assertEqual(
+            OrganizationUser.objects.filter(
+                organization=org2, user__username="tester"
+            ).count(),
+            0,
+        )
+
     def test_user_auth_token_404(self):
         url = reverse(
             "radius:user_auth_token", args=["00000000-0000-0000-0000-000000000000"]
