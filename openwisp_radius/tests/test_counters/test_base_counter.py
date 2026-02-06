@@ -114,6 +114,13 @@ class TestBaseCounter(TestCounterMixin, BaseTransactionTestCase):
             self.assertEqual(str(datetime.fromtimestamp(start)), "2021-10-22 00:00:00")
             self.assertEqual(str(datetime.fromtimestamp(end)), "2021-11-22 00:00:00")
 
+        with self.subTest("monthly_subscription future start date logic"):
+            user.date_joined = datetime.fromisoformat("2021-07-04 12:34:58")
+            user.save(update_fields=["date_joined"])
+            start, end = resets["monthly_subscription"](user)
+            self.assertEqual(str(datetime.fromtimestamp(start)), "2021-10-04 00:00:00")
+            self.assertEqual(str(datetime.fromtimestamp(end)), "2021-11-04 00:00:00")
+
         with self.subTest("never"):
             start, end = resets["never"]()
             self.assertEqual(start, 0)
@@ -130,6 +137,33 @@ class TestBaseCounter(TestCounterMixin, BaseTransactionTestCase):
         self.assertEqual(BaseDailyCounter.get_attribute_type(), "seconds")
         self.assertEqual(BaseMontlhyTrafficCounter.get_attribute_type(), "bytes")
         self.assertEqual(MaxInputOctetsCounter.get_attribute_type(), "bytes")
+
+    def test_base_exception_logging(self):
+        from unittest.mock import MagicMock
+
+        from ...counters.exceptions import BaseException
+
+        logger = MagicMock()
+        BaseException("message", "error", logger)
+        logger.error.assert_called_with("message")
+        with self.assertRaises(AssertionError):
+            BaseException("message", "invalid_level", logger)
+
+    def test_consumed_method(self):
+        opts = self._get_kwargs("Max-Daily-Session")
+        from ...counters.sqlite.daily_counter import DailyCounter
+
+        counter = DailyCounter(**opts)
+        consumed = counter.consumed()
+        self.assertEqual(consumed, 0)
+        self.assertIsInstance(consumed, int)
+
+        from .utils import _acct_data
+
+        self._create_radius_accounting(**_acct_data)
+        consumed = counter.consumed()
+        self.assertEqual(consumed, int(_acct_data["session_time"]))
+        self.assertIsInstance(consumed, int)
 
 
 del BaseTransactionTestCase

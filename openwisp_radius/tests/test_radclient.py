@@ -123,3 +123,38 @@ class TestRadClient(TestCase):
                 f"DisconnectNAK received from {client.client.server} "
                 f"for payload: {attrs}"
             )
+            mocked_logger.assert_called_with(
+                f"DisconnectNAK received from {client.client.server} "
+                f"for payload: {attrs}"
+            )
+
+    def test_coa_packet_encode_key_values_empty(self):
+        client = self._get_client()
+        packet = CoaPacket(dict=client.client.dict)
+        key = "Session-Timeout"
+        res = packet._EncodeKeyValues(key, "")
+        self.assertEqual(res, (key, ""))
+
+    def test_get_dictionaries(self):
+        client = self._get_client()
+        dicts = client.get_dictionaries()
+        self.assertTrue(len(dicts) >= 1)
+        self.assertTrue("dictionary" in dicts[0])
+
+    def test_disconnect_packet_with_custom_code(self):
+        from pyrad.packet import DisconnectNAK
+
+        client = self._get_client()
+        packet = DisconnectPacket(code=DisconnectNAK, dict=client.client.dict)
+        self.assertEqual(packet.code, DisconnectNAK)
+
+    def test_disconnect_packet_default_code(self):
+        client = self._get_client()
+        packet = DisconnectPacket(dict=client.client.dict)
+        self.assertEqual(packet.code, DisconnectRequest)
+
+    def test_rad_client_repr(self):
+        client = self._get_client()
+        self.assertIsNotNone(client.client)
+        self.assertEqual(client.client.server, "127.0.0.1")
+        self.assertEqual(client.client.secret, b"testing")
