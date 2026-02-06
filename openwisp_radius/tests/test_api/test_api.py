@@ -1089,25 +1089,29 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_radius_user_group_list(self):
         org1 = self._create_org(name="Org 1", slug="org-1")
         org2 = self._create_org(name="Org 2", slug="org-2")
-        user = self._create_user(username="org1-admin", email="org1-admin@test.com")
+        org1_admin = self._create_user(
+            username="org1-admin", email="org1-admin@test.com"
+        )
         member = self._create_user(username="org1-user", email="org1-user@test.com")
-        org2_user = self._create_user(username="org2-user", email="org2-user@test.com")
-        self._create_org_user(user=user, organization=org1, is_admin=True)
+        org1_only = self._create_user(username="org1-only", email="org1-only@test.com")
+        self._create_org_user(user=org1_admin, organization=org1, is_admin=True)
         self._create_org_user(user=member, organization=org1)
-        self._create_org_user(user=org2_user, organization=org2, is_admin=True)
+        self._create_org_user(user=member, organization=org2)
+        self._create_org_user(user=org1_only, organization=org1)
         self.assertEqual(
-            RadiusUserGroup.objects.filter(group__organization=org1).count(), 2
+            RadiusUserGroup.objects.filter(group__organization=org1).count(), 3
         )
         self.assertEqual(
             RadiusUserGroup.objects.filter(group__organization=org2).count(), 1
         )
-        url = reverse("radius:radius_user_group_list")
+        self.assertEqual(RadiusUserGroup.objects.filter(user=member).count(), 2)
+        url = reverse("radius:radius_user_group_list", args=[member.pk])
 
         with self.subTest("Unauthenticated access"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
 
-        self.client.force_login(user=user)
+        self.client.force_login(user=org1_admin)
         with self.subTest("Access without permission"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 403)
@@ -1115,7 +1119,6 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             response = self.client.post(
                 url,
                 {
-                    "user": member.pk,
                     "group": RadiusGroup.objects.get(
                         organization=org1, name="org-1-power-users"
                     ).pk,
@@ -1125,44 +1128,36 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 403)
 
-        self._add_model_permission(user, RadiusUserGroup, ["view", "add"])
+        self._add_model_permission(org1_admin, RadiusUserGroup, ["view", "add"])
 
         with self.subTest("Basic list"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             data = response.data
-            self.assertEqual(data["count"], 2)
+            self.assertEqual(data["count"], 1)
             self.assertEqual(data["next"], None)
             self.assertEqual(data["previous"], None)
             results = data["results"]
-            self.assertEqual(len(results), 2)
+            self.assertEqual(len(results), 1)
             result_ids = [item["id"] for item in results]
             self.assertEqual(
                 RadiusUserGroup.objects.filter(
-                    id__in=result_ids, group__organization=org1
+                    id__in=result_ids, group__organization=org1, user=member
                 ).count(),
-                2,
+                1,
             )
 
         with self.subTest("Filtering by organization"):
             response = self.client.get(url, {"organization": org1.id})
             self.assertEqual(response.status_code, 200)
             data = response.data
-            self.assertEqual(data["count"], 2)
-            results = data["results"]
-            self.assertEqual(len(results), 2)
-            result_ids = [item["id"] for item in results]
-            self.assertEqual(
-                RadiusUserGroup.objects.filter(id__in=result_ids).count(), 2
-            )
-
-        with self.subTest("Filtering by user"):
-            response = self.client.get(url, {"user": member.id})
-            self.assertEqual(response.status_code, 200)
-            data = response.data
             self.assertEqual(data["count"], 1)
             results = data["results"]
-            self.assertEqual(results[0]["user"], str(member.id))
+            self.assertEqual(len(results), 1)
+            result_ids = [item["id"] for item in results]
+            self.assertEqual(
+                RadiusUserGroup.objects.filter(id__in=result_ids).count(), 1
+            )
 
         with self.subTest("Create RADIUS user group"):
             group = RadiusGroup.objects.get(
@@ -1170,7 +1165,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             response = self.client.post(
                 url,
-                {"user": member.id, "group": group.id, "priority": 2},
+                {"group": group.id, "priority": 2},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 201)
@@ -1186,18 +1181,19 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             response = self.client.post(
                 url,
-                {"user": member.id, "group": org2_group.id, "priority": 1},
+                {"group": org2_group.id, "priority": 1},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 400)
 
         with self.subTest("Create RadiusUserGroup with non member user"):
+            self._create_org_user(user=org1_admin, organization=org2, is_admin=True)
             group = RadiusGroup.objects.get(
-                organization=org1, name="org-1-users"
+                organization=org2, name="org-2-users"
             )
             response = self.client.post(
-                url,
-                {"user": org2_user.id, "group": group.id, "priority": 1},
+                reverse("radius:radius_user_group_list", args=[org1_only.pk]),
+                {"group": group.id, "priority": 1},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 400)
@@ -1214,7 +1210,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         user_group = RadiusUserGroup.objects.get(
             user=member, group__organization=org1
         )
-        url = reverse("radius:radius_user_group_detail", args=[user_group.pk])
+        url = reverse(
+            "radius:radius_user_group_detail", args=[member.pk, user_group.pk]
+        )
         with self.subTest("Unauthenticated requests"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
@@ -1226,7 +1224,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 401)
             response = self.client.put(
                 url,
-                {"user": member.id, "group": user_group.group.id, "priority": 2},
+                {"group": user_group.group.id, "priority": 2},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 401)
@@ -1250,7 +1248,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest("GET not found"):
             fake_uuid = "00000000-0000-0000-0000-000000000000"
-            fake_url = reverse("radius:radius_user_group_detail", args=[fake_uuid])
+            fake_url = reverse(
+                "radius:radius_user_group_detail", args=[member.pk, fake_uuid]
+            )
             response = self.client.get(fake_url)
             self.assertEqual(response.status_code, 404)
 
@@ -1270,7 +1270,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             response = self.client.put(
                 url,
-                {"user": member.id, "group": group.id, "priority": 1},
+                {"group": group.id, "priority": 1},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 200)
@@ -1290,7 +1290,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             org2_group = RadiusUserGroup.objects.get(
                 user=org2_user, group__organization=org2
             )
-            url_org2 = reverse("radius:radius_user_group_detail", args=[org2_group.pk])
+            url_org2 = reverse(
+                "radius:radius_user_group_detail", args=[org2_user.pk, org2_group.pk]
+            )
             response = self.client.get(url_org2)
             self.assertEqual(response.status_code, 404)
             response = self.client.patch(
@@ -1301,7 +1303,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 404)
             response = self.client.put(
                 url_org2,
-                {"user": org2_user.id, "group": org2_group.group.id, "priority": 5},
+                {"group": org2_group.group.id, "priority": 5},
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 404)

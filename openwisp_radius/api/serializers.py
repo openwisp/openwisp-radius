@@ -345,11 +345,24 @@ class UserRadiusUsageSerializer(serializers.Serializer):
 class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSerializer):
     organization_field = "group__organization"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.context.get("user") and "user" in self.fields:
+            self.fields["user"].read_only = True
+            self.fields["user"].required = False
+
     class Meta:
         model = RadiusUserGroup
         fields = "__all__"
         read_only_fields = ("username", "groupname", "created", "modified")
         extra_kwargs = {"user": {"required": True}, "group": {"required": True}}
+
+    def _get_user(self, data):
+        return (
+            data.get("user")
+            or self.context.get("user")
+            or (self.instance.user if self.instance else None)
+        )
 
     def filter_fields(self):
         user = self.context["request"].user
@@ -373,13 +386,18 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
 
     def validate(self, data):
         data = super().validate(data)
-        user = data.get("user") or (self.instance.user if self.instance else None)
+        user = self._get_user(data)
         group = data.get("group") or (self.instance.group if self.instance else None)
         if user and group and not user.is_member(group.organization):
             raise serializers.ValidationError(
                 {"user": _("The user is not a member of this organization")}
             )
         return data
+
+    def create(self, validated_data):
+        if "user" not in validated_data and self.context.get("user"):
+            validated_data["user"] = self.context["user"]
+        return super().create(validated_data)
 
 
 class GroupSerializer(serializers.ModelSerializer):

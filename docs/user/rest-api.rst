@@ -877,25 +877,23 @@ RADIUS User Groups API
 
 .. code-block:: text
 
-    /api/v1/radius/user-group/
+    /api/v1/users/user/<user_id>/radius-groups/
 
 GET
 ^^^
 
-This allows listing of RADIUS user group relationships. It supports filtering
-by organization and user.
+This allows listing of RADIUS user group relationships for a specific user.
+It supports filtering by organization.
 
 .. code-block:: text
 
-    /api/v1/radius/user-group?user=<user_id>
-    /api/v1/radius/user-group?organization=<org_id>
+    /api/v1/users/user/<user_id>/radius-groups?organization=<org_id>
 
 Parameters:
 
 ============ ==========================
 Param        Description
 ============ ==========================
-user         Filter by user UUID
 organization Filter organizations by id
 ============ ==========================
 
@@ -907,7 +905,6 @@ Creates a RADIUS user group relationship.
 ============ ====================
 Param        Description
 ============ ====================
-user         User UUID
 group        RADIUS group UUID
 priority     Priority
 ============ ====================
@@ -915,21 +912,20 @@ priority     Priority
 GET (detail)
 ^^^^^^^^^^^^
 
-Returns a single RADIUS user group relationship by its UUID.
+Returns a single RADIUS user group relationship by its UUID for the specified user.
 
 .. code-block:: text
 
-    /api/v1/radius/user-group/<uuid>
+    /api/v1/users/user/<user_id>/radius-groups/<uuid>
 
 PATCH
 ^^^^^
 
-Partially updates a RADIUS user group relationship identified by its UUID.
+Partially updates a RADIUS user group relationship identified by its UUID for the specified user.
 
 ============ ====================
 Param        Description
 ============ ====================
-user         User UUID
 group        RADIUS group UUID
 priority     Priority
 ============ ====================
@@ -937,4 +933,4 @@ priority     Priority
 DELETE
 ^^^^^^
 
-Deletes a RADIUS user group relationship identified by its UUID.
+Deletes a RADIUS user group relationship identified by its UUID for the specified user.

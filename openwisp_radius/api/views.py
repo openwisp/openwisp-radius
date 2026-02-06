@@ -866,7 +866,7 @@ class RadiusUserGroupFilter(FilterSet):
 
     class Meta:
         model = RadiusUserGroup
-        fields = ["organization", "organization_slug", "user", "group"]
+        fields = ["organization", "organization_slug", "group"]
 
 
 class RadiusUserGroupPaginator(PageNumberPagination):
@@ -875,11 +875,46 @@ class RadiusUserGroupPaginator(PageNumberPagination):
     max_page_size = 100
 
 
+class RadiusUserGroupUserMixin:
+    user_url_kwarg = "pk"
+
+    def get_user_pk(self):
+        return self.kwargs.get(self.user_url_kwarg)
+
+    def get_user(self):
+        if not hasattr(self, "_radius_user_group_user"):
+            try:
+                user = User.objects.get(pk=self.get_user_pk())
+            except User.DoesNotExist:
+                raise Http404
+            if not self.request.user.is_superuser:
+                managed_orgs = getattr(self.request.user, "organizations_managed", [])
+                if not OrganizationUser.objects.filter(
+                    user=user,
+                    organization_id__in=managed_orgs,
+                ).exists():
+                    raise Http404
+            self._radius_user_group_user = user
+        return self._radius_user_group_user
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["user"] = self.get_user()
+        return context
+
+    def get_queryset(self):
+        return super().get_queryset().filter(user=self.get_user())
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.get_user())
+
+
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
         operation_description="""
-        Returns a list of RADIUS user groups for the organizations managed by the user.
+        Returns a list of RADIUS user groups for the specified user and
+        the organizations managed by the request user.
         """,
     ),
 )
@@ -887,12 +922,16 @@ class RadiusUserGroupPaginator(PageNumberPagination):
     name="post",
     decorator=swagger_auto_schema(
         operation_description="""
-        Creates a new RADIUS user group for an organization managed by the user.
+        Creates a new RADIUS user group for the specified user and
+        an organization managed by the request user.
         """,
     ),
 )
 class RadiusUserGroupListView(
-    ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
+    RadiusUserGroupUserMixin,
+    ProtectedAPIMixin,
+    FilterByOrganizationManaged,
+    ListCreateAPIView,
 ):
     serializer_class = RadiusUserGroupSerializer
     queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
@@ -911,7 +950,7 @@ radius_user_group_list = RadiusUserGroupListView.as_view()
     name="get",
     decorator=swagger_auto_schema(
         operation_description="""
-        Returns a single RADIUS user group by its UUID.
+        Returns a single RADIUS user group by its UUID for the specified user.
         """,
     ),
 )
@@ -919,7 +958,7 @@ radius_user_group_list = RadiusUserGroupListView.as_view()
     name="put",
     decorator=swagger_auto_schema(
         operation_description="""
-        Updates a RADIUS user group identified by its UUID.
+        Updates a RADIUS user group identified by its UUID for the specified user.
         """,
     ),
 )
@@ -927,7 +966,7 @@ radius_user_group_list = RadiusUserGroupListView.as_view()
     name="patch",
     decorator=swagger_auto_schema(
         operation_description="""
-        Partially updates a RADIUS user group identified by its UUID.
+        Partially updates a RADIUS user group identified by its UUID for the specified user.
         """,
     ),
 )
@@ -935,18 +974,23 @@ radius_user_group_list = RadiusUserGroupListView.as_view()
     name="delete",
     decorator=swagger_auto_schema(
         operation_description="""
-        Deletes a RADIUS user group identified by its UUID.
+        Deletes a RADIUS user group identified by its UUID for the specified user.
         """,
     ),
 )
 class RadiusUserGroupDetailView(
-    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
+    RadiusUserGroupUserMixin,
+    ProtectedAPIMixin,
+    FilterByOrganizationManaged,
+    RetrieveUpdateDestroyAPIView,
 ):
+    user_url_kwarg = "user_pk"
     serializer_class = RadiusUserGroupSerializer
     queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
         "username"
     )
     organization_field = "group__organization"
+    lookup_url_kwarg = "radius_user_group_pk"
 
 
 radius_user_group_detail = RadiusUserGroupDetailView.as_view()
