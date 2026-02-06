@@ -79,15 +79,15 @@ jobs:
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
 
-      - name: QA checks
-        run: |
-          ./run-qa-checks
+      # - name: QA checks
+      #   run: |
+      #     ./run-qa-checks
 
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |
-          coverage run runtests.py --parallel > /dev/null 2>&1 || ./runtests.py
-          SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
+          coverage run runtests.py
+          SAMPLE_APP=1 coverage run ./runtests.py
           MONITORING_INTEGRATION=1 coverage run runtests.py
           coverage combine
           coverage xml

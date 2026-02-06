@@ -1,6 +1,5 @@
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from django.core.exceptions import ObjectDoesNotExist
 
 from .utils import load_model
 
@@ -12,13 +11,9 @@ class RadiusBatchConsumer(AsyncJsonWebsocketConsumer):
         if user.is_superuser:
             return RadiusBatch.objects.filter(pk=batch_id).exists()
         # For non-superusers, check their managed organizations
-        try:
-            RadiusBatch.objects.filter(
-                pk=batch_id, organization__in=user.organizations_managed
-            ).exists()
-            return True
-        except ObjectDoesNotExist:
-            return False
+        return RadiusBatch.objects.filter(
+            pk=batch_id, organization__in=user.organizations_managed
+        ).exists()
 
     async def connect(self):
         self.batch_id = self.scope["url_route"]["kwargs"]["batch_id"]

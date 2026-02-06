@@ -1,6 +1,6 @@
 import os
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -536,6 +536,28 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 radius_acc.called_station_id, rad_options["called_station_id"]
             )
 
+        with self.subTest("Test password-protected OpenVPN connection"):
+            with patch(
+                "openwisp_radius.management.commands.base.convert_called_station_id"
+                ".telnetlib.Telnet"
+            ) as mock_telnet_class:
+                mock_tn = MagicMock()
+                mock_telnet_class.return_value.__enter__.return_value = mock_tn
+                mock_tn.read_until.side_effect = [
+                    b"ENTER PASSWORD:",
+                    b">INFO:OpenVPN Management Interface Version 3 -- type 'help' for more info",
+                    self._get_openvpn_status().encode(),
+                ]
+                call_command("convert_called_station_id")
+
+                password_sent = any(
+                    "somepassword\\n" in str(call)
+                    for call in mock_tn.write.call_args_list
+                )
+                self.assertTrue(
+                    password_sent, "Password should have been sent to telnet connection"
+                )
+
     @capture_any_output()
     @patch.object(
         app_settings,
@@ -564,3 +586,27 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+
+    def test_convert_called_station_id_command_wrapper(self):
+        from ..management.commands.convert_called_station_id import Command
+
+        command = Command()
+        self.assertIsNotNone(command)
+        from ..management.commands.base.convert_called_station_id import (
+            BaseConvertCalledStationIdCommand,
+        )
+
+        self.assertIsInstance(command, BaseConvertCalledStationIdCommand)
+
+    def test_prefix_add_users_command_wrapper(self):
+        from ..management.commands.prefix_add_users import Command
+
+        command = Command()
+        self.assertIsNotNone(command)
+        from ..management.commands.base import BatchAddMixin
+        from ..management.commands.base.prefix_add_users import (
+            BasePrefixAddUsersCommand,
+        )
+
+        self.assertIsInstance(command, BatchAddMixin)
+        self.assertIsInstance(command, BasePrefixAddUsersCommand)
