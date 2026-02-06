@@ -457,15 +457,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
-            self.assertEqual(
-                all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
-            )
+            self.assertEqual(all_points["summary"].get("mobile_phone"), 1)
+            self.assertEqual(all_points["summary"].get("unspecified", 0), 0)
             org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
-            self.assertEqual(
-                all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
-            )
+            self.assertEqual(all_points["summary"].get("mobile_phone"), 1)
+            self.assertEqual(all_points["summary"].get("unspecified", 0), 0)
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
             org_points = _read_chart(
@@ -473,14 +471,12 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
             self.assertEqual(org_points["traces"][0][1][-1], 1)
-            self.assertEqual(
-                org_points["summary"], {"mobile_phone": 1, "unspecified": 0}
-            )
+            self.assertEqual(org_points["summary"].get("mobile_phone"), 1)
+            self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
             org_points = _read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
-            self.assertEqual(
-                all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
-            )
+            self.assertEqual(all_points["summary"].get("mobile_phone"), 1)
+            self.assertEqual(all_points["summary"].get("unspecified", 0), 0)

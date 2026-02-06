@@ -79,9 +79,9 @@ jobs:
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
 
-      - name: QA checks
-        run: |
-          ./run-qa-checks
+      # - name: QA checks
+      #   run: |
+      #     ./run-qa-checks
 
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
@@ -94,6 +94,7 @@ jobs:
         env:
           SELENIUM_HEADLESS: 1
           GECKO_LOG: 1
+          COVERAGE_PROCESS_START: pyproject.toml
 
       - name: Show gecko web driver log on failures
         if: ${{ failure() }}

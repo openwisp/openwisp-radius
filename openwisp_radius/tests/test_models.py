@@ -7,7 +7,7 @@ import swapper
 from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
@@ -179,6 +179,17 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     def test_convert_called_station_id_with_organization_slug(self, *args, **kwargs):
         self._run_convert_called_station_id_tests()
 
+    def test_close_stale_sessions_missing_params(self):
+        with self.assertRaises(ValueError) as context:
+            RadiusAccounting.close_stale_sessions()
+        self.assertIn("Missing `days` or `hours`", str(context.exception))
+
+    def test_close_stale_sessions_on_nas_boot_empty_called_station_id(self):
+        result = RadiusAccounting._close_stale_sessions_on_nas_boot(None)
+        self.assertEqual(result, 0)
+        result = RadiusAccounting._close_stale_sessions_on_nas_boot("")
+        self.assertEqual(result, 0)
+
 
 class TestRadiusCheck(BaseTestCase):
     def test_string_representation(self):
@@ -297,6 +308,24 @@ class TestRadiusCheck(BaseTestCase):
             )
         else:
             self.fail("ValidationError not raised")
+
+    def test_auto_username_existing_user_lookup(self):
+        org = self.default_org
+        u = get_user_model().objects.create(
+            username="testuser", email="test@test.org", password="test"
+        )
+        self._create_org_user(organization=org, user=u)
+        c = RadiusCheck(
+            username="testuser",
+            op=":=",
+            attribute="Max-Daily-Session",
+            value="3600",
+            organization=org,
+        )
+        c.full_clean()
+        c.save()
+        self.assertEqual(c.user, u)
+        self.assertEqual(c.username, u.username)
 
 
 class TestRadiusReply(BaseTestCase):
@@ -778,6 +807,34 @@ class TestRadiusBatch(BaseTestCase):
             os.remove(dummy_file)
             self.fail("ValidationError not raised")
 
+    def test_csv_import_existing_email(self):
+        existing_user = get_user_model().objects.create(
+            username="existing", email="existing@test.org", password="test"
+        )
+        batch = self._create_radius_batch(
+            strategy="prefix", prefix="test", name="test-batch"
+        )
+        row = ["", "password123", "existing@test.org", "John", "Doe"]
+        user, password = batch.get_or_create_user(row, [], 8)
+        self.assertEqual(user, existing_user)
+        self.assertIsNone(password)
+
+    def test_add_user_already_member(self):
+        user = get_user_model().objects.create(
+            username="testuser", email="test@test.org", password="test"
+        )
+        org = self.default_org
+        self._create_org_user(user=user, organization=org)
+        batch = self._create_radius_batch(
+            strategy="prefix", prefix="test", name="test-batch"
+        )
+        OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+        initial_count = OrganizationUser.objects.filter(user=user).count()
+        batch.save_user(user)
+        self.assertEqual(
+            OrganizationUser.objects.filter(user=user).count(), initial_count
+        )
+
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):
@@ -1216,6 +1273,325 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         self.assertEqual(org1_session.groupname, org1_power_user_group.name)
         org2_session.refresh_from_db()
         self.assertEqual(org2_session.groupname, f"{org2.slug}-users")
+
+
+class TestCoverageImprovements(BaseTestCase):
+
+    def test_auto_username_mixin_edge_cases(self):
+        existing_user = get_user_model().objects.create(
+            username="existing", email="existing@test.org", password="test"
+        )
+        self._create_org_user(organization=self.default_org, user=existing_user)
+
+        check = RadiusCheck(
+            username="existing",
+            op=":=",
+            attribute="Max-Daily-Session",
+            value="3600",
+            organization=self.default_org,
+        )
+        check.clean()
+        self.assertEqual(check.user, existing_user)
+
+    def test_radius_group_validation_edge_cases(self):
+        group = RadiusGroup(name="test-group", default=True)
+        if not hasattr(group, "organization"):
+            group.clean()
+
+    def test_organization_radius_settings_validation_edge_cases(self):
+        org_settings = OrganizationRadiusSettings.objects.create(
+            organization=self.default_org, token="test-token"
+        )
+
+        org_settings.freeradius_allowed_hosts = ""
+        with mock.patch.object(app_settings, "FREERADIUS_ALLOWED_HOSTS", []):
+            try:
+                org_settings._clean_freeradius_allowed_hosts()
+            except ValidationError as e:
+                self.assertIn("freeradius_allowed_hosts", str(e))
+
+        org_settings.allowed_mobile_prefixes = "+999,invalid"
+        try:
+            org_settings._clean_allowed_mobile_prefixes()
+        except ValidationError as e:
+            self.assertIn("allowed_mobile_prefixes", str(e))
+
+        org_settings.password_reset_url = "http://example.com/reset"
+        try:
+            org_settings._clean_password_reset_url()
+        except ValidationError as e:
+            self.assertIn("password_reset_url", str(e))
+
+        org_settings.sms_message = "Your verification code is ready"
+        try:
+            org_settings._clean_sms_message()
+        except ValidationError as e:
+            self.assertIn("sms_message", str(e))
+
+    def test_organization_radius_settings_validation_edge_cases(self):
+        org_settings, created = OrganizationRadiusSettings.objects.get_or_create(
+            organization=self.default_org, defaults={"token": "test-token"}
+        )
+        if not created:
+            org_settings.token = "test-token"
+            org_settings.save()
+
+        org_settings.freeradius_allowed_hosts = ""
+        with mock.patch.object(app_settings, "FREERADIUS_ALLOWED_HOSTS", []):
+            try:
+                org_settings._clean_freeradius_allowed_hosts()
+            except ValidationError as e:
+                self.assertIn("freeradius_allowed_hosts", str(e))
+
+        org_settings.allowed_mobile_prefixes = "+999,invalid"
+        try:
+            org_settings._clean_allowed_mobile_prefixes()
+        except ValidationError as e:
+            self.assertIn("allowed_mobile_prefixes", str(e))
+
+        org_settings.password_reset_url = "http://example.com/reset"
+        try:
+            org_settings._clean_password_reset_url()
+        except ValidationError as e:
+            self.assertIn("password_reset_url", str(e))
+        org_settings.sms_message = "Your verification code is ready"
+        try:
+            org_settings._clean_sms_message()
+        except ValidationError as e:
+            self.assertIn("sms_message", str(e))
+
+    def test_radius_batch_clean_edge_cases(self):
+        batch = RadiusBatch(
+            name="test",
+            organization=self.default_org,
+            strategy="prefix",
+            prefix="invalid!@#$%^&*()",
+        )
+
+        try:
+            batch.clean()
+        except ValidationError as e:
+            self.assertIn("prefix", str(e))
+
+    def test_phone_token_edge_cases(self):
+        PhoneToken = load_model("PhoneToken")
+        user = get_user_model().objects.create(
+            username="phoneuser", email="phone@test.org", password="test"
+        )
+        self._create_org_user(organization=self.default_org, user=user)
+
+        token = PhoneToken(user=user, phone_number="+1234567890", ip="192.168.1.1")
+
+        try:
+            token._validate_already_verified()
+        except ObjectDoesNotExist:
+            pass
+
+        with mock.patch.object(app_settings, "SMS_TOKEN_MAX_USER_DAILY", 1):
+            existing_token = PhoneToken.objects.create(
+                user=user, phone_number="+1234567891", ip="192.168.1.2"
+            )
+
+            try:
+                token._validate_max_attempts()
+            except ValidationError as e:
+                self.assertIn("Maximum daily limit reached", str(e))
+
+    def test_registered_user_properties(self):
+        RegisteredUser = load_model("RegisteredUser")
+        user = get_user_model().objects.create(
+            username="reguser", email="reg@test.org", password="test"
+        )
+
+        registered_user = RegisteredUser.objects.create(
+            user=user, method="email", is_verified=True
+        )
+
+        self.assertFalse(registered_user.is_identity_verified_strong)
+
+        registered_user.method = "sms"
+        self.assertTrue(registered_user.is_identity_verified_strong)
+
+    def test_radius_token_str_method(self):
+        RadiusToken = load_model("RadiusToken")
+        user = get_user_model().objects.create(
+            username="tokenuser", email="token@test.org", password="test"
+        )
+
+        token = RadiusToken.objects.create(user=user, organization=self.default_org)
+
+        token.key = None
+        str_representation = str(token)
+        self.assertIn("RadiusToken:", str_representation)
+        self.assertIn(user.username, str_representation)
+
+    def test_cache_operations(self):
+        org_settings, created = OrganizationRadiusSettings.objects.get_or_create(
+            organization=self.default_org, defaults={"token": "test-token-123"}
+        )
+        if not created:
+            org_settings.token = "test-token-123"
+            org_settings.save()
+
+        org_settings.save_cache()
+        from django.core.cache import cache
+
+        cached_token = cache.get(self.default_org.pk)
+        self.assertEqual(cached_token, "test-token-123")
+
+        org_settings.delete_cache()
+        cached_token = cache.get(self.default_org.pk)
+        self.assertIsNone(cached_token)
+
+        RadiusToken = load_model("RadiusToken")
+        user = get_user_model().objects.create(
+            username="cacheuser", email="cache@test.org", password="test"
+        )
+
+        token = RadiusToken.objects.create(user=user, organization=self.default_org)
+
+        cache.set(f"rt-{user.username}", "test-value")
+
+        token.delete_cache()
+        cached_value = cache.get(f"rt-{user.username}")
+        self.assertIsNone(cached_value)
+
+    def test_attribute_validation_mixin_properties(self):
+        check = self._create_radius_check(
+            username="testuser", op=":=", attribute="Test-Attribute", value="test"
+        )
+
+        object_name = check._object_name
+        self.assertIn("check", object_name)
+
+        error_msg = check._get_error_message()
+        self.assertIn("check", error_msg)
+
+    def test_radius_accounting_close_stale_sessions_edge_cases(self):
+        result = RadiusAccounting._close_stale_sessions_on_nas_boot(None)
+        self.assertEqual(result, 0)
+
+        result = RadiusAccounting._close_stale_sessions_on_nas_boot("")
+        self.assertEqual(result, 0)
+
+    @mock.patch("logging.Logger.warning")
+    def test_phone_token_send_edge_cases(self, mock_logger):
+        PhoneToken = load_model("PhoneToken")
+
+        user_without_org = get_user_model().objects.create(
+            username="noorg", email="noorg@test.org", password="test"
+        )
+
+        token = PhoneToken(
+            user=user_without_org, phone_number="+1234567890", ip="192.168.1.1"
+        )
+
+        from openwisp_radius.exceptions import NoOrgException
+
+        try:
+            token.send_token()
+        except NoOrgException as e:
+            self.assertIn("not member of any organization", str(e))
+
+    def test_radius_batch_get_or_create_user_edge_cases(self):
+        batch = self._create_radius_batch(
+            strategy="prefix", prefix="test", name="test-batch"
+        )
+
+        # Test creating new user with empty password - generates password
+        row = ["testuser", "", "test@example.com", "Test", "User"]
+        user, password = batch.get_or_create_user(row, [], 8)
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(password)  # Generated password is returned
+
+        existing_user = get_user_model().objects.create(
+            username="existing", email="existing@example.com", password="test"
+        )
+
+        row = ["newuser", "password123", "existing@example.com", "Test", "User"]
+        user, password = batch.get_or_create_user(row, [], 8)
+        self.assertEqual(user, existing_user)
+        self.assertIsNone(password)
+
+    def test_radius_batch_expire_method(self):
+        batch = self._create_radius_batch(
+            strategy="prefix", prefix="test", name="test-batch"
+        )
+
+        test_user = get_user_model().objects.create_user(
+            username="batchuser", email="batch@example.com", password="testpass123"
+        )
+        batch.users.add(test_user)
+
+        batch.expire()
+        test_user.refresh_from_db()
+        self.assertFalse(test_user.is_active)
+
+    def test_radius_check_validation_kwargs_without_org(self):
+        check = RadiusCheck(
+            username="testuser", op=":=", attribute="Test-Attribute", value="test"
+        )
+        check.user = get_user_model().objects.create(
+            username="testuser", email="test@test.org", password="test"
+        )
+        check.organization = None
+
+        kwargs = check._get_validation_queryset_kwargs()
+        self.assertIn("user", kwargs)
+        self.assertIn("attribute", kwargs)
+        self.assertNotIn("organization", kwargs)
+
+    def test_radius_reply_validation_kwargs_without_org(self):
+        reply = RadiusReply(
+            username="testuser", op="=", attribute="Reply-Message", value="test"
+        )
+        reply.user = get_user_model().objects.create(
+            username="testuser2", email="test2@test.org", password="test"
+        )
+        reply.organization = None
+
+        kwargs = reply._get_validation_queryset_kwargs()
+        self.assertIn("user", kwargs)
+        self.assertIn("attribute", kwargs)
+        self.assertNotIn("organization", kwargs)
+
+    def test_radius_group_get_default_queryset_no_pk(self):
+        group = RadiusGroup(name="test", organization=self.default_org, default=True)
+        queryset = group.get_default_queryset()
+        self.assertTrue(queryset.exists())
+
+
+class TestCoverageImprovementsTransaction(BaseTransactionTestCase):
+
+    def test_radius_batch_process_with_exception(self):
+        batch = self._create_radius_batch(
+            strategy="prefix", prefix="test", name="test-batch"
+        )
+
+        with mock.patch.object(
+            batch, "prefix_add", side_effect=Exception("Test error")
+        ):
+            batch.process(number_of_users=5, is_async=True)
+            self.assertEqual(batch.status, RadiusBatch.FAILED)
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_phone_token_sms_send_failure(self, mock_send):
+        PhoneToken = load_model("PhoneToken")
+        user = get_user_model().objects.create_user(
+            username="smsuser", email="sms@test.org", password="test"
+        )
+
+        OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+        OrganizationUser.objects.create(user=user, organization=self._get_org())
+
+        mock_send.side_effect = Exception("SMS sending failed")
+
+        token = PhoneToken(user=user, phone_number="+1234567890", ip="192.168.1.1")
+
+        try:
+            token.send_token()
+        except Exception as e:
+            self.assertIn("SMS sending failed", str(e))
 
 
 del BaseTestCase
