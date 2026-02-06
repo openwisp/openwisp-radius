@@ -564,3 +564,27 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+
+    def test_convert_called_station_id_command_wrapper(self):
+        from ..management.commands.convert_called_station_id import Command
+
+        command = Command()
+        self.assertIsNotNone(command)
+        from ..management.commands.base.convert_called_station_id import (
+            BaseConvertCalledStationIdCommand,
+        )
+
+        self.assertIsInstance(command, BaseConvertCalledStationIdCommand)
+
+    def test_prefix_add_users_command_wrapper(self):
+        from ..management.commands.prefix_add_users import Command
+
+        command = Command()
+        self.assertIsNotNone(command)
+        from ..management.commands.base import BatchAddMixin
+        from ..management.commands.base.prefix_add_users import (
+            BasePrefixAddUsersCommand,
+        )
+
+        self.assertIsInstance(command, BatchAddMixin)
+        self.assertIsInstance(command, BasePrefixAddUsersCommand)
