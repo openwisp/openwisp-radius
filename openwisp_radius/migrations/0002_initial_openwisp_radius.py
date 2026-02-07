@@ -248,7 +248,7 @@ class Migration(migrations.Migration):
                         max_length=32,
                         validators=[
                             django.core.validators.RegexValidator(
-                                re.compile("^[^\\s/\\.]+$"),
+                                re.compile(r"^[^\\s/\.]+$"),
                                 code="invalid",
                                 message=(
                                     "This value must not contain spaces, "

@@ -90,7 +90,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 "nas_ip_address": "192.168.182.3",
                 "framed_ipv6_prefix": "::/64",
                 "calling_station_id": str(EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix)),
-                "called_station_id": "AA-AA-AA-AA-AA-0A",
+                "called_station_id": "cc:cc:cc:cc:cc:0c",
             }
         )
         with self.subTest("Settings disabled"):
@@ -98,7 +98,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options["unique_id"] = "113"
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "AA-AA-AA-AA-AA-0A")
+            self.assertEqual(radiusaccounting.called_station_id, "cc:cc:cc:cc:cc:0c")
 
         RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
         RadiusAppConfig.connect_signals()
@@ -109,15 +109,15 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options["organization"] = self._create_org(name="new-org")
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "AA-AA-AA-AA-AA-0A")
+            self.assertEqual(radiusaccounting.called_station_id, "cc:cc:cc:cc:cc:0c")
 
         with self.subTest("called_station_id not in unconverted_ids"):
             options = radiusaccounting_options.copy()
-            options["called_station_id"] = "EE-EE-EE-EE-EE-EE"
+            options["called_station_id"] = "ee:ee:ee:ee:ee:ee"
             options["unique_id"] = "112"
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "EE-EE-EE-EE-EE-EE")
+            self.assertEqual(radiusaccounting.called_station_id, "ee:ee:ee:ee:ee:ee")
 
         with self.subTest("Ideal condition"):
             with self._get_openvpn_status_mock():
@@ -126,7 +126,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 radiusaccounting = self._create_radius_accounting(**options)
                 radiusaccounting.refresh_from_db()
                 self.assertEqual(
-                    radiusaccounting.called_station_id, "CC-CC-CC-CC-CC-0C"
+                    radiusaccounting.called_station_id, "cc:cc:cc:cc:cc:0c"
                 )
 
     def test_multiple_accounting_sessions(self):
@@ -137,7 +137,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 "nas_ip_address": "192.168.182.3",
                 "framed_ipv6_prefix": "::/64",
                 "calling_station_id": str(EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix)),
-                "called_station_id": "AA-AA-AA-AA-AA-0A",
+                "called_station_id": "aa:aa:aa:aa:aa:0a",
             }
         )
 
