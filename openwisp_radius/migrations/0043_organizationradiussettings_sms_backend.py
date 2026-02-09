@@ -6,13 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('openwisp_radius', '0042_set_existing_batches_completed'),
+        ("openwisp_radius", "0042_set_existing_batches_completed"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organizationradiussettings',
-            name='sms_backend',
-            field=models.CharField(blank=True, help_text='Optional dotted path to an SMS backend. If empty, the global SMS_BACKEND setting is used.', max_length=255),
+            model_name="organizationradiussettings",
+            name="sms_backend",
+            field=models.CharField(
+                blank=True,
+                help_text=(
+                    "Optional dotted path to an SMS backend. "
+                    "If empty, the global SMS_BACKEND setting is used."
+                ),
+                max_length=255,
+            ),
         ),
     ]
