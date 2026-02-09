@@ -602,6 +602,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     "sms_message",
                     "allowed_mobile_prefixes",
                     "sms_cooldown",
+                    "sms_backend",
                     "sms_meta_data",
                 ),
                 "classes": ("org-sms-options",),

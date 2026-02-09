@@ -13,6 +13,7 @@ from django.core.validators import validate_email
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.utils.module_loading import import_string
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
@@ -101,14 +102,31 @@ def generate_sms_token():
 
 
 class SmsMessage(BaseSmsMessage):
-    def send(self, fail_silently=False, meta_data=None):
+    def get_connection(self, fail_silently=False, organization=None):
+        backend_path = None
+        if organization:
+            backend_path = get_organization_radius_settings(organization, "sms_backend")
+
+        if backend_path:
+            backend_cls = import_string(backend_path)
+            try:
+                return backend_cls(fail_silently=fail_silently)
+            except TypeError:
+                return backend_cls()
+
+        return super().get_connection(fail_silently)
+
+    def send(self, fail_silently=False, meta_data=None, organization=None):
         """
         Customized send method that allows passing
         custom meta data configuration to the SMS backend
         """
         if not self.to:
             return 0
-        backend_instance = self.get_connection(fail_silently)
+        backend_instance = self.get_connection(
+            fail_silently=fail_silently,
+            organization=organization,
+        )
         args = [[self]]
         if meta_data and getattr(backend_instance, "supports_meta_data", False):
             args.append(meta_data)

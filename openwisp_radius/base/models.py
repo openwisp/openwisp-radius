@@ -1248,6 +1248,15 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         ),
         verbose_name=_("SMS meta data"),
     )
+    sms_backend = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_(
+            "Optional dotted path to an SMS backend. "
+            "If empty, the global SMS_BACKEND setting is used."
+        ),
+    )
+
     freeradius_allowed_hosts = FallbackTextField(
         help_text=_GET_IP_LIST_HELP_TEXT,
         fallback=",".join(app_settings.FREERADIUS_ALLOWED_HOSTS),
