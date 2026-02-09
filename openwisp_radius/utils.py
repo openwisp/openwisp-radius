@@ -6,6 +6,7 @@ from datetime import timedelta
 from io import BytesIO, StringIO
 
 import swapper
+from contextlib import contextmanager
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -14,6 +15,7 @@ from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from django.utils.module_loading import import_string
 from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
@@ -101,14 +103,33 @@ def generate_sms_token():
 
 
 class SmsMessage(BaseSmsMessage):
-    def send(self, fail_silently=False, meta_data=None):
+    def get_connection(self, fail_silently=False, organization=None):
+        backend_path = None
+        if organization:
+            backend_path = get_organization_radius_settings(
+                organization, "sms_backend"
+            )
+
+        if backend_path:
+            backend_cls = import_string(backend_path)
+            try:
+                return backend_cls(fail_silently=fail_silently)
+            except TypeError:
+                return backend_cls()
+
+        return super().get_connection(fail_silently)
+
+    def send(self, fail_silently=False, meta_data=None, organization=None):
         """
         Customized send method that allows passing
         custom meta data configuration to the SMS backend
         """
         if not self.to:
             return 0
-        backend_instance = self.get_connection(fail_silently)
+        backend_instance = self.get_connection(
+            fail_silently=fail_silently,
+            organization=organization,
+        )
         args = [[self]]
         if meta_data and getattr(backend_instance, "supports_meta_data", False):
             args.append(meta_data)
@@ -417,3 +438,4 @@ def get_one_time_login_url(user, organization):
         return
 
     return login_url + get_query_string(user)
+
