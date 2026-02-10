@@ -300,10 +300,11 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
 class UserGroupCheckSerializer(serializers.ModelSerializer):
     result = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
+    reset = serializers.SerializerMethodField()
 
     class Meta:
         model = RadiusGroupCheck
-        fields = ("attribute", "op", "value", "result", "type")
+        fields = ("attribute", "op", "value", "result", "type", "reset")
 
     def get_result(self, obj):
         try:
@@ -328,6 +329,19 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
             return None
         else:
             return counter.get_attribute_type()
+
+    def get_reset(self, obj):
+        try:
+            Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
+            counter = Counter(
+                user=self.context["user"],
+                group=self.context["group"],
+                group_check=obj,
+            )
+            _, end_time = counter.get_reset_timestamps()
+            return end_time
+        except (SkipCheck, ValueError, KeyError):
+            return None
 
 
 class UserRadiusUsageSerializer(serializers.Serializer):
