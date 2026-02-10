@@ -1299,6 +1299,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_org_user(user=admin_user, organization=org1, is_admin=True)
         target_user = self._create_user(username="target_user", email="target@test.com")
         self._create_org_user(user=target_user, organization=org1)
+        self._create_org_user(user=target_user, organization=org2)
         # Create a user in org2 that admin_user should not be able to access
         org2_user = self._create_user(username="org2_user", email="org2@test.com")
         self._create_org_user(user=org2_user, organization=org2)
@@ -1367,10 +1368,26 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         with self.subTest("Cannot create RadiusUserGroup with group from other org"):
-            self._create_org_user(user=admin_user, organization=org2, is_admin=True)
+            # target_user is member of org2,
+            # but admin_user can only manage org1
             org2_group = RadiusGroup.objects.get(
                 organization=org2, name="org-2-power-users"
             )
+            response = self.client.post(
+                url,
+                {"group": str(org2_group.pk)},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("group", response.data)
+            self.assertEqual(response.data["group"][0].code, "does_not_exist")
+
+            # target_user is only member of org1,
+            # admin_user can manage both org1 and org2
+            OrganizationUser.objects.filter(
+                user=target_user, organization=org2
+            ).delete()
+            self._create_org_user(user=target_user, organization=org2, is_admin=True)
             response = self.client.post(
                 url,
                 {"group": str(org2_group.pk)},
