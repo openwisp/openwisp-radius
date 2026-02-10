@@ -1292,6 +1292,223 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             response = self.client.delete(url_org2)
             self.assertEqual(response.status_code, 404)
 
+    def test_radius_user_group_list(self):
+        org1 = self._create_org(name="Org 1")
+        org2 = self._create_org(name="Org 2")
+        admin_user = self._create_user(username="admin_user", email="admin@test.com")
+        self._create_org_user(user=admin_user, organization=org1, is_admin=True)
+        target_user = self._create_user(username="target_user", email="target@test.com")
+        self._create_org_user(user=target_user, organization=org1)
+        self._create_org_user(user=target_user, organization=org2)
+        # Create a user in org2 that admin_user should not be able to access
+        org2_user = self._create_user(username="org2_user", email="org2@test.com")
+        self._create_org_user(user=org2_user, organization=org2)
+        org1_group = RadiusGroup.objects.get(organization=org1, name="org-1-users")
+        rug = self._create_radius_usergroup(
+            user=target_user, group=org1_group, priority=1
+        )
+        url = reverse("radius:radius_user_group_list", args=[target_user.pk])
+        org2_user_url = reverse("radius:radius_user_group_list", args=[org2_user.pk])
+
+        with self.subTest("Unauthenticated access"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.force_login(user=admin_user)
+        with self.subTest("Access without permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            response = self.client.post(
+                url, {"group": str(org1_group.pk)}, content_type="application/json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self._add_model_permission(admin_user, RadiusUserGroup, ["view", "add"])
+        with self.subTest("List RadiusUserGroups"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            data = response.data
+            self.assertEqual(data["count"], 1)
+            self.assertEqual(data["results"][0]["id"], str(rug.pk))
+
+        with self.subTest("Create RadiusUserGroup"):
+            org1_power_users = RadiusGroup.objects.get(
+                organization=org1, name="org-1-power-users"
+            )
+            response = self.client.post(
+                url,
+                {"group": str(org1_power_users.pk), "priority": 2},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(
+                RadiusUserGroup.objects.filter(user=target_user).count(), 2
+            )
+
+        with self.subTest("Cannot access user from other organization"):
+            response = self.client.get(org2_user_url)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        with self.subTest("Cannot create for user not in admin's organization"):
+            org2_user2 = self._create_user(
+                username="org2_user2", email="org2user2@test.com"
+            )
+            self._create_org_user(user=org2_user2, organization=org2)
+            org2_user2_url = reverse(
+                "radius:radius_user_group_list", args=[org2_user2.pk]
+            )
+            org1_group = RadiusGroup.objects.get(
+                organization=org1, name="org-1-power-users"
+            )
+            response = self.client.post(
+                org2_user2_url,
+                {"group": str(org1_group.pk)},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        with self.subTest("Cannot create RadiusUserGroup with group from other org"):
+            # target_user is member of org2,
+            # but admin_user can only manage org1
+            org2_group = RadiusGroup.objects.get(
+                organization=org2, name="org-2-power-users"
+            )
+            response = self.client.post(
+                url,
+                {"group": str(org2_group.pk)},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("group", response.data)
+            self.assertEqual(response.data["group"][0].code, "does_not_exist")
+
+            # target_user is only member of org1,
+            # admin_user can manage both org1 and org2
+            OrganizationUser.objects.filter(
+                user=target_user, organization=org2
+            ).delete()
+            self._create_org_user(user=target_user, organization=org2, is_admin=True)
+            response = self.client.post(
+                url,
+                {"group": str(org2_group.pk)},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("group", response.data)
+            self.assertEqual(response.data["group"][0].code, "does_not_exist")
+
+        with self.subTest("Superuser can access any user"):
+            superuser = self._get_admin()
+            self.client.force_login(user=superuser)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            response = self.client.get(org2_user_url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_radius_user_group_detail(self):
+        org1 = self._create_org(name="Org 1")
+        org2 = self._create_org(name="Org 2")
+        admin_user = self._create_user(username="admin_user", email="admin@test.com")
+        self._create_org_user(user=admin_user, organization=org1, is_admin=True)
+        target_user = self._create_user(username="target_user", email="target@test.com")
+        self._create_org_user(user=target_user, organization=org1)
+        org1_default_group = RadiusGroup.objects.get(
+            organization=org1, name="org-1-users"
+        )
+        org1_power_users_group = RadiusGroup.objects.get(
+            organization=org1, name="org-1-power-users"
+        )
+        rug = self._create_radius_usergroup(
+            user=target_user, group=org1_default_group, priority=1
+        )
+        url = reverse("radius:radius_user_group_detail", args=[target_user.pk, rug.pk])
+
+        with self.subTest("Unauthenticated access"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+            response = self.client.patch(
+                url, {"priority": 5}, content_type="application/json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.force_login(user=admin_user)
+        with self.subTest("Access without permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self._add_model_permission(
+            admin_user, RadiusUserGroup, ["view", "change", "delete"]
+        )
+
+        with self.subTest("GET operation"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            data = response.json()
+            self.assertEqual(data["id"], str(rug.pk))
+            self.assertEqual(data["group"], str(org1_default_group.pk))
+
+        with self.subTest("PATCH operation"):
+            response = self.client.patch(
+                url, {"priority": 10}, content_type="application/json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            rug.refresh_from_db()
+            self.assertEqual(rug.priority, 10)
+
+        with self.subTest("PUT operation"):
+            response = self.client.put(
+                url,
+                {"group": str(org1_power_users_group.pk), "priority": 3},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            rug.refresh_from_db()
+            self.assertEqual(rug.group, org1_power_users_group)
+            self.assertEqual(rug.priority, 3)
+
+        with self.subTest("DELETE operation"):
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(RadiusUserGroup.objects.filter(pk=rug.pk).count(), 0)
+
+        with self.subTest("GET not found"):
+            fake_uuid = "00000000-0000-0000-0000-000000000000"
+            fake_url = reverse(
+                "radius:radius_user_group_detail", args=[target_user.pk, fake_uuid]
+            )
+            response = self.client.get(fake_url)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        with self.subTest("Cannot access RadiusUserGroup of user from other org"):
+            org2_user = self._create_user(username="org2_user", email="org2@test.com")
+            self._create_org_user(user=org2_user, organization=org2)
+            org2_rug = self._create_radius_usergroup(
+                user=org2_user,
+                group=RadiusGroup.objects.get(organization=org2, name="org-2-users"),
+                priority=1,
+            )
+            org2_url = reverse(
+                "radius:radius_user_group_detail", args=[org2_user.pk, org2_rug.pk]
+            )
+            response = self.client.get(org2_url)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        with self.subTest("Superuser can access any RadiusUserGroup"):
+            superuser = self._get_admin()
+            self.client.force_login(user=superuser)
+            response = self.client.get(org2_url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            # Patch RadiusUserGroup of org2_user
+            response = self.client.patch(
+                org2_url, {"priority": 7}, content_type="application/json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            org2_rug.refresh_from_db()
+            self.assertEqual(org2_rug.priority, 7)
+
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_user_radius_usage_view(self):

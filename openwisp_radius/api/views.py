@@ -48,7 +48,11 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.filters import OrganizationManagedFilter
-from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
+from openwisp_users.api.mixins import (
+    FilterByOrganizationManaged,
+    FilterByParentManaged,
+    ProtectedAPIMixin,
+)
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -69,6 +73,7 @@ from .serializers import (
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
     RadiusGroupSerializer,
+    RadiusUserGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -942,3 +947,99 @@ class RadiusGroupDetailView(
 
 
 radius_group_detail = RadiusGroupDetailView.as_view()
+
+
+class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
+    """
+    Base view for RadiusUserGroup management.
+    Provides user parent filtering and queryset logic.
+    """
+
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
+        "-created"
+    )
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if getattr(self, "swagger_fake_view", False):
+            return qs
+        return qs.filter(user_id=self.kwargs["user_pk"])
+
+    def get_parent_queryset(self):
+        """Get the parent user from the URL."""
+        return User.objects.filter(pk=self.kwargs["user_pk"])
+
+    def get_organization_queryset(self, qs):
+        """Filter users by organizations the request user manages."""
+        orgs = self.request.user.organizations_managed
+        app_label = User._meta.app_config.label
+        filter_kwargs = {
+            # exclude superusers
+            "is_superuser": False,
+            # ensure user is member of the org
+            f"{app_label}_organizationuser__organization_id__in": orgs,
+        }
+        return qs.filter(**filter_kwargs).distinct()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns the list of RADIUS user groups for a specific user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS user group assignment for the user.
+        """,
+    ),
+)
+class RadiusUserGroupListCreateView(BaseRadiusUserGroupView, ListCreateAPIView):
+    pagination_class = RadiusGroupPaginator
+
+
+radius_user_group_list = RadiusUserGroupListCreateView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS user group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+class RadiusUserGroupDetailView(BaseRadiusUserGroupView, RetrieveUpdateDestroyAPIView):
+    organization_field = "group__organization"
+
+
+radius_user_group_detail = RadiusUserGroupDetailView.as_view()
