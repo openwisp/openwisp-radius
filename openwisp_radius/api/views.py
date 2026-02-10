@@ -963,7 +963,7 @@ class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
     def get_queryset(self):
         qs = super().get_queryset()
         if getattr(self, "swagger_fake_view", False):
-            return super().get_queryset()
+            return qs
         return qs.filter(user_id=self.kwargs["user_pk"])
 
     def get_parent_queryset(self):

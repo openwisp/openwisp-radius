@@ -379,6 +379,8 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
             self.fields["group"].queryset = self.fields["group"].queryset.filter(
                 organization_id__in=self._user.organizations_dict.keys()
             )
+        else:
+            self.fields["group"].queryset = self.fields["group"].queryset.none()
 
     def validate(self, data):
         if self._user:
