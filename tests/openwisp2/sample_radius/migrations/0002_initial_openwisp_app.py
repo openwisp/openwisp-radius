@@ -7,7 +7,6 @@ from urllib.parse import urljoin
 import django.core.validators
 import django.db.models.deletion
 import django.utils.timezone
-import jsonfield.fields
 import model_utils.fields
 import private_storage.fields
 import private_storage.storage.files
@@ -543,7 +542,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "sms_meta_data",
-                    jsonfield.fields.JSONField(
+                    models.JSONField(
                         blank=True,
                         help_text=(
                             "Additional configuration for SMS backend in JSON format"
@@ -695,9 +694,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "user_credentials",
-                    jsonfield.fields.JSONField(
-                        blank=True, null=True, verbose_name="PDF"
-                    ),
+                    models.JSONField(blank=True, null=True, verbose_name="PDF"),
                 ),
                 (
                     "expiration_date",
