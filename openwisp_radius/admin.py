@@ -579,6 +579,7 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
                     "freeradius_allowed_hosts",
                     "coa_enabled",
                     "registration_enabled",
+                    "cross_organization_login_enabled",
                     "saml_registration_enabled",
                     "social_registration_enabled",
                     "mac_addr_roaming_enabled",

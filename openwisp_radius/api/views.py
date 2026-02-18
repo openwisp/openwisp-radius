@@ -328,6 +328,8 @@ class ObtainAuthTokenView(
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
             if get_organization_radius_settings(
+                self.organization, "cross_organization_login_enabled"
+            ) and get_organization_radius_settings(
                 self.organization, "registration_enabled"
             ):
                 if self._needs_identity_verification(
