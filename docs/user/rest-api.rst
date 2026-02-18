@@ -870,16 +870,103 @@ Batch CSV Download
 
 .. code-block:: text
 
-    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/<filename>
+    /api/v1/radius/organization/<organization-slug>/batch/<id>/csv/
 
-Responds only to **GET**.
+Responds only to **GET**. Allows downloading the CSV file used to import
+users for a specific batch user creation operation. Example:
 
-Parameters:
+.. code-block:: shell
 
-======== ===========
-Param    Description
-======== ===========
-slug     string
-id       string
-filename string
-======== ===========
+    curl -X GET \
+        'http://127.0.0.1:8000/api/v1/radius/organization/default/batch/f4943c8a-462e-40ba-89b6-91a2541c9cf4/csv/' \
+        -H 'Authorization: Bearer your-token-here'
+
+RADIUS Groups
++++++++++++++
+
+.. code-block:: text
+
+    /api/v1/radius/group/
+
+GET
+^^^
+
+This allows listing of RADIUS groups. It supports sorting by organization
+id and group name.
+
+.. code-block:: text
+
+    /api/v1/radius/group?search=<group_name>
+    /api/v1/radius/group?organization=<org_id>
+
+Filters
+"""""""
+
+================= ============================
+Filter Parameter  Description
+================= ============================
+search            Search groups by name
+organization      Filter organizations by id
+organization_slug Filter organizations by slug
+================= ============================
+
+Pagination
+""""""""""
+
+Pagination is provided using page number pagination, the default page size
+is 20, which can be overridden using the ``page_size`` parameter (maximum
+100).
+
+.. code-block:: text
+
+    {
+        "count": 42,
+        "next": "http://example.com/api/v1/radius/group/?page=2",
+        "previous": null,
+        "results": [...]
+    }
+
+POST
+^^^^
+
+Creates RADIUS Group.
+
+============ ====================
+Param        Description
+============ ====================
+name         Name of group
+organization Organization UUID
+description  Description of group
+============ ====================
+
+.. note::
+
+    The group name is automatically prefixed with the organization slug
+    when stored (for example: ``org-slug-Staff``).
+
+GET (detail)
+^^^^^^^^^^^^
+
+Returns a single RADIUS Group by its UUID.
+
+.. code-block:: text
+
+    /api/v1/radius/group/<uuid>
+
+PATCH
+^^^^^
+
+Partially updates a RADIUS group identified by its UUID.
+
+============ ====================
+Param        Description
+============ ====================
+name         Name of group
+organization Organization UUID
+description  Description of group
+============ ====================
+
+DELETE
+^^^^^^
+
+Deletes a RADIUS group identified by its UUID.

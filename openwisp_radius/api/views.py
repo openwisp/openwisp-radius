@@ -19,6 +19,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
+from django_filters import rest_framework as filters
 from django_filters.rest_framework import CharFilter, DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
@@ -26,12 +27,16 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
+    ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -42,6 +47,7 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
+from openwisp_users.api.filters import OrganizationManagedFilter
 from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
@@ -62,6 +68,7 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -84,6 +91,7 @@ RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroup = load_model("RadiusGroup")
 RadiusGroupCheck = load_model("RadiusGroupCheck")
 auth_backend = UsersAuthenticationBackend()
 
@@ -849,3 +857,90 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 
 
 radius_accounting = RadiusAccountingView.as_view()
+
+
+class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusGroup
+
+
+class RadiusGroupPaginator(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of RADIUS groups for the organizations managed by the user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS group for an organization managed by the user.
+        """,
+    ),
+)
+class RadiusGroupListView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
+):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.order_by("name")
+    filterset_class = RadiusGroupFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name"]
+    pagination_class = RadiusGroupPaginator
+
+
+radius_group_list = RadiusGroupListView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+class RadiusGroupDetailView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
+):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.order_by("name")
+
+
+radius_group_detail = RadiusGroupDetailView.as_view()
