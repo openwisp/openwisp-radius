@@ -3,8 +3,7 @@
 import json
 import logging
 
-import django.core.serializers.json
-from django.db import migrations, models
+from django.db import migrations
 
 logger = logging.getLogger(__name__)
 
@@ -40,30 +39,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name="organizationradiussettings",
-            name="sms_meta_data",
-            field=models.JSONField(
-                blank=True,
-                encoder=django.core.serializers.json.DjangoJSONEncoder,
-                help_text=(
-                    "Additional configuration for SMS backend in JSON format "
-                    "(optional, leave blank if unsure)"
-                ),
-                null=True,
-                verbose_name="SMS meta data",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="radiusbatch",
-            name="user_credentials",
-            field=models.JSONField(
-                blank=True,
-                encoder=django.core.serializers.json.DjangoJSONEncoder,
-                null=True,
-                verbose_name="PDF",
-            ),
-        ),
         migrations.RunPython(
             convert_user_credentials_data, reverse_code=migrations.RunPython.noop
         ),
