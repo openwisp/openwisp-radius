@@ -373,8 +373,10 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.context.get("view") and getattr(
-            self.context["view"], "get_parent_queryset", None
+        if (
+            self.context.get("view")
+            and getattr(self.context["view"], "get_parent_queryset", None)
+            and not getattr(self.context["view"], "swagger_fake_view", False)
         ):
             self._user = self.context["view"].get_parent_queryset().first()
         else:
