@@ -983,6 +983,18 @@ class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
         return qs.filter(**filter_kwargs).distinct()
 
 
+class RadiusUserGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    organization_slug = None
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusUserGroup
+        fields = ["group__organization", "group__organization__slug"]
+
+
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -1001,6 +1013,8 @@ class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
 )
 class RadiusUserGroupListCreateView(BaseRadiusUserGroupView, ListCreateAPIView):
     pagination_class = RadiusGroupPaginator
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RadiusUserGroupFilter
 
 
 radius_user_group_list = RadiusUserGroupListCreateView.as_view()

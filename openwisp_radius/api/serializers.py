@@ -373,8 +373,12 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        view = self.context.get("view")
-        self._user = view.get_parent_queryset().first()
+        if self.context.get("view") and getattr(
+            self.context["view"], "get_parent_queryset", None
+        ):
+            self._user = self.context["view"].get_parent_queryset().first()
+        else:
+            self._user = None
         if self._user:
             self.fields["group"].queryset = self.fields["group"].queryset.filter(
                 organization_id__in=self._user.organizations_dict.keys()
