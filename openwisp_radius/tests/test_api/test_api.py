@@ -1331,6 +1331,16 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(data["count"], 1)
             self.assertEqual(data["results"][0]["id"], str(rug.pk))
 
+        with self.subTest("Filter by organization query parameter"):
+            # requesting the same organization that the existing group belongs to
+            response = self.client.get(url + f"?group__organization={org1.pk}")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["count"], 1)
+            # a different organization should yield no results
+            response = self.client.get(url + f"?group__organization={org2.pk}")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("group__organization", response.data)
+
         with self.subTest("Create RadiusUserGroup"):
             org1_power_users = RadiusGroup.objects.get(
                 organization=org1, name="org-1-power-users"
