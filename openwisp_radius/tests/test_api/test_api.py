@@ -26,6 +26,7 @@ from rest_framework.test import APIClient
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
+    RadiusUserGroupSerializer,
     RadiusUserSerializer,
     UserGroupCheckSerializer,
 )
@@ -1397,7 +1398,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             OrganizationUser.objects.filter(
                 user=target_user, organization=org2
             ).delete()
-            self._create_org_user(user=target_user, organization=org2, is_admin=True)
+            self._create_org_user(user=admin_user, organization=org2, is_admin=True)
             response = self.client.post(
                 url,
                 {"group": str(org2_group.pk)},
@@ -1518,6 +1519,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             org2_rug.refresh_from_db()
             self.assertEqual(org2_rug.priority, 7)
+
+    def test_radius_user_group_serializer_without_view_context(self):
+        serializer = RadiusUserGroupSerializer(context={})
+        self.assertEqual(serializer._user, None)
+        self.assertEqual(serializer.fields["group"].queryset.count(), 0)
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):

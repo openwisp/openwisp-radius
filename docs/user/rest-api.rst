@@ -1020,6 +1020,18 @@ GET (detail)
 
 Returns a single RADIUS user group assignment by its UUID.
 
+PUT
+^^^
+
+Fully updates the RADIUS user group assignment.
+
+======== ==============================================
+Param    Description
+======== ==============================================
+group    UUID of the RADIUS group to assign (optional)
+priority Priority of the assignment (optional, integer)
+======== ==============================================
+
 PATCH
 ^^^^^
 
