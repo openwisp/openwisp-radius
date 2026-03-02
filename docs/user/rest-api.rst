@@ -980,7 +980,7 @@ Pagination is provided using page number pagination; default page size is
 
     GET /api/v1/users/user/<user_pk>/radius-group/
 
-It supports sorting by organization id and organization slug.
+It supports filtering by organization id and organization slug.
 
 Filters
 """""""
