@@ -62,7 +62,7 @@ setup(
         "Exscript~=2.6.28",
     ],
     extras_require={
-        "saml": ["djangosaml2==1.12.0"],
+        "saml": ["djangosaml2>=1.12.0,<1.13.0"],
         "openvpn_status": ["openvpn-status~=0.2.1"],
     },
     classifiers=[
