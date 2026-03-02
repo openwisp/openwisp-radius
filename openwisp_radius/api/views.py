@@ -957,8 +957,18 @@ class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return self.queryset.none()
-        qs = super().get_queryset()
-        return qs.filter(user_id=self.kwargs["user_pk"])
+        qs = (
+            super()
+            .get_queryset()
+            .filter(
+                user_id=self.kwargs["user_pk"],
+            )
+        )
+        if self.request.user.is_superuser:
+            return qs
+        return qs.filter(
+            group__organization__in=self.request.user.organizations_managed
+        )
 
     def get_parent_queryset(self):
         """Get the parent user from the URL."""

@@ -1308,6 +1308,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         rug = self._create_radius_usergroup(
             user=target_user, group=org1_group, priority=1
         )
+        org2_group = RadiusGroup.objects.get(organization=org2, name="org-2-users")
+        self._create_radius_usergroup(user=target_user, group=org2_group, priority=1)
         url = reverse("radius:radius_user_group_list", args=[target_user.pk])
         org2_user_url = reverse("radius:radius_user_group_list", args=[org2_user.pk])
 
@@ -1353,7 +1355,10 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(
-                RadiusUserGroup.objects.filter(user=target_user).count(), 2
+                RadiusUserGroup.objects.filter(
+                    user=target_user, group__organization=org1
+                ).count(),
+                2,
             )
 
         with self.subTest("Cannot access user from other organization"):
