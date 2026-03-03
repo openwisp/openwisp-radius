@@ -1072,6 +1072,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 "result": None,
                 "type": None,
                 "value": "2000000000",
+                "reset": None,
             },
         )
 
@@ -1317,6 +1318,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 0,
                     "type": "seconds",
+                    "reset": checks[0]["reset"],
                 },
             )
             self.assertDictEqual(
@@ -1327,6 +1329,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 0,
                     "type": "bytes",
+                    "reset": checks[1]["reset"],
                 },
             )
 
@@ -1358,6 +1361,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 261,
                     "type": "seconds",
+                    "reset": checks[0]["reset"],
                 },
             )
             self.assertDictEqual(
@@ -1368,6 +1372,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 2000000000,
                     "type": "bytes",
+                    "reset": checks[1]["reset"],
                 },
             )
 
@@ -1396,6 +1401,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 522,
                     "type": "seconds",
+                    "reset": checks[0]["reset"],
                 },
             )
             self.assertDictEqual(
@@ -1406,6 +1412,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 3000000000,
                     "type": "bytes",
+                    "reset": checks[1]["reset"],
                 },
             )
 
@@ -1434,6 +1441,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 783,
                     "type": "seconds",
+                    "reset": checks[0]["reset"],
                 },
             )
             self.assertDictEqual(
@@ -1444,6 +1452,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 3000000000,
                     "type": "bytes",
+                    "reset": checks[1]["reset"],
                 },
             )
 
@@ -1470,6 +1479,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 "result": None,
                 "type": None,
                 "value": "2000000000",
+                "reset": None,
             },
         )
 
