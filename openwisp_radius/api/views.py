@@ -971,7 +971,6 @@ class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
         )
 
     def get_parent_queryset(self):
-        """Get the parent user from the URL."""
         return User.objects.filter(pk=self.kwargs["user_pk"])
 
     def get_organization_queryset(self, qs):
@@ -992,6 +991,7 @@ class RadiusUserGroupFilter(OrganizationManagedFilter, filters.FilterSet):
     Filter RADIUS groups by organizations managed by the user.
     """
 
+    # Disable parent's organization_slug; use group__organization__slug instead
     organization_slug = None
 
     class Meta(OrganizationManagedFilter.Meta):
