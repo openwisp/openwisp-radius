@@ -1484,6 +1484,17 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(rug.group, org1_power_users_group)
             self.assertEqual(rug.priority, 3)
 
+        with self.subTest("PUT without group field"):
+            response = self.client.put(
+                url,
+                {"priority": 4},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            rug.refresh_from_db()
+            self.assertEqual(rug.group, org1_power_users_group)
+            self.assertEqual(rug.priority, 4)
+
         with self.subTest("DELETE operation"):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
