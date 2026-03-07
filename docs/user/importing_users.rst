@@ -118,7 +118,7 @@ See :ref:`API documentation: Batch user creation
 <radius_batch_user_creation>`.
 
 Real-time batch status via WebSocket
--------------------------------------
+------------------------------------
 
 When the number of users to import meets or exceeds
 :ref:`OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD

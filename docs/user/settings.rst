@@ -128,9 +128,8 @@ For batches smaller than the threshold, users will be created immediately
 .. note::
 
     When batch processing runs asynchronously, the final batch status
-    (``"completed"`` or ``"failed"``) is delivered to connected clients
-    in real time via the :ref:`WebSocket API
-    <radius_websocket_api>`.
+    (``"completed"`` or ``"failed"``) is delivered to connected clients in
+    real time via the :ref:`WebSocket API <radius_websocket_api>`.
 
 ``OPENWISP_RADIUS_BATCH_DEFAULT_PASSWORD_LENGTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

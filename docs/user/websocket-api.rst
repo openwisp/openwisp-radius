@@ -13,8 +13,8 @@ Overview
 The WebSocket API provides real-time status updates for batch user
 creation operations.
 
-When a batch is processed asynchronously (i.e., the number of users
-to generate or import meets or exceeds
+When a batch is processed asynchronously (i.e., the number of users to
+generate or import meets or exceeds
 :ref:`OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD
 <openwisp_radius_batch_async_threshold>`), the Django admin interface
 automatically connects to the relevant endpoint to receive live status
@@ -28,7 +28,7 @@ All endpoints:
   after the connection is established.
 
 Authentication and Authorization
----------------------------------
+--------------------------------
 
 All WebSocket endpoints require an authenticated user.
 
@@ -57,10 +57,10 @@ If any check fails, the server closes the connection without sending any
 message.
 
 Connection Endpoints
----------------------
+--------------------
 
 1. Batch User Creation Status
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This endpoint delivers real-time status updates for a single batch user
 creation operation.
@@ -88,9 +88,9 @@ A single batch user creation operation identified by its UUID.
 Server-Pushed Messages
 ++++++++++++++++++++++
 
-After the connection is established, the client does not need to send
-any messages. The server pushes exactly **one** message when batch
-processing finishes (either successfully or with an error).
+After the connection is established, the client does not need to send any
+messages. The server pushes exactly **one** message when batch processing
+finishes (either successfully or with an error).
 
 Message type: ``batch_status_update``
 
@@ -105,19 +105,19 @@ The ``status`` field contains one of the following values:
 .. list-table::
     :header-rows: 1
 
-    * - Value
+    - - Value
       - Description
-    * - ``"pending"``
+    - - ``"pending"``
       - The batch has been created but processing has not yet started.
         This value is not sent via WebSocket; it is visible only through
         the REST API or admin interface.
-    * - ``"processing"``
-      - The batch is currently being processed. This value is not sent
-        via WebSocket; it is the status visible when the admin page is
-        opened and the WebSocket connection is established.
-    * - ``"completed"``
+    - - ``"processing"``
+      - The batch is currently being processed. This value is not sent via
+        WebSocket; it is the status visible when the admin page is opened
+        and the WebSocket connection is established.
+    - - ``"completed"``
       - Batch processing finished successfully. This is a terminal status.
-    * - ``"failed"``
+    - - ``"failed"``
       - Batch processing encountered an error. This is a terminal status.
 
 .. note::
@@ -130,8 +130,8 @@ Connection Lifecycle
 ++++++++++++++++++++
 
 1. The client connects to the endpoint with the batch UUID in the URL.
-2. If the user is authorized, the connection is accepted and the client
-   is added to the channel group ``radius_batch_<batch-id>``.
+2. If the user is authorized, the connection is accepted and the client is
+   added to the channel group ``radius_batch_<batch-id>``.
 3. When batch processing finishes, the server sends one
    ``batch_status_update`` message containing the terminal status.
 4. The client should close the connection upon receiving ``"completed"``
@@ -139,7 +139,7 @@ Connection Lifecycle
 5. On disconnect, the client is removed from the channel group.
 
 Example Client (JavaScript)
-++++++++++++++++++++++++++++
++++++++++++++++++++++++++++
 
 Example based on the admin interface implementation:
 
@@ -164,7 +164,7 @@ Example based on the admin interface implementation:
 Replace ``<batch-id>`` with the UUID of the batch object.
 
 Deployment Requirements
-------------------------
+-----------------------
 
 WebSocket support requires server-side configuration beyond the default
 Django setup. The following components must be in place.
@@ -172,12 +172,12 @@ Django setup. The following components must be in place.
 ASGI Server
 ~~~~~~~~~~~
 
-Django's default WSGI server does not support WebSockets. You must use
-an ASGI-compatible server such as `Daphne
+Django's default WSGI server does not support WebSockets. You must use an
+ASGI-compatible server such as `Daphne
 <https://github.com/django/daphne>`_.
 
-Install Daphne and add it as the **first entry** in ``INSTALLED_APPS``
-so that Django uses it as the ASGI server:
+Install Daphne and add it as the **first entry** in ``INSTALLED_APPS`` so
+that Django uses it as the ASGI server:
 
 .. code-block:: python
 
@@ -218,8 +218,8 @@ Install ``channels_redis`` and configure it:
 WebSocket Routing
 ~~~~~~~~~~~~~~~~~
 
-Import ``openwisp_radius.routing.websocket_urlpatterns`` and include it
-in your project's ``URLRouter``. Example ASGI routing module:
+Import ``openwisp_radius.routing.websocket_urlpatterns`` and include it in
+your project's ``URLRouter``. Example ASGI routing module:
 
 .. code-block:: python
 
