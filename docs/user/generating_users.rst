@@ -84,3 +84,16 @@ REST API: Batch user creation
 
 See API documentation: :ref:`Batch user creation
 <radius_batch_user_creation>`.
+
+Real-time batch status via WebSocket
+------------------------------------
+
+When the number of users to generate meets or exceeds
+:ref:`OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD
+<openwisp_radius_batch_async_threshold>`, the operation runs
+asynchronously via Celery and the batch status is delivered to connected
+clients in real time.
+
+See :ref:`WebSocket API Reference: Batch User Creation Status
+<radius_websocket_api>` for the endpoint URL, message format, and
+integration example.

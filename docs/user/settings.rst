@@ -111,6 +111,8 @@ The default encryption format for storing radius check values.
 A list of disabled encryption formats, by default all formats are enabled
 in order to keep backward compatibility with legacy systems.
 
+.. _openwisp_radius_batch_async_threshold:
+
 ``OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,6 +124,12 @@ background task (asynchronously) using Celery. This prevents timeouts and
 keeps the user interface responsive when creating a large number of users.
 For batches smaller than the threshold, users will be created immediately
 (synchronously).
+
+.. note::
+
+    When batch processing runs asynchronously, the final batch status
+    (``"completed"`` or ``"failed"``) is delivered to connected clients in
+    real time via the :ref:`WebSocket API <radius_websocket_api>`.
 
 ``OPENWISP_RADIUS_BATCH_DEFAULT_PASSWORD_LENGTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
