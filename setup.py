@@ -51,7 +51,7 @@ setup(
         "passlib~=1.7.1",
         "djangorestframework-link-header-pagination~=0.1.1",
         "weasyprint>=65,<68",
-        "dj-rest-auth>=6.0,<7.1",
+        "dj-rest-auth>=6.0,<7.2",
         "django-sendsms~=0.5.0",
         "django-private-storage~=3.1.0",
         "django-ipware>=5.0,<7.1",
@@ -61,7 +61,7 @@ setup(
         "Exscript~=2.6.28",
     ],
     extras_require={
-        "saml": ["djangosaml2==1.11.1"],
+        "saml": ["djangosaml2>=1.12.0,<1.13.0"],
         "openvpn_status": ["openvpn-status~=0.2.1"],
     },
     classifiers=[

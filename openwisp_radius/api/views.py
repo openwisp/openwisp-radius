@@ -609,13 +609,11 @@ class CreatePhoneTokenView(
     )
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, sends a code via SMS to the
             phone number of the user.
-            """
-        ),
+            """),
         request_body=no_body,
         responses={201: ""},
     )
@@ -689,14 +687,12 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
     serializer_class = serializers.Serializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, allows checking whether an active
             SMS token was already requested for the mobile phone number
             of the logged in account.
-            """
-        ),
+            """),
         responses={200: '`{"active":"true/false"}`'},
     )
     def get(self, request, *args, **kwargs):
@@ -780,13 +776,11 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     serializer_class = ChangePhoneNumberSerializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Allows users to change their phone number, will flag the
             user as inactive and send them a verification code via SMS.
-            """
-        ),
+            """),
         responses={200: ""},
     )
     def post(self, request, *args, **kwargs):
