@@ -1495,6 +1495,21 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(rug.group, org1_power_users_group)
             self.assertEqual(rug.priority, 4)
 
+        with self.subTest("Org manager cannot assign group from another org"):
+            self._create_org_user(user=target_user, organization=org2)
+            org2_group = RadiusGroup.objects.get(organization=org2, name="org-2-users")
+            response = self.client.put(
+                url,
+                {"group": str(org2_group.pk), "priority": 8},
+                content_type="application/json",
+            )
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+            )
+            rug.refresh_from_db()
+            self.assertEqual(rug.group, org1_power_users_group)
+
         with self.subTest("DELETE operation"):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
