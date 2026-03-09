@@ -384,8 +384,10 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
             self._user = None
         if self._user and view and getattr(view.request, "user", None):
             orgs = view.request.user.organizations_managed
-            self.fields["group"].queryset = self.fields["group"].queryset.filter(
-                organization__in=orgs
+            self.fields["group"].queryset = (
+                self.fields["group"]
+                .queryset.filter(organization__in=orgs)
+                .filter(organization__in=self._user.organizations_dict.keys())
             )
         else:
             self.fields["group"].queryset = self.fields["group"].queryset.none()
