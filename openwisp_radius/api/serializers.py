@@ -365,6 +365,43 @@ class RadiusGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSerializ
         return data
 
 
+class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSerializer):
+    class Meta:
+        model = RadiusUserGroup
+        fields = ("id", "group", "priority", "created", "modified")
+        read_only_fields = ("id", "created", "modified")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        view = self.context.get("view")
+        if (
+            view
+            and getattr(view, "get_parent_queryset", None)
+            and not getattr(view, "swagger_fake_view", False)
+        ):
+            self._user = view.get_parent_queryset().first()
+        else:
+            self._user = None
+        if self._user and view and getattr(view.request, "user", None):
+            # Restrict available groups to organizations that the request user manages
+            # and that the edited user belongs to. This prevents assigning groups from
+            # organizations outside the request user's management scope.
+            self.fields["group"].queryset = self.fields["group"].queryset.filter(
+                Q(organization__in=view.request.user.organizations_managed)
+                & Q(organization__in=self._user.organizations_dict.keys())
+            )
+        else:
+            self.fields["group"].queryset = self.fields["group"].queryset.none()
+
+    def validate(self, data):
+        if self._user:
+            if "username" not in data:
+                data["username"] = self._user.username
+            if "user" not in data:
+                data["user"] = self._user
+        return super().validate(data)
+
+
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
