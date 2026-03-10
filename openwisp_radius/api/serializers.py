@@ -383,11 +383,12 @@ class RadiusUserGroupSerializer(FilterSerializerByOrgManaged, ValidatedModelSeri
         else:
             self._user = None
         if self._user and view and getattr(view.request, "user", None):
-            orgs = view.request.user.organizations_managed
-            self.fields["group"].queryset = (
-                self.fields["group"]
-                .queryset.filter(organization__in=orgs)
-                .filter(organization__in=self._user.organizations_dict.keys())
+            # Restrict available groups to organizations that the request user manages
+            # and that the edited user belongs to. This prevents assigning groups from
+            # organizations outside the request user's management scope.
+            self.fields["group"].queryset = self.fields["group"].queryset.filter(
+                Q(organization__in=view.request.user.organizations_managed)
+                & Q(organization__in=self._user.organizations_dict.keys())
             )
         else:
             self.fields["group"].queryset = self.fields["group"].queryset.none()
