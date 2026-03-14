@@ -18,6 +18,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
+from django.db import IntegrityError
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -190,6 +191,24 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self._register_user(expect_201=False, expect_users=None)
         self.assertIn("username", response.data)
         self.assertIn("email", response.data)
+
+    def test_register_concurrent_username_collision(self):
+        # Simulate a race condition where two requests pass validation but
+        # the second save hits a DB unique constraint on the username field.
+        url = reverse("radius:rest_register", args=[self.default_org.slug])
+        params = {
+            "username": self._test_email,
+            "email": self._test_email,
+            "password1": "password",
+            "password2": "password",
+        }
+        with mock.patch(
+            "django.contrib.auth.base_user.AbstractBaseUser.save",
+            side_effect=IntegrityError("UNIQUE constraint failed: auth_user.username"),
+        ):
+            response = self.client.post(url, params)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("username", response.data)
 
     def test_register_duplicate_different_org(self):
         self.default_org.radius_settings.sms_verification = True

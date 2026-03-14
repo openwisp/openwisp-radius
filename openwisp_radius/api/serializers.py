@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
@@ -716,7 +717,12 @@ class RegisterSerializer(
             user.full_clean()
         except ValidationError as e:
             raise serializers.ValidationError(self._get_error_dict(e))
-        user.save()
+        try:
+            user.save()
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"username": [_("A user with that username already exists.")]}
+            )
         orgUser = OrganizationUser(organization=org, user=user)
         orgUser.full_clean()
         orgUser.save()
