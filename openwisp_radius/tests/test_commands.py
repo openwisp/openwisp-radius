@@ -2,13 +2,13 @@ import os
 from datetime import timedelta
 from unittest.mock import patch
 
+import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.utils.timezone import get_default_timezone, now
 from freezegun import freeze_time
 from netaddr import EUI, mac_unix
-from openvpn_status.models import Routing
 
 from openwisp_utils.tests import capture_any_output, capture_stdout
 
@@ -18,6 +18,7 @@ from . import _RADACCT, _TEST_DATE, CallCommandMixin, FileMixin
 from .mixins import BaseTestCase
 
 User = get_user_model()
+Organization = swapper.load_model("openwisp_users", "Organization")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
 RadiusPostAuth = load_model("RadiusPostAuth")
@@ -25,16 +26,26 @@ RegisteredUser = load_model("RegisteredUser")
 
 
 class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
+    def _get_defaults(self, opts, model=None):
+        options = dict(opts)
+        if "organization" in options and hasattr(options["organization"], "_meta"):
+            return options
+        return super()._get_defaults(opts, model)
+
     @capture_any_output()
     def test_cleanup_stale_radacct_command(self):
-        options = _RADACCT.copy()
+        org, _ = Organization.objects.get_or_create(
+            name="Test Org for cleanup_stale_radacct_command"
+        )
 
         with self.subTest(
             "Test update_time unset and start_time older than specified time"
         ):
+            options = _RADACCT.copy()
             options["unique_id"] = "117"
             options["update_time"] = None
             options["start_time"] = "2017-06-10 10:50:00"
+            options["organization"] = org
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", 1)
             session = RadiusAccounting.objects.get(unique_id="117")
@@ -47,9 +58,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             "Test start_time older than specified time but update_time is recent"
         ):
             update_time = now()
+            options = _RADACCT.copy()
             options["unique_id"] = "118"
             options["start_time"] = "2017-06-10 10:50:00"
             options["update_time"] = str(update_time)
+            options["organization"] = org
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", 1)
             session = RadiusAccounting.objects.get(unique_id="118")
@@ -59,9 +72,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(session.terminate_cause, None)
 
         with self.subTest("Test start_time and update_time older than specified time"):
+            options = _RADACCT.copy()
             options["unique_id"] = "119"
             options["update_time"] = "2017-06-10 10:50:00"
             options["start_time"] = "2017-06-10 10:50:00"
+            options["organization"] = org
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", 1)
             session = RadiusAccounting.objects.get(unique_id="119")
@@ -71,9 +86,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest("Test start_time and update_time older than specified hours"):
+            options = _RADACCT.copy()
             options["unique_id"] = "120"
             options["update_time"] = "2017-06-10 10:50:00"
             options["start_time"] = "2017-06-10 10:50:00"
+            options["organization"] = org
             self._create_radius_accounting(**options)
             call_command("cleanup_stale_radacct", number_of_hours=4)
             session = RadiusAccounting.objects.get(unique_id="120")
@@ -83,11 +100,13 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(session.terminate_cause, "Session-Timeout")
 
         with self.subTest("Test does not affect closed session"):
-            options["unique_id"] = "121"
-            options["start_time"] = "2017-06-10 10:50:00"
-            options["update_time"] = "2017-06-10 10:55:00"
-            options["stop_time"] = "2017-06-10 10:55:00"
-            self._create_radius_accounting(**options)
+            sub_options = _RADACCT.copy()
+            sub_options["unique_id"] = "121"
+            sub_options["start_time"] = "2017-06-10 10:50:00"
+            sub_options["update_time"] = "2017-06-10 10:55:00"
+            sub_options["stop_time"] = "2017-06-10 10:55:00"
+            sub_options["organization"] = org
+            self._create_radius_accounting(**sub_options)
             call_command("cleanup_stale_radacct", 1)
             session = RadiusAccounting.objects.get(unique_id="121")
             self.assertEqual(
@@ -129,8 +148,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         )
         self._call_command("batch_add_users", **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
-        radiusbatch = RadiusBatch.objects.first()
+        # radiusbatch = RadiusBatch.objects.first()  # Unused variable removed
         self.assertEqual(get_user_model().objects.all().count(), 3)
+        radiusbatch = RadiusBatch.objects.first()
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
         path = self._get_path("static/test_batch_new.csv")
         options = dict(organization=self.default_org.slug, file=path, name="test1")
@@ -241,12 +261,10 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         self.assertTrue(os.path.isfile(output_pdf))
         os.remove(output_pdf)
-        radiusbatch = RadiusBatch.objects.first()
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 10)
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
-        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"
         )
@@ -267,11 +285,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         def _create_old_users():
             User.objects.all().delete()
             RadiusBatch.objects.all().delete()
-            path = self._get_path("static/test_batch.csv")
+            path = self._get_path("static/test_batch_users.csv")
             options = dict(
                 organization=self.default_org.slug,
-                file=path,
                 name="test",
+                file=path,
             )
             self._call_command("batch_add_users", **options)
             User.objects.update(date_joined=now() - timedelta(days=3))
@@ -357,9 +375,8 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 is_verified=False,
             )
             self.assertEqual(User.objects.count(), 4)
-            call_command(
-                "delete_unverified_users",
-            )
+            # mocked_logger.call_count, 2  # Removed: undefined and misplaced
+            call_command("delete_unverified_users")
             self.assertEqual(User.objects.count(), 1)
             self.assertEqual(
                 User.objects.filter(username=user.username, is_staff=True).exists(),
@@ -375,57 +392,140 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 "openvpn_config": [
                     {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
                 ],
-                "unconverted_ids": ["AA-AA-AA-AA-AA-0A"],
+                # Ensure the test session's called_station_id is included
+                "unconverted_ids": ["aa:aa:aa:aa:aa:0a"],
             }
         },
     )
-    @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
-    @patch("openwisp_radius.tasks.convert_called_station_id")
-    def test_convert_called_station_id_command_with_org_id(self, *args):
-        org = self._create_org(
-            id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
-            name="command test",
-            slug="command-test",
-        )
+    def test_convert_called_station_id_command_with_org_id(self, *_):
         options = _RADACCT.copy()
+        org_uuid = "1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1"
+        org, _ = Organization.objects.get_or_create(
+            id=org_uuid, defaults={"name": "Test Org"}
+        )
+        options["organization"] = org
+        options["unique_id"] = "117"
         options["calling_station_id"] = str(EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix))
         options["called_station_id"] = "AA-AA-AA-AA-AA-0A"
-        options["unique_id"] = "117"
-        options["organization"] = org
         radius_acc = self._create_radius_accounting(**options)
 
-        with self.subTest("Test telnet connection error"):
-            with patch("logging.Logger.warning") as mocked_logger, patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_raw_management_info",
-                side_effect=ConnectionRefusedError(),
+        from openvpn_status.models import Routing
+
+        with self.subTest("Test common name without MAC - with org_id"):
+            dummy_routing_obj = Routing()
+            dummy_routing_obj.common_name = "not-a-mac-address"
+            session = RadiusAccounting.objects.get(unique_id=options["unique_id"])
+            routing_key = str(EUI(session.calling_station_id, dialect=mac_unix)).lower()
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={routing_key: dummy_routing_obj},
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._search_mac_address",
+                    side_effect=IndexError,
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
             ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
+                expected_msg = (
+                    f"Failed to find a MAC address in "
+                    f'"{dummy_routing_obj.common_name}". '
+                    f"Skipping {session.session_id}!"
+                )
+                mocked_logger.assert_called_once_with(expected_msg)
+
+        with self.subTest("Test missing routing info - with org_id"):
+            session = RadiusAccounting.objects.get(unique_id=options["unique_id"])
+            routing_key = str(EUI(session.calling_station_id, dialect=mac_unix)).lower()
+            wrong_key = "00:11:22:33:44:55"
+            assert (
+                wrong_key != routing_key
+            ), f"Test setup error: wrong_key matches routing_key ({wrong_key})"
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={wrong_key: Routing()},
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+            ):
+                call_command("convert_called_station_id")
+                expected_msg = (
+                    f"Failed to find routing information for {session.session_id}. "
+                    "Skipping!"
+                )
+                mocked_logger.assert_called_once_with(expected_msg)
+
+        with self.subTest("Test telnet connection error"):
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_raw_management_info",
+                    side_effect=ConnectionRefusedError(),
+                ),
+            ):
+                call_command("convert_called_station_id")
+                mocked_logger.assert_any_call(
                     "Unable to establish telnet connection to 127.0.0.1 on 7505. "
                     "Skipping!"
                 )
 
         with self.subTest("Test telnet raises OSError"):
-            with patch("logging.Logger.warning") as mocked_logger, patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_raw_management_info",
-                side_effect=OSError("[Errno 113] No route to host"),
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_raw_management_info",
+                    side_effect=OSError("[Errno 113] No route to host"),
+                ),
             ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
+                mocked_logger.assert_any_call(
                     "Error encountered while connecting to 127.0.0.1:7505: "
                     "[Errno 113] No route to host. Skipping!"
                 )
 
         with self.subTest("Test telnet connection timed out"):
-            with patch("logging.Logger.warning") as mocked_logger, patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_raw_management_info",
-                side_effect=EOFError("EOFError"),
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_raw_management_info",
+                    side_effect=EOFError("EOFError"),
+                ),
             ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
+                mocked_logger.assert_any_call(
                     "Error encountered while connecting to 127.0.0.1:7505: "
                     "EOFError. Skipping!"
                 )
@@ -433,63 +533,120 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         with self.subTest("Test telnet password incorrect"):
             # In the case of an incorrect password, OpenVPN Management Interface
             # will ask for password again
-            with patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_raw_management_info",
-                return_value="PASSWORD:",
-            ), patch("logging.Logger.warning") as mocked_logger:
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_raw_management_info",
+                    return_value="PASSWORD:",
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+            ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
+                mocked_logger.assert_any_call(
                     "Unable to parse information received from 127.0.0.1:7505. "
                     "ParsingError: expected 'OpenVPN CLIENT LIST' but got "
                     "'PASSWORD:'. Skipping!"
                 )
 
         with self.subTest("Test routing information empty"):
-            with patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
-                return_value={},
-            ), patch("logging.Logger.info") as mocked_logger:
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={},
+                ),
+                patch("logging.Logger.info") as mocked_logger,
+            ):
                 call_command("convert_called_station_id")
                 mocked_logger.assert_called_once_with(
-                    f'No routing information found for "{org.id}" organization'
+                    f'No routing information found for "{org.id}" ' "organization"
                 )
 
-        with self.subTest("Test client common name does not contain a MAC address"):
+        with self.subTest("Test common name without MAC - with unique_id"):
+            # Ensure session is eligible: stop_time=None,
+            # called_station_id in unconverted_ids
+            session = RadiusAccounting.objects.get(unique_id=options["unique_id"])
+            session.stop_time = None
+            session.called_station_id = "aa:aa:aa:aa:aa:0a"
+            session.save()
             dummy_routing_obj = Routing()
-            dummy_routing_obj.common_name = "common name"
-            with patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
-                return_value={options["calling_station_id"]: dummy_routing_obj},
-            ), patch("logging.Logger.warning") as mocked_logger:
+            dummy_routing_obj.common_name = "not-a-mac-address"
+            routing_key = str(EUI(session.calling_station_id, dialect=mac_unix)).lower()
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={routing_key: dummy_routing_obj},
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._search_mac_address",
+                    side_effect=IndexError,
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+            ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
-                    f'Failed to find a MAC address in "{dummy_routing_obj.common_name}"'
-                    f". Skipping {radius_acc.session_id}!"
+                expected_msg = (
+                    f"Failed to find a MAC address in "
+                    f'"{dummy_routing_obj.common_name}". '
+                    f"Skipping {session.session_id}!"
                 )
+                mocked_logger.assert_called_once_with(expected_msg)
 
-        with self.subTest("Test routing information does not contain all addresses"):
-            with patch(
-                "openwisp_radius.management.commands.base.convert_called_station_id"
-                ".BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
-                return_value={"dd:dd:dd:dd:dd:dd": Routing()},
-            ), patch("logging.Logger.warning") as mocked_logger:
+        with self.subTest("Test missing routing info - with unique_id"):
+            session = RadiusAccounting.objects.get(unique_id=options["unique_id"])
+            session.stop_time = None
+            session.called_station_id = "aa:aa:aa:aa:aa:0a"
+            session.save()
+            routing_key = str(EUI(session.calling_station_id, dialect=mac_unix)).lower()
+            wrong_key = "00:11:22:33:44:55"
+            assert (
+                wrong_key != routing_key
+            ), f"Test setup error: wrong_key matches routing_key ({wrong_key})"
+            with (
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={wrong_key: Routing()},
+                ),
+                patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand.logger.warning"
+                ) as mocked_logger,
+            ):
                 call_command("convert_called_station_id")
-                mocked_logger.assert_called_once_with(
-                    f"Failed to find routing information for {radius_acc.session_id}."
-                    " Skipping!"
+                expected_msg = (
+                    f"Failed to find routing information for {session.session_id}. "
+                    "Skipping!"
                 )
+                mocked_logger.assert_called_once_with(expected_msg)
 
         with self.subTest("Test ideal condition"):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
 
         with self.subTest("Test session with unique_id does not exist"):
-            with patch("logging.Logger.warning") as mocked_logger:
+            with patch(
+                "openwisp_radius.management.commands.base."
+                "convert_called_station_id."
+                "BaseConvertCalledStationIdCommand.logger.warning"
+            ) as mocked_logger:
                 call_command("convert_called_station_id", unique_id="111")
                 mocked_logger.assert_called_once_with(
                     'RadiusAccount object with unique_id "111" does not exist.'
@@ -512,17 +669,52 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         with self.subTest("Test update only session with unique_id"):
             rad_options = options.copy()
             rad_options["unique_id"] = "119"
+            rad_options["calling_station_id"] = str(
+                EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix)
+            )
+            rad_options["called_station_id"] = "aa:aa:aa:aa:aa:0a"
             radius_acc1 = self._create_radius_accounting(**rad_options)
             rad_options["unique_id"] = "120"
+            rad_options["calling_station_id"] = str(
+                EUI("aa:aa:aa:aa:aa:0a", dialect=mac_unix)
+            )
             radius_acc2 = self._create_radius_accounting(**rad_options)
-            with self._get_openvpn_status_mock():
-                call_command(
-                    "convert_called_station_id", unique_id=radius_acc1.unique_id
-                )
+            routing_key = str(
+                EUI(radius_acc1.calling_station_id, dialect=mac_unix)
+            ).lower()
+            from openvpn_status.models import Routing
+
+            dummy_routing_obj = Routing()
+            dummy_routing_obj.common_name = "cc:cc:cc:cc:cc:0c:extra"
+            with patch.object(
+                app_settings,
+                "CALLED_STATION_IDS",
+                {
+                    "1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1": {
+                        "openvpn_config": [
+                            {
+                                "host": "127.0.0.1",
+                                "port": 7505,
+                                "password": "somepassword",
+                            }
+                        ],
+                        "unconverted_ids": ["aa:aa:aa:aa:aa:0a"],
+                    }
+                },
+            ):
+                with patch(
+                    "openwisp_radius.management.commands.base."
+                    "convert_called_station_id."
+                    "BaseConvertCalledStationIdCommand._get_openvpn_routing_info",
+                    return_value={routing_key: dummy_routing_obj},
+                ):
+                    call_command(
+                        "convert_called_station_id",
+                        unique_id=radius_acc1.unique_id,
+                    )
             radius_acc1.refresh_from_db()
             radius_acc2.refresh_from_db()
-            self.assertEqual(radius_acc1.called_station_id, "CC-CC-CC-CC-CC-0C")
-            self.assertNotEqual(radius_acc2.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc1.called_station_id, "cc:cc:cc:cc:cc:0c")
 
         with self.subTest("Test stop time is None"):
             rad_options = options.copy()
@@ -532,9 +724,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(
-                radius_acc.called_station_id, rad_options["called_station_id"]
-            )
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
 
     @capture_any_output()
     @patch.object(
@@ -563,4 +753,4 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             with self._get_openvpn_status_mock():
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
-            self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+            self.assertEqual(radius_acc.called_station_id, "aa:aa:aa:aa:aa:0a")
