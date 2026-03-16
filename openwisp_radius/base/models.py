@@ -1338,8 +1338,11 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
     @property
     def freeradius_allowed_hosts_list(self):
         addresses = []
-        if self.freeradius_allowed_hosts:
-            addresses = self.freeradius_allowed_hosts.split(",")
+        addresses = [
+            (ip or "").strip()
+            for ip in (self.freeradius_allowed_hosts or "").split(",")
+            if (ip or "").strip()
+        ]
         return addresses
 
     @property
@@ -1383,7 +1386,9 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             else:
                 try:
                     for ip_address in allowed_hosts_set:
-                        ipaddress.ip_network(ip_address)
+                        ip_str = (ip_address or "").strip()
+                        if ip_str:
+                            ipaddress.ip_network(ip_str, strict=False)
                 except ValueError:
                     raise ValidationError(
                         {
