@@ -2385,6 +2385,67 @@ class TestTransactionClientIpApi(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
 
+    def test_ip_from_radsetting_cidr_range_valid(self):
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(
+                organization=self._get_org()
+            )
+        radsetting.freeradius_allowed_hosts = "172.18.0.0/16"
+        radsetting.save()
+
+        with mock.patch(
+            "openwisp_radius.api.freeradius_views.get_client_ip",
+            return_value=("172.18.0.10", True),
+        ):
+            response = self.client.post(reverse("radius:authorize"), self.params)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    def test_ip_from_radsetting_spaces_and_host_bits_valid(self):
+        org = self._get_org()
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(organization=org)
+
+        radsetting.freeradius_allowed_hosts = "127.0.0.1, 172.18.0.5/16"
+        radsetting.save()
+
+        self.assertEqual(
+            cache.get(f"ip-{org.pk}"),
+            ["127.0.0.1", "172.18.0.5/16"],
+        )
+
+        with mock.patch(
+            "openwisp_radius.api.freeradius_views.get_client_ip",
+            return_value=("172.18.0.10", True),
+        ):
+            response = self.client.post(reverse("radius:authorize"), self.params)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+
+    @capture_any_output()
+    def test_ip_outside_cidr_range_rejected(self):
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(
+                organization=self._get_org()
+            )
+        radsetting.freeradius_allowed_hosts = "172.18.0.0/16"
+        radsetting.save()
+
+        with mock.patch(
+            "openwisp_radius.api.freeradius_views.get_client_ip",
+            return_value=("10.0.0.5", True),
+        ):
+            response = self.client.post(reverse("radius:authorize"), self.params)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.data["detail"],
+            "Request rejected: Client IP address (10.0.0.5) is not in "
+            "the list of IP addresses allowed to consume the freeradius API.",
+        )
+
     def test_ip_from_setting_valid(self):
         response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 200)
