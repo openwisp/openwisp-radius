@@ -123,5 +123,37 @@ class TestSqliteCounters(TestCounterMixin, BaseTransactionTestCase):
         expected = int(opts["group_check"].value) - traffic
         self.assertEqual(counter.check(), (expected,))
 
+    def test_sqlite_organization_id_format(self):
+        opts = self._get_kwargs("Max-Daily-Session")
+        counter = DailyCounter(**opts)
+        self.assertNotIn("-", counter.organization_id)
+        self.assertEqual(
+            counter.organization_id, str(opts["group"].organization_id).replace("-", "")
+        )
+
+    def test_sqlite_traffic_sql(self):
+        opts = self._get_kwargs("Max-Daily-Session-Traffic")
+        counter = DailyTrafficCounter(**opts)
+        self.assertIn("SELECT SUM(acctinputoctets + acctoutputoctets)", counter.sql)
+
+    def test_sqlite_counter_mixin_init(self):
+        opts = self._get_kwargs("Max-Daily-Session")
+        counter = DailyCounter(**opts)
+        original_org_id = str(opts["group"].organization_id)
+        self.assertIn("-", original_org_id)
+        self.assertNotIn("-", counter.organization_id)
+        self.assertEqual(counter.organization_id, original_org_id.replace("-", ""))
+
+    def test_sqlite_traffic_mixin_sql_property(self):
+        from ...counters.sqlite import SqliteTrafficMixin
+
+        self.assertIn(
+            "SELECT SUM(acctinputoctets + acctoutputoctets)",
+            SqliteTrafficMixin.sql,
+        )
+        self.assertIn("FROM radacct", SqliteTrafficMixin.sql)
+        self.assertIn("WHERE username=%s", SqliteTrafficMixin.sql)
+        self.assertIn("AND organization_id=%s", SqliteTrafficMixin.sql)
+
 
 del BaseTransactionTestCase

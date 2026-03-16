@@ -31,6 +31,7 @@ RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+PhoneToken = load_model("PhoneToken")
 
 _RADCHECK_ENTRY = {
     "username": "Monica",
@@ -1510,6 +1511,236 @@ class TestAdmin(
         with self.subTest("test radius group is registered"):
             html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)
+
+    def test_radius_group_admin_get_group_name(self):
+        from ..admin import RadiusGroupAdmin
+
+        admin_instance = RadiusGroupAdmin(RadiusGroup, None)
+
+        group = self._create_radius_group(name="test-group")
+        display_name = admin_instance.get_group_name(group)
+        expected = group.name.replace(f"{group.organization.slug}-", "")
+        self.assertEqual(display_name, expected)
+
+    def test_radius_group_admin_has_delete_permission_non_superuser(self):
+        from ..admin import RadiusGroupAdmin
+
+        admin_instance = RadiusGroupAdmin(RadiusGroup, None)
+
+        non_superuser = self._create_user(is_staff=True, is_superuser=False)
+        self._create_org_user(
+            organization=self.default_org, user=non_superuser, is_admin=True
+        )
+
+        from django.test import RequestFactory
+
+        factory = RequestFactory()
+        request = factory.get("/")
+        request.user = non_superuser
+
+        default_group = RadiusGroup.objects.get(
+            organization=self.default_org, default=True
+        )
+        result = admin_instance.has_delete_permission(request, default_group)
+        self.assertFalse(result)
+
+    def test_radius_group_admin_get_actions_removes_delete_selected(self):
+        from django.contrib import admin
+
+        from ..admin import RadiusGroupAdmin
+
+        admin_site = admin.AdminSite()
+        admin_instance = RadiusGroupAdmin(RadiusGroup, admin_site)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        actions = admin_instance.get_actions(request)
+        self.assertNotIn("delete_selected", actions)
+        self.assertIn("delete_selected_groups", actions)
+
+    def test_radius_batch_admin_number_of_users(self):
+        from ..admin import RadiusBatchAdmin
+
+        admin_instance = RadiusBatchAdmin(RadiusBatch, None)
+
+        batch = self._create_radius_batch(
+            name="test-batch", strategy="prefix", prefix="test"
+        )
+        user1 = self._create_user(username="user1", email="user1@test.com")
+        user2 = self._create_user(username="user2", email="user2@test.com")
+        batch.users.add(user1, user2)
+
+        count = admin_instance.number_of_users(batch)
+        self.assertEqual(count, 2)
+
+    def test_radius_batch_admin_get_fields_add_vs_change(self):
+        from ..admin import RadiusBatchAdmin
+
+        admin_instance = RadiusBatchAdmin(RadiusBatch, None)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        add_fields = admin_instance.get_fields(request, obj=None)
+        self.assertNotIn("users", add_fields)
+        self.assertNotIn("status", add_fields)
+
+        batch = self._create_radius_batch(name="test", strategy="prefix", prefix="test")
+        change_fields = admin_instance.get_fields(request, obj=batch)
+        self.assertIn("users", change_fields)
+
+    def test_radius_batch_admin_get_readonly_fields_processing(self):
+        from ..admin import RadiusBatchAdmin
+
+        admin_instance = RadiusBatchAdmin(RadiusBatch, None)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        batch = self._create_radius_batch(name="test", strategy="prefix", prefix="test")
+        batch.status = "processing"
+        batch.save()
+
+        readonly_fields = admin_instance.get_readonly_fields(request, batch)
+        expected_readonly = ["strategy", "prefix", "csvfile", "name", "organization"]
+        for field in expected_readonly:
+            self.assertIn(field, readonly_fields)
+
+    def test_radius_batch_admin_has_delete_permission_processing(self):
+        from ..admin import RadiusBatchAdmin
+
+        admin_instance = RadiusBatchAdmin(RadiusBatch, None)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        batch = self._create_radius_batch(name="test", strategy="prefix", prefix="test")
+        batch.status = "processing"
+        batch.save()
+
+        result = admin_instance.has_delete_permission(request, batch)
+        self.assertFalse(result)
+
+    def test_radius_batch_admin_delete_model(self):
+        from ..admin import RadiusBatchAdmin
+
+        admin_instance = RadiusBatchAdmin(RadiusBatch, None)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        batch = self._create_radius_batch(name="test", strategy="prefix", prefix="test")
+        user1 = self._create_user(username="del1", email="del1@test.com")
+        batch.users.add(user1)
+
+        initial_user_count = User.objects.count()
+        admin_instance.delete_model(request, batch)
+
+        self.assertFalse(RadiusBatch.objects.filter(pk=batch.pk).exists())
+        self.assertEqual(User.objects.count(), initial_user_count - 1)
+
+    def test_phone_token_inline_permissions(self):
+        from django.contrib import admin
+
+        from ..admin import PhoneTokenInline
+
+        admin_site = admin.AdminSite()
+        inline_instance = PhoneTokenInline(PhoneToken, admin_site)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        self.assertFalse(inline_instance.has_add_permission(request, obj=None))
+        self.assertFalse(inline_instance.has_delete_permission(request))
+        self.assertFalse(inline_instance.has_change_permission(request))
+
+    def test_registered_user_inline_has_delete_permission(self):
+        from django.contrib import admin
+
+        from ..admin import RegisteredUserInline
+
+        admin_site = admin.AdminSite()
+        inline_instance = RegisteredUserInline(RegisteredUser, admin_site)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        result = inline_instance.has_delete_permission(request)
+        self.assertFalse(result)
+
+    def test_get_is_verified_exception_handling(self):
+        from ..admin import get_is_verified
+
+        user = self._create_user(username="no-reg", email="noreg@test.com")
+
+        class MockAdmin:
+            pass
+
+        admin_instance = MockAdmin()
+
+        result = get_is_verified(admin_instance, user)
+        self.assertIn("icon-unknown.svg", result)
+        self.assertIn('alt="unknown"', result)
+
+    def test_organization_first_mixin_get_fields(self):
+        from django.contrib import admin
+
+        from ..admin import RadiusAccountingAdmin
+
+        admin_site = admin.AdminSite()
+        admin_instance = RadiusAccountingAdmin(RadiusAccounting, admin_site)
+
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/")
+        request.user = self._get_admin()
+
+        fields = admin_instance.get_fields(request)
+        self.assertEqual(fields[0], "organization")
+
+        @mock.patch("openwisp_radius.admin.RADIUS_API_BASEURL", "http://testapi.com")
+        def test_radius_batch_admin_change_view_with_baseurl(self):
+            batch = self._create_radius_batch(
+                name="test-batch", strategy="prefix", prefix="test-prefix"
+            )
+
+            url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk])
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "http://testapi.com")
+
+    def test_radius_batch_admin_response_add_continue(self):
+        add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")
+        data = {
+            "strategy": "prefix",
+            "prefix": "test-continue",
+            "name": "test-batch-continue",
+            "organization": self.default_org.pk,
+            "number_of_users": 1,
+            "_continue": True,
+        }
+
+        response = self.client.post(add_url, data)
+        batch = RadiusBatch.objects.get(name="test-batch-continue")
+        expected_url = reverse(
+            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
+        )
+        self.assertRedirects(response, expected_url)
 
 
 class TestRadiusGroupAdmin(BaseTestCase):
