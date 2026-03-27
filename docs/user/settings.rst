@@ -628,6 +628,37 @@ screenshot below.
     otherwise, if all the organization use the same configuration, we
     recommend changing the global setting.
 
+.. _openwisp_radius_cross_organization_login_enabled:
+
+``OPENWISP_RADIUS_CROSS_ORGANIZATION_LOGIN_ENABLED``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``True``
+
+This setting controls whether a user who is registered in one organization
+can also access other organizations.
+
+When enabled, a user who already has an account in one organization can
+log in to another organization using the :ref:`login endpoint
+<radius_login_obtain_user_auth_token>` without completing an additional
+registration. During the login process, the user is automatically added to
+the new organization **only if registration is enabled** for that organization.
+
+When disabled (``False``), users can log in **only** to organizations they
+are already registered with. Logging in to a different organization is not
+allowed, even if that organization permits new user registrations.
+
+**This setting can be overridden in individual organizations via the admin
+interface**, by going to *Organizations* then edit a specific organization
+and scroll down to *"Organization RADIUS settings"*, as shown in the
+screenshot below.
+
+.. image:: ../images/organization_cross_login.png
+    :alt: cross-organization login setting
+
+See :ref:`Registering to Multiple Organizations
+<radius_registering_to_multiple_organizations>` for more information.
+
 .. _openwisp_radius_sms_verification_enabled:
 
 ``OPENWISP_RADIUS_SMS_VERIFICATION_ENABLED``

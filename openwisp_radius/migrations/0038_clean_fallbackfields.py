@@ -2,8 +2,6 @@ from django.db import migrations
 
 from openwisp_utils.fields import FallbackMixin
 
-from ..utils import load_model
-
 
 def clean_fallback_fields(apps, schema_editor):
     """
@@ -15,7 +13,9 @@ def clean_fallback_fields(apps, schema_editor):
     is the same as the fallback value, effectively removing the
     unnecessary data from the database.
     """
-    OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
+    OrganizationRadiusSettings = apps.get_model(
+        "openwisp_radius", "OrganizationRadiusSettings"
+    )
     fallback_fields = []
     fallback_field_names = []
 
