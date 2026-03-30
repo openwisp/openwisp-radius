@@ -92,6 +92,7 @@ User = get_user_model()
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 PhoneToken = load_model("PhoneToken")
+RegisteredUser = load_model("RegisteredUser")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
@@ -321,7 +322,7 @@ class ObtainAuthTokenView(
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
             {"slug": kwargs["slug"]}
-        ) and not self.is_identity_verified_strong(user):
+        ) and not self.is_identity_verified_strong(user, self.organization):
             status_code = 401
         return Response(response, status=status_code)
 
@@ -337,7 +338,7 @@ class ObtainAuthTokenView(
             ):
                 if self._needs_identity_verification(
                     org=self.organization
-                ) and not self.is_identity_verified_strong(user):
+                ) and not self.is_identity_verified_strong(user, self.organization):
                     raise PermissionDenied
                 try:
                     org_user = OrganizationUser(
@@ -383,9 +384,15 @@ class ValidateAuthTokenView(
         response = {"response_code": "BLANK_OR_INVALID_TOKEN"}
         if request_token:
             try:
-                token = UserToken.objects.select_related(
-                    "user", "user__registered_user"
-                ).get(key=request_token)
+                token = (
+                    UserToken.objects.select_related(
+                        "user",
+                    )
+                    .prefetch_related(
+                        "user__registered_users",
+                    )
+                    .get(key=request_token)
+                )
             except UserToken.DoesNotExist:
                 pass
             else:
@@ -395,7 +402,7 @@ class ValidateAuthTokenView(
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)
-                if not self.is_identity_verified_strong(user):
+                if not self.is_identity_verified_strong(user, self.organization):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by("-created")
@@ -753,8 +760,13 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
-            user.registered_user.is_verified = True
-            user.registered_user.method = "mobile_phone"
+            reg_user, _ = RegisteredUser.get_or_create_for_user_and_org(
+                user=user,
+                organization=self.organization,
+                defaults={"is_verified": False, "method": ""},
+            )
+            reg_user.is_verified = True
+            reg_user.method = "mobile_phone"
             user.is_active = True
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
@@ -763,7 +775,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
-            user.registered_user.save()
+            reg_user.save()
             # delete any radius token cache key if present
             cache.delete(f"rt-{phone_token.phone_number}")
             return Response(None, status=200)

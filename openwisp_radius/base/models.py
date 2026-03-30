@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import string
+import uuid
 from datetime import timedelta
 from io import StringIO
 
@@ -1058,7 +1059,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         user.save()
-        registered_user = RegisteredUser(user=user, method="manual")
+        registered_user = RegisteredUser(
+            user=user,
+            method="manual",
+            organization=self.organization,
+        )
         if self.organization.radius_settings.needs_identity_verification:
             registered_user.is_verified = True
         registered_user.save()
@@ -1570,14 +1575,12 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return self.verified
 
     def _validate_already_verified(self):
-        try:
-            if self.user.registered_user.is_verified:
-                logger.warning(f"User {self.user.pk} is already verified")
-                raise exceptions.UserAlreadyVerified(
-                    _("This user has been already verified.")
-                )
-        except ObjectDoesNotExist:
-            pass
+        RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        if RegisteredUser.objects.filter(user=self.user, is_verified=True).exists():
+            logger.warning(f"User {self.user.pk} is already verified")
+            raise exceptions.UserAlreadyVerified(
+                _("This user has been already verified.")
+            )
 
     def __check(self, token):
         self._validate_already_verified()
@@ -1602,12 +1605,23 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(models.Model):
-    user = models.OneToOneField(
+class AbstractRegisteredUser(UUIDModel):
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="registered_user",
-        primary_key=True,
+        related_name="registered_users",
+    )
+    organization = models.ForeignKey(
+        swapper.get_model_name("openwisp_users", "Organization"),
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="registered_users",
+        verbose_name=_("organization"),
+        help_text=(
+            "The organization this registration info belongs to. "
+            "If null, applies to all orgs without specific requirements."
+        ),
     )
     method = models.CharField(
         _("registration method"),
@@ -1649,6 +1663,54 @@ class AbstractRegisteredUser(models.Model):
         abstract = True
         verbose_name = _("Registration Information")
         verbose_name_plural = verbose_name
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "organization"],
+                name="unique_registered_user_per_org",
+            ),
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=Q(organization__isnull=True),
+                name="unique_global_registered_user",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        Model = self._meta.model
+        qs = Model.objects.filter(user=self.user, organization=self.organization)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
+            raise ValidationError(
+                _("A registration record already exists for this user/organization.")
+            )
+
+    @classmethod
+    def get_for_user_and_org(cls, user, organization):
+        try:
+            return cls.objects.get(user=user, organization=organization)
+        except cls.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_or_create_for_user_and_org(cls, user, organization, defaults=None):
+        defaults = defaults or {}
+        return cls.objects.get_or_create(
+            user=user, organization=organization, defaults=defaults
+        )
+
+    @classmethod
+    def get_global_or_org_specific(cls, user, organization=None):
+        if organization:
+            try:
+                return cls.objects.get(user=user, organization=organization)
+            except cls.DoesNotExist:
+                pass
+        try:
+            return cls.objects.get(user=user, organization__isnull=True)
+        except cls.DoesNotExist:
+            return None
 
     @classmethod
     def unverify_inactive_users(cls):

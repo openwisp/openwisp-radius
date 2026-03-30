@@ -1359,7 +1359,7 @@ class TestAdmin(
 
         with self.subTest("Inline exists"):
             response = self.client.get(url)
-            self.assertContains(response, "id_registered_user-TOTAL_FORMS")
+            self.assertContains(response, "id_registered_users-TOTAL_FORMS")
 
         with self.subTest("Register new choice"):
             register_registration_method("national_id", "National ID")
@@ -1416,7 +1416,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1424,7 +1427,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")
@@ -1449,7 +1455,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1457,7 +1466,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")

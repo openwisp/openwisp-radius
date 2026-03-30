@@ -28,7 +28,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         return reverse("radius:user_auth_token", args=[self.default_org.slug])
 
     def _post_credentials(self):
-        with self.assertNumQueries(21):
+        with self.assertNumQueries(22):
             return self.client.post(
                 self._get_url(), {"username": "tester", "password": "tester"}
             )
@@ -220,7 +220,9 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             response = self.client.post(url, user_cred)
             self.assertEqual(response.status_code, 403)
 
-        registered_user = RegisteredUser.objects.create(user=user, method="")
+        registered_user = RegisteredUser.objects.create(
+            user=user, organization=org2, method=""
+        )
         with self.subTest("Test unverified user without registration method"):
             response = self.client.post(url, user_cred)
             self.assertEqual(response.status_code, 403)
@@ -305,7 +307,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data["response_code"], "BLANK_OR_INVALID_TOKEN")
         # valid token
         payload = dict(token=token.key)
-        with self.assertNumQueries(16):
+        with self.assertNumQueries(17):
             response = self.client.post(url, payload)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

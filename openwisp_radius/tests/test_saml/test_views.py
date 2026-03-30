@@ -152,8 +152,9 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
 
     @capture_any_output()
     def test_user_registered_with_non_saml_method(self):
+        org = Organization.objects.get(slug="default")
         user = self._create_user(username="test-user", email="org_user@example.com")
-        RegisteredUser.objects.create(user=user, method="manual")
+        RegisteredUser.objects.create(user=user, method="manual", organization=org)
         relay_state = self._get_relay_state(
             redirect_url="https://captive-portal.example.com", org_slug="default"
         )

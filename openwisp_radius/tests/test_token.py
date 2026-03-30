@@ -65,7 +65,10 @@ class TestPhoneToken(BaseTestCase):
     def test_is_already_verified(self):
         token = self._create_token()
         RegisteredUser.objects.create(
-            user=token.user, method="mobile_phone", is_verified=True
+            user=token.user,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         token.refresh_from_db()
 

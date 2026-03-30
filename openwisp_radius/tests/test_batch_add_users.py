@@ -143,8 +143,9 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
                 "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )
-        self.assertEqual(user.registered_user.is_verified, True)
-        self.assertEqual(user.registered_user.method, "manual")
+        reg_user = user.registered_users.get(organization=self.default_org)
+        self.assertEqual(reg_user.is_verified, True)
+        self.assertEqual(reg_user.method, "manual")
 
 
 class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
