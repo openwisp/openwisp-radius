@@ -159,7 +159,10 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         user = User.objects.get(email=self._test_email)
         self.assertTrue(user.is_member(self.default_org))
         self.assertTrue(user.is_active)
-        self.assertFalse(user.registered_user.is_verified)
+        self.assertEqual(
+            user.registered_users.get(organization=self.default_org).is_verified,
+            False,
+        )
 
     def test_register_400_password(self):
         response = self._register_user(
@@ -319,11 +322,15 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_radius_user_serializer(self):
         self._register_user()
         try:
-            user = User.objects.select_related("radius_token", "registered_user").get(
-                email=self._test_email
+            user = (
+                User.objects.select_related("radius_token")
+                .prefetch_related("registered_users")
+                .get(email=self._test_email)
             )
-            admin = User.objects.select_related("radius_token", "registered_user").get(
-                username="admin"
+            admin = (
+                User.objects.select_related("radius_token")
+                .prefetch_related("registered_users")
+                .get(username="admin")
             )
         except User.DoesNotExist as e:
             self.fail(f"user not found: {e}")
@@ -343,9 +350,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     "birth_date": user.birth_date,
                     "location": user.location,
                     "is_active": user.is_active,
-                    "is_verified": user.registered_user.is_verified,
+                    "is_verified": user.registered_users.first().is_verified,
                     "password_expired": user.has_password_expired(),
-                    "method": user.registered_user.method,
+                    "method": user.registered_users.first().method,
                     "radius_user_token": user.radius_token.key,
                 },
             )
