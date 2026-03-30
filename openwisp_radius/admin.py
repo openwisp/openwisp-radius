@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin, StackedInline
+from django.contrib.admin import ModelAdmin, StackedInline, TabularInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -534,11 +534,15 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-class RegisteredUserInline(StackedInline):
+class RegisteredUserInline(TabularInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
     extra = 0
-    readonly_fields = ("modified",)
+    readonly_fields = (
+        "organization",
+        "modified",
+    )
+    fields = ("organization", "method", "is_verified", "modified")
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -549,12 +553,17 @@ UserAdmin.inlines += [
     RadiusUserGroupInline,
     PhoneTokenInline,
 ]
-UserAdmin.list_filter += (RegisteredUserFilter, "registered_user__method")
+UserAdmin.list_filter += (RegisteredUserFilter, "registered_users__method")
 
 
 def get_is_verified(self, obj):
     try:
-        value = "yes" if obj.registered_user.is_verified else "no"
+        if not obj.registered_users.exists():
+            value = "unknown"
+        elif obj.registered_users.filter(is_verified=True).exists():
+            value = "yes"
+        else:
+            value = "no"
     except Exception:
         value = "unknown"
     icon_url = static(f"admin/img/icon-{value}.svg")
@@ -564,7 +573,6 @@ def get_is_verified(self, obj):
 UserAdmin.get_is_verified = get_is_verified
 UserAdmin.get_is_verified.short_description = _("Verified")
 UserAdmin.list_display.insert(3, "get_is_verified")
-UserAdmin.list_select_related = ("registered_user",)
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):

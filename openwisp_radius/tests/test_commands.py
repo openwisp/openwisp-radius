@@ -276,15 +276,19 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self._call_command("batch_add_users", **options)
             User.objects.update(date_joined=now() - timedelta(days=3))
             for user in User.objects.all():
-                user.registered_user.is_verified = False
-                user.registered_user.method = "email"
-                user.registered_user.save(update_fields=["is_verified", "method"])
+                reg_user = user.registered_users.first()
+                reg_user.is_verified = False
+                reg_user.method = "email"
+                reg_user.save(update_fields=["is_verified", "method"])
 
         with self.subTest("Delete unverified users older than 2 days"):
             _create_old_users()
             # This user should not be deleted
             RegisteredUser.objects.create(
-                user=self._create_user(), method="mobile_phone", is_verified=False
+                user=self._create_user(),
+                organization=self.default_org,
+                method="mobile_phone",
+                is_verified=False,
             )
 
             self.assertEqual(User.objects.count(), 4)
@@ -298,6 +302,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             # This user should not be deleted
             RegisteredUser.objects.create(
                 user=self._create_user(date_joined=now() - timedelta(days=3)),
+                organization=self.default_org,
                 method="mobile_phone",
                 is_verified=False,
             )
@@ -315,6 +320,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             # This user should not be deleted
             RegisteredUser.objects.create(
                 user=self._create_user(date_joined=now() - timedelta(days=3)),
+                organization=self.default_org,
                 method="email",
                 is_verified=True,
             )
@@ -329,6 +335,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             user = self._create_user(date_joined=now() - timedelta(days=3))
             RegisteredUser.objects.create(
                 user=user,
+                organization=self.default_org,
                 method="email",
                 is_verified=False,
             )
@@ -353,6 +360,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             RegisteredUser.objects.create(
                 user=user,
+                organization=self.default_org,
                 method="email",
                 is_verified=False,
             )
