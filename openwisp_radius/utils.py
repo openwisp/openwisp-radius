@@ -17,7 +17,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
 
 from . import settings as app_settings
 from .counters.exceptions import MaxQuotaReached, SkipCheck
@@ -201,6 +204,9 @@ def prefix_generate_users(prefix, n, password_length):
 
 
 def generate_pdf(radbatch_uuid):
+    if HTML is None:
+        raise ImportError("weasyprint is required for PDF generation")
+
     template = get_template(app_settings.BATCH_PDF_TEMPLATE)
     data = load_model("RadiusBatch").objects.get(pk=radbatch_uuid)
     html = HTML(string=template.render({"users": data.user_credentials}))
