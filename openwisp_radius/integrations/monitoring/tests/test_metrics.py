@@ -22,7 +22,11 @@ User = get_user_model()
 @tag("radius_monitoring")
 class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def _create_registered_user(self, **kwargs):
-        options = {"is_verified": False, "method": "mobile_phone"}
+        options = {
+            "is_verified": False,
+            "method": "mobile_phone",
+            "organization": self.default_org,
+        }
         options.update(**kwargs)
         if "user" not in options:
             options["user"] = self._create_user()

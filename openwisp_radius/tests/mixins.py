@@ -97,10 +97,10 @@ class GetEditFormInlineMixin(object):
                 "phonetoken_set-MIN_NUM_FORMS": 0,
                 "phonetoken_set-MAX_NUM_FORMS": 0,
                 # registered user inline
-                "registered_user-TOTAL_FORMS": 0,
-                "registered_user-INITIAL_FORMS": 0,
-                "registered_user-MIN_NUM_FORMS": 0,
-                "registered_user-MAX_NUM_FORMS": 0,
+                "registered_users-TOTAL_FORMS": 0,
+                "registered_users-INITIAL_FORMS": 0,
+                "registered_users-MIN_NUM_FORMS": 0,
+                "registered_users-MAX_NUM_FORMS": 0,
                 # radius token inline
                 "radius_token-TOTAL_FORMS": "0",
                 "radius_token-INITIAL_FORMS": "0",

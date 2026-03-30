@@ -14,6 +14,7 @@ from openwisp_utils.tests import capture_stderr
 from .mixins import ApiTokenMixin, BaseTestCase
 
 RadiusToken = load_model("openwisp_radius", "RadiusToken")
+RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 OrganizationRadiusSettings = load_model("openwisp_radius", "OrganizationRadiusSettings")
 Organization = load_model("openwisp_users", "Organization")
 User = get_user_model()
@@ -102,13 +103,13 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         user = User.objects.filter(username="socialuser").first()
         self.assertTrue(user.is_member(self.default_org))
         try:
-            reg_user = user.registered_user
-        except ObjectDoesNotExist:
+            reg_user = user.registered_users.get(organization=self.default_org)
+        except RegisteredUser.DoesNotExist:
             self.fail("RegisteredUser instance not found")
         self.assertEqual(reg_user.method, "social_login")
         # social login is not a legally valid identity verification method
         # so this should be always False when users sign up with this method
-        self.assertFalse(reg_user.is_verified)
+        self.assertEqual(reg_user.is_verified, False)
 
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()

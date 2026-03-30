@@ -35,12 +35,12 @@ class BaseDeleteUnverifiedUsersCommand(BaseCommand):
 
         qs = User.objects.filter(
             date_joined__lt=days,
-            registered_user__isnull=False,
-            registered_user__is_verified=False,
+            registered_users__isnull=False,
+            registered_users__is_verified=False,
             is_staff=False,
-        )
+        ).distinct()
         if exclude_methods:
-            qs = qs.exclude(registered_user__method__in=exclude_methods)
+            qs = qs.exclude(registered_users__method__in=exclude_methods)
 
         for user in qs.iterator():
             if not RadiusAccounting.objects.filter(username=user.username).exists():
