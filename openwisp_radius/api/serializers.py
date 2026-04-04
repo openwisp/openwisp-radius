@@ -35,6 +35,7 @@ from openwisp_utils.api.serializers import ValidatedModelSerializer
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
+from ..base.models import sanitize_mac_address
 from ..counters.exceptions import SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import (
@@ -271,7 +272,11 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         do not overwrite it back to unconverted ID during interim updates
         """
         ids = app_settings.CALLED_STATION_IDS
-        if not ids or instance.called_station_id == acct_data["called_station_id"]:
+        called_station_id = acct_data.get("called_station_id")
+        if not called_station_id:
+            return acct_data
+        sanitized = sanitize_mac_address(called_station_id)
+        if not ids or instance.called_station_id == sanitized:
             return acct_data
         try:
             organization = acct_data["organization"]
@@ -285,7 +290,7 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 unconverted_ids = ids.get(str(organization.id), {}).get(
                     "unconverted_ids", []
                 ) + ids.get(organization.slug, {}).get("unconverted_ids", [])
-                if acct_data["called_station_id"] in unconverted_ids:
+                if sanitized in unconverted_ids or called_station_id in unconverted_ids:
                     acct_data["called_station_id"] = instance.called_station_id
         except Exception:
             logger.exception("Got exception in _check_called_station_id")
