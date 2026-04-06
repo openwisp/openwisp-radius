@@ -10,7 +10,7 @@
   height: 4em;
 }
 #radius-session-tbody strong {
-  color: green;
+  color: var(--ow-color-success, green);
 }
 #radius-session-tbody tr td p {
   white-space: nowrap;
