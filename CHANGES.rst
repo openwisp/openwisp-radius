@@ -6,6 +6,27 @@ Version 1.3.0 [unreleased]
 
 Work in progress.
 
+Version 1.2.1 [2026-04-10]
+--------------------------
+
+Changes
+~~~~~~~
+
+Dependencies
+++++++++++++
+
+- Bumped ``dj-rest-auth<7.2``
+- Bumped ``weasyprint<68``
+- Bump ``djangosaml2`` from 1.11.1 to 1.12.0
+
+Bugfixes
+~~~~~~~~
+
+- Added CSV batch download endpoint to REST API docs `#373
+  <https://github.com/openwisp/openwisp-radius/issues/373>`_
+- Made batch import operations atomic `#551
+  <https://github.com/openwisp/openwisp-radius/issues/551>`_
+
 Version 1.2.0 [2025-10-24]
 --------------------------
 
