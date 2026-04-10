@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - master
+      - "1.2"
   pull_request:
     branches:
       - master
+      - "1.2"
 
 jobs:
   build:
@@ -77,7 +79,7 @@ jobs:
               spatialite-bin \
               libsqlite3-mod-spatialite
           sudo npm install -g prettier
-          pip install -U pip wheel setuptools
+          pip install -U pip wheel "setuptools<82"
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
           pip install ${{ matrix.django-version }}
