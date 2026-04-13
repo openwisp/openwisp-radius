@@ -336,7 +336,10 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.fail(f"user not found: {e}")
 
         with self.assertNumQueries(0):
-            data = RadiusUserSerializer(user).data
+            # Organization is required to get the RegisteredUser object
+            view = mock.MagicMock()
+            view.organization = self.default_org
+            data = RadiusUserSerializer(user, context={"view": view}).data
 
         with self.subTest("test full data"):
             self.assertEqual(

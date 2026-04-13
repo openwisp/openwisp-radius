@@ -1616,7 +1616,6 @@ class AbstractRegisteredUser(UUIDModel):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name="registered_users",
         verbose_name=_("organization"),
         help_text=(
             "The organization this registration info belongs to. "
