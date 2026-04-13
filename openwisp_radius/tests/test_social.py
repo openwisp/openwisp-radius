@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from swapper import load_model

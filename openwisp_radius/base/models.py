@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import string
-import uuid
 from datetime import timedelta
 from io import StringIO
 
@@ -16,7 +15,7 @@ from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import models, transaction
 from django.db.models import ProtectedError, Q
