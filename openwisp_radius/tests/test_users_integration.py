@@ -98,13 +98,13 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         temp_file = NamedTemporaryFile(delete=False)
         org_user = self._create_org_user()
         user = org_user.user
-        RegisteredUser.objects.create(
+        reg_user = RegisteredUser.objects.create(
             user=user,
             organization=org_user.organization,
             method="mobile_phone",
             is_verified=False,
         )
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             call_command("export_users", filename=temp_file.name)
 
         with open(temp_file.name, "r") as file:
@@ -112,10 +112,11 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             csv_data = list(csv_reader)
 
         self.assertEqual(len(csv_data), 2)
-        # registered_user fields are no longer included in the export
-        # because RegisteredUser is now per-organization
-        self.assertNotIn("registered_user.method", csv_data[0])
-        self.assertNotIn("registered_user.is_verified", csv_data[0])
+        self.assertIn("registered_users", csv_data[0])
+        self.assertEqual(
+            csv_data[1][-1],
+            f"(({reg_user.organization_id},{reg_user.method},{reg_user.is_verified}))",
+        )
 
     def test_radiususergroup_inline(self):
         """

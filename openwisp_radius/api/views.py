@@ -760,7 +760,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
-            reg_user, _ = RegisteredUser.get_or_create_for_user_and_org(
+            reg_user, __ = RegisteredUser.get_or_create_for_user_and_org(
                 user=user,
                 organization=self.organization,
                 defaults={"is_verified": False, "method": ""},
