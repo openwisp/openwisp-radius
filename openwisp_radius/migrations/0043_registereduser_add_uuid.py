@@ -64,7 +64,6 @@ class Migration(migrations.Migration):
                         help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="registered_users",
                         to=swapper.get_model_name("openwisp_users", "Organization"),
                         verbose_name="organization",
                     ),
