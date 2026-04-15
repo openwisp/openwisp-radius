@@ -5,6 +5,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
+from django.db.models import Case, IntegerField, Value, When
 
 from ..utils import create_default_groups
 
@@ -88,9 +89,18 @@ def copy_registered_users_ctcr_reverse(
 
     restored_objects = []
     previous_user_id = None
-    queryset = RegisteredUserNew.objects.order_by(
-        "user_id", "-is_verified", "method", "pk"
+    # Annotate each row with an explicit verification priority so that stronger
+    # methods (anything that is not '' or 'email') sort before weaker ones.
+    # Lexical ordering of 'method' would place '' first, picking the weakest.
+    method_priority = Case(
+        When(method="", then=Value(0)),
+        When(method="email", then=Value(1)),
+        default=Value(2),
+        output_field=IntegerField(),
     )
+    queryset = RegisteredUserNew.objects.annotate(
+        method_priority=method_priority
+    ).order_by("user_id", "-is_verified", "-method_priority", "pk")
     for registered_user in queryset.iterator(chunk_size=BATCH_SIZE):
         if registered_user.user_id == previous_user_id:
             continue
@@ -187,10 +197,23 @@ def migrate_registered_users_multitenant_reverse(
                 organization__isnull=True,
             ).values_list("user_id", flat=True)
         )
-        org_records = RegisteredUser.objects.filter(
-            user_id__in=user_id_batch,
-            organization__isnull=False,
-        ).order_by("user_id", "-is_verified", "method", "pk")
+        # Annotate each row with an explicit verification priority so that stronger
+        # methods (anything that is not '' or 'email') sort before weaker ones.
+        # Lexical ordering of 'method' would place '' first, picking the weakest.
+        method_priority = Case(
+            When(method="", then=Value(0)),
+            When(method="email", then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+        org_records = (
+            RegisteredUser.objects.filter(
+                user_id__in=user_id_batch,
+                organization__isnull=False,
+            )
+            .annotate(method_priority=method_priority)
+            .order_by("user_id", "-is_verified", "-method_priority", "pk")
+        )
 
         to_create = []
         to_delete_pks = []

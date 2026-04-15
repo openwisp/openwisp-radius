@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
+from django.db.models import Count, Q
 from django.utils.timezone import now
 
 from openwisp_radius.utils import load_model
@@ -33,12 +34,21 @@ class BaseDeleteUnverifiedUsersCommand(BaseCommand):
         if exclude_methods:
             exclude_methods = exclude_methods.split(",")
 
-        qs = User.objects.filter(
-            date_joined__lt=days,
-            registered_users__isnull=False,
-            registered_users__is_verified=False,
-            is_staff=False,
-        ).distinct()
+        qs = (
+            User.objects.filter(
+                date_joined__lt=days,
+                registered_users__isnull=False,
+                is_staff=False,
+            )
+            .annotate(
+                num_verified=Count(
+                    "registered_users",
+                    filter=Q(registered_users__is_verified=True),
+                )
+            )
+            .filter(num_verified=0)
+            .distinct()
+        )
         if exclude_methods:
             qs = qs.exclude(registered_users__method__in=exclude_methods)
 

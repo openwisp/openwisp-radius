@@ -143,7 +143,7 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
                 "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )
-        reg_user = user.registered_users.get(organization=self.default_org)
+        reg_user = user.registered_users.get(organization=organization)
         self.assertEqual(reg_user.is_verified, True)
         self.assertEqual(reg_user.method, "manual")
 

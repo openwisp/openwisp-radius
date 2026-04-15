@@ -645,7 +645,7 @@ class CreatePhoneTokenView(
         try:
             phone_token.full_clean()
             if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified()
+                phone_token._validate_already_verified(organization=self.organization)
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
@@ -754,7 +754,9 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 _("No verification code found in the system for this user.")
             )
         try:
-            is_valid = phone_token.is_valid(serializer.data["code"])
+            is_valid = phone_token.is_valid(
+                serializer.data["code"], organization=self.organization
+            )
         except PhoneTokenException as e:
             return self._error_response(str(e))
         if not is_valid:
@@ -763,11 +765,13 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             reg_user, __ = RegisteredUser.get_or_create_for_user_and_org(
                 user=user,
                 organization=self.organization,
-                defaults={"is_verified": False, "method": ""},
+                defaults={
+                    "is_verified": True,
+                    "method": "mobile_phone",
+                    "is_active": True,
+                },
             )
             reg_user.is_verified = True
-            reg_user.method = "mobile_phone"
-            user.is_active = True
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number

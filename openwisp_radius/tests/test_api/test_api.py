@@ -342,6 +342,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             data = RadiusUserSerializer(user, context={"view": view}).data
 
         with self.subTest("test full data"):
+            registered_user = user.registered_users.get(organization=self.default_org)
             self.assertEqual(
                 data,
                 {
@@ -353,9 +354,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     "birth_date": user.birth_date,
                     "location": user.location,
                     "is_active": user.is_active,
-                    "is_verified": user.registered_users.first().is_verified,
                     "password_expired": user.has_password_expired(),
-                    "method": user.registered_users.first().method,
+                    "is_verified": registered_user.is_verified,
+                    "method": registered_user.method,
                     "radius_user_token": user.radius_token.key,
                 },
             )
