@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin, StackedInline, TabularInline
+from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -534,7 +534,7 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-class RegisteredUserInline(TabularInline):
+class RegisteredUserInline(StackedInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
     extra = 0

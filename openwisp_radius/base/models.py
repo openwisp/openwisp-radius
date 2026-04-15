@@ -1058,14 +1058,20 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         user.save()
-        registered_user = RegisteredUser(
+        registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
             user=user,
-            method="manual",
             organization=self.organization,
+            defaults={
+                "method": "manual",
+                "is_verified": self.organization.radius_settings.needs_identity_verification,
+            },
         )
-        if self.organization.radius_settings.needs_identity_verification:
+        if (
+            not created
+            and self.organization.radius_settings.needs_identity_verification
+        ):
             registered_user.is_verified = True
-        registered_user.save()
+            registered_user.save()
         self.users.add(user)
         if OrganizationUser.objects.filter(
             user=user, organization=self.organization
@@ -1563,26 +1569,35 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         )
         sms_message.send(meta_data=org_radius_settings.sms_meta_data)
 
-    def is_valid(self, token):
+    def is_valid(self, token, organization=None):
         self.attempts += 1
         try:
-            self.verified = self.__check(token)
+            self.verified = self.__check(token, organization=organization)
         except exceptions.PhoneTokenException as phone_error:
             self.save()
             raise phone_error
         self.save()
         return self.verified
 
-    def _validate_already_verified(self):
+    def _validate_already_verified(self, organization=None):
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
-        if RegisteredUser.objects.filter(user=self.user, is_verified=True).exists():
+        if organization is not None:
+            reg_user = RegisteredUser.get_global_or_org_specific(
+                self.user, organization
+            )
+            is_verified = reg_user is not None and reg_user.is_verified
+        else:
+            is_verified = RegisteredUser.objects.filter(
+                user=self.user, is_verified=True
+            ).exists()
+        if is_verified:
             logger.warning(f"User {self.user.pk} is already verified")
             raise exceptions.UserAlreadyVerified(
                 _("This user has been already verified.")
             )
 
-    def __check(self, token):
-        self._validate_already_verified()
+    def __check(self, token, organization=None):
+        self._validate_already_verified(organization=organization)
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
                 f"User {self.user} has reached the max "
@@ -1613,6 +1628,7 @@ class AbstractRegisteredUser(UUIDModel):
     organization = models.ForeignKey(
         swapper.get_model_name("openwisp_users", "Organization"),
         on_delete=models.CASCADE,
+        related_name="registered_users",
         null=True,
         blank=True,
         verbose_name=_("organization"),
@@ -1683,13 +1699,6 @@ class AbstractRegisteredUser(UUIDModel):
             raise ValidationError(
                 _("A registration record already exists for this user/organization.")
             )
-
-    @classmethod
-    def get_for_user_and_org(cls, user, organization):
-        try:
-            return cls.objects.get(user=user, organization=organization)
-        except cls.DoesNotExist:
-            return None
 
     @classmethod
     def get_or_create_for_user_and_org(cls, user, organization, defaults=None):

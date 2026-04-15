@@ -276,7 +276,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self._call_command("batch_add_users", **options)
             User.objects.update(date_joined=now() - timedelta(days=3))
             for user in User.objects.all():
-                reg_user = user.registered_users.first()
+                reg_user = user.registered_users.get(organization=self.default_org)
                 reg_user.is_verified = False
                 reg_user.method = "email"
                 reg_user.save(update_fields=["is_verified", "method"])
@@ -373,6 +373,37 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 User.objects.filter(username=user.username, is_staff=True).exists(),
                 True,
             )
+
+        with self.subTest(
+            "User verified in one org but unverified in another should not be deleted"
+        ):
+            _create_old_users()
+            org2 = self._create_org(name="second org", slug="second-org")
+            user = self._create_user(
+                username="multiorg_user",
+                email="multiorg_user@test.com",
+                date_joined=now() - timedelta(days=3),
+            )
+            # Unverified registration in default org
+            RegisteredUser.objects.create(
+                user=user,
+                organization=self.default_org,
+                method="email",
+                is_verified=False,
+            )
+            # Verified registration in second org
+            RegisteredUser.objects.create(
+                user=user,
+                organization=org2,
+                method="mobile_phone",
+                is_verified=True,
+            )
+            self.assertEqual(User.objects.count(), 4)
+            call_command("delete_unverified_users", older_than_days=2)
+            # Users from _create_old_users (3 unverified) should be deleted,
+            # but the user verified in org2 must remain
+            self.assertEqual(User.objects.count(), 1)
+            self.assertEqual(User.objects.filter(pk=user.pk).exists(), True)
 
     @capture_any_output()
     @patch.object(

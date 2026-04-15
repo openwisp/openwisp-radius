@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 Organization = load_model("openwisp_users", "Organization")
 OrganizationRadiusSettings = load_model("openwisp_radius", "OrganizationRadiusSettings")
+RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 
 
 class ErrorDictMixin(object):
@@ -33,6 +34,8 @@ class IDVerificationHelper(object):
     def is_identity_verified_strong(self, user, organization=None):
         reg_user = None
         global_reg_user = None
+        # We use all() to utilize the prefetch cache, otherwise
+        # it would cause an additional query to fetch the registered user
         for ru in user.registered_users.all():
             if organization and ru.organization_id == organization.pk:
                 reg_user = ru

@@ -31,6 +31,7 @@ def copy_registered_users_reverse(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        swapper.dependency("openwisp_users", "Organization"),
         ("openwisp_radius", "0042_set_existing_batches_completed"),
     ]
 
@@ -63,6 +64,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
                         null=True,
+                        related_name="registered_users",
                         on_delete=django.db.models.deletion.CASCADE,
                         to=swapper.get_model_name("openwisp_users", "Organization"),
                         verbose_name="organization",

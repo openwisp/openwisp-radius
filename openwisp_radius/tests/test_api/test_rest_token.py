@@ -28,7 +28,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         return reverse("radius:user_auth_token", args=[self.default_org.slug])
 
     def _post_credentials(self):
-        with self.assertNumQueries(22):
+        with self.assertNumQueries(21):
             return self.client.post(
                 self._get_url(), {"username": "tester", "password": "tester"}
             )

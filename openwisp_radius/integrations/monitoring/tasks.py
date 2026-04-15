@@ -186,6 +186,7 @@ def post_save_radiusaccounting(
         RegisteredUser.objects.only("method")
         .filter(user__username=username)
         .filter(Q(organization_id=organization_id) | Q(organization__isnull=True))
+        .order_by("-organization_id")
         .first()
     )
     if registration_method is None:
