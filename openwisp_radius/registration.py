@@ -10,6 +10,7 @@ REGISTRATION_METHOD_CHOICES = [
     ("manual", _("Manually created")),
     ("email", _("Email")),
     ("mobile_phone", _("Mobile phone")),
+    ("pending_verification", _("Pending Verification")),
 ]
 
 AUTHORIZE_UNVERIFIED = []

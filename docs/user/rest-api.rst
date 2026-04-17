@@ -803,6 +803,48 @@ Param        Description
 phone_number string
 ============ ===========
 
+Update Registered User Method
++++++++++++++++++++++++++++++
+
+**Requires the user auth token (Bearer Token)**.
+
+Allows users to update their registered user method for an organization.
+The method can only be updated when it is currently set to
+``pending_verification``. Once updated, it cannot be changed again via
+this endpoint.
+
+This endpoint is used during cross-organization login when a user
+authenticates to a new organization. The user must complete verification
+for that organization before they can create account with the new
+organization.
+
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/account/registration-method/
+
+Responds only to **POST**.
+
+Parameters:
+
+====== ===========
+Param  Description
+====== ===========
+method string (\*)
+====== ===========
+
+(\*) ``method`` must be one of the available
+:ref:`registration/verification methods
+<openwisp_radius_needs_identity_verification>`, excluding
+``pending_verification``.
+
+**Success Response (200 OK)**:
+
+.. code-block:: json
+
+    {
+        "method": "mobile_phone"
+    }
+
 .. _radius_batch_user_creation:
 
 Batch user creation

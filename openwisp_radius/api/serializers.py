@@ -765,6 +765,47 @@ class ChangePhoneNumberSerializer(
         reg_user.save()
 
 
+class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
+    method = serializers.ChoiceField(
+        choices=[
+            choice
+            for choice in REGISTRATION_METHOD_CHOICES
+            if choice[0] != "pending_verification"
+        ],
+        help_text=_(
+            "The registration method to set for the user. "
+            "Cannot be 'pending_verification'."
+        ),
+    )
+
+    class Meta:
+        model = RegisteredUser
+        fields = ["method"]
+
+    def validate_method(self, value):
+        if value == "pending_verification":
+            raise serializers.ValidationError(
+                _("'pending_verification' cannot be set as a registration method.")
+            )
+        return value
+
+    def validate(self, attrs):
+        if self.instance.method != "pending_verification":
+            raise serializers.ValidationError(
+                {
+                    "method": _(
+                        "Method can only be updated from pending verification state."
+                    )
+                }
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance.method = validated_data["method"]
+        instance.save()
+        return instance
+
+
 class RadiusUserSerializer(serializers.ModelSerializer):
     """
     Used to return information about the logged in user
