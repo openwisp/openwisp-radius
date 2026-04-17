@@ -65,6 +65,30 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         url = reverse("radius:batch")
         return self.client.post(url, data, HTTP_AUTHORIZATION=header)
 
+    def _get_update_method_url(self, org=None):
+        if org is None:
+            org = self.default_org
+        return reverse(
+            "radius:update_registered_user_registration_method", args=[org.slug]
+        )
+
+    def _create_pending_verification_user(self):
+        user = self._create_user(
+            username="pendinguser",
+            password="tester",
+            email="pendinguser@test.com",
+        )
+        org2 = self._create_org(name="org2")
+        OrganizationUser.objects.create(user=user, organization=org2)
+        RegisteredUser.objects.create(
+            user=user,
+            organization=org2,
+            method="pending_verification",
+            is_verified=False,
+        )
+        user_token = Token.objects.create(user=user)
+        return user, org2, user_token
+
     def test_batch_bad_request_400(self):
         self.assertEqual(RadiusBatch.objects.count(), 0)
         data = self._radius_batch_prefix_data(number_of_users=-1)
@@ -970,7 +994,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             auth_url, {"username": "tester", "password": "tester"}
         )
-        authorization = f'Bearer {response.data["key"]}'
+        authorization = f"Bearer {response.data['key']}"
         stop_time = "2018-03-02T11:43:24.020460+01:00"
         data1 = self.acct_post_data
         data1.update(
@@ -1610,6 +1634,119 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(serializer._user, None)
         self.assertEqual(serializer.fields["group"].queryset.count(), 0)
 
+    def test_update_registered_user_method_success(self):
+        user, org2, user_token = self._create_pending_verification_user(
+            suffix="_success"
+        )
+        url = self._get_update_method_url(org2)
+        response = self.client.post(
+            url,
+            {"method": "mobile_phone"},
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["method"], "mobile_phone")
+        registered_user = RegisteredUser.objects.get(user=user, organization=org2)
+        self.assertEqual(registered_user.method, "mobile_phone")
+        self.assertEqual(registered_user.is_verified, False)
+
+    def test_update_registered_user_method_with_valid_methods(self):
+        user, org2, user_token = self._create_pending_verification_user(suffix="_valid")
+        url = self._get_update_method_url(org2)
+        for method in ["", "manual", "email", "mobile_phone"]:
+            with self.subTest(method=method):
+                registered_user = RegisteredUser.objects.get(
+                    user=user, organization=org2
+                )
+                registered_user.method = "pending_verification"
+                registered_user.save()
+                response = self.client.post(
+                    url,
+                    {"method": method},
+                    HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data["method"], method)
+
+    def test_update_registered_user_method_validation_errors(self):
+        user, org2, user_token = self._create_pending_verification_user()
+        url = self._get_update_method_url(org2)
+        with self.subTest("reject_pending_verification_as_input"):
+            response = self.client.post(
+                url,
+                {"method": "pending_verification"},
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 400)
+
+        with self.subTest("reject_invalid_method"):
+            response = self.client.post(
+                url,
+                {"method": "invalid_method"},
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 400)
+
+        with self.subTest("reject_non_pending_state"):
+            registered_user = RegisteredUser.objects.get(user=user, organization=org2)
+            registered_user.method = "mobile_phone"
+            registered_user.save()
+            response = self.client.post(
+                url,
+                {"method": "email"},
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("pending verification", response.data["method"][0])
+
+    def test_update_registered_user_method_404_cases(self):
+        with self.subTest("not_found_without_registered_user"):
+            user = self._create_user(username="noreguser", password="tester")
+            user_token = Token.objects.create(user=user)
+            url = self._get_update_method_url()
+            response = self.client.post(
+                url,
+                {"method": "mobile_phone"},
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 404)
+
+        with self.subTest("only_owner_can_update"):
+            user, org2, user_token = self._create_pending_verification_user(
+                suffix="_owner"
+            )
+            other_user = self._create_user(
+                username="otheruser", password="tester", email="otheruser@test.com"
+            )
+            other_user_token = Token.objects.create(user=other_user)
+            url = self._get_update_method_url(org2)
+            response = self.client.post(
+                url,
+                {"method": "mobile_phone"},
+                HTTP_AUTHORIZATION=f"Bearer {other_user_token.key}",
+            )
+            self.assertEqual(response.status_code, 404)
+
+        with self.subTest("invalid_org"):
+            user, _, user_token = self._create_pending_verification_user(
+                suffix="_invalid_org"
+            )
+            url = reverse(
+                "radius:update_registered_user_registration_method",
+                args=["nonexistent-org-slug"],
+            )
+            response = self.client.post(
+                url,
+                {"method": "mobile_phone"},
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 404)
+
+    def test_update_registered_user_method_requires_authentication(self):
+        url = self._get_update_method_url()
+        response = self.client.post(url, {"method": "mobile_phone"})
+        self.assertEqual(response.status_code, 401)
+
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_user_radius_usage_view(self):
@@ -1619,7 +1756,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         response = self.client.post(
             auth_url, {"username": "tester", "password": "tester"}
         )
-        authorization = f'Bearer {response.data["key"]}'
+        authorization = f"Bearer {response.data['key']}"
         self.assertEqual(response.status_code, 200)
         with self.subTest("Test user has not used any data"):
             response = self.client.get(usage_url, HTTP_AUTHORIZATION=authorization)

@@ -35,6 +35,7 @@ from rest_framework.generics import (
     ListCreateAPIView,
     RetrieveAPIView,
     RetrieveUpdateDestroyAPIView,
+    get_object_or_404,
 )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
@@ -74,6 +75,7 @@ from .serializers import (
     RadiusBatchSerializer,
     RadiusGroupSerializer,
     RadiusUserGroupSerializer,
+    UpdateRegisteredUserMethodSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -345,7 +347,7 @@ class ObtainAuthTokenView(
                     RegisteredUser.objects.get_or_create(
                         user=user,
                         organization=self.organization,
-                        defaults={"method": ""},
+                        defaults={"method": "pending_verification"},
                     )
                 except ValidationError as error:
                     raise serializers.ValidationError(
@@ -621,13 +623,11 @@ class CreatePhoneTokenView(
     )
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, sends a code via SMS to the
             phone number of the user.
-            """
-        ),
+            """),
         request_body=no_body,
         responses={201: ""},
     )
@@ -701,14 +701,12 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
     serializer_class = serializers.Serializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, allows checking whether an active
             SMS token was already requested for the mobile phone number
             of the logged in account.
-            """
-        ),
+            """),
         responses={200: '`{"active":"true/false"}`'},
     )
     def get(self, request, *args, **kwargs):
@@ -802,13 +800,11 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     serializer_class = ChangePhoneNumberSerializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Allows users to change their phone number, will flag the
             user as inactive and send them a verification code via SMS.
-            """
-        ),
+            """),
         responses={200: ""},
     )
     def post(self, request, *args, **kwargs):
@@ -834,6 +830,54 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
 
 
 change_phone_number = ChangePhoneNumberView.as_view()
+
+
+class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UpdateRegisteredUserMethodSerializer
+
+    @swagger_auto_schema(
+        operation_description=("""
+            **Requires the user auth token (Bearer Token).**
+            Allows users to update their registered user method for an organization.
+            The method can only be updated when it is currently
+            set to 'pending_verification'.
+            Once updated, it cannot be changed again via this endpoint.
+            """),
+        responses={
+            200: "Method updated successfully",
+            400: (
+                "Invalid request (method is not 'pending_verification' "
+                "or invalid method value)"
+            ),
+            401: "Authentication required",
+            404: "RegisteredUser not found for this user and organization",
+        },
+    )
+    def post(self, request, slug):
+        user = request.user
+        try:
+            reg_user = get_object_or_404(
+                RegisteredUser,
+                user_id=user.pk,
+                organization=self.organization,
+            )
+        except RegisteredUser.DoesNotExist:
+            raise NotFound(
+                _("RegisteredUser not found for this user and organization.")
+            )
+        serializer = self.get_serializer(
+            instance=reg_user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"method": serializer.instance.method}, status=status.HTTP_200_OK
+        )
+
+
+update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
 
 
 class RadiusAccountingFilter(AccountingFilter):

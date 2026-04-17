@@ -229,11 +229,14 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             )
 
         registered_user = RegisteredUser.objects.get(user=user, organization=org2)
-        with self.subTest("Test unverified user without registration method"):
+        with self.subTest("Test new RegisteredUser has pending_verification method"):
+            self.assertEqual(registered_user.method, "pending_verification")
+
+        with self.subTest("Test unverified user with pending_verification method"):
             response = self.client.post(url, user_cred)
             self.assertEqual(response.status_code, 401)
 
-        with self.subTest("Test verified user without registration method"):
+        with self.subTest("Test verified user with pending_verification method"):
             registered_user.is_verified = True
             registered_user.save()
             response = self.client.post(url, user_cred)

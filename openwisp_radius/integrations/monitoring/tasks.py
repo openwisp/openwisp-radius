@@ -97,6 +97,8 @@ def _write_user_signup_metric_for_all(metric_key):
 
     for method, count in total_registered_users.items():
         method = clean_registration_method(method)
+        if method is None:
+            continue
         metric = get_metric_func(organization_id="__all__", registration_method=method)
         metric_data.append((metric, {"value": count}))
     Metric.batch_write(metric_data)
@@ -145,6 +147,8 @@ def _write_user_signup_metrics_for_orgs(metric_key):
 
     for org_id, registration_method, count in registered_users:
         registration_method = clean_registration_method(registration_method)
+        if registration_method is None:
+            continue
         if registration_method == "unspecified":
             count += users_without_registereduser.get(org_id, 0)
         metric = get_metric_func(
