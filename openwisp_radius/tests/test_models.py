@@ -42,6 +42,7 @@ RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusBatch = load_model("RadiusBatch")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
+RegisteredUser = load_model("RegisteredUser")
 
 
 class TestNas(BaseTestCase):
@@ -1216,6 +1217,65 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         self.assertEqual(org1_session.groupname, org1_power_user_group.name)
         org2_session.refresh_from_db()
         self.assertEqual(org2_session.groupname, f"{org2.slug}-users")
+
+
+class TestRegisteredUser(BaseTestCase):
+    def test_get_global_or_org_specific(self):
+        user = self._create_user()
+        org = self._create_org(name="ru-test-org", slug="ru-test-org")
+
+        with self.subTest("returns None when no records exist"):
+            result = RegisteredUser.get_global_or_org_specific(user, org)
+            self.assertIsNone(result)
+
+        with self.subTest("returns global record as fallback"):
+            global_ru = RegisteredUser.objects.create(
+                user=user, organization=None, is_verified=True
+            )
+            result = RegisteredUser.get_global_or_org_specific(user, org)
+            self.assertIsNone(result.organization)
+            self.assertEqual(result.is_verified, True)
+
+        with self.subTest("org-specific preferred over global"):
+            global_ru.is_verified = False
+            global_ru.save()
+            org_ru = RegisteredUser.objects.create(
+                user=user, organization=org, is_verified=True
+            )
+            result = RegisteredUser.get_global_or_org_specific(user, org)
+            self.assertEqual(result.organization, org)
+            self.assertEqual(result.is_verified, True)
+
+        with self.subTest(
+            "org-specific returned even when global is verified and org-specific is not"
+        ):
+            org_ru.is_verified = False
+            org_ru.save()
+            global_ru.is_verified = True
+            global_ru.save()
+            result = RegisteredUser.get_global_or_org_specific(user, org)
+            self.assertEqual(result.organization, org)
+            self.assertEqual(result.is_verified, False)
+
+        with self.subTest("returns global record when organization=None passed"):
+            result = RegisteredUser.get_global_or_org_specific(user, organization=None)
+            self.assertIsNone(result.organization)
+
+    def test_clean_prevents_duplicate_registered_user(self):
+        user = self._create_user()
+        org = self._create_org(name="dup-test-org", slug="dup-test-org")
+
+        with self.subTest("duplicate org-specific raises ValidationError"):
+            RegisteredUser.objects.create(user=user, organization=org)
+            duplicate = RegisteredUser(user=user, organization=org)
+            with self.assertRaises(ValidationError):
+                duplicate.full_clean()
+
+        with self.subTest("duplicate global raises ValidationError"):
+            RegisteredUser.objects.create(user=user, organization=None)
+            duplicate = RegisteredUser(user=user, organization=None)
+            with self.assertRaises(ValidationError):
+                duplicate.full_clean()
 
 
 del BaseTestCase

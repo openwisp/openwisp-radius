@@ -316,7 +316,7 @@ class ObtainAuthTokenView(
         self.update_user_details(user)
         context = {"view": self, "request": request}
         serializer = self.serializer_class(instance=token, context=context)
-        response = RadiusUserSerializer(user).data
+        response = RadiusUserSerializer(user, context=context).data
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
         # If identity verification is required, check if user is verified
@@ -336,24 +336,24 @@ class ObtainAuthTokenView(
             if get_organization_radius_settings(
                 self.organization, "registration_enabled"
             ):
-                if self._needs_identity_verification(
-                    org=self.organization
-                ) and not self.is_identity_verified_strong(user, self.organization):
-                    raise PermissionDenied
                 try:
                     org_user = OrganizationUser(
                         user=user, organization=self.organization
                     )
                     org_user.full_clean()
                     org_user.save()
+                    RegisteredUser.objects.get_or_create(
+                        user=user,
+                        organization=self.organization,
+                        defaults={"method": ""},
+                    )
                 except ValidationError as error:
                     raise serializers.ValidationError(
                         {"non_field_errors": error.message_dict.pop("__all__")}
                     )
             else:
                 message = _(
-                    "{organization} does not allow self registration "
-                    "of new accounts."
+                    "{organization} does not allow self registration of new accounts."
                 ).format(organization=self.organization.name)
                 raise PermissionDenied(message)
 
@@ -411,8 +411,8 @@ class ValidateAuthTokenView(
                     user.phone_number = (
                         phone_token.phone_number if phone_token else user.phone_number
                     )
-                response = RadiusUserSerializer(user).data
                 context = {"view": self, "request": request}
+                response = RadiusUserSerializer(user, context=context).data
                 token_data = rest_auth_settings.api_settings.TOKEN_SERIALIZER(
                     token, context=context
                 ).data
@@ -621,11 +621,13 @@ class CreatePhoneTokenView(
     )
 
     @swagger_auto_schema(
-        operation_description=("""
+        operation_description=(
+            """
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, sends a code via SMS to the
             phone number of the user.
-            """),
+            """
+        ),
         request_body=no_body,
         responses={201: ""},
     )
@@ -699,12 +701,14 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
     serializer_class = serializers.Serializer
 
     @swagger_auto_schema(
-        operation_description=("""
+        operation_description=(
+            """
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, allows checking whether an active
             SMS token was already requested for the mobile phone number
             of the logged in account.
-            """),
+            """
+        ),
         responses={200: '`{"active":"true/false"}`'},
     )
     def get(self, request, *args, **kwargs):
@@ -772,6 +776,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 },
             )
             reg_user.is_verified = True
+            reg_user.method = "mobile_phone"
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number
@@ -797,11 +802,13 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     serializer_class = ChangePhoneNumberSerializer
 
     @swagger_auto_schema(
-        operation_description=("""
+        operation_description=(
+            """
             **Requires the user auth token (Bearer Token).**
             Allows users to change their phone number, will flag the
             user as inactive and send them a verification code via SMS.
-            """),
+            """
+        ),
         responses={200: ""},
     )
     def post(self, request, *args, **kwargs):

@@ -1407,6 +1407,20 @@ class TestAdmin(
             register_registration_method("github", "GitHub", strong_identity=False)
             self.assertIn("github", RegisteredUser._weak_verification_methods)
 
+    def test_user_admin_shows_multiple_registered_user_records(self):
+        user = self._create_user(username="multiuser", email="multi@test.org")
+        org2 = self._create_org(name="org2", slug="org2")
+        RegisteredUser.objects.create(
+            user=user, organization=self.default_org, is_verified=True
+        )
+        RegisteredUser.objects.create(user=user, organization=org2, is_verified=False)
+        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        user_url = reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk])
+        response = self.client.get(user_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "id_registered_users-TOTAL_FORMS")
+        self.assertIn('value="3"', response.rendered_content)
+
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
         self.assertIsNotNone(unknown)

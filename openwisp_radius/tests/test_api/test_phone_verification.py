@@ -23,6 +23,7 @@ from ..mixins import ApiTokenMixin, BaseTestCase
 User = get_user_model()
 PhoneToken = load_model("PhoneToken")
 RadiusToken = load_model("RadiusToken")
+RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
@@ -223,9 +224,23 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         reg_user.save()
         token.user.save()
         url = reverse("radius:phone_token_create", args=[self.default_org.slug])
-        r = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
-        self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.json(), {"user": "This user has been already verified."})
+
+        with self.subTest("org-specific verified record blocks phone token creation"):
+            response = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(
+                response.json(), {"user": "This user has been already verified."}
+            )
+
+        with self.subTest("global verified record also blocks phone token creation"):
+            # Replace org-specific record with a global verified record
+            reg_user.delete()
+            RegisteredUser.objects.create(
+                user=token.user, organization=None, is_verified=True
+            )
+            r = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
+            self.assertEqual(r.status_code, 400)
+            self.assertEqual(r.json(), {"user": "This user has been already verified."})
 
     @freeze_time(_TEST_DATE)
     @capture_any_output()
@@ -941,6 +956,54 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         user.refresh_from_db()
         self.assertEqual(user.phone_number, new_phone_number)
         self.assertEqual(user.username, new_phone_number)
+
+    @capture_any_output()
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_phone_change_unverifies_only_specific_org(self, *args):
+        org2 = self._create_org(name="org2", slug="org2")
+        org2_settings = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )[0]
+        org2_settings.sms_verification = True
+        org2_settings.needs_method = True
+        org2_settings.sms_sender = "+595972157632"
+        org2_settings.full_clean()
+        org2_settings.save()
+        self._create_org_user(organization=org2)
+
+        self._register_user(expect_users=None)
+        user = User.objects.get(email=self._test_email)
+        user_token = Token.objects.get(user=user)
+
+        phone_token = PhoneToken.objects.create(
+            user=user,
+            ip="127.0.0.1",
+            phone_number="+393664255801",
+        )
+        url = reverse("radius:phone_token_validate", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"code": phone_token.token}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        reg_org1 = RegisteredUser.objects.get(user=user, organization=self.default_org)
+        self.assertEqual(reg_org1.is_verified, True)
+
+        url = reverse("radius:phone_number_change", args=[self.default_org.slug])
+        with mock.patch("openwisp_radius.utils.SmsMessage.send"):
+            response = self.client.post(
+                url,
+                json.dumps({"phone_number": "+595972157444"}),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+        self.assertEqual(response.status_code, 200)
+
+        reg_org1.refresh_from_db()
+        self.assertEqual(reg_org1.is_verified, False)
 
 
 class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
