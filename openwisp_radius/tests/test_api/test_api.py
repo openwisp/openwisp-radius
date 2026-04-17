@@ -41,6 +41,7 @@ RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusGroup = load_model("RadiusGroup")
+RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -60,7 +61,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         login_payload = {"username": username, "password": password}
         login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
         login_response = self.client.post(login_url, data=login_payload)
-        header = f'Bearer {login_response.json()["key"]}'
+        header = f"Bearer {login_response.json()['key']}"
         url = reverse("radius:batch")
         return self.client.post(url, data, HTTP_AUTHORIZATION=header)
 
@@ -380,6 +381,48 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                     "radius_user_token": None,
                 },
             )
+
+        with self.subTest("org-specific takes precedence over global"):
+            # Create user with both a global (unverified) and
+            # org-specific (verified) record
+            user2 = self._create_user(username="user2", email="user2@test.com")
+            self._create_org_user(user=user2, organization=self.default_org)
+            RegisteredUser.objects.create(
+                user=user2, organization=None, is_verified=False
+            )
+            RegisteredUser.objects.create(
+                user=user2,
+                organization=self.default_org,
+                is_verified=True,
+                method="mobile_phone",
+            )
+            url = reverse("radius:user_auth_token", args=[self.default_org.slug])
+            r = self.client.post(url, {"username": "user2", "password": "tester"})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.data["is_verified"], True)
+            self.assertEqual(r.data["method"], "mobile_phone")
+
+        with self.subTest("global record as fallback when no org-specific"):
+            # Create user with only a global (verified) record
+            user3 = self._create_user(username="user3", email="user3@test.com")
+            self._create_org_user(user=user3, organization=self.default_org)
+            RegisteredUser.objects.create(
+                user=user3, organization=None, is_verified=True, method="email"
+            )
+            url = reverse("radius:user_auth_token", args=[self.default_org.slug])
+            r = self.client.post(url, {"username": "user3", "password": "tester"})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.data["is_verified"], True)
+            self.assertEqual(r.data["method"], "email")
+
+        with self.subTest("returns None when no RegisteredUser records exist"):
+            user4 = self._create_user(username="user4", email="user4@test.com")
+            self._create_org_user(user=user4, organization=self.default_org)
+            url = reverse("radius:user_auth_token", args=[self.default_org.slug])
+            r = self.client.post(url, {"username": "user4", "password": "tester"})
+            self.assertEqual(r.status_code, 200)
+            self.assertIsNone(r.data["is_verified"])
+            self.assertIsNone(r.data["method"])
 
     # The fallback value is set on project startup, hence it also requires mocking.
     @mock.patch.object(

@@ -1058,12 +1058,13 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         user.save()
+        radius_settings = self.organization.radius_settings
         registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
             user=user,
             organization=self.organization,
             defaults={
                 "method": "manual",
-                "is_verified": self.organization.radius_settings.needs_identity_verification,
+                "is_verified": radius_settings.needs_identity_verification,
             },
         )
         if (

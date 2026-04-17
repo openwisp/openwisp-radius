@@ -218,20 +218,26 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
         with self.subTest("Test RegisteredUser object does not exist"):
             response = self.client.post(url, user_cred)
-            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(
+                OrganizationUser.objects.filter(user=user, organization=org2).count(),
+                1,
+            )
+            self.assertEqual(
+                RegisteredUser.objects.filter(user=user, organization=org2).count(),
+                1,
+            )
 
-        registered_user = RegisteredUser.objects.create(
-            user=user, organization=org2, method=""
-        )
+        registered_user = RegisteredUser.objects.get(user=user, organization=org2)
         with self.subTest("Test unverified user without registration method"):
             response = self.client.post(url, user_cred)
-            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.status_code, 401)
 
         with self.subTest("Test verified user without registration method"):
             registered_user.is_verified = True
             registered_user.save()
             response = self.client.post(url, user_cred)
-            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.status_code, 401)
 
         with self.subTest("Test verified user with mobile registration method"):
             registered_user.method = "mobile_phone"
@@ -241,11 +247,10 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             self.assertIn("key", response.data)
 
         OrganizationUser.objects.filter(organization=org2, user=user).delete()
+        RegisteredUser.objects.filter(user=user, organization=org2).delete()
         with self.subTest(
             "Test unverified user organization does not need identity verification"
         ):
-            registered_user.is_verified = False
-            registered_user.save()
             rad_settings.needs_identity_verification = False
             rad_settings.save()
 
@@ -402,3 +407,122 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         User.objects.update(password_updated=now() - timedelta(days=60))
         response = self._test_validate_auth_token_helper(user)
         self.assertEqual(response.data["password_expired"], True)
+
+    @capture_any_output()
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_multi_org_phone_verification_flow(self, *args):
+        org_a = self.default_org
+        org_a.radius_settings.sms_verification = True
+        org_a.radius_settings.sms_sender = "+595972157632"
+        org_a.radius_settings.full_clean()
+        org_a.radius_settings.save()
+
+        org_b = self._create_org(name="OrgB", slug="orgb")
+        OrganizationRadiusSettings.objects.create(
+            organization=org_b,
+            sms_verification=True,
+            needs_identity_verification=True,
+            sms_sender="+595972157633",
+        )
+
+        with self.subTest("Register with OrgA"):
+            url = reverse("radius:rest_register", args=[org_a.slug])
+            response = self.client.post(
+                url,
+                {
+                    "username": "multiorguser",
+                    "email": "multiorg@test.org",
+                    "password1": "tester",
+                    "password2": "tester",
+                    "phone_number": "+393664255801",
+                    "method": "mobile_phone",
+                },
+            )
+            self.assertEqual(response.status_code, 201)
+            user = User.objects.get(email="multiorg@test.org")
+            self.assertEqual(
+                RegisteredUser.objects.filter(user=user, organization=org_a).count(),
+                1,
+            )
+            self.assertEqual(
+                RegisteredUser.objects.get(user=user, organization=org_a).is_verified,
+                False,
+            )
+
+        with self.subTest("Complete phone verification for OrgA"):
+            user_token = Token.objects.get(user=user)
+            phone_token = PhoneToken.objects.create(
+                user=user, ip="127.0.0.1", phone_number="+393664255801"
+            )
+            url = reverse("radius:phone_token_validate", args=[org_a.slug])
+            response = self.client.post(
+                url,
+                {"code": phone_token.token},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                RegisteredUser.objects.get(user=user, organization=org_a).is_verified,
+                True,
+            )
+
+        with self.subTest("User is verified in OrgA but not in OrgB"):
+            self.assertTrue(
+                RegisteredUser.objects.get(user=user, organization=org_a).is_verified
+            )
+            self.assertEqual(
+                RegisteredUser.objects.filter(user=user, organization=org_b).count(),
+                0,
+            )
+
+        with self.subTest("Login to OrgB creates OrganizationUser and RegisteredUser"):
+            url = reverse("radius:user_auth_token", args=[org_b.slug])
+            response = self.client.post(
+                url, {"username": "multiorguser", "password": "tester"}
+            )
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(response.data.get("is_verified"), False)
+            self.assertEqual(
+                OrganizationUser.objects.filter(user=user, organization=org_b).count(),
+                1,
+            )
+            self.assertEqual(
+                RegisteredUser.objects.filter(user=user, organization=org_b).count(),
+                1,
+            )
+            self.assertEqual(
+                RegisteredUser.objects.get(user=user, organization=org_b).is_verified,
+                False,
+            )
+
+        with self.subTest("Complete phone verification for OrgB"):
+            user_token = Token.objects.get(user=user)
+            phone_token = PhoneToken.objects.create(
+                user=user, ip="127.0.0.1", phone_number="+393664255802"
+            )
+            url = reverse("radius:phone_token_validate", args=[org_b.slug])
+            response = self.client.post(
+                url,
+                {"code": phone_token.token},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                RegisteredUser.objects.get(user=user, organization=org_b).is_verified,
+                True,
+            )
+
+        with self.subTest("User can now login to OrgB"):
+            url = reverse("radius:user_auth_token", args=[org_b.slug])
+            response = self.client.post(
+                url, {"username": "multiorguser", "password": "tester"}
+            )
+            self.assertEqual(
+                response.status_code,
+                200,
+                f"Login failed: {response.status_code} - {response.data}",
+            )
+            self.assertEqual(response.data["is_verified"], True)
+            self.assertEqual(response.data["method"], "mobile_phone")
