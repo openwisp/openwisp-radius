@@ -105,7 +105,9 @@ class FreeradiusApiAuthentication(BaseAuthentication):
 
         for ip in ip_list:
             try:
-                if ipaddress.ip_address(client_ip) in ipaddress.ip_network(ip):
+                if ipaddress.ip_address(client_ip) in ipaddress.ip_network(
+                    (ip or "").strip(), strict=False
+                ):
                     return (AnonymousUser(), uuid)
             except ValueError:
                 invalid_addr_message = _(
