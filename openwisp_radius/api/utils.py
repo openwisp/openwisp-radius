@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 Organization = load_model("openwisp_users", "Organization")
 OrganizationRadiusSettings = load_model("openwisp_radius", "OrganizationRadiusSettings")
+RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 
 
 class ErrorDictMixin(object):
@@ -30,8 +31,18 @@ class IDVerificationHelper(object):
         except ObjectDoesNotExist:
             return app_settings.NEEDS_IDENTITY_VERIFICATION
 
-    def is_identity_verified_strong(self, user):
-        try:
-            return user.registered_user.is_identity_verified_strong
-        except ObjectDoesNotExist:
+    def is_identity_verified_strong(self, user, organization=None):
+        reg_user = None
+        global_reg_user = None
+        # We use all() to utilize the prefetch cache, otherwise
+        # it would cause an additional query to fetch the registered user
+        for ru in user.registered_users.all():
+            if organization and ru.organization_id == organization.pk:
+                reg_user = ru
+                break
+            elif ru.organization_id is None:
+                global_reg_user = ru
+        reg_user = reg_user or global_reg_user
+        if reg_user is None:
             return False
+        return reg_user.is_identity_verified_strong

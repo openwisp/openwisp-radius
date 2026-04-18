@@ -15,7 +15,9 @@ class RegisteredUserFilter(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == "unknown":
-            return queryset.filter(registered_user__isnull=True)
+            return queryset.filter(registered_users__isnull=True)
         elif self.value():
-            return queryset.filter(registered_user__is_verified=self.value() == "true")
+            return queryset.filter(
+                registered_users__is_verified=self.value() == "true"
+            ).distinct()
         return queryset

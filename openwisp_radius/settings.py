@@ -232,10 +232,13 @@ for counter_path in _counters:
 if not hasattr(settings, "OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG"):
     from openwisp_users import settings as ow_users_settings
 
-    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["fields"].extend(
-        ["registered_user.method", "registered_user.is_verified"]
+    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["fields"].append(
+        {
+            "name": "registered_users",
+            "fields": ("organization_id", "method", "is_verified"),
+        }
     )
-    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["select_related"].extend(
-        ["registered_user"]
+    ow_users_settings.EXPORT_USERS_COMMAND_CONFIG["prefetch_related"].extend(
+        ["registered_users"]
     )
 BATCH_ASYNC_THRESHOLD = get_settings_value("BATCH_ASYNC_THRESHOLD", 15)

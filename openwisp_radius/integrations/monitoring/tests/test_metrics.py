@@ -21,8 +21,17 @@ User = get_user_model()
 
 @tag("radius_monitoring")
 class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
+    def _read_chart(chart, **kwargs):
+        return chart.read(
+            additional_query_kwargs={"additional_params": kwargs},
+        )
+
     def _create_registered_user(self, **kwargs):
-        options = {"is_verified": False, "method": "mobile_phone"}
+        options = {
+            "is_verified": False,
+            "method": "mobile_phone",
+            "organization": self.default_org,
+        }
         options.update(**kwargs)
         if "user" not in options:
             options["user"] = self._create_user()
@@ -371,11 +380,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_write_user_registration_metrics(self):
         from ..tasks import write_user_registration_metrics
 
-        def _read_chart(chart, **kwargs):
-            return chart.read(
-                additional_query_kwargs={"additional_params": kwargs},
-            )
-
         # The TransactionTestCase truncates all the data after each test.
         # The general metrics and charts which are created by migrations
         # get deleted after each test. Therefore, we create them again here.
@@ -393,21 +397,25 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(len(org_points["traces"]), 0)
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            all_points = _read_chart(
+            all_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(len(org_points["traces"]), 0)
@@ -421,23 +429,27 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            all_points = _read_chart(
+            all_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
@@ -454,13 +466,17 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(
                 all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(
@@ -468,7 +484,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             )
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
@@ -476,7 +492,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(
                 org_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
@@ -484,3 +500,27 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(
                 all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
+
+    def test_pending_verification_excluded_from_metrics(self):
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        create_general_metrics(None, None)
+        org = self._create_org(name="pending_verification_test_org")
+        user_signup_metric = self.metric_model.objects.get(key="user_signups")
+        total_user_signup_metric = self.metric_model.objects.get(key="tot_user_signups")
+        user = self._create_org_user(organization=org).user
+        self._create_registered_user(
+            user=user, organization=org, method="pending_verification"
+        )
+        write_user_registration_metrics.delay()
+
+        user_signup_chart = user_signup_metric.chart_set.first()
+        all_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
+        self.assertEqual(len(all_points["traces"]), 0)
+
+        total_user_signup_chart = total_user_signup_metric.chart_set.first()
+        all_points = self._read_chart(
+            total_user_signup_chart, organization_id=[str(org.pk)]
+        )
+        self.assertEqual(len(all_points["traces"]), 0)

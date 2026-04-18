@@ -206,6 +206,88 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
 
+    def test_authorize_verified_user(self):
+        org_user = self._get_org_user()
+        user = org_user.user
+        org_settings = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+
+        with self.subTest("org-specific verified record passes authorization"):
+            RegisteredUser.objects.create(
+                user=user, organization=self._get_org(), is_verified=True
+            )
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+
+        with self.subTest("global verified record passes authorization (fallback)"):
+            RegisteredUser.objects.filter(user=user).delete()
+            RegisteredUser.objects.create(
+                user=user, organization=None, is_verified=True
+            )
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+
+    def test_multi_org_user_different_verification_states(self):
+        org1 = self._get_org()
+        org_settings = OrganizationRadiusSettings.objects.get(organization=org1)
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        org2 = self._create_org(name="org2", slug="org2")
+        org2_settings = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )[0]
+        org2_settings.needs_identity_verification = True
+        org2_settings.full_clean()
+        org2_settings.save()
+        user = self._get_user_with_org()
+        self._create_org_user(organization=org2, user=user)
+        RegisteredUser.objects.create(user=user, organization=org1, is_verified=True)
+        auth_header_org1 = f"Bearer {org1.pk} {org1.radius_settings.token}"
+        response = self._authorize_user(
+            username=user.username, auth_header=auth_header_org1
+        )
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        auth_header_org2 = f"Bearer {org2.pk} {org2.radius_settings.token}"
+        response = self._authorize_user(
+            username=user.username, auth_header=auth_header_org2
+        )
+        self.assertIsNone(response.data)
+
+    def test_global_fallback_for_orgs_without_specific_records(self):
+        org1 = self._get_org()
+        org2 = self._create_org(name="org2", slug="org2")
+        org2_settings = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )[0]
+        org2_settings.needs_identity_verification = True
+        org2_settings.full_clean()
+        org2_settings.save()
+        user = self._get_user_with_org()
+        self._create_org_user(organization=org2, user=user)
+        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        org_settings = OrganizationRadiusSettings.objects.get(organization=org1)
+        org_settings.needs_identity_verification = True
+        org_settings.save()
+        user.registered_users.exclude(organization=None).delete()
+
+        auth_header_org1 = f"Bearer {org1.pk} {org1.radius_settings.token}"
+        response = self._authorize_user(
+            username=user.username, auth_header=auth_header_org1
+        )
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        auth_header_org2 = f"Bearer {org2.pk} {org2.radius_settings.token}"
+        response = self._authorize_user(
+            username=user.username, auth_header=auth_header_org2
+        )
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
     def test_authorize_radius_token_unverified_user(self):
         user = self._get_org_user()
         org_settings = OrganizationRadiusSettings.objects.get(
@@ -258,7 +340,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def test_postauth_accept_201_querystring(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
         params = self._get_postauth_params()
-        post_url = f'{reverse("radius:postauth")}{self.token_querystring}'
+        post_url = f"{reverse('radius:postauth')}{self.token_querystring}"
         response = self.client.post(post_url, params)
         params["password"] = ""
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
@@ -2442,7 +2524,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         )
         self._get_org_user()
         token_querystring = f"?token={rad.token}&uuid={str(self.org.pk)}"
-        post_url = f'{reverse("radius:authorize")}{token_querystring}'
+        post_url = f"{reverse('radius:authorize')}{token_querystring}"
         # Clear cache before sending request
         cache.clear()
         self.client.post(post_url, {"username": "tester", "password": "tester"})

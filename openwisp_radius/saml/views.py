@@ -72,10 +72,13 @@ class AssertionConsumerServiceView(
             orgUser.full_clean()
             orgUser.save()
         try:
-            user.registered_user
-        except ObjectDoesNotExist:
+            user.registered_users.get(organization=org)
+        except RegisteredUser.DoesNotExist:
             registered_user = RegisteredUser(
-                user=user, method="saml", is_verified=app_settings.SAML_IS_VERIFIED
+                user=user,
+                organization=org,
+                method="saml",
+                is_verified=app_settings.SAML_IS_VERIFIED,
             )
             registered_user.full_clean()
             registered_user.save()
