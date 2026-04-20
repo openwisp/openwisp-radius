@@ -172,7 +172,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             f"?uuid={str(self.default_org.pk)}",
         ]:
             with self.subTest(querystring):
-                post_url = f'{reverse("radius:authorize")}{querystring}'
+                post_url = f"{reverse('radius:authorize')}{querystring}"
                 response = self.client.post(
                     post_url, {"username": "tester", "password": "tester"}
                 )
@@ -1309,7 +1309,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
 
     def test_get_authorize_view(self):
-        url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        url = f"{reverse('radius:authorize')}{self.token_querystring}"
         r = self.client.get(url, HTTP_ACCEPT="text/html")
         self.assertEqual(r.status_code, 405)
         expected = f'<form action="{reverse("radius:authorize")}'
@@ -1444,7 +1444,7 @@ class TestTransactionFreeradiusApi(
         )
         reply2.full_clean()
         reply2.save()
-        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        post_url = f"{reverse('radius:authorize')}{self.token_querystring}"
         response = self.client.post(
             post_url, {"username": "tester", "password": "tester"}
         )
@@ -1539,7 +1539,7 @@ class TestTransactionFreeradiusApi(
 
     def test_authorize_200_querystring(self):
         self._get_org_user()
-        post_url = f'{reverse("radius:authorize")}{self.token_querystring}'
+        post_url = f"{reverse('radius:authorize')}{self.token_querystring}"
         response = self.client.post(
             post_url, {"username": "tester", "password": "tester"}
         )
@@ -2242,7 +2242,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
-            f'{reverse("radius:accounting")}{self.token_querystring}',
+            f"{reverse('radius:accounting')}{self.token_querystring}",
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2281,7 +2281,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
-            f'{reverse("radius:accounting")}{self.token_querystring}',
+            f"{reverse('radius:accounting')}{self.token_querystring}",
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2301,7 +2301,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
     def test_mac_authentication_with_no_logging(self, logger):
         username = "5c:7d:c1:72:a7:3b"
         self.client.post(
-            f'{reverse("radius:accounting")}{self.token_querystring}',
+            f"{reverse('radius:accounting')}{self.token_querystring}",
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2336,7 +2336,7 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
             groupname="group2", priority=1, username="testgroup2"
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
-        url = f'{reverse("radius:accounting")}{self.token_querystring}'
+        url = f"{reverse('radius:accounting')}{self.token_querystring}"
         self.client.post(
             url,
             {
@@ -2401,12 +2401,15 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
             "Request rejected: (localhost) in organization settings or "
             "settings.py is not a valid IP address. Please contact administrator."
         )
-        with mock.patch(
-            "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS", ["localhost"]
-        ), mock.patch.object(
-            OrganizationRadiusSettings._meta.get_field("freeradius_allowed_hosts"),
-            "from_db_value",
-            return_value="localhost",
+        with (
+            mock.patch(
+                "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS", ["localhost"]
+            ),
+            mock.patch.object(
+                OrganizationRadiusSettings._meta.get_field("freeradius_allowed_hosts"),
+                "from_db_value",
+                return_value="localhost",
+            ),
         ):
             response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 403)
@@ -2524,7 +2527,7 @@ class TestOgranizationRadiusSettings(ApiTokenMixin, BaseTestCase):
         )
         self._get_org_user()
         token_querystring = f"?token={rad.token}&uuid={str(self.org.pk)}"
-        post_url = f"{reverse('radius:authorize')}{token_querystring}"
+        post_url = f'{reverse("radius:authorize")}{token_querystring}'
         # Clear cache before sending request
         cache.clear()
         self.client.post(post_url, {"username": "tester", "password": "tester"})
