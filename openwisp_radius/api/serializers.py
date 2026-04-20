@@ -515,6 +515,54 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
+class RadiusBatchUpdateSerializer(RadiusBatchSerializer):
+    """
+    Serializer for updating RadiusBatch objects.
+    Makes the organization field readonly for existing objects.
+    """
+
+    organization_slug = RadiusOrganizationField(
+        help_text=("Slug of the organization for creating radius batch."),
+        required=False,
+        label="organization",
+        slug_field="slug",
+        write_only=True,
+    )
+
+    def validate(self, data):
+        """
+        Validates partial updates while preserving model-level validation.
+        Ignores organization_slug if provided since organization is readonly.
+        """
+        data.pop("organization_slug", None)
+        strategy = data.get("strategy") or (self.instance and self.instance.strategy)
+        if (
+            strategy == "prefix"
+            and "number_of_users" in data
+            and not data.get("number_of_users")
+        ):
+            raise serializers.ValidationError(
+                {"number_of_users": _("The field number_of_users cannot be empty")}
+            )
+        validated_data = serializers.ModelSerializer.validate(self, data)
+        # Run model-level validation (full_clean) for update
+        if self.instance:
+            batch_data = {
+                field: validated_data.get(field, getattr(self.instance, field))
+                for field in validated_data
+            }
+            batch_data.pop("number_of_users", None)
+            for field, value in batch_data.items():
+                setattr(self.instance, field, value)
+            self.instance.full_clean()
+        return validated_data
+
+    class Meta:
+        model = RadiusBatch
+        fields = "__all__"
+        read_only_fields = ("created", "modified", "user_credentials", "organization")
+
+
 class PasswordResetSerializer(BasePasswordResetSerializer):
     input = serializers.CharField()
     email = None

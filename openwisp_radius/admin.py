@@ -463,23 +463,21 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         )
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
-            request, obj
-        )
+        readonly_fields = super().get_readonly_fields(request, obj)
         if obj and obj.status != "pending":
             return (
                 "strategy",
+                "organization",
                 "prefix",
                 "csvfile",
                 "number_of_users",
                 "users",
                 "expiration_date",
                 "name",
-                "organization",
                 "status",
             ) + readonly_fields
         elif obj:
-            return ("status",) + readonly_fields
+            return ("organization", "status") + readonly_fields
         return ("status",) + readonly_fields
 
     def has_delete_permission(self, request, obj=None):
