@@ -774,7 +774,6 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 },
             )
             reg_user.is_verified = True
-            reg_user.method = "mobile_phone"
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number

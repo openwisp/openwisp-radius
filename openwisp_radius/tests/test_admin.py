@@ -671,16 +671,19 @@ class TestAdmin(
             f"admin:{self.app_label_users}_organization_add",
         )
         PASSWORD_RESET_URLS = {"default": default_password_reset_url}
-        with mock.patch.object(
-            app_settings,
-            "DEFAULT_PASSWORD_RESET_URL",
-            app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
-        ), mock.patch.object(
-            # The default value is set on project startup, hence
-            # it also requires mocking.
-            OrganizationRadiusSettings._meta.get_field("password_reset_url"),
-            "fallback",
-            app_settings.DEFAULT_PASSWORD_RESET_URL,
+        with (
+            mock.patch.object(
+                app_settings,
+                "DEFAULT_PASSWORD_RESET_URL",
+                app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
+            ),
+            mock.patch.object(
+                # The default value is set on project startup, hence
+                # it also requires mocking.
+                OrganizationRadiusSettings._meta.get_field("password_reset_url"),
+                "fallback",
+                app_settings.DEFAULT_PASSWORD_RESET_URL,
+            ),
         ):
             response = self.client.get(url)
             self.assertContains(response, default_password_reset_url)
@@ -1418,8 +1421,13 @@ class TestAdmin(
         user_url = reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk])
         response = self.client.get(user_url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "id_registered_users-TOTAL_FORMS")
-        self.assertIn('value="3"', response.rendered_content)
+        self.assertContains(
+            response,
+            (
+                '<input type="hidden" name="registered_users-INITIAL_FORMS" value="3"'
+                ' id="id_registered_users-INITIAL_FORMS">'
+            ),
+        )
 
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()

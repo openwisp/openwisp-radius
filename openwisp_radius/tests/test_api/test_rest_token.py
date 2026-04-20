@@ -177,14 +177,15 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         url = reverse("radius:user_auth_token", args=[org2.slug])
 
         with self.subTest("Global disabled and organization None"):
-            with mock.patch.object(
-                app_settings, "REGISTRATION_API_ENABLED", False
-            ), mock.patch.object(
-                # The fallback value is set on project startup, hence
-                # it also requires mocking.
-                OrganizationRadiusSettings._meta.get_field("registration_enabled"),
-                "fallback",
-                False,
+            with (
+                mock.patch.object(app_settings, "REGISTRATION_API_ENABLED", False),
+                mock.patch.object(
+                    # The fallback value is set on project startup, hence
+                    # it also requires mocking.
+                    OrganizationRadiusSettings._meta.get_field("registration_enabled"),
+                    "fallback",
+                    False,
+                ),
             ):
                 _assert_registration_disabled()
 
@@ -250,7 +251,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             self.assertIn("key", response.data)
 
         OrganizationUser.objects.filter(organization=org2, user=user).delete()
-        RegisteredUser.objects.filter(user=user, organization=org2).delete()
+        RegisteredUser.objects.filter(user=user).update(is_verified=False)
         with self.subTest(
             "Test unverified user organization does not need identity verification"
         ):

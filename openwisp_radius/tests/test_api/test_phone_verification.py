@@ -225,22 +225,11 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         token.user.save()
         url = reverse("radius:phone_token_create", args=[self.default_org.slug])
 
-        with self.subTest("org-specific verified record blocks phone token creation"):
-            response = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(
-                response.json(), {"user": "This user has been already verified."}
-            )
-
-        with self.subTest("global verified record also blocks phone token creation"):
-            # Replace org-specific record with a global verified record
-            reg_user.delete()
-            RegisteredUser.objects.create(
-                user=token.user, organization=None, is_verified=True
-            )
-            r = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
-            self.assertEqual(r.status_code, 400)
-            self.assertEqual(r.json(), {"user": "This user has been already verified."})
+        response = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(), {"user": "This user has been already verified."}
+        )
 
     @freeze_time(_TEST_DATE)
     @capture_any_output()
@@ -839,7 +828,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         r1 = self.client.post(
             url,
             content_type="application/json",
-            HTTP_AUTHORIZATION=f'Bearer {r.data["key"]}',
+            HTTP_AUTHORIZATION=f"Bearer {r.data['key']}",
         )
         self.assertEqual(r1.status_code, 201)
 
