@@ -2,5 +2,4 @@
 .field-prefix label,
 .field-number_of_users label {
   font-weight: bold;
-  color: var(--ow-color-black, #000);
 }

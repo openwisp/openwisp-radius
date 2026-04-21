@@ -6,5 +6,4 @@
 .form-row.field-user label,
 .form-row.field-username label {
   font-weight: bold;
-  color: var(--ow-color-fg-darker, #333);
 }
