@@ -2242,7 +2242,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
-            f"{reverse('radius:accounting')}{self.token_querystring}",
+            f'{reverse("radius:accounting")}{self.token_querystring}',
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2281,7 +2281,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
         self.client.post(
-            f"{reverse('radius:accounting')}{self.token_querystring}",
+            f'{reverse("radius:accounting")}{self.token_querystring}',
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2301,7 +2301,7 @@ class TestAutoGroupname(ApiTokenMixin, BaseTestCase):
     def test_mac_authentication_with_no_logging(self, logger):
         username = "5c:7d:c1:72:a7:3b"
         self.client.post(
-            f"{reverse('radius:accounting')}{self.token_querystring}",
+            f'{reverse("radius:accounting")}{self.token_querystring}',
             {
                 "status_type": "Start",
                 "session_time": "",
@@ -2336,7 +2336,7 @@ class TestAutoGroupnameDisabled(ApiTokenMixin, BaseTestCase):
             groupname="group2", priority=1, username="testgroup2"
         )
         user.radiususergroup_set.set([usergroup1, usergroup2])
-        url = f"{reverse('radius:accounting')}{self.token_querystring}"
+        url = f'{reverse("radius:accounting")}{self.token_querystring}'
         self.client.post(
             url,
             {
@@ -2401,15 +2401,12 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
             "Request rejected: (localhost) in organization settings or "
             "settings.py is not a valid IP address. Please contact administrator."
         )
-        with (
-            mock.patch(
-                "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS", ["localhost"]
-            ),
-            mock.patch.object(
-                OrganizationRadiusSettings._meta.get_field("freeradius_allowed_hosts"),
-                "from_db_value",
-                return_value="localhost",
-            ),
+        with mock.patch(
+            "openwisp_radius.settings.FREERADIUS_ALLOWED_HOSTS", ["localhost"]
+        ), mock.patch.object(
+            OrganizationRadiusSettings._meta.get_field("freeradius_allowed_hosts"),
+            "from_db_value",
+            return_value="localhost",
         ):
             response = self.client.post(reverse("radius:authorize"), self.params)
         self.assertEqual(response.status_code, 403)

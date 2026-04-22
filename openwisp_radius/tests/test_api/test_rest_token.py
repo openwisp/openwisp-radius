@@ -470,11 +470,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
                 RegisteredUser.objects.get(user=user, organization=org_a).is_verified,
                 True,
             )
-
-        with self.subTest("User is verified in OrgA but not in OrgB"):
-            self.assertTrue(
-                RegisteredUser.objects.get(user=user, organization=org_a).is_verified
-            )
+            # Ensure that the user is not registered for OrgB yet
             self.assertEqual(
                 RegisteredUser.objects.filter(user=user, organization=org_b).count(),
                 0,
@@ -498,6 +494,22 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
             self.assertEqual(
                 RegisteredUser.objects.get(user=user, organization=org_b).is_verified,
                 False,
+            )
+
+        with self.subTest("Update the registration method for OrgB to mobile_phone"):
+            url = reverse(
+                "radius:update_registered_user_registration_method", args=[org_b.slug]
+            )
+            response = self.client.post(
+                url,
+                {"method": "mobile_phone"},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                RegisteredUser.objects.get(user=user, organization=org_b).method,
+                "mobile_phone",
             )
 
         with self.subTest("Complete phone verification for OrgB"):

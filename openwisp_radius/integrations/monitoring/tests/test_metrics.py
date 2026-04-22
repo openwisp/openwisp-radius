@@ -21,7 +21,7 @@ User = get_user_model()
 
 @tag("radius_monitoring")
 class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
-    def _read_chart(chart, **kwargs):
+    def _read_chart(self, chart, **kwargs):
         return chart.read(
             additional_query_kwargs={"additional_params": kwargs},
         )

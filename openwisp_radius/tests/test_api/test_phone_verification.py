@@ -828,7 +828,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         r1 = self.client.post(
             url,
             content_type="application/json",
-            HTTP_AUTHORIZATION=f"Bearer {r.data['key']}",
+            HTTP_AUTHORIZATION=f'Bearer {r.data["key"]}',
         )
         self.assertEqual(r1.status_code, 201)
 
