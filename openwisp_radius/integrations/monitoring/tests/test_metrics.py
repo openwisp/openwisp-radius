@@ -247,6 +247,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         convert_called_station_id feature, but it is not configured
         properly leaving all called_station_id unconverted.
         """
+        cache.clear()
         user = self._create_user()
         reg_user = self._create_registered_user(user=user)
         options = _RADACCT.copy()
