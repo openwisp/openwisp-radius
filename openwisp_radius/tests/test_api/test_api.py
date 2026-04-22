@@ -72,11 +72,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "radius:update_registered_user_registration_method", args=[org.slug]
         )
 
-    def _create_pending_verification_user(self):
+    def _create_pending_verification_user(self, username_suffix=""):
         user = self._create_user(
-            username="pendinguser",
+            username=f"pendinguser{username_suffix}",
             password="tester",
-            email="pendinguser@test.com",
+            email=f"pendinguser{username_suffix}@test.com",
         )
         org2 = self._create_org(name="org2")
         OrganizationUser.objects.create(user=user, organization=org2)
@@ -1636,7 +1636,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     def test_update_registered_user_method_success(self):
         user, org2, user_token = self._create_pending_verification_user(
-            suffix="_success"
+            username_suffix="_success"
         )
         url = self._get_update_method_url(org2)
         response = self.client.post(
@@ -1651,7 +1651,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(registered_user.is_verified, False)
 
     def test_update_registered_user_method_with_valid_methods(self):
-        user, org2, user_token = self._create_pending_verification_user(suffix="_valid")
+        user, org2, user_token = self._create_pending_verification_user(
+            username_suffix="_valid"
+        )
         url = self._get_update_method_url(org2)
         for method in ["", "manual", "email", "mobile_phone"]:
             with self.subTest(method=method):
@@ -1713,7 +1715,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest("only_owner_can_update"):
             user, org2, user_token = self._create_pending_verification_user(
-                suffix="_owner"
+                username_suffix="_owner"
             )
             other_user = self._create_user(
                 username="otheruser", password="tester", email="otheruser@test.com"
@@ -1729,7 +1731,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         with self.subTest("invalid_org"):
             user, _, user_token = self._create_pending_verification_user(
-                suffix="_invalid_org"
+                username_suffix="_invalid_org"
             )
             url = reverse(
                 "radius:update_registered_user_registration_method",

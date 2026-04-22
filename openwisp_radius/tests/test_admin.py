@@ -671,19 +671,16 @@ class TestAdmin(
             f"admin:{self.app_label_users}_organization_add",
         )
         PASSWORD_RESET_URLS = {"default": default_password_reset_url}
-        with (
-            mock.patch.object(
-                app_settings,
-                "DEFAULT_PASSWORD_RESET_URL",
-                app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
-            ),
-            mock.patch.object(
-                # The default value is set on project startup, hence
-                # it also requires mocking.
-                OrganizationRadiusSettings._meta.get_field("password_reset_url"),
-                "fallback",
-                app_settings.DEFAULT_PASSWORD_RESET_URL,
-            ),
+        with mock.patch.object(
+            app_settings,
+            "DEFAULT_PASSWORD_RESET_URL",
+            app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
+        ), mock.patch.object(
+            # The default value is set on project startup, hence
+            # it also requires mocking.
+            OrganizationRadiusSettings._meta.get_field("password_reset_url"),
+            "fallback",
+            app_settings.DEFAULT_PASSWORD_RESET_URL,
         ):
             response = self.client.get(url)
             self.assertContains(response, default_password_reset_url)
