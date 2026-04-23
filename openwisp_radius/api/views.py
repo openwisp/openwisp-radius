@@ -770,7 +770,6 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 defaults={
                     "is_verified": True,
                     "method": "mobile_phone",
-                    "is_active": True,
                 },
             )
             reg_user.is_verified = True
