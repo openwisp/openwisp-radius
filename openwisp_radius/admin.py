@@ -630,7 +630,7 @@ OrganizationAdmin.inlines.append(OrganizationRadiusSettingsInline)
 # avoid cluttering the admin with too many models, leave only the
 # minimum required to configure social login and check if it's working
 if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
-    from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
+    from allauth.socialaccount.admin import SocialAccount
 
     class SocialAccountInline(admin.StackedInline):
         model = SocialAccount
@@ -644,7 +644,6 @@ if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
             return False
 
     UserAdmin.inlines += [SocialAccountInline]
-    admin.site.register(SocialApp, SocialAppAdmin)
 
 
 if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
