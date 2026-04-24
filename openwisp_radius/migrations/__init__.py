@@ -10,10 +10,6 @@ from django.db.models import Case, IntegerField, Value, When
 from ..utils import create_default_groups
 
 BATCH_SIZE = 1000
-REGISTERED_USER_ORGANIZATION_HELP_TEXT = (
-    "The organization this registration info belongs to. "
-    "If null, applies to all orgs without specific requirements."
-)
 
 
 def get_swapped_model(apps, app_name, model_name):
@@ -100,7 +96,7 @@ def copy_registered_users_ctcr_reverse(
     )
     queryset = RegisteredUserNew.objects.annotate(
         method_priority=method_priority
-    ).order_by("user_id", "-is_verified", "-method_priority", "pk")
+    ).order_by("user_id", "-is_verified", "-method_priority", "-modified")
     for registered_user in queryset.iterator(chunk_size=BATCH_SIZE):
         if registered_user.user_id == previous_user_id:
             continue
@@ -212,7 +208,7 @@ def migrate_registered_users_multitenant_reverse(
                 organization__isnull=False,
             )
             .annotate(method_priority=method_priority)
-            .order_by("user_id", "-is_verified", "-method_priority", "pk")
+            .order_by("user_id", "-is_verified", "-method_priority", "-modified")
         )
 
         to_create = []

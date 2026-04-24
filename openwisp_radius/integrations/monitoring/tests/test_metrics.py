@@ -26,6 +26,18 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             additional_query_kwargs={"additional_params": kwargs},
         )
 
+    def _assert_pending_verification_excluded(self, points):
+        pending_verification_traces = [
+            trace_points
+            for trace_name, trace_points in points["traces"]
+            if trace_name == "pending_verification"
+        ]
+        self.assertEqual(pending_verification_traces, [])
+        self.assertNotIn(
+            "pending_verification",
+            points.get("summary", {}),
+        )
+
     def _create_registered_user(self, **kwargs):
         options = {
             "is_verified": False,
@@ -517,11 +529,17 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         write_user_registration_metrics.delay()
 
         user_signup_chart = user_signup_metric.chart_set.first()
-        all_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
-        self.assertEqual(len(all_points["traces"]), 0)
+        org_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
+        all_points = self._read_chart(user_signup_chart, organization_id=["__all__"])
+        self._assert_pending_verification_excluded(org_points)
+        self._assert_pending_verification_excluded(all_points)
 
         total_user_signup_chart = total_user_signup_metric.chart_set.first()
-        all_points = self._read_chart(
+        org_points = self._read_chart(
             total_user_signup_chart, organization_id=[str(org.pk)]
         )
-        self.assertEqual(len(all_points["traces"]), 0)
+        all_points = self._read_chart(
+            total_user_signup_chart, organization_id=["__all__"]
+        )
+        self._assert_pending_verification_excluded(org_points)
+        self._assert_pending_verification_excluded(all_points)

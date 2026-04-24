@@ -11,8 +11,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -339,16 +339,15 @@ class ObtainAuthTokenView(
                 self.organization, "registration_enabled"
             ):
                 try:
-                    org_user = OrganizationUser(
-                        user=user, organization=self.organization
-                    )
-                    org_user.full_clean()
-                    org_user.save()
-                    RegisteredUser.objects.get_or_create(
-                        user=user,
-                        organization=self.organization,
-                        defaults={"method": "pending_verification"},
-                    )
+                    with transaction.atomic():
+                        OrganizationUser.objects.get_or_create(
+                            user=user, organization=self.organization
+                        )
+                        RegisteredUser.objects.get_or_create(
+                            user=user,
+                            organization=self.organization,
+                            defaults={"method": "pending_verification"},
+                        )
                 except ValidationError as error:
                     raise serializers.ValidationError(
                         {"non_field_errors": error.message_dict.pop("__all__")}
