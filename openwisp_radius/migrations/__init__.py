@@ -171,12 +171,10 @@ def migrate_registered_users_multitenant_forward(
         )
 
         to_create = []
-        to_delete_pks = []
         for registered_user in batch:
             organization_ids = sorted(memberships.get(registered_user.user_id, ()))
             if not organization_ids:
                 continue
-            to_delete_pks.append(registered_user.pk)
             extra_kwargs = _registered_user_extra_kwargs(registered_user, extra_fields)
             for organization_id in organization_ids:
                 pair = (registered_user.user_id, organization_id)
@@ -195,8 +193,6 @@ def migrate_registered_users_multitenant_forward(
                 to_create.append(copied)
 
         _flush_bulk_create(RegisteredUser, to_create)
-        if to_delete_pks:
-            RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
 
 
 def migrate_registered_users_multitenant_reverse(

@@ -772,6 +772,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 },
             )
             reg_user.is_verified = True
+            reg_user.method = "mobile_phone"
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number
@@ -779,7 +780,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
-            reg_user.save()
+            reg_user.save(update_fields=["is_verified", "method"])
             # delete any radius token cache key if present
             cache.delete(f"rt-{phone_token.phone_number}")
             return Response(None, status=200)
