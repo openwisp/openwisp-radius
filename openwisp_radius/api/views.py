@@ -11,8 +11,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -35,6 +35,7 @@ from rest_framework.generics import (
     ListCreateAPIView,
     RetrieveAPIView,
     RetrieveUpdateDestroyAPIView,
+    get_object_or_404,
 )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
@@ -74,6 +75,7 @@ from .serializers import (
     RadiusBatchSerializer,
     RadiusGroupSerializer,
     RadiusUserGroupSerializer,
+    UpdateRegisteredUserMethodSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -92,6 +94,7 @@ User = get_user_model()
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 PhoneToken = load_model("PhoneToken")
+RegisteredUser = load_model("RegisteredUser")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
@@ -315,13 +318,13 @@ class ObtainAuthTokenView(
         self.update_user_details(user)
         context = {"view": self, "request": request}
         serializer = self.serializer_class(instance=token, context=context)
-        response = RadiusUserSerializer(user).data
+        response = RadiusUserSerializer(user, context=context).data
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
             {"slug": kwargs["slug"]}
-        ) and not self.is_identity_verified_strong(user):
+        ) and not self.is_identity_verified_strong(user, self.organization):
             status_code = 401
         return Response(response, status=status_code)
 
@@ -335,24 +338,23 @@ class ObtainAuthTokenView(
             if get_organization_radius_settings(
                 self.organization, "registration_enabled"
             ):
-                if self._needs_identity_verification(
-                    org=self.organization
-                ) and not self.is_identity_verified_strong(user):
-                    raise PermissionDenied
                 try:
-                    org_user = OrganizationUser(
-                        user=user, organization=self.organization
-                    )
-                    org_user.full_clean()
-                    org_user.save()
+                    with transaction.atomic():
+                        OrganizationUser.objects.get_or_create(
+                            user=user, organization=self.organization
+                        )
+                        RegisteredUser.objects.get_or_create(
+                            user=user,
+                            organization=self.organization,
+                            defaults={"method": "pending_verification"},
+                        )
                 except ValidationError as error:
                     raise serializers.ValidationError(
                         {"non_field_errors": error.message_dict.pop("__all__")}
                     )
             else:
                 message = _(
-                    "{organization} does not allow self registration "
-                    "of new accounts."
+                    "{organization} does not allow self registration of new accounts."
                 ).format(organization=self.organization.name)
                 raise PermissionDenied(message)
 
@@ -383,9 +385,15 @@ class ValidateAuthTokenView(
         response = {"response_code": "BLANK_OR_INVALID_TOKEN"}
         if request_token:
             try:
-                token = UserToken.objects.select_related(
-                    "user", "user__registered_user"
-                ).get(key=request_token)
+                token = (
+                    UserToken.objects.select_related(
+                        "user",
+                    )
+                    .prefetch_related(
+                        "user__registered_users",
+                    )
+                    .get(key=request_token)
+                )
             except UserToken.DoesNotExist:
                 pass
             else:
@@ -395,7 +403,7 @@ class ValidateAuthTokenView(
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)
-                if not self.is_identity_verified_strong(user):
+                if not self.is_identity_verified_strong(user, self.organization):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by("-created")
@@ -404,8 +412,8 @@ class ValidateAuthTokenView(
                     user.phone_number = (
                         phone_token.phone_number if phone_token else user.phone_number
                     )
-                response = RadiusUserSerializer(user).data
                 context = {"view": self, "request": request}
+                response = RadiusUserSerializer(user, context=context).data
                 token_data = rest_auth_settings.api_settings.TOKEN_SERIALIZER(
                     token, context=context
                 ).data
@@ -638,7 +646,7 @@ class CreatePhoneTokenView(
         try:
             phone_token.full_clean()
             if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified()
+                phone_token._validate_already_verified(organization=self.organization)
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
@@ -747,15 +755,23 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
                 _("No verification code found in the system for this user.")
             )
         try:
-            is_valid = phone_token.is_valid(serializer.data["code"])
+            is_valid = phone_token.is_valid(
+                serializer.data["code"], organization=self.organization
+            )
         except PhoneTokenException as e:
             return self._error_response(str(e))
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
-            user.registered_user.is_verified = True
-            user.registered_user.method = "mobile_phone"
-            user.is_active = True
+            reg_user, __ = RegisteredUser.get_or_create_for_user_and_org(
+                user=user,
+                organization=self.organization,
+                defaults={
+                    "is_verified": True,
+                    "method": "mobile_phone",
+                },
+            )
+            reg_user.is_verified = True
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number
@@ -763,7 +779,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
-            user.registered_user.save()
+            reg_user.save()
             # delete any radius token cache key if present
             cache.delete(f"rt-{phone_token.phone_number}")
             return Response(None, status=200)
@@ -811,6 +827,54 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
 
 
 change_phone_number = ChangePhoneNumberView.as_view()
+
+
+class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UpdateRegisteredUserMethodSerializer
+
+    @swagger_auto_schema(
+        operation_description=("""
+            **Requires the user auth token (Bearer Token).**
+            Allows users to update their registered user method for an organization.
+            The method can only be updated when it is currently
+            set to 'pending_verification'.
+            Once updated, it cannot be changed again via this endpoint.
+            """),
+        responses={
+            200: "Method updated successfully",
+            400: (
+                "Invalid request (method is not 'pending_verification' "
+                "or invalid method value)"
+            ),
+            401: "Authentication required",
+            404: "RegisteredUser not found for this user and organization",
+        },
+    )
+    def post(self, request, slug):
+        user = request.user
+        try:
+            reg_user = get_object_or_404(
+                RegisteredUser,
+                user_id=user.pk,
+                organization=self.organization,
+            )
+        except RegisteredUser.DoesNotExist:
+            raise NotFound(
+                _("RegisteredUser not found for this user and organization.")
+            )
+        serializer = self.get_serializer(
+            instance=reg_user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"method": serializer.instance.method}, status=status.HTTP_200_OK
+        )
+
+
+update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
 
 
 class RadiusAccountingFilter(AccountingFilter):

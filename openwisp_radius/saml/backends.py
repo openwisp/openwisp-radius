@@ -14,7 +14,10 @@ class OpenwispRadiusSaml2Backend(Saml2Backend):
             # with SAML registration method.
             try:
                 attribute_mapping = attribute_mapping.copy()
-                if user.registered_user.method != "saml":
+                # Check if any of the user's registered_users records
+                # were NOT created via SAML
+                has_non_saml = user.registered_users.exclude(method="saml").exists()
+                if has_non_saml:
                     for key, value in attribute_mapping.items():
                         if "username" in value:
                             break

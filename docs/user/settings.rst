@@ -696,6 +696,9 @@ verification method. The following choices are available by default:
 - ``mobile_phone``: Mobile phone number :ref:`verification via SMS
   <openwisp_radius_sms_verification_enabled>`
 - ``social_login``: :doc:`social login feature <social_login>`
+- ``pending_verification``: Transitional state used when a user
+  authenticates to a new organization but has not yet completed
+  verification for that organization.
 
 .. note::
 

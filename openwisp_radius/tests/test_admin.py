@@ -1359,7 +1359,7 @@ class TestAdmin(
 
         with self.subTest("Inline exists"):
             response = self.client.get(url)
-            self.assertContains(response, "id_registered_user-TOTAL_FORMS")
+            self.assertContains(response, "id_registered_users-TOTAL_FORMS")
 
         with self.subTest("Register new choice"):
             register_registration_method("national_id", "National ID")
@@ -1407,6 +1407,25 @@ class TestAdmin(
             register_registration_method("github", "GitHub", strong_identity=False)
             self.assertIn("github", RegisteredUser._weak_verification_methods)
 
+    def test_user_admin_shows_multiple_registered_user_records(self):
+        user = self._create_user(username="multiuser", email="multi@test.org")
+        org2 = self._create_org(name="org2", slug="org2")
+        RegisteredUser.objects.create(
+            user=user, organization=self.default_org, is_verified=True
+        )
+        RegisteredUser.objects.create(user=user, organization=org2, is_verified=False)
+        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        user_url = reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk])
+        response = self.client.get(user_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            (
+                '<input type="hidden" name="registered_users-INITIAL_FORMS" value="3"'
+                ' id="id_registered_users-INITIAL_FORMS">'
+            ),
+        )
+
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
         self.assertIsNotNone(unknown)
@@ -1416,7 +1435,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1424,7 +1446,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")
@@ -1449,7 +1474,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1457,7 +1485,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")

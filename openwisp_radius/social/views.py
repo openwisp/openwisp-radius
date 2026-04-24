@@ -1,5 +1,6 @@
 import swapper
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -42,18 +43,19 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
         user = request.user
         is_member = user.is_member(org)
         # add user to organization
-        if not is_member:
-            orgUser = OrganizationUser(organization=org, user=user)
-            orgUser.full_clean()
-            orgUser.save()
-        try:
-            user.registered_user
-        except ObjectDoesNotExist:
-            registered_user = RegisteredUser(
-                user=user, method="social_login", is_verified=False
+        with transaction.atomic():
+            if not is_member:
+                orgUser = OrganizationUser(organization=org, user=user)
+                orgUser.full_clean()
+                orgUser.save()
+            registered_user, created = RegisteredUser.objects.get_or_create(
+                user=user,
+                organization=org,
+                defaults={"method": "social_login", "is_verified": False},
             )
-            registered_user.full_clean()
-            registered_user.save()
+            if created:
+                registered_user.full_clean()
+                registered_user.save()
 
     def get_redirect_url(self, request, organization):
         """
