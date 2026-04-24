@@ -2,6 +2,7 @@ from unittest import mock
 
 import swapper
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.timezone import localtime, now, timedelta
 from freezegun import freeze_time
@@ -13,7 +14,7 @@ from openwisp_utils.tests import capture_any_output
 from ... import settings as app_settings
 from ...utils import load_model
 from .. import _TEST_DATE
-from ..mixins import ApiTokenMixin, BaseTestCase
+from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 RadiusToken = load_model("RadiusToken")
 RegisteredUser = load_model("RegisteredUser")
@@ -137,14 +138,19 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
                 response = self.client.post(
                     url, {"username": "tester", "password": "tester"}
                 )
-                self.assertEqual(response.status_code, 400)
-                expected_response = {
-                    "non_field_errors": [
-                        "Organization user with this User and "
-                        "Organization already exists."
-                    ]
-                }
-                self.assertEqual(response.data, expected_response)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    OrganizationUser.objects.filter(
+                        user__username="tester", organization=org2
+                    ).count(),
+                    1,
+                )
+                self.assertEqual(
+                    RegisteredUser.objects.filter(
+                        user__username="tester", organization=org2
+                    ).count(),
+                    1,
+                )
 
     @capture_any_output()
     def test_user_auth_token_different_organization_registration_settings(self):
@@ -296,6 +302,53 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         User.objects.update(password_updated=now() - timedelta(days=60))
         response = self._user_auth_token_helper("tester")
         self.assertEqual(response.data["password_expired"], True)
+
+
+class TestApiUserTokenTransactions(ApiTokenMixin, BaseTransactionTestCase):
+    @capture_any_output()
+    def test_user_auth_token_integrity_error_fallback(self):
+        org_user = self._get_org_user()
+        org2 = self._create_org(name="org2")
+        OrganizationRadiusSettings.objects.create(
+            organization=org2, needs_identity_verification=False
+        )
+        OrganizationUser.objects.create(user=org_user.user, organization=org2)
+        RegisteredUser.objects.create(
+            user=org_user.user,
+            organization=org2,
+            method="pending_verification",
+        )
+        url = reverse("radius:user_auth_token", args=[org2.slug])
+
+        with (
+            mock.patch.object(
+                OrganizationUser.objects,
+                "get_or_create",
+                side_effect=IntegrityError,
+            ),
+            mock.patch.object(
+                RegisteredUser.objects,
+                "get_or_create",
+                side_effect=IntegrityError,
+            ),
+        ):
+            response = self.client.post(
+                url, {"username": org_user.user.username, "password": "tester"}
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("key", response.data)
+        self.assertEqual(
+            OrganizationUser.objects.filter(
+                user=org_user.user, organization=org2
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            RegisteredUser.objects.filter(
+                user=org_user.user, organization=org2
+            ).count(),
+            1,
+        )
 
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):

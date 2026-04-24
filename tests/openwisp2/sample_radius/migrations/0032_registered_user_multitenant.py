@@ -9,15 +9,10 @@ from django.conf import settings
 from django.db import migrations, models
 
 from openwisp_radius.migrations import (
-    REGISTERED_USER_ORGANIZATION_HELP_TEXT,
     copy_registered_users_ctcr_forward,
     copy_registered_users_ctcr_reverse,
     migrate_registered_users_multitenant_forward,
     migrate_registered_users_multitenant_reverse,
-)
-from openwisp_radius.registration import (
-    REGISTRATION_METHOD_CHOICES,
-    get_registration_choices,
 )
 
 
@@ -92,11 +87,6 @@ class Migration(migrations.Migration):
                             "method",
                             models.CharField(
                                 blank=True,
-                                choices=(
-                                    REGISTRATION_METHOD_CHOICES
-                                    if django.VERSION < (5, 0)
-                                    else get_registration_choices
-                                ),
                                 default="",
                                 help_text=(
                                     "users can sign up in different ways, some "
@@ -139,7 +129,11 @@ class Migration(migrations.Migration):
                             "organization",
                             models.ForeignKey(
                                 blank=True,
-                                help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
+                                help_text=(
+                                    "The organization this registration info belongs"
+                                    " to. If null, applies to all orgs without"
+                                    " specific requirements."
+                                ),
                                 null=True,
                                 on_delete=django.db.models.deletion.CASCADE,
                                 related_name="+",
@@ -190,7 +184,11 @@ class Migration(migrations.Migration):
                     name="organization",
                     field=models.ForeignKey(
                         blank=True,
-                        help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
+                        help_text=(
+                            "The organization this registration info belongs"
+                            " to. If null, applies to all orgs without"
+                            " specific requirements."
+                        ),
                         null=True,
                         related_name="registered_users",
                         on_delete=django.db.models.deletion.CASCADE,

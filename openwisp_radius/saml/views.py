@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView
@@ -67,23 +68,21 @@ class AssertionConsumerServiceView(
         org = self.get_organization_from_relay_state()
         is_member = user.is_member(org)
         # add user to organization
-        if not is_member:
-            orgUser = OrganizationUser(organization=org, user=user)
-            orgUser.full_clean()
-            orgUser.save()
-        try:
-            user.registered_users.get(organization=org)
-        except RegisteredUser.DoesNotExist:
-            registered_user = RegisteredUser(
+        with transaction.atomic():
+            if not is_member:
+                orgUser = OrganizationUser(organization=org, user=user)
+                orgUser.full_clean()
+                orgUser.save()
+            registered_user, created = RegisteredUser.objects.get_or_create(
                 user=user,
                 organization=org,
-                method="saml",
-                is_verified=app_settings.SAML_IS_VERIFIED,
+                defaults={
+                    "method": "saml",
+                    "is_verified": app_settings.SAML_IS_VERIFIED,
+                },
             )
-            registered_user.full_clean()
-            registered_user.save()
-            # The user is just created, it will not have an email address
-            if user.email:
+            if created and user.email:
+                # The user is just created, it will not have an email address
                 try:
                     email_address = EmailAddress(
                         user=user, email=user.email, primary=True, verified=True
@@ -92,8 +91,8 @@ class AssertionConsumerServiceView(
                     email_address.save()
                 except ValidationError:
                     logger.exception(
-                        f'Failed email validation for "{user}"'
-                        " during SAML user creation"
+                        f'Failed email validation for "{user}" during'
+                        " SAML user creation"
                     )
 
     def customize_relay_state(self, relay_state):

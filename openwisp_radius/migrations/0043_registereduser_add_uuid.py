@@ -1,6 +1,5 @@
 import uuid
 
-import django
 import django.db.models.deletion
 import django.utils.timezone
 import model_utils.fields
@@ -8,16 +7,7 @@ import swapper
 from django.conf import settings
 from django.db import migrations, models
 
-from openwisp_radius.registration import (
-    REGISTRATION_METHOD_CHOICES,
-    get_registration_choices,
-)
-
-from . import (
-    REGISTERED_USER_ORGANIZATION_HELP_TEXT,
-    copy_registered_users_ctcr_forward,
-    copy_registered_users_ctcr_reverse,
-)
+from . import copy_registered_users_ctcr_forward, copy_registered_users_ctcr_reverse
 
 
 def copy_registered_users_forward(apps, schema_editor):
@@ -62,7 +52,11 @@ class Migration(migrations.Migration):
                     name="organization",
                     field=models.ForeignKey(
                         blank=True,
-                        help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
+                        help_text=(
+                            "The organization this registration info belongs to. "
+                            "If null, applies to all orgs without specific"
+                            " requirements."
+                        ),
                         null=True,
                         related_name="registered_users",
                         on_delete=django.db.models.deletion.CASCADE,
@@ -88,11 +82,6 @@ class Migration(migrations.Migration):
                             "method",
                             models.CharField(
                                 blank=True,
-                                choices=(
-                                    REGISTRATION_METHOD_CHOICES
-                                    if django.VERSION < (5, 0)
-                                    else get_registration_choices
-                                ),
                                 default="",
                                 help_text=(
                                     "users can sign up in different ways, some "
@@ -135,7 +124,11 @@ class Migration(migrations.Migration):
                             "organization",
                             models.ForeignKey(
                                 blank=True,
-                                help_text=REGISTERED_USER_ORGANIZATION_HELP_TEXT,
+                                help_text=(
+                                    "The organization this registration info belongs"
+                                    " to. If null, applies to all orgs without"
+                                    " specific requirements."
+                                ),
                                 null=True,
                                 on_delete=django.db.models.deletion.CASCADE,
                                 related_name="+",
