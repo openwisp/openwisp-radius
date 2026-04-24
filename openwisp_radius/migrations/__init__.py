@@ -35,10 +35,43 @@ def _flush_bulk_create(model, objects, batch_size=BATCH_SIZE):
         objects.clear()
 
 
+def _flush_bulk_update(model, objects, fields, batch_size=BATCH_SIZE):
+    if objects:
+        model.objects.bulk_update(objects, fields=fields, batch_size=batch_size)
+        objects.clear()
+
+
 def _registered_user_extra_kwargs(registered_user, extra_fields=()):
     return {
         field_name: getattr(registered_user, field_name) for field_name in extra_fields
     }
+
+
+def _registered_user_method_priority_case():
+    # Strong methods (anything that is not '' or 'email') must rank above the
+    # weak fallbacks so rollback restores the strongest verification state.
+    return Case(
+        When(method="", then=Value(0)),
+        When(method="email", then=Value(1)),
+        default=Value(2),
+        output_field=IntegerField(),
+    )
+
+
+def _registered_user_method_priority(registered_user):
+    if registered_user.method == "":
+        return 0
+    if registered_user.method == "email":
+        return 1
+    return 2
+
+
+def _registered_user_strength(registered_user):
+    return (
+        int(registered_user.is_verified),
+        _registered_user_method_priority(registered_user),
+        registered_user.modified,
+    )
 
 
 def copy_registered_users_ctcr_forward(
@@ -88,12 +121,7 @@ def copy_registered_users_ctcr_reverse(
     # Annotate each row with an explicit verification priority so that stronger
     # methods (anything that is not '' or 'email') sort before weaker ones.
     # Lexical ordering of 'method' would place '' first, picking the weakest.
-    method_priority = Case(
-        When(method="", then=Value(0)),
-        When(method="email", then=Value(1)),
-        default=Value(2),
-        output_field=IntegerField(),
-    )
+    method_priority = _registered_user_method_priority_case()
     queryset = RegisteredUserNew.objects.annotate(
         method_priority=method_priority
     ).order_by("user_id", "-is_verified", "-method_priority", "-modified")
@@ -187,21 +215,17 @@ def migrate_registered_users_multitenant_reverse(
     for user_id_batch in _batched_iterator(
         user_ids_qs.iterator(chunk_size=BATCH_SIZE), BATCH_SIZE
     ):
-        existing_globals = set(
-            RegisteredUser.objects.filter(
+        existing_globals = {
+            registered_user.user_id: registered_user
+            for registered_user in RegisteredUser.objects.filter(
                 user_id__in=user_id_batch,
                 organization__isnull=True,
-            ).values_list("user_id", flat=True)
-        )
+            )
+        }
         # Annotate each row with an explicit verification priority so that stronger
         # methods (anything that is not '' or 'email') sort before weaker ones.
         # Lexical ordering of 'method' would place '' first, picking the weakest.
-        method_priority = Case(
-            When(method="", then=Value(0)),
-            When(method="email", then=Value(1)),
-            default=Value(2),
-            output_field=IntegerField(),
-        )
+        method_priority = _registered_user_method_priority_case()
         org_records = (
             RegisteredUser.objects.filter(
                 user_id__in=user_id_batch,
@@ -212,28 +236,43 @@ def migrate_registered_users_multitenant_reverse(
         )
 
         to_create = []
+        to_update = []
         to_delete_pks = []
         current_user_id = None
+        update_fields = ["is_verified", "method", "modified", *extra_fields]
 
         for registered_user in org_records.iterator(chunk_size=BATCH_SIZE):
-            to_delete_pks.append(registered_user.pk)
             if registered_user.user_id == current_user_id:
+                to_delete_pks.append(registered_user.pk)
                 continue
             current_user_id = registered_user.user_id
-            if registered_user.user_id in existing_globals:
-                continue
-            restored = RegisteredUser(
-                id=uuid.uuid4(),
-                user_id=registered_user.user_id,
-                organization=None,
-                is_verified=registered_user.is_verified,
-                method=registered_user.method,
-                **_registered_user_extra_kwargs(registered_user, extra_fields),
-            )
-            restored.modified = registered_user.modified
-            to_create.append(restored)
+            existing_global = existing_globals.get(registered_user.user_id)
+            if existing_global is None:
+                restored = RegisteredUser(
+                    id=uuid.uuid4(),
+                    user_id=registered_user.user_id,
+                    organization=None,
+                    is_verified=registered_user.is_verified,
+                    method=registered_user.method,
+                    **_registered_user_extra_kwargs(registered_user, extra_fields),
+                )
+                restored.modified = registered_user.modified
+                to_create.append(restored)
+            elif _registered_user_strength(registered_user) > _registered_user_strength(
+                existing_global
+            ):
+                existing_global.is_verified = registered_user.is_verified
+                existing_global.method = registered_user.method
+                existing_global.modified = registered_user.modified
+                for field_name, value in _registered_user_extra_kwargs(
+                    registered_user, extra_fields
+                ).items():
+                    setattr(existing_global, field_name, value)
+                to_update.append(existing_global)
+            to_delete_pks.append(registered_user.pk)
 
         _flush_bulk_create(RegisteredUser, to_create)
+        _flush_bulk_update(RegisteredUser, to_update, fields=update_fields)
         if to_delete_pks:
             RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
 
