@@ -188,11 +188,15 @@ def post_save_radiusaccounting(
 ):
     registration_method = (
         RegisteredUser.objects.only("method")
-        .filter(user__username=username)
-        .filter(Q(organization_id=organization_id) | Q(organization__isnull=True))
-        .order_by("-organization_id")
+        .filter(user__username=username, organization_id=organization_id)
         .first()
     )
+    if registration_method is None:
+        registration_method = (
+            RegisteredUser.objects.only("method")
+            .filter(user__username=username, organization__isnull=True)
+            .first()
+        )
     if registration_method is None:
         logger.info(
             f'RegisteredUser object not found for "{username}".'

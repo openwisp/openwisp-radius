@@ -778,6 +778,10 @@ class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
         model = RegisteredUser
         fields = ["method"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["method"].choices = get_registration_choices()
+
     def validate_method(self, value):
         if value == "pending_verification":
             raise serializers.ValidationError(

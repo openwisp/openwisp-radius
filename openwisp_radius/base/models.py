@@ -1071,6 +1071,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             not created
             and self.organization.radius_settings.needs_identity_verification
         ):
+            registered_user.method = "manual"
             registered_user.is_verified = True
             registered_user.save()
         self.users.add(user)
