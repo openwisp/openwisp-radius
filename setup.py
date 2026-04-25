@@ -36,7 +36,7 @@ setup(
     zip_safe=False,
     install_requires=[
         "openwisp-notifications~=1.2.0",
-        "openwisp-users~=1.2.0",
+        "openwisp-users~=1.2.2",
         "openwisp-utils[rest,celery]~=1.2.0",
         "passlib~=1.7.1",
         "djangorestframework-link-header-pagination~=0.1.1",
