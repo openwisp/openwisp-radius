@@ -1,6 +1,22 @@
 Change log
 ==========
 
+Version 1.2.2 [2026-04-25]
+--------------------------
+
+Changes
+~~~~~~~
+
+Dependencies
+++++++++++++
+
+- Bumped openwisp-users to 1.2.2
+
+Bugfixes
+~~~~~~~~
+
+- Removed re-registering of SocialAppAdmin
+
 Version 1.2.1 [2026-04-10]
 --------------------------
 
