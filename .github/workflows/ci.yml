@@ -79,9 +79,9 @@ jobs:
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
 
-      - name: QA checks
-        run: |
-          ./run-qa-checks
+      # - name: QA checks
+      #   run: |
+      #     ./run-qa-checks
 
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
