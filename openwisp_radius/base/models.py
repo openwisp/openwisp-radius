@@ -1293,6 +1293,15 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         help_text=_REGISTRATION_ENABLED_HELP_TEXT,
         fallback=app_settings.REGISTRATION_API_ENABLED,
     )
+    cross_organization_login_enabled = FallbackBooleanChoiceField(
+        help_text=_(
+            "Allow users registered in a different organization to log in to"
+            " this organization without performing an additional registration."
+        ),
+        verbose_name=_("Cross-organization login enabled"),
+        fallback=app_settings.CROSS_ORGANIZATION_LOGIN_ENABLED,
+    )
+
     saml_registration_enabled = FallbackBooleanChoiceField(
         help_text=_SAML_REGISTRATION_ENABLED_HELP_TEXT,
         verbose_name=_("SAML registration enabled"),
