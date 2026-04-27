@@ -855,16 +855,11 @@ class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
     )
     def post(self, request, slug):
         user = request.user
-        try:
-            reg_user = get_object_or_404(
-                RegisteredUser,
-                user_id=user.pk,
-                organization=self.organization,
-            )
-        except RegisteredUser.DoesNotExist:
-            raise NotFound(
-                _("RegisteredUser not found for this user and organization.")
-            )
+        reg_user = get_object_or_404(
+            RegisteredUser,
+            user_id=user.pk,
+            organization=self.organization,
+        )
         serializer = self.get_serializer(
             instance=reg_user, data=request.data, partial=True
         )

@@ -53,7 +53,7 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
                 organization=org,
                 defaults={"method": "social_login", "is_verified": False},
             )
-            if created:
+            if not created:
                 registered_user.full_clean()
                 registered_user.save()
 

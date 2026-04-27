@@ -7,7 +7,7 @@ import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -57,6 +57,7 @@ logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
 RadiusAccounting = load_model("RadiusAccounting")
+RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 Organization = swapper.load_model("openwisp_users", "Organization")
@@ -405,28 +406,45 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
     def _get_user_query_conditions(self, request):
         is_active = Q(is_active=True)
         needs_verification = self._needs_identity_verification({"pk": request._auth})
-        # if no identity verification enabled for this org,
-        # just ensure user is active
         if not needs_verification:
             return is_active
         organization_id = request._auth
-        org_or_global = Q(registered_users__organization_id=organization_id) | Q(
-            registered_users__organization__isnull=True
-        )
-        is_verified = Q(registered_users__is_verified=True) & org_or_global
         AUTHORIZE_UNVERIFIED = registration.AUTHORIZE_UNVERIFIED
-        # and no method should authorize unverified users
-        # ensure user is active AND verified
+        # Use subqueries to ensure org-specific records take precedence over
+        # global (organization=NULL) records.
+        # A JOIN-based filter would allow a user to pass if ANY registered_users
+        # row matched, causing a bypass when a global verified record coexisted
+        # with an org-specific unverified record.
+        #
+        # Strategy: check if org-specific record exists and satisfies criteria;
+        # if not, fall back to checking the global record. This matches the
+        # behavior in api/utils.py:IDVerificationHelper.is_identity_verified_strong.
+        org_specific = RegisteredUser.objects.filter(
+            user=OuterRef("pk"),
+            organization_id=organization_id,
+        )
+        global_only = RegisteredUser.objects.filter(
+            user=OuterRef("pk"),
+            organization_id__isnull=True,
+        )
+
+        # is_verified: user passes if org-specific record is verified, or if
+        # no org-specific record exists and the global record is verified.
+        has_org_verified = Exists(org_specific.filter(is_verified=True))
+        has_global_verified = Exists(global_only.filter(is_verified=True))
+        no_org_specific = ~Exists(org_specific.values("pk"))
+        is_verified = has_org_verified | (no_org_specific & has_global_verified)
+
         if not AUTHORIZE_UNVERIFIED:
             return is_active & is_verified
-        # in case some methods are allowed to authorize unverified users
-        # ensure user is active AND
-        # (user is verified OR user uses one of these methods)
-        else:
-            authorize_unverified = (
-                Q(registered_users__method__in=AUTHORIZE_UNVERIFIED) & org_or_global
-            )
-            return is_active & (is_verified | authorize_unverified)
+
+        # authorize_unverified: user passes if org-specific record uses a
+        # special method, or if no org-specific record exists and the global
+        # record uses a special method.
+        has_org_special = Exists(org_specific.filter(method__in=AUTHORIZE_UNVERIFIED))
+        has_global_special = Exists(global_only.filter(method__in=AUTHORIZE_UNVERIFIED))
+        authorize_unverified = has_org_special | (no_org_specific & has_global_special)
+        return is_active & (is_verified | authorize_unverified)
 
     def authenticate_user(self, request, user, password):
         """

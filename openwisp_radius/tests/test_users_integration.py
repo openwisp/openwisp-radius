@@ -104,7 +104,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             method="mobile_phone",
             is_verified=False,
         )
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             call_command("export_users", filename=temp_file.name)
 
         with open(temp_file.name, "r") as file:

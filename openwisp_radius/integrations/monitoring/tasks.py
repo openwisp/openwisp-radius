@@ -118,6 +118,7 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # count of users who registered with that organization and method.
     registered_users_query = RegisteredUser.objects.exclude(
         user__openwisp_users_organizationuser__created__gt=end_time,
+        method="pending_verification",
     )
 
     if metric_key == "user_signups":
@@ -147,8 +148,6 @@ def _write_user_signup_metrics_for_orgs(metric_key):
 
     for org_id, registration_method, count in registered_users:
         registration_method = clean_registration_method(registration_method)
-        if registration_method is None:
-            continue
         if registration_method == "unspecified":
             count += users_without_registereduser.get(org_id, 0)
         metric = get_metric_func(
@@ -206,6 +205,8 @@ def post_save_radiusaccounting(
     else:
         registration_method = registration_method.method
     registration_method = clean_registration_method(registration_method)
+    if registration_method is None:
+        registration_method = "unspecified"
     device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
     extra_tags = {
         "method": registration_method,
