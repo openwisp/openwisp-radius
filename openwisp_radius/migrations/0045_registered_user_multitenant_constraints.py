@@ -12,6 +12,9 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(
                 fields=["user", "organization"],
                 name="unique_registered_user_per_org",
+                violation_error_message=(
+                    "A registration record already exists for this user/organization."
+                ),
             ),
         ),
         migrations.AddConstraint(
@@ -20,6 +23,9 @@ class Migration(migrations.Migration):
                 fields=["user"],
                 condition=models.Q(organization__isnull=True),
                 name="unique_global_registered_user",
+                violation_error_message=(
+                    "A registration record already exists for this user/organization."
+                ),
             ),
         ),
     ]

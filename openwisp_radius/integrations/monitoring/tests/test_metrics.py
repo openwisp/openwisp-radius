@@ -276,7 +276,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         options["stop_time"] = options["start_time"]
         # Remove calls for user registration from mocked logger
         mocked_logger.reset_mock()
-
         self._create_radius_accounting(**options)
         self.assertEqual(
             self.metric_model.objects.filter(
@@ -388,6 +387,97 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         mocked_logger.assert_called_once_with(
             f'RegisteredUser object not found for "{user.username}".'
             ' The metric will be written with "unspecified" registration method!'
+        )
+
+    def test_post_save_radiusaccounting_pending_verification(self):
+        """
+        Test that when a user has a RegisteredUser with method="pending_verification",
+        the metric is written with "unspecified" instead of None.
+        """
+        user = self._create_user()
+        self._create_registered_user(user=user, method="pending_verification")
+        device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "pending_001",
+                "username": user.username,
+                "called_station_id": device.mac_address.replace("-", ":").upper(),
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        options["stop_time"] = options["start_time"]
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                name="RADIUS Accounting",
+                key="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    "called_station_id": device.mac_address,
+                    "calling_station_id": sha1_hash("00:00:00:00:00:00"),
+                    "location_id": str(device_loc.location.id),
+                    "method": "unspecified",
+                    "organization_id": str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+
+    def test_post_save_radiusaccounting_org_specific_takes_precedence_over_global(
+        self,
+    ):
+        """
+        Test that when a user has both a global (organization=None) and org-specific
+        RegisteredUser, the org-specific one takes precedence.
+        """
+        user = self._create_user()
+        self._create_registered_user(user=user, organization=None, method="email")
+        self._create_registered_user(
+            user=user, organization=self.default_org, method="mobile_phone"
+        )
+        device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "org_spec_001",
+                "username": user.username,
+                "called_station_id": device.mac_address.replace("-", ":").upper(),
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        options["stop_time"] = options["start_time"]
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                name="RADIUS Accounting",
+                key="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    "called_station_id": device.mac_address,
+                    "calling_station_id": sha1_hash("00:00:00:00:00:00"),
+                    "location_id": str(device_loc.location.id),
+                    "method": "mobile_phone",
+                    "organization_id": str(self.default_org.id),
+                },
+            ).count(),
+            1,
         )
 
     def test_write_user_registration_metrics(self):

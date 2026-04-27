@@ -1683,24 +1683,19 @@ class AbstractRegisteredUser(UUIDModel):
             models.UniqueConstraint(
                 fields=["user", "organization"],
                 name="unique_registered_user_per_org",
+                violation_error_message=_(
+                    "A registration record already exists for this user/organization."
+                ),
             ),
             models.UniqueConstraint(
                 fields=["user"],
                 condition=Q(organization__isnull=True),
                 name="unique_global_registered_user",
+                violation_error_message=_(
+                    "A registration record already exists for this user/organization."
+                ),
             ),
         ]
-
-    def clean(self):
-        super().clean()
-        Model = self._meta.model
-        qs = Model.objects.filter(user=self.user, organization=self.organization)
-        if self.pk:
-            qs = qs.exclude(pk=self.pk)
-        if qs.exists():
-            raise ValidationError(
-                _("A registration record already exists for this user/organization.")
-            )
 
     @classmethod
     def get_or_create_for_user_and_org(cls, user, organization, defaults=None):
