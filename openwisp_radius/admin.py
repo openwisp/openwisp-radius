@@ -539,7 +539,7 @@ class RegisteredUserInline(StackedInline):
     form = AlwaysHasChangedForm
     extra = 0
     readonly_fields = ("modified",)
-    fields = ("method", "is_verified", "modified")
+    fields = ("organization", "method", "is_verified", "modified")
 
     def has_delete_permission(self, request, obj=None):
         return False
