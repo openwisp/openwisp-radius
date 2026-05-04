@@ -175,6 +175,9 @@ _COA_ENABLED_HELP_TEXT = _("Whether RADIUS Change Of Authoization (CoA) is enabl
 _LOGIN_URL_HELP_TEXT = _("Enter the URL where users can log in to the wifi service")
 _STATUS_URL_HELP_TEXT = _("Enter the URL where users can log out from the wifi service")
 _PASSWORD_RESET_URL_HELP_TEXT = _("Enter the URL where users can reset their password")
+_REGISTRATION_UNIQUE_VALIDATION_ERROR = _(
+    "A user cannot have more than one registration record in the same organization."
+)
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 
 
@@ -1683,17 +1686,13 @@ class AbstractRegisteredUser(UUIDModel):
             models.UniqueConstraint(
                 fields=["user", "organization"],
                 name="unique_registered_user_per_org",
-                violation_error_message=_(
-                    "A registration record already exists for this user/organization."
-                ),
+                violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
             ),
             models.UniqueConstraint(
                 fields=["user"],
                 condition=Q(organization__isnull=True),
                 name="unique_global_registered_user",
-                violation_error_message=_(
-                    "A registration record already exists for this user/organization."
-                ),
+                violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
             ),
         ]
 

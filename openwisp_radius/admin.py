@@ -7,6 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.forms.models import BaseInlineFormSet
 from django.http import HttpResponseRedirect
 from django.templatetags.static import static
 from django.urls import reverse
@@ -534,9 +535,26 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
+class RegisteredUserFormset(BaseInlineFormSet):
+    def get_unique_error_message(self, unique_check):
+        # Django inline formsets perform their own uniqueness validation
+        # (BaseModelFormSet.validate_unique) *before* model-level validation runs.
+        # Because of this, the custom `violation_error_message` defined on
+        # `UniqueConstraint` is never surfaced in the admin UI.
+        #
+        # Overriding this method allows us to replace Django’s generic
+        # "Please correct the duplicate data for <field>." message with a
+        # domain-specific, user-friendly error that matches our constraint.
+        if unique_check == ("user", "organization"):
+            return _(
+                "A user cannot have more than one registration record in the same organization."
+            )
+
+
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
+    formset = RegisteredUserFormset
     extra = 0
     readonly_fields = ("modified",)
     fields = ("organization", "method", "is_verified", "modified")
