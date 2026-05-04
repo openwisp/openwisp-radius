@@ -15,7 +15,7 @@ from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import models, transaction
 from django.db.models import ProtectedError, Q
@@ -175,6 +175,9 @@ _COA_ENABLED_HELP_TEXT = _("Whether RADIUS Change Of Authoization (CoA) is enabl
 _LOGIN_URL_HELP_TEXT = _("Enter the URL where users can log in to the wifi service")
 _STATUS_URL_HELP_TEXT = _("Enter the URL where users can log out from the wifi service")
 _PASSWORD_RESET_URL_HELP_TEXT = _("Enter the URL where users can reset their password")
+_REGISTRATION_UNIQUE_VALIDATION_ERROR = _(
+    "A user cannot have more than one registration record in the same organization."
+)
 OPTIONAL_SETTINGS = app_settings.OPTIONAL_REGISTRATION_FIELDS
 
 
@@ -1058,10 +1061,22 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         user.save()
-        registered_user = RegisteredUser(user=user, method="manual")
-        if self.organization.radius_settings.needs_identity_verification:
+        radius_settings = self.organization.radius_settings
+        registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
+            user=user,
+            organization=self.organization,
+            defaults={
+                "method": "manual",
+                "is_verified": radius_settings.needs_identity_verification,
+            },
+        )
+        if (
+            not created
+            and self.organization.radius_settings.needs_identity_verification
+        ):
+            registered_user.method = "manual"
             registered_user.is_verified = True
-        registered_user.save()
+            registered_user.save()
         self.users.add(user)
         if OrganizationUser.objects.filter(
             user=user, organization=self.organization
@@ -1559,28 +1574,35 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         )
         sms_message.send(meta_data=org_radius_settings.sms_meta_data)
 
-    def is_valid(self, token):
+    def is_valid(self, token, organization=None):
         self.attempts += 1
         try:
-            self.verified = self.__check(token)
+            self.verified = self.__check(token, organization=organization)
         except exceptions.PhoneTokenException as phone_error:
             self.save()
             raise phone_error
         self.save()
         return self.verified
 
-    def _validate_already_verified(self):
-        try:
-            if self.user.registered_user.is_verified:
-                logger.warning(f"User {self.user.pk} is already verified")
-                raise exceptions.UserAlreadyVerified(
-                    _("This user has been already verified.")
-                )
-        except ObjectDoesNotExist:
-            pass
+    def _validate_already_verified(self, organization=None):
+        RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        if organization is not None:
+            reg_user = RegisteredUser.get_global_or_org_specific(
+                self.user, organization
+            )
+            is_verified = reg_user is not None and reg_user.is_verified
+        else:
+            is_verified = RegisteredUser.objects.filter(
+                user=self.user, is_verified=True
+            ).exists()
+        if is_verified:
+            logger.warning(f"User {self.user.pk} is already verified")
+            raise exceptions.UserAlreadyVerified(
+                _("This user has been already verified.")
+            )
 
-    def __check(self, token):
-        self._validate_already_verified()
+    def __check(self, token, organization=None):
+        self._validate_already_verified(organization=organization)
         if self.attempts > app_settings.SMS_TOKEN_MAX_ATTEMPTS:
             logger.warning(
                 f"User {self.user} has reached the max "
@@ -1602,12 +1624,23 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(models.Model):
-    user = models.OneToOneField(
+class AbstractRegisteredUser(UUIDModel):
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="registered_user",
-        primary_key=True,
+        related_name="registered_users",
+    )
+    organization = models.ForeignKey(
+        swapper.get_model_name("openwisp_users", "Organization"),
+        on_delete=models.CASCADE,
+        related_name="registered_users",
+        null=True,
+        blank=True,
+        verbose_name=_("organization"),
+        help_text=(
+            "The organization this registration info belongs to. "
+            "If null, applies to all orgs without specific requirements."
+        ),
     )
     method = models.CharField(
         _("registration method"),
@@ -1639,7 +1672,7 @@ class AbstractRegisteredUser(models.Model):
         default=False,
     )
     modified = AutoLastModifiedField(_("Last verification change"), editable=True)
-    _weak_verification_methods = {"", "email"}
+    _weak_verification_methods = {"", "email", "pending_verification"}
 
     @property
     def is_identity_verified_strong(self):
@@ -1649,19 +1682,55 @@ class AbstractRegisteredUser(models.Model):
         abstract = True
         verbose_name = _("Registration Information")
         verbose_name_plural = verbose_name
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "organization"],
+                name="unique_registered_user_per_org",
+                violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
+            ),
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=Q(organization__isnull=True),
+                name="unique_global_registered_user",
+                violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
+            ),
+        ]
+
+    @classmethod
+    def get_or_create_for_user_and_org(cls, user, organization, defaults=None):
+        defaults = defaults or {}
+        return cls.objects.get_or_create(
+            user=user, organization=organization, defaults=defaults
+        )
+
+    @classmethod
+    def get_global_or_org_specific(cls, user, organization=None):
+        if organization:
+            try:
+                return cls.objects.get(user=user, organization=organization)
+            except cls.DoesNotExist:
+                pass
+        try:
+            return cls.objects.get(user=user, organization__isnull=True)
+        except cls.DoesNotExist:
+            return None
 
     @classmethod
     def unverify_inactive_users(cls):
         if not app_settings.UNVERIFY_INACTIVE_USERS:
             return
-        # Exclude users who have unspecified, manual, or email
+        # Exclude users who have unspecified, manual, email, or pending_verification
         # registration method because such users don't have an option
         # to re-verify. See https://github.com/openwisp/openwisp-radius/issues/517
-        cls.objects.exclude(method__in=["", "manual", "email"]).filter(
+        cls.objects.exclude(
+            method__in=["", "manual", "email", "pending_verification"]
+        ).filter(
             user__is_staff=False,
             user__last_login__lt=timezone.now()
             - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),
-        ).update(is_verified=False)
+        ).update(
+            is_verified=False
+        )
 
     @classmethod
     def delete_inactive_users(cls):

@@ -21,8 +21,29 @@ User = get_user_model()
 
 @tag("radius_monitoring")
 class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
+    def _read_chart(self, chart, **kwargs):
+        return chart.read(
+            additional_query_kwargs={"additional_params": kwargs},
+        )
+
+    def _assert_pending_verification_excluded(self, points):
+        pending_verification_traces = [
+            trace_points
+            for trace_name, trace_points in points["traces"]
+            if trace_name == "pending_verification"
+        ]
+        self.assertEqual(pending_verification_traces, [])
+        self.assertNotIn(
+            "pending_verification",
+            points.get("summary", {}),
+        )
+
     def _create_registered_user(self, **kwargs):
-        options = {"is_verified": False, "method": "mobile_phone"}
+        options = {
+            "is_verified": False,
+            "method": "mobile_phone",
+            "organization": self.default_org,
+        }
         options.update(**kwargs)
         if "user" not in options:
             options["user"] = self._create_user()
@@ -238,6 +259,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         convert_called_station_id feature, but it is not configured
         properly leaving all called_station_id unconverted.
         """
+        cache.clear()
         user = self._create_user()
         reg_user = self._create_registered_user(user=user)
         options = _RADACCT.copy()
@@ -254,7 +276,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         options["stop_time"] = options["start_time"]
         # Remove calls for user registration from mocked logger
         mocked_logger.reset_mock()
-
         self._create_radius_accounting(**options)
         self.assertEqual(
             self.metric_model.objects.filter(
@@ -368,13 +389,99 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ' The metric will be written with "unspecified" registration method!'
         )
 
+    def test_post_save_radiusaccounting_pending_verification(self):
+        """
+        Test that when a user has a RegisteredUser with method="pending_verification",
+        the metric is written with "unspecified" instead of None.
+        """
+        user = self._create_user()
+        self._create_registered_user(user=user, method="pending_verification")
+        device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "pending_001",
+                "username": user.username,
+                "called_station_id": device.mac_address.replace("-", ":").upper(),
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        options["stop_time"] = options["start_time"]
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                name="RADIUS Accounting",
+                key="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    "called_station_id": device.mac_address,
+                    "calling_station_id": sha1_hash("00:00:00:00:00:00"),
+                    "location_id": str(device_loc.location.id),
+                    "method": "unspecified",
+                    "organization_id": str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+
+    def test_post_save_radiusaccounting_org_specific_takes_precedence_over_global(
+        self,
+    ):
+        """
+        Test that when a user has both a global (organization=None) and org-specific
+        RegisteredUser, the org-specific one takes precedence.
+        """
+        user = self._create_user()
+        self._create_registered_user(user=user, organization=None, method="email")
+        self._create_registered_user(
+            user=user, organization=self.default_org, method="mobile_phone"
+        )
+        device = self._create_device()
+        device_loc = self._create_device_location(
+            content_object=device,
+            location=self._create_location(organization=device.organization),
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "org_spec_001",
+                "username": user.username,
+                "called_station_id": device.mac_address.replace("-", ":").upper(),
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        options["stop_time"] = options["start_time"]
+        self._create_radius_accounting(**options)
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                name="RADIUS Accounting",
+                key="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    "called_station_id": device.mac_address,
+                    "calling_station_id": sha1_hash("00:00:00:00:00:00"),
+                    "location_id": str(device_loc.location.id),
+                    "method": "mobile_phone",
+                    "organization_id": str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+
     def test_write_user_registration_metrics(self):
         from ..tasks import write_user_registration_metrics
-
-        def _read_chart(chart, **kwargs):
-            return chart.read(
-                additional_query_kwargs={"additional_params": kwargs},
-            )
 
         # The TransactionTestCase truncates all the data after each test.
         # The general metrics and charts which are created by migrations
@@ -393,21 +500,25 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(len(org_points["traces"]), 0)
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            all_points = _read_chart(
+            all_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(len(org_points["traces"]), 0)
@@ -421,23 +532,27 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            all_points = _read_chart(
+            all_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(all_points["summary"], {"unspecified": 1})
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
@@ -454,13 +569,17 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             write_user_registration_metrics.delay()
 
             user_signup_chart = user_signup_metric.chart_set.first()
-            all_points = _read_chart(user_signup_chart, organization_id=["__all__"])
+            all_points = self._read_chart(
+                user_signup_chart, organization_id=["__all__"]
+            )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(
                 all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
-            org_points = _read_chart(user_signup_chart, organization_id=[str(org.id)])
+            org_points = self._read_chart(
+                user_signup_chart, organization_id=[str(org.id)]
+            )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
             self.assertEqual(all_points["traces"][0][1][-1], 1)
             self.assertEqual(
@@ -468,7 +587,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             )
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
@@ -476,7 +595,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(
                 org_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
-            org_points = _read_chart(
+            org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
@@ -484,3 +603,33 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(
                 all_points["summary"], {"mobile_phone": 1, "unspecified": 0}
             )
+
+    def test_pending_verification_excluded_from_metrics(self):
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        create_general_metrics(None, None)
+        org = self._create_org(name="pending_verification_test_org")
+        user_signup_metric = self.metric_model.objects.get(key="user_signups")
+        total_user_signup_metric = self.metric_model.objects.get(key="tot_user_signups")
+        user = self._create_org_user(organization=org).user
+        self._create_registered_user(
+            user=user, organization=org, method="pending_verification"
+        )
+        write_user_registration_metrics.delay()
+
+        user_signup_chart = user_signup_metric.chart_set.first()
+        org_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
+        all_points = self._read_chart(user_signup_chart, organization_id=["__all__"])
+        self._assert_pending_verification_excluded(org_points)
+        self._assert_pending_verification_excluded(all_points)
+
+        total_user_signup_chart = total_user_signup_metric.chart_set.first()
+        org_points = self._read_chart(
+            total_user_signup_chart, organization_id=[str(org.pk)]
+        )
+        all_points = self._read_chart(
+            total_user_signup_chart, organization_id=["__all__"]
+        )
+        self._assert_pending_verification_excluded(org_points)
+        self._assert_pending_verification_excluded(all_points)

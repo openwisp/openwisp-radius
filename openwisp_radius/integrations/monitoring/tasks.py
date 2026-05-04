@@ -75,9 +75,9 @@ def _write_user_signup_metric_for_all(metric_key):
         )
     )
     # Some manually created users, like superuser may not have a
-    # RegisteredUser object. We would could them with "unspecified" method
+    # RegisteredUser object. We would count them with "unspecified" method
     users_without_registereduser_query = User.objects.filter(
-        registered_user__isnull=True
+        registered_users__isnull=True
     )
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
@@ -97,6 +97,8 @@ def _write_user_signup_metric_for_all(metric_key):
 
     for method, count in total_registered_users.items():
         method = clean_registration_method(method)
+        if method is None:
+            continue
         metric = get_metric_func(organization_id="__all__", registration_method=method)
         metric_data.append((metric, {"value": count}))
     Metric.batch_write(metric_data)
@@ -116,6 +118,7 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # count of users who registered with that organization and method.
     registered_users_query = RegisteredUser.objects.exclude(
         user__openwisp_users_organizationuser__created__gt=end_time,
+        method="pending_verification",
     )
 
     if metric_key == "user_signups":
@@ -131,7 +134,7 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # which do not have related RegisteredUser object. Add the count
     # of such users with the "unspecified" method.
     users_without_registereduser_query = OrganizationUser.objects.filter(
-        user__registered_user__isnull=True
+        user__registered_users__isnull=True
     )
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
@@ -182,18 +185,28 @@ def post_save_radiusaccounting(
     called_station_id,
     time=None,
 ):
-    try:
+    registration_method = (
+        RegisteredUser.objects.only("method")
+        .filter(user__username=username, organization_id=organization_id)
+        .first()
+    )
+    if registration_method is None:
         registration_method = (
-            RegisteredUser.objects.only("method").get(user__username=username).method
+            RegisteredUser.objects.only("method")
+            .filter(user__username=username, organization__isnull=True)
+            .first()
         )
-    except RegisteredUser.DoesNotExist:
+    if registration_method is None:
         logger.info(
             f'RegisteredUser object not found for "{username}".'
             ' The metric will be written with "unspecified" registration method!'
         )
         registration_method = "unspecified"
     else:
-        registration_method = clean_registration_method(registration_method)
+        registration_method = registration_method.method
+    registration_method = clean_registration_method(registration_method)
+    if registration_method is None:
+        registration_method = "unspecified"
     device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
     extra_tags = {
         "method": registration_method,

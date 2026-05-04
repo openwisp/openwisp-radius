@@ -671,16 +671,19 @@ class TestAdmin(
             f"admin:{self.app_label_users}_organization_add",
         )
         PASSWORD_RESET_URLS = {"default": default_password_reset_url}
-        with mock.patch.object(
-            app_settings,
-            "DEFAULT_PASSWORD_RESET_URL",
-            app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
-        ), mock.patch.object(
-            # The default value is set on project startup, hence
-            # it also requires mocking.
-            OrganizationRadiusSettings._meta.get_field("password_reset_url"),
-            "fallback",
-            app_settings.DEFAULT_PASSWORD_RESET_URL,
+        with (
+            mock.patch.object(
+                app_settings,
+                "DEFAULT_PASSWORD_RESET_URL",
+                app_settings.get_default_password_reset_url(PASSWORD_RESET_URLS),
+            ),
+            mock.patch.object(
+                # The default value is set on project startup, hence
+                # it also requires mocking.
+                OrganizationRadiusSettings._meta.get_field("password_reset_url"),
+                "fallback",
+                app_settings.DEFAULT_PASSWORD_RESET_URL,
+            ),
         ):
             response = self.client.get(url)
             self.assertContains(response, default_password_reset_url)
@@ -1359,7 +1362,7 @@ class TestAdmin(
 
         with self.subTest("Inline exists"):
             response = self.client.get(url)
-            self.assertContains(response, "id_registered_user-TOTAL_FORMS")
+            self.assertContains(response, "id_registered_users-TOTAL_FORMS")
 
         with self.subTest("Register new choice"):
             register_registration_method("national_id", "National ID")
@@ -1407,6 +1410,67 @@ class TestAdmin(
             register_registration_method("github", "GitHub", strong_identity=False)
             self.assertIn("github", RegisteredUser._weak_verification_methods)
 
+    def test_admin_prevents_duplicate_registered_user_same_org(self):
+        user = self._create_user(username="dup_test_user", email="dup@test.org")
+        reg_user = RegisteredUser.objects.create(
+            user=user, organization=self.default_org, is_verified=True
+        )
+        user_change_url = reverse(
+            f"admin:{User._meta.app_label}_user_change", args=[user.pk]
+        )
+        response = self.client.get(user_change_url)
+        self.assertEqual(response.status_code, 200)
+        data = {
+            "username": "dup_test_user",
+            "email": "dup@test.org",
+            "registered_users-TOTAL_FORMS": "2",
+            "registered_users-INITIAL_FORMS": "1",
+            "registered_users-MIN_NUM_FORMS": "0",
+            "registered_users-MAX_NUM_FORMS": "1000",
+            "registered_users-0-id": str(reg_user.pk),
+            "registered_users-0-user": str(user.pk),
+            "registered_users-0-organization": str(self.default_org.pk),
+            "registered_users-0-method": "",
+            "registered_users-0-is_verified": "on",
+            "registered_users-1-id": "",
+            "registered_users-1-user": str(user.pk),
+            "registered_users-1-organization": str(self.default_org.pk),
+            "registered_users-1-method": "",
+            "registered_users-1-is_verified": "on",
+        }
+        response = self.client.post(user_change_url, data)
+        self.assertContains(response, "errors")
+        self.assertContains(
+            response,
+            "A user cannot have more than one registration record in the"
+            " same organization.",
+        )
+        self.assertEqual(
+            RegisteredUser.objects.filter(
+                user=user, organization=self.default_org
+            ).count(),
+            1,
+        )
+
+    def test_user_admin_shows_multiple_registered_user_records(self):
+        user = self._create_user(username="multiuser", email="multi@test.org")
+        org2 = self._create_org(name="org2", slug="org2")
+        RegisteredUser.objects.create(
+            user=user, organization=self.default_org, is_verified=True
+        )
+        RegisteredUser.objects.create(user=user, organization=org2, is_verified=False)
+        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        user_url = reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk])
+        response = self.client.get(user_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            (
+                '<input type="hidden" name="registered_users-INITIAL_FORMS" value="3"'
+                ' id="id_registered_users-INITIAL_FORMS">'
+            ),
+        )
+
     def test_get_is_verified_user_admin_list(self):
         unknown = User.objects.first()
         self.assertIsNotNone(unknown)
@@ -1416,7 +1480,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1424,7 +1491,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")
@@ -1449,7 +1519,10 @@ class TestAdmin(
         verified.full_clean()
         verified.save()
         RegisteredUser.objects.create(
-            user=verified, method="mobile_phone", is_verified=True
+            user=verified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
         unverified = User.objects.create(
             username="unverified", password="unverified", email="unverified@test.com"
@@ -1457,7 +1530,10 @@ class TestAdmin(
         unverified.full_clean()
         unverified.save()
         RegisteredUser.objects.create(
-            user=unverified, method="mobile_phone", is_verified=False
+            user=unverified,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=False,
         )
         app_label = User._meta.app_label
         url = reverse(f"admin:{app_label}_user_changelist")

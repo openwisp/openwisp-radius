@@ -36,7 +36,7 @@ from openwisp_utils.api.serializers import ValidatedModelSerializer
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..counters.exceptions import SkipCheck
-from ..registration import REGISTRATION_METHOD_CHOICES
+from ..registration import get_registration_choices
 from ..utils import (
     get_group_checks,
     get_organization_radius_settings,
@@ -571,7 +571,7 @@ class RegisterSerializer(
             'verification in its "Organization RADIUS Settings."'
         ),
         default="",
-        choices=REGISTRATION_METHOD_CHOICES,
+        choices=get_registration_choices(),
     )
 
     def validate_phone_number(self, phone_number):
@@ -688,9 +688,11 @@ class RegisterSerializer(
         # the custom_signup method contains the openwisp specific logic
         self.custom_signup(request, user)
         # create a RegisteredUser object for every user that registers through API
-        RegisteredUser.objects.create(
+        org = self.context["view"].organization
+        RegisteredUser.objects.get_or_create(
             user=user,
-            method=self.validated_data["method"],
+            organization=org,
+            defaults={"method": self.validated_data["method"]},
         )
         setup_user_email(request, user, [])
         return user
@@ -753,8 +755,55 @@ class ChangePhoneNumberSerializer(
         # yet, tha will be done by the phone token validation view
         # once the phone number has been validated
         # at this point we flag the user as unverified again
-        self.user.registered_user.is_verified = False
-        self.user.registered_user.save()
+        org = self.context["view"].organization
+        reg_user, _ = RegisteredUser.get_or_create_for_user_and_org(
+            user=self.user,
+            organization=org,
+            defaults={"is_verified": False, "method": ""},
+        )
+        reg_user.is_verified = False
+        reg_user.save()
+
+
+class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
+    method = serializers.ChoiceField(
+        choices=get_registration_choices(),
+        help_text=_(
+            "The registration method to set for the user. "
+            "Cannot be 'pending_verification'."
+        ),
+    )
+
+    class Meta:
+        model = RegisteredUser
+        fields = ["method"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["method"].choices = get_registration_choices()
+
+    def validate_method(self, value):
+        if value == "pending_verification":
+            raise serializers.ValidationError(
+                _("'pending_verification' cannot be set as a registration method.")
+            )
+        return value
+
+    def validate(self, attrs):
+        if self.instance.method != "pending_verification":
+            raise serializers.ValidationError(
+                {
+                    "method": _(
+                        "Method can only be updated from pending verification state."
+                    )
+                }
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance.method = validated_data["method"]
+        instance.save()
+        return instance
 
 
 class RadiusUserSerializer(serializers.ModelSerializer):
@@ -762,11 +811,8 @@ class RadiusUserSerializer(serializers.ModelSerializer):
     Used to return information about the logged in user
     """
 
-    is_verified = serializers.BooleanField(source="registered_user.is_verified")
-    method = serializers.CharField(
-        source="registered_user.method",
-        allow_null=True,
-    )
+    is_verified = serializers.SerializerMethodField()
+    method = serializers.SerializerMethodField()
     password_expired = serializers.BooleanField(source="has_password_expired")
     radius_user_token = serializers.CharField(source="radius_token.key", default=None)
 
@@ -786,3 +832,33 @@ class RadiusUserSerializer(serializers.ModelSerializer):
             "password_expired",
             "radius_user_token",
         ]
+
+    def _get_registered_user(self, obj):
+        if not hasattr(self, "_registered_user_cache"):
+            self._registered_user_cache = {}
+        if obj.pk not in self._registered_user_cache:
+            view = self.context.get("view")
+            organization = getattr(view, "organization", None)
+            org_reg_user = None
+            global_reg_user = None
+            # We iterate over .all() instead of using .filter() because callers
+            # of this serializer (e.g. validate_auth_token) prefetch
+            # "registered_users" via prefetch_related. Using .all() hits the
+            # in-memory prefetch cache (0 DB queries), whereas .filter() would
+            # bypass the cache and issue a new query every time.
+            for ru in obj.registered_users.all():
+                if organization and ru.organization_id == organization.pk:
+                    org_reg_user = ru
+                    break
+                elif ru.organization_id is None:
+                    global_reg_user = ru
+            self._registered_user_cache[obj.pk] = org_reg_user or global_reg_user
+        return self._registered_user_cache[obj.pk]
+
+    def get_is_verified(self, obj):
+        reg_user = self._get_registered_user(obj)
+        return reg_user.is_verified if reg_user else None
+
+    def get_method(self, obj):
+        reg_user = self._get_registered_user(obj)
+        return reg_user.method if reg_user else None
