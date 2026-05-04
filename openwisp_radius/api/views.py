@@ -780,7 +780,7 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
-            reg_user.save(update_fields=["is_verified", "method"])
+            reg_user.save()
             # delete any radius token cache key if present
             cache.delete(f"rt-{phone_token.phone_number}")
             return Response(None, status=200)

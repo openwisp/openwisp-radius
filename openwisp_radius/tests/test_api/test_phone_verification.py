@@ -338,8 +338,8 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertIn("non_field_errors", r.data)
         self.assertIn("is not member", str(r.data["non_field_errors"]))
 
-    @freeze_time(_TEST_DATE)
     @capture_any_output()
+    @freeze_time(_TEST_DATE)
     def test_validate_phone_token_200(self):
         self.test_create_phone_token_201()
         user = User.objects.get(email=self._test_email)
@@ -828,7 +828,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         r1 = self.client.post(
             url,
             content_type="application/json",
-            HTTP_AUTHORIZATION=f'Bearer {r.data["key"]}',
+            HTTP_AUTHORIZATION=f"Bearer {r.data['key']}",
         )
         self.assertEqual(r1.status_code, 201)
 
