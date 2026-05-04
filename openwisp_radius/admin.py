@@ -547,7 +547,8 @@ class RegisteredUserFormset(BaseInlineFormSet):
         # domain-specific, user-friendly error that matches our constraint.
         if unique_check == ("user", "organization"):
             return _(
-                "A user cannot have more than one registration record in the same organization."
+                "A user cannot have more than one registration record in the"
+                " same organization."
             )
 
 

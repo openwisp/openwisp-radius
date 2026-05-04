@@ -317,7 +317,7 @@ class TestMigrations(BaseTestCase):
         org3 = self._create_org(name="method-org-3", slug="method-org-3")
         modified_base = timezone.now()
         # All unverified, same timestamp - method should decide
-        org_empty = RegisteredUser.objects.create(
+        RegisteredUser.objects.create(
             user=user,
             organization=org1,
             is_verified=False,
