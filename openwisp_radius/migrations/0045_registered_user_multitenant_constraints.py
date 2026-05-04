@@ -13,7 +13,8 @@ class Migration(migrations.Migration):
                 fields=["user", "organization"],
                 name="unique_registered_user_per_org",
                 violation_error_message=(
-                    "A registration record already exists for this user/organization."
+                    "A user cannot have more than one registration record in the same"
+                    " organization."
                 ),
             ),
         ),
@@ -24,7 +25,8 @@ class Migration(migrations.Migration):
                 condition=models.Q(organization__isnull=True),
                 name="unique_global_registered_user",
                 violation_error_message=(
-                    "A registration record already exists for this user/organization."
+                    "A user cannot have more than one registration record in the same"
+                    " organization."
                 ),
             ),
         ),
