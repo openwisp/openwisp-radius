@@ -86,3 +86,4 @@ See `OpenWISP Support Channels <http://openwisp.org/support.html>`_.
 
 .. image:: https://raw.githubusercontent.com/openwisp/openwisp2-docs/master/assets/design/openwisp-logo-black.svg
     :target: http://openwisp.org
+
