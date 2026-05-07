@@ -146,8 +146,6 @@ def migrate_registered_users_multitenant_forward(
     apps, schema_editor, app_label, extra_fields=()
 ):
     RegisteredUser = apps.get_model(app_label, "RegisteredUser")
-    if RegisteredUser._meta.swapped:
-        return
     OrganizationUser = get_swapped_model(apps, "openwisp_users", "OrganizationUser")
 
     queryset = RegisteredUser.objects.filter(organization__isnull=True).order_by(
@@ -198,77 +196,45 @@ def migrate_registered_users_multitenant_forward(
 def migrate_registered_users_multitenant_reverse(
     apps, schema_editor, app_label, extra_fields=()
 ):
+    # Keep the strongest RegisteredUser per user and delete the weaker duplicates.
+    # Ranking is by: verified over unverified, stronger method over weaker method,
+    # then newer modified timestamps over older ones.
     RegisteredUser = apps.get_model(app_label, "RegisteredUser")
-    if RegisteredUser._meta.swapped:
-        return
-
+    # Process users in batches so the migration scales to large tables without
+    # issuing one query per user.
     user_ids_qs = (
-        RegisteredUser.objects.filter(organization__isnull=False)
-        .order_by()
-        .values_list("user_id", flat=True)
-        .distinct()
+        RegisteredUser.objects.order_by().values_list("user_id", flat=True).distinct()
     )
     for user_id_batch in _batched_iterator(
         user_ids_qs.iterator(chunk_size=BATCH_SIZE), BATCH_SIZE
     ):
-        existing_globals = {
-            registered_user.user_id: registered_user
-            for registered_user in RegisteredUser.objects.filter(
-                user_id__in=user_id_batch,
-                organization__isnull=True,
-            )
-        }
         # Annotate each row with an explicit verification priority so that stronger
         # methods (anything that is not '' or 'email') sort before weaker ones.
-        # Lexical ordering of 'method' would place '' first, picking the weakest.
         method_priority = _registered_user_method_priority_case()
-        org_records = (
+        ranked_registered_users = (
             RegisteredUser.objects.filter(
                 user_id__in=user_id_batch,
-                organization__isnull=False,
             )
             .annotate(method_priority=method_priority)
             .order_by("user_id", "-is_verified", "-method_priority", "-modified")
         )
-
-        to_create = []
-        to_update = []
         to_delete_pks = []
         current_user_id = None
-        update_fields = ["is_verified", "method", "modified", *extra_fields]
-
-        for registered_user in org_records.iterator(chunk_size=BATCH_SIZE):
-            if registered_user.user_id == current_user_id:
+        for registered_user in ranked_registered_users.iterator(chunk_size=BATCH_SIZE):
+            # Rows for the same user are consecutive because of the ordering
+            # above, and the first row in each group is the strongest one.
+            # Every later row for that user is therefore a weaker duplicate.
+            is_duplicate_for_user = registered_user.user_id == current_user_id
+            if is_duplicate_for_user:
                 to_delete_pks.append(registered_user.pk)
-                continue
-            current_user_id = registered_user.user_id
-            existing_global = existing_globals.get(registered_user.user_id)
-            if existing_global is None:
-                restored = RegisteredUser(
-                    id=uuid.uuid4(),
-                    user_id=registered_user.user_id,
-                    organization=None,
-                    is_verified=registered_user.is_verified,
-                    method=registered_user.method,
-                    **_registered_user_extra_kwargs(registered_user, extra_fields),
-                )
-                restored.modified = registered_user.modified
-                to_create.append(restored)
-            elif _registered_user_strength(registered_user) > _registered_user_strength(
-                existing_global
-            ):
-                existing_global.is_verified = registered_user.is_verified
-                existing_global.method = registered_user.method
-                existing_global.modified = registered_user.modified
-                for field_name, value in _registered_user_extra_kwargs(
-                    registered_user, extra_fields
-                ).items():
-                    setattr(existing_global, field_name, value)
-                to_update.append(existing_global)
-            to_delete_pks.append(registered_user.pk)
+            else:
+                current_user_id = registered_user.user_id
+                if len(to_delete_pks) >= BATCH_SIZE:
+                    RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
+                to_delete_pks.clear()
 
-        _flush_bulk_create(RegisteredUser, to_create)
-        _flush_bulk_update(RegisteredUser, to_update, fields=update_fields)
+        # Delete all weaker rows for the batch at once rather than issuing a
+        # separate delete for each user.
         if to_delete_pks:
             RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
 

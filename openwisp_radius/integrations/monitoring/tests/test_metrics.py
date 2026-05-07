@@ -432,18 +432,20 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             1,
         )
 
-    def test_post_save_radiusaccounting_org_specific_takes_precedence_over_global(
+    def test_post_save_radiusaccounting_does_not_fallback_to_other_org(
         self,
     ):
         """
-        Test that when a user has both a global (organization=None) and org-specific
-        RegisteredUser, the org-specific one takes precedence.
+        Test that a RegisteredUser from another organization is not used
+        when accounting is written for the current organization.
         """
         user = self._create_user()
-        self._create_registered_user(user=user, organization=None, method="email")
         self._create_registered_user(
             user=user, organization=self.default_org, method="mobile_phone"
         )
+        org2 = self._create_org(name="metrics-org-2", slug="metrics-org-2")
+        self._create_org_user(user=user, organization=org2)
+        self._create_registered_user(user=user, organization=org2, method="email")
         device = self._create_device()
         device_loc = self._create_device_location(
             content_object=device,

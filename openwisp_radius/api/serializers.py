@@ -839,8 +839,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
         if obj.pk not in self._registered_user_cache:
             view = self.context.get("view")
             organization = getattr(view, "organization", None)
-            org_reg_user = None
-            global_reg_user = None
+            reg_user = None
             # We iterate over .all() instead of using .filter() because callers
             # of this serializer (e.g. validate_auth_token) prefetch
             # "registered_users" via prefetch_related. Using .all() hits the
@@ -848,11 +847,9 @@ class RadiusUserSerializer(serializers.ModelSerializer):
             # bypass the cache and issue a new query every time.
             for ru in obj.registered_users.all():
                 if organization and ru.organization_id == organization.pk:
-                    org_reg_user = ru
+                    reg_user = ru
                     break
-                elif ru.organization_id is None:
-                    global_reg_user = ru
-            self._registered_user_cache[obj.pk] = org_reg_user or global_reg_user
+            self._registered_user_cache[obj.pk] = reg_user
         return self._registered_user_cache[obj.pk]
 
     def get_is_verified(self, obj):

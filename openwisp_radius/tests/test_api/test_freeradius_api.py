@@ -223,14 +223,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
 
-        with self.subTest("global verified record passes authorization (fallback)"):
+        with self.subTest("other-organization record does not pass authorization"):
             RegisteredUser.objects.filter(user=user).delete()
+            org2 = self._create_org(name="verified-org-2", slug="verified-org-2")
+            self._create_org_user(organization=org2, user=user)
             RegisteredUser.objects.create(
-                user=user, organization=None, is_verified=True
+                user=user, organization=org2, is_verified=True
             )
             response = self._authorize_user(auth_header=self.auth_header)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+            self.assertEqual(response.data, None)
 
     def test_multi_org_user_different_verification_states(self):
         org1 = self._get_org()
@@ -259,7 +261,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertIsNone(response.data)
 
-    def test_global_fallback_for_orgs_without_specific_records(self):
+    def test_other_org_record_is_not_used_as_fallback(self):
         org1 = self._get_org()
         org2 = self._create_org(name="org2", slug="org2")
         org2_settings = OrganizationRadiusSettings.objects.get_or_create(
@@ -270,17 +272,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         org2_settings.save()
         user = self._get_user_with_org()
         self._create_org_user(organization=org2, user=user)
-        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        RegisteredUser.objects.create(user=user, organization=org2, is_verified=True)
         org_settings = OrganizationRadiusSettings.objects.get(organization=org1)
         org_settings.needs_identity_verification = True
         org_settings.save()
-        user.registered_users.exclude(organization=None).delete()
 
         auth_header_org1 = f"Bearer {org1.pk} {org1.radius_settings.token}"
         response = self._authorize_user(
             username=user.username, auth_header=auth_header_org1
         )
-        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+        self.assertEqual(response.data, None)
 
         auth_header_org2 = f"Bearer {org2.pk} {org2.radius_settings.token}"
         response = self._authorize_user(
@@ -288,42 +289,45 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
-    def test_global_verified_with_org_unverified(self):
+    def test_other_org_verified_with_org_unverified(self):
         """
-        A user with a global verified RegisteredUser should NOT be
-        authorized for an org where they have an org-specific unverified RegisteredUser.
-        The org-specific record takes precedence over the global fallback.
+        A user with a verified record in another org should not be
+        authorized for an org where they have an org-specific unverified record.
         """
         org = self._get_org()
         org_settings = OrganizationRadiusSettings.objects.get(organization=org)
         org_settings.needs_identity_verification = True
         org_settings.save()
         user = self._get_user_with_org()
+        org2 = self._create_org(name="org2-priority", slug="org2-priority")
+        self._create_org_user(organization=org2, user=user)
         RegisteredUser.objects.create(user=user, organization=org, is_verified=False)
-        RegisteredUser.objects.create(user=user, organization=None, is_verified=True)
+        RegisteredUser.objects.create(user=user, organization=org2, is_verified=True)
         auth_header = f"Bearer {org.pk} {org.radius_settings.token}"
         response = self._authorize_user(username=user.username, auth_header=auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
 
     @mock.patch.object(registration, "AUTHORIZE_UNVERIFIED", ["mobile_phone"])
-    def test_global_special_method_with_org_unverified_not_authorized(self):
+    def test_other_org_special_method_with_org_unverified_not_authorized(self):
         """
         When AUTHORIZE_UNVERIFIED is set, the org-specific
         record still takes precedence. A user with org-specific unverified record
         using a non-special method should NOT be authorized even if they have a
-        global record with a special method.
+        verified record in another organization with a special method.
         """
         org = self._get_org()
         org_settings = OrganizationRadiusSettings.objects.get(organization=org)
         org_settings.needs_identity_verification = True
         org_settings.save()
         user = self._get_user_with_org()
+        org2 = self._create_org(name="org2-special", slug="org2-special")
+        self._create_org_user(organization=org2, user=user)
         RegisteredUser.objects.create(
             user=user, organization=org, method="email", is_verified=False
         )
         RegisteredUser.objects.create(
-            user=user, organization=None, method="mobile_phone", is_verified=True
+            user=user, organization=org2, method="mobile_phone", is_verified=True
         )
         auth_header = f"Bearer {org.pk} {org.radius_settings.token}"
         response = self._authorize_user(username=user.username, auth_header=auth_header)

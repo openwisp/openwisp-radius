@@ -191,12 +191,6 @@ def post_save_radiusaccounting(
         .first()
     )
     if registration_method is None:
-        registration_method = (
-            RegisteredUser.objects.only("method")
-            .filter(user__username=username, organization__isnull=True)
-            .first()
-        )
-    if registration_method is None:
         logger.info(
             f'RegisteredUser object not found for "{username}".'
             ' The metric will be written with "unspecified" registration method!'

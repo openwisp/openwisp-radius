@@ -131,8 +131,7 @@ class Migration(migrations.Migration):
                                 blank=True,
                                 help_text=(
                                     "The organization this registration info belongs"
-                                    " to. If null, applies to all orgs without"
-                                    " specific requirements."
+                                    " to."
                                 ),
                                 null=True,
                                 on_delete=django.db.models.deletion.CASCADE,
@@ -183,13 +182,9 @@ class Migration(migrations.Migration):
                     model_name="registereduser",
                     name="organization",
                     field=models.ForeignKey(
-                        blank=True,
                         help_text=(
-                            "The organization this registration info belongs"
-                            " to. If null, applies to all orgs without"
-                            " specific requirements."
+                            "Organization associated with this registered user entry."
                         ),
-                        null=True,
                         related_name="registered_users",
                         on_delete=django.db.models.deletion.CASCADE,
                         to=swapper.get_model_name("openwisp_users", "Organization"),
@@ -207,18 +202,6 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(
                 fields=["user", "organization"],
                 name="unique_registered_user_per_org",
-                violation_error_message=(
-                    "A user cannot have more than one registration"
-                    " record in the same organization."
-                ),
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="registereduser",
-            constraint=models.UniqueConstraint(
-                fields=["user"],
-                condition=models.Q(organization__isnull=True),
-                name="unique_global_registered_user",
                 violation_error_message=(
                     "A user cannot have more than one registration"
                     " record in the same organization."

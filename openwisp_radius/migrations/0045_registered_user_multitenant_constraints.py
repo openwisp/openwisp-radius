@@ -18,16 +18,4 @@ class Migration(migrations.Migration):
                 ),
             ),
         ),
-        migrations.AddConstraint(
-            model_name="registereduser",
-            constraint=models.UniqueConstraint(
-                fields=["user"],
-                condition=models.Q(organization__isnull=True),
-                name="unique_global_registered_user",
-                violation_error_message=(
-                    "A user cannot have more than one registration record in the same"
-                    " organization."
-                ),
-            ),
-        ),
     ]

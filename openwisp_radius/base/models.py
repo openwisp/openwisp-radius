@@ -1587,9 +1587,7 @@ class AbstractPhoneToken(TimeStampedEditableModel):
     def _validate_already_verified(self, organization=None):
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         if organization is not None:
-            reg_user = RegisteredUser.get_global_or_org_specific(
-                self.user, organization
-            )
+            reg_user = RegisteredUser.get_for_user_and_org(self.user, organization)
             is_verified = reg_user is not None and reg_user.is_verified
         else:
             is_verified = RegisteredUser.objects.filter(
@@ -1634,13 +1632,8 @@ class AbstractRegisteredUser(UUIDModel):
         swapper.get_model_name("openwisp_users", "Organization"),
         on_delete=models.CASCADE,
         related_name="registered_users",
-        null=True,
-        blank=True,
         verbose_name=_("organization"),
-        help_text=(
-            "The organization this registration info belongs to. "
-            "If null, applies to all orgs without specific requirements."
-        ),
+        help_text=_("Organization associated with this registered user entry."),
     )
     method = models.CharField(
         _("registration method"),
@@ -1688,12 +1681,6 @@ class AbstractRegisteredUser(UUIDModel):
                 name="unique_registered_user_per_org",
                 violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
             ),
-            models.UniqueConstraint(
-                fields=["user"],
-                condition=Q(organization__isnull=True),
-                name="unique_global_registered_user",
-                violation_error_message=_REGISTRATION_UNIQUE_VALIDATION_ERROR,
-            ),
         ]
 
     @classmethod
@@ -1704,14 +1691,9 @@ class AbstractRegisteredUser(UUIDModel):
         )
 
     @classmethod
-    def get_global_or_org_specific(cls, user, organization=None):
-        if organization:
-            try:
-                return cls.objects.get(user=user, organization=organization)
-            except cls.DoesNotExist:
-                pass
+    def get_for_user_and_org(cls, user, organization):
         try:
-            return cls.objects.get(user=user, organization__isnull=True)
+            return cls.objects.get(user=user, organization=organization)
         except cls.DoesNotExist:
             return None
 

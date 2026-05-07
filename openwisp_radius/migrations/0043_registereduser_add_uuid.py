@@ -53,9 +53,7 @@ class Migration(migrations.Migration):
                     field=models.ForeignKey(
                         blank=True,
                         help_text=(
-                            "The organization this registration info belongs to. "
-                            "If null, applies to all orgs without specific"
-                            " requirements."
+                            "Organization associated with this registered user entry."
                         ),
                         null=True,
                         related_name="registered_users",
@@ -125,9 +123,8 @@ class Migration(migrations.Migration):
                             models.ForeignKey(
                                 blank=True,
                                 help_text=(
-                                    "The organization this registration info belongs"
-                                    " to. If null, applies to all orgs without"
-                                    " specific requirements."
+                                    "Organization associated with this registered user"
+                                    " entry."
                                 ),
                                 null=True,
                                 on_delete=django.db.models.deletion.CASCADE,

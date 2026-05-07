@@ -406,14 +406,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 },
             )
 
-        with self.subTest("org-specific takes precedence over global"):
-            # Create user with both a global (unverified) and
-            # org-specific (verified) record
+        with self.subTest("org-specific record is returned for the current org"):
             user2 = self._create_user(username="user2", email="user2@test.com")
             self._create_org_user(user=user2, organization=self.default_org)
-            RegisteredUser.objects.create(
-                user=user2, organization=None, is_verified=False
-            )
             RegisteredUser.objects.create(
                 user=user2,
                 organization=self.default_org,
@@ -426,18 +421,19 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(r.data["is_verified"], True)
             self.assertEqual(r.data["method"], "mobile_phone")
 
-        with self.subTest("global record as fallback when no org-specific"):
-            # Create user with only a global (verified) record
+        with self.subTest("other-organization record is not used as fallback"):
             user3 = self._create_user(username="user3", email="user3@test.com")
             self._create_org_user(user=user3, organization=self.default_org)
+            org2 = self._create_org(name="serializer-org2", slug="serializer-org2")
+            self._create_org_user(user=user3, organization=org2)
             RegisteredUser.objects.create(
-                user=user3, organization=None, is_verified=True, method="email"
+                user=user3, organization=org2, is_verified=True, method="email"
             )
             url = reverse("radius:user_auth_token", args=[self.default_org.slug])
             r = self.client.post(url, {"username": "user3", "password": "tester"})
             self.assertEqual(r.status_code, 200)
-            self.assertEqual(r.data["is_verified"], True)
-            self.assertEqual(r.data["method"], "email")
+            self.assertIsNone(r.data["is_verified"])
+            self.assertIsNone(r.data["method"])
 
         with self.subTest("returns None when no RegisteredUser records exist"):
             user4 = self._create_user(username="user4", email="user4@test.com")
