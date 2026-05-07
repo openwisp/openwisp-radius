@@ -231,7 +231,7 @@ def migrate_registered_users_multitenant_reverse(
                 current_user_id = registered_user.user_id
                 if len(to_delete_pks) >= BATCH_SIZE:
                     RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
-                to_delete_pks.clear()
+                    to_delete_pks.clear()
 
         # Delete all weaker rows for the batch at once rather than issuing a
         # separate delete for each user.

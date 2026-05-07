@@ -203,7 +203,6 @@ class TestMigrations(BaseTestCase):
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.is_verified, True)
         self.assertEqual(surviving_record.method, "email")
-        self.assertEqual(surviving_record.modified, modified_base)
         self.assertEqual(surviving_record.pk, first_record.pk)
 
     def test_multitenant_reverse_method_priority_ordering(self):

@@ -7,6 +7,17 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterField(
+            model_name="registereduser",
+            name="organization",
+            field=models.ForeignKey(
+                help_text="Organization associated with this registered user entry.",
+                on_delete=models.deletion.CASCADE,
+                related_name="registered_users",
+                to="openwisp_users.organization",
+                verbose_name="organization",
+            ),
+        ),
         migrations.AddConstraint(
             model_name="registereduser",
             constraint=models.UniqueConstraint(
