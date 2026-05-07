@@ -1822,7 +1822,10 @@ class TestTransactionFreeradiusApi(
     def test_authorize_unverified_user_with_special_method(self):
         org_user = self._get_org_user()
         reg_user = RegisteredUser(
-            user=org_user.user, method="mobile_phone", is_verified=False
+            user=org_user.user,
+            method="mobile_phone",
+            is_verified=False,
+            organization_id=org_user.organization_id,
         )
         reg_user.full_clean()
         reg_user.save()
