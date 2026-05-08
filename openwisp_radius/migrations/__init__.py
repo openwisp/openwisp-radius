@@ -1,11 +1,10 @@
 import uuid
-from collections import defaultdict
 
 import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, IntegerField, Prefetch, Value, When
 
 from ..utils import create_default_groups
 
@@ -35,12 +34,6 @@ def _flush_bulk_create(model, objects, batch_size=BATCH_SIZE):
         objects.clear()
 
 
-def _flush_bulk_update(model, objects, fields, batch_size=BATCH_SIZE):
-    if objects:
-        model.objects.bulk_update(objects, fields=fields, batch_size=batch_size)
-        objects.clear()
-
-
 def _registered_user_extra_kwargs(registered_user, extra_fields=()):
     return {
         field_name: getattr(registered_user, field_name) for field_name in extra_fields
@@ -55,22 +48,6 @@ def _registered_user_method_priority_case():
         When(method="email", then=Value(1)),
         default=Value(2),
         output_field=IntegerField(),
-    )
-
-
-def _registered_user_method_priority(registered_user):
-    if registered_user.method == "":
-        return 0
-    if registered_user.method == "email":
-        return 1
-    return 2
-
-
-def _registered_user_strength(registered_user):
-    return (
-        int(registered_user.is_verified),
-        _registered_user_method_priority(registered_user),
-        registered_user.modified,
     )
 
 
@@ -145,52 +122,131 @@ def copy_registered_users_ctcr_reverse(
 def migrate_registered_users_multitenant_forward(
     apps, schema_editor, app_label, extra_fields=()
 ):
-    RegisteredUser = apps.get_model(app_label, "RegisteredUser")
-    OrganizationUser = get_swapped_model(apps, "openwisp_users", "OrganizationUser")
+    """
+    Expand legacy org-less RegisteredUser rows into organization-specific rows.
 
-    queryset = RegisteredUser.objects.filter(organization__isnull=True).order_by(
-        "user_id"
+    Before this migration, RegisteredUser is effectively single-tenant and users
+    are expected to have at most one row where organization IS NULL. That row is
+    treated as the template for all organization-specific rows created during the
+    migration.
+
+    For each user, the migration:
+    1. Finds the org-less RegisteredUser row.
+    2. Creates one RegisteredUser per OrganizationUser membership.
+    3. Deletes the original org-less row.
+
+    Implementation notes:
+    - Assumes each user has at most one org-less RegisteredUser row.
+    - Prioritizes readability and explicit control flow over aggressive SQL/JOIN
+    optimization.
+    - Avoids JOIN-based filtering to keep migration assumptions visible in Python
+    and reduce duplicate-row/DISTINCT complexity.
+    - Uses iterator(), prefetch_related(), bulk_create(), and batched deletes to
+    remain memory bounded while processing large datasets.
+    """
+    User = apps.get_model(settings.AUTH_USER_MODEL)
+    RegisteredUser = apps.get_model(
+        app_label,
+        "RegisteredUser",
     )
-    iterator = queryset.iterator(chunk_size=BATCH_SIZE)
-    for batch in _batched_iterator(iterator, BATCH_SIZE):
-        user_ids = [registered_user.user_id for registered_user in batch]
-        memberships = defaultdict(set)
-        membership_qs = OrganizationUser.objects.filter(
-            user_id__in=user_ids
-        ).values_list("user_id", "organization_id")
-        for user_id, organization_id in membership_qs.iterator(chunk_size=BATCH_SIZE):
-            memberships[user_id].add(organization_id)
+    OrganizationUser = get_swapped_model(
+        apps,
+        "openwisp_users",
+        "OrganizationUser",
+    )
 
-        existing_pairs = set(
-            RegisteredUser.objects.filter(
-                user_id__in=user_ids,
-                organization__isnull=False,
-            ).values_list("user_id", "organization_id")
+    queryset = User.objects.prefetch_related(
+        Prefetch(
+            "registered_users",
+            queryset=RegisteredUser.objects.only(
+                "id",
+                "user_id",
+                "organization_id",
+                "method",
+                "is_verified",
+                "modified",
+                *extra_fields,
+            ),
+            # Store prefetched objects directly as a Python list to avoid
+            # additional queryset evaluation during iteration.
+            to_attr="prefetched_registered_users",
+        ),
+        Prefetch(
+            "openwisp_users_organizationuser",
+            queryset=OrganizationUser.objects.only(
+                "user_id",
+                "organization_id",
+            ),
+            to_attr="organization_memberships",
+        ),
+    ).order_by("id")
+
+    to_create = []
+    for user in queryset.iterator(chunk_size=BATCH_SIZE):
+        # Locate the legacy org-less RegisteredUser row that acts as the source
+        # template for new organization-specific rows.
+        #
+        # We intentionally do this in Python instead of SQL because:
+        #
+        # - the prefetched list is expected to be extremely small
+        #   (ideally, it will contain at most one item due to the migration invariant)
+        # - it keeps migration assumptions explicit,
+        # - and avoids introducing JOIN + DISTINCT complexity.
+        base_registered_user = next(
+            (
+                registered_user
+                for registered_user in user.prefetched_registered_users
+                if registered_user.organization_id is None
+            ),
+            None,
         )
+        # Users without a legacy org-less RegisteredUser row require no work.
+        if not base_registered_user:
+            continue
 
-        to_create = []
-        for registered_user in batch:
-            organization_ids = sorted(memberships.get(registered_user.user_id, ()))
-            if not organization_ids:
-                continue
-            extra_kwargs = _registered_user_extra_kwargs(registered_user, extra_fields)
-            for organization_id in organization_ids:
-                pair = (registered_user.user_id, organization_id)
-                if pair in existing_pairs:
-                    continue
-                existing_pairs.add(pair)
-                copied = RegisteredUser(
-                    id=uuid.uuid4(),
-                    user_id=registered_user.user_id,
-                    organization_id=organization_id,
-                    is_verified=registered_user.is_verified,
-                    method=registered_user.method,
-                    **extra_kwargs,
-                )
-                copied.modified = registered_user.modified
-                to_create.append(copied)
+        # Create one RegisteredUser row per organization membership.
+        for membership in user.organization_memberships:
+            copied = RegisteredUser(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                organization_id=membership.organization_id,
+                method=base_registered_user.method,
+                is_verified=base_registered_user.is_verified,
+                **_registered_user_extra_kwargs(
+                    base_registered_user,
+                    extra_fields,
+                ),
+            )
+            # Preserve the original modification timestamp because this migration
+            # reshapes existing data rather than creating a logically new
+            # verification state.
+            copied.modified = base_registered_user.modified
+            to_create.append(copied)
 
-        _flush_bulk_create(RegisteredUser, to_create)
+        # Flush inserts in batches to avoid holding too many unsaved model
+        # instances in memory.
+        if len(to_create) >= BATCH_SIZE:
+            _flush_bulk_create(
+                RegisteredUser,
+                to_create,
+            )
+
+    _flush_bulk_create(
+        RegisteredUser,
+        to_create,
+    )
+
+    # Delete all remaining legacy org-less RegisteredUser rows.
+    #
+    # This covers:
+    #   1. Users whose org-less row was expanded into org-specific rows above.
+    #   2. Users with an org-less row but zero organization memberships.
+    #      These users have no org-specific rows to migrate to, and keeping
+    #      an org-less row would violate the new (user, organization) unique
+    #      constraint, so the row is intentionally cleaned up here.
+    RegisteredUser.objects.filter(
+        organization__isnull=True,
+    ).delete()
 
 
 def migrate_registered_users_multitenant_reverse(
