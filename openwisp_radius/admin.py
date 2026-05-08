@@ -559,6 +559,7 @@ class RegisteredUserInline(StackedInline):
     extra = 0
     readonly_fields = ("modified",)
     fields = ("organization", "method", "is_verified", "modified")
+    autocomplete_fields = ("organization",)
 
     def has_delete_permission(self, request, obj=None):
         return False
