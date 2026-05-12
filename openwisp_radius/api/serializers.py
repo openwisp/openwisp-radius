@@ -689,7 +689,7 @@ class RegisterSerializer(
         self.custom_signup(request, user)
         # create a RegisteredUser object for every user that registers through API
         org = self.context["view"].organization
-        RegisteredUser.objects.get_or_create(
+        RegisteredUser.get_or_create_for_user_and_org(
             user=user,
             organization=org,
             defaults={"method": self.validated_data["method"]},

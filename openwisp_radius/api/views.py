@@ -343,7 +343,7 @@ class ObtainAuthTokenView(
                         OrganizationUser.objects.get_or_create(
                             user=user, organization=self.organization
                         )
-                        RegisteredUser.objects.get_or_create(
+                        RegisteredUser.get_or_create_for_user_and_org(
                             user=user,
                             organization=self.organization,
                             defaults={"method": "pending_verification"},

@@ -575,9 +575,10 @@ UserAdmin.list_filter += (RegisteredUserFilter, "registered_users__method")
 
 def get_is_verified(self, obj):
     try:
-        if not obj.registered_users.exists():
+        is_verifieds = obj.registered_users.values_list("is_verified", flat=True)
+        if not len(is_verifieds):
             value = "unknown"
-        elif obj.registered_users.filter(is_verified=True).exists():
+        elif any(is_verifieds):
             value = "yes"
         else:
             value = "no"

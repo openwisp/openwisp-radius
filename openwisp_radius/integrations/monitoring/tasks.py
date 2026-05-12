@@ -117,8 +117,9 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # The query returns a tuple of organization_id, registration_method and
     # count of users who registered with that organization and method.
     registered_users_query = RegisteredUser.objects.exclude(
+        method="pending_verification"
+    ).exclude(
         user__openwisp_users_organizationuser__created__gt=end_time,
-        method="pending_verification",
     )
 
     if metric_key == "user_signups":

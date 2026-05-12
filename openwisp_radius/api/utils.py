@@ -31,7 +31,7 @@ class IDVerificationHelper(object):
         except ObjectDoesNotExist:
             return app_settings.NEEDS_IDENTITY_VERIFICATION
 
-    def is_identity_verified_strong(self, user, organization=None):
+    def is_identity_verified_strong(self, user, organization):
         reg_user = None
         # We use all() to utilize the prefetch cache, otherwise
         # it would cause an additional query to fetch the registered user

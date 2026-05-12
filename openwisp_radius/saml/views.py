@@ -73,7 +73,7 @@ class AssertionConsumerServiceView(
                 orgUser = OrganizationUser(organization=org, user=user)
                 orgUser.full_clean()
                 orgUser.save()
-            registered_user, created = RegisteredUser.objects.get_or_create(
+            registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
                 user=user,
                 organization=org,
                 defaults={

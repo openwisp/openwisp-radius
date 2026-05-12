@@ -44,6 +44,7 @@ def _registered_user_method_priority_case():
     # Strong methods (anything that is not '' or 'email') must rank above the
     # weak fallbacks so rollback restores the strongest verification state.
     return Case(
+        When(method="pending_verification", then=Value(-1)),
         When(method="", then=Value(0)),
         When(method="email", then=Value(1)),
         default=Value(2),

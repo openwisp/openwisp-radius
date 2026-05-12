@@ -1701,18 +1701,14 @@ class AbstractRegisteredUser(UUIDModel):
     def unverify_inactive_users(cls):
         if not app_settings.UNVERIFY_INACTIVE_USERS:
             return
-        # Exclude users who have unspecified, manual, email, or pending_verification
+        # Exclude users who have unspecified, manual, or email
         # registration method because such users don't have an option
         # to re-verify. See https://github.com/openwisp/openwisp-radius/issues/517
-        cls.objects.exclude(
-            method__in=["", "manual", "email", "pending_verification"]
-        ).filter(
+        cls.objects.exclude(method__in=["", "manual", "email"]).filter(
             user__is_staff=False,
             user__last_login__lt=timezone.now()
             - timedelta(days=app_settings.UNVERIFY_INACTIVE_USERS),
-        ).update(
-            is_verified=False
-        )
+        ).update(is_verified=False)
 
     @classmethod
     def delete_inactive_users(cls):

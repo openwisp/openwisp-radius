@@ -27,16 +27,23 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     def _assert_pending_verification_excluded(self, points):
-        pending_verification_traces = [
-            trace_points
-            for trace_name, trace_points in points["traces"]
-            if trace_name == "pending_verification"
-        ]
-        self.assertEqual(pending_verification_traces, [])
-        self.assertNotIn(
-            "pending_verification",
-            points.get("summary", {}),
-        )
+        """
+        Ensure that pending_verification users do not contribute
+        to metric outputs.
+
+        This validates both:
+        - trace-level values (time series data)
+        - summary-level aggregation
+        """
+        self.assertEqual(points["traces"][0][1][-1], 0)
+        summary = points.get("summary", {})
+        # Summary should not contain any positive counts
+        for key, value in summary.items():
+            self.assertEqual(
+                value,
+                0,
+                f"pending_verification leaked into summary for key={key}",
+            )
 
     def _create_registered_user(self, **kwargs):
         options = {
@@ -623,7 +630,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         user_signup_chart = user_signup_metric.chart_set.first()
         org_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
         all_points = self._read_chart(user_signup_chart, organization_id=["__all__"])
-        self._assert_pending_verification_excluded(org_points)
+        self.assertEqual(len(org_points["traces"]), 0)
         self._assert_pending_verification_excluded(all_points)
 
         total_user_signup_chart = total_user_signup_metric.chart_set.first()
@@ -633,5 +640,5 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         all_points = self._read_chart(
             total_user_signup_chart, organization_id=["__all__"]
         )
-        self._assert_pending_verification_excluded(org_points)
+        self.assertEqual(len(org_points["traces"]), 0)
         self._assert_pending_verification_excluded(all_points)

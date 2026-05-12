@@ -243,6 +243,43 @@ class TestMigrations(BaseTestCase):
         self.assertEqual(surviving_record.method, "mobile_phone")
         self.assertEqual(RegisteredUser.objects.filter(user=user).count(), 1)
 
+    def test_multitenant_reverse_pending_verification_method_ignored(
+        self,
+    ):
+        user = self._create_user(
+            username="pending-vs-strong",
+            email="pending-vs-strong@example.com",
+        )
+        org1 = self._create_org(
+            name="pending-org-1",
+            slug="pending-org-1",
+        )
+        org2 = self._create_org(
+            name="pending-org-2",
+            slug="pending-org-2",
+        )
+        modified_base = timezone.now()
+        with freeze_time(modified_base):
+            RegisteredUser.objects.create(
+                user=user,
+                organization=org1,
+                is_verified=False,
+                method="pending_verification",
+            )
+            strong_record = RegisteredUser.objects.create(
+                user=user,
+                organization=org2,
+                is_verified=False,
+                method="mobile_phone",
+            )
+        migrate_registered_users_multitenant_reverse(
+            apps, None, app_label="openwisp_radius"
+        )
+        surviving_record = RegisteredUser.objects.get(user=user)
+        self.assertEqual(surviving_record.pk, strong_record.pk)
+        self.assertEqual(surviving_record.method, "mobile_phone")
+        self.assertEqual(RegisteredUser.objects.filter(user=user).count(), 1)
+
     def test_multitenant_reverse_full_cleanup(self):
         """
         Test that duplicate org-scoped records are reduced to one per user.
