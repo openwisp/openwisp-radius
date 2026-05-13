@@ -130,8 +130,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self._call_command("batch_add_users", **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         radiusbatch = RadiusBatch.objects.first()
-        self.assertEqual(get_user_model().objects.all().count(), 3)
+        users = get_user_model().objects.all()
+        self.assertEqual(users.count(), 3)
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
+        for user in users:
+            self.assertEqual(user.expiration_date.strftime("%d-%m-%y"), "28-01-18")
         path = self._get_path("static/test_batch_new.csv")
         options = dict(organization=self.default_org.slug, file=path, name="test1")
         self._call_command("batch_add_users", **options)
@@ -150,20 +153,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 organization=self.default_org.slug, file=invalid_csv_path, name="test4"
             )
             self._call_command("batch_add_users", **options)
-
-    @capture_stdout()
-    def test_deactivate_expired_users_command(self):
-        path = self._get_path("static/test_batch.csv")
-        options = dict(
-            organization=self.default_org.slug,
-            file=path,
-            expiration="28-01-1970",
-            name="test",
-        )
-        self._call_command("batch_add_users", **options)
-        self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 3)
-        call_command("deactivate_expired_users")
-        self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
 
     @freeze_time(_TEST_DATE)
     @capture_stdout()
@@ -246,6 +235,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(users.count(), 10)
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
+            self.assertEqual(u.expiration_date.strftime("%d-%m-%y"), "28-01-18")
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"

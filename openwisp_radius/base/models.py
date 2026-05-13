@@ -1060,6 +1060,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def save_user(self, user):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        if self.expiration_date is not None:
+            user.expiration_date = self.expiration_date
         user.save()
         radius_settings = self.organization.radius_settings
         registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
@@ -1092,12 +1094,6 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         self.users.all().delete()
         super().delete()
         self._remove_files()
-
-    def expire(self):
-        users = self.users.all()
-        for u in users:
-            u.is_active = False
-            u.save()
 
     def _remove_files(self):
         if self.csvfile:

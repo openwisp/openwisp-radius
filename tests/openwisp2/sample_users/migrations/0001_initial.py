@@ -35,6 +35,15 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "expiration_date",
+                    models.DateField(
+                        blank=True,
+                        help_text="Date on which the user account will expire.",
+                        null=True,
+                        verbose_name="expiration date",
+                    ),
+                ),
+                (
                     "is_superuser",
                     models.BooleanField(
                         default=False,
