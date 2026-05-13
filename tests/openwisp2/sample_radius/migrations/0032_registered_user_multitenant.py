@@ -13,6 +13,7 @@ from openwisp_radius.migrations import (
     copy_registered_users_ctcr_reverse,
     migrate_registered_users_multitenant_forward,
     migrate_registered_users_multitenant_reverse,
+    populate_phonetoken_organization,
 )
 
 
@@ -52,6 +53,10 @@ def migrate_registered_users_reverse(apps, schema_editor):
     )
 
 
+def populate_sample_phonetoken_organization(apps, schema_editor):
+    populate_phonetoken_organization(apps, schema_editor, app_label="sample_radius")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -78,6 +83,14 @@ class Migration(migrations.Migration):
             populate_sample_phonetoken_organization,
             migrations.RunPython.noop,
         ),
+        migrations.RemoveIndex(
+            model_name="phonetoken",
+            name="sample_radi_user_id_b748c7_idx",
+        ),
+        migrations.RemoveIndex(
+            model_name="phonetoken",
+            name="sample_radi_user_id_044fca_idx",
+        ),
         migrations.AlterField(
             model_name="phonetoken",
             name="organization",
@@ -85,6 +98,20 @@ class Migration(migrations.Migration):
                 on_delete=models.deletion.CASCADE,
                 to=swapper.get_model_name("openwisp_users", "Organization"),
                 verbose_name="organization",
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="phonetoken",
+            index=models.Index(
+                fields=["user", "created"],
+                name="sample_radi_user_id_b748c7_idx",
+            ),
+        ),
+        migrations.AddIndex(
+            model_name="phonetoken",
+            index=models.Index(
+                fields=["user", "created", "ip"],
+                name="sample_radi_user_id_044fca_idx",
             ),
         ),
         migrations.SeparateDatabaseAndState(
@@ -238,10 +265,6 @@ class Migration(migrations.Migration):
             model_name="registereduser",
             name="organization",
             field=models.ForeignKey(
-                help_text=(
-                    "Organization associated with this registered user entry."
-                ),
-                related_name="registered_users",
                 on_delete=django.db.models.deletion.CASCADE,
                 to=swapper.get_model_name("openwisp_users", "Organization"),
                 verbose_name="organization",
