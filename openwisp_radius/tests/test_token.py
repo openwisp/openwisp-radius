@@ -41,7 +41,12 @@ class TestPhoneToken(BaseTestCase):
         radius_settings.save()
 
     def _create_token(
-        self, user=None, ip="127.0.0.1", phone_number="+393664351808", created=None
+        self,
+        user=None,
+        organization=None,
+        ip="127.0.0.1",
+        phone_number="+393664351808",
+        created=None,
     ):
         if not user:
             opts = {
@@ -53,7 +58,14 @@ class TestPhoneToken(BaseTestCase):
             }
             user = self._create_user(**opts)
             self._create_org_user(**{"user": user})
-        token = PhoneToken(user=user, ip=ip, phone_number=phone_number)
+        if organization is None:
+            organization = self.default_org
+        token = PhoneToken(
+            user=user,
+            organization=organization,
+            ip=ip,
+            phone_number=phone_number,
+        )
         if created:
             token.created = created
             token.modified = created

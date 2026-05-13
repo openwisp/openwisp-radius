@@ -440,7 +440,10 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         user.save()
         user.refresh_from_db()
         phone_token = PhoneToken(
-            user=user, ip="127.0.0.1", phone_number="+237675578296"
+            user=user,
+            organization=self.default_org,
+            ip="127.0.0.1",
+            phone_number="+237675578296",
         )
         phone_token.full_clean()
         phone_token.save()
@@ -509,7 +512,10 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         with self.subTest("Complete phone verification for OrgA"):
             user_token = Token.objects.get(user=user)
             phone_token = PhoneToken.objects.create(
-                user=user, ip="127.0.0.1", phone_number="+393664255801"
+                user=user,
+                organization=org_a,
+                ip="127.0.0.1",
+                phone_number="+393664255801",
             )
             url = reverse("radius:phone_token_validate", args=[org_a.slug])
             response = self.client.post(
@@ -568,7 +574,10 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         with self.subTest("Complete phone verification for OrgB"):
             user_token = Token.objects.get(user=user)
             phone_token = PhoneToken.objects.create(
-                user=user, ip="127.0.0.1", phone_number="+393664255802"
+                user=user,
+                organization=org_b,
+                ip="127.0.0.1",
+                phone_number="+393664255802",
             )
             url = reverse("radius:phone_token_validate", args=[org_b.slug])
             response = self.client.post(

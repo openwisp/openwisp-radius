@@ -57,8 +57,8 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
                 if registered_user.method == "pending_verification":
                     registered_user.method = "social_login"
                     registered_user.is_verified = False
-                registered_user.full_clean()
-                registered_user.save()
+                    registered_user.full_clean()
+                    registered_user.save()
 
     def get_redirect_url(self, request, organization):
         """

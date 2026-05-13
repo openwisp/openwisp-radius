@@ -1,24 +1,29 @@
 from datetime import timedelta
 
+import swapper
 from django.apps.registry import apps
 from django.db import connection
 from django.utils import timezone
 from freezegun import freeze_time
 
-from ..migrations import migrate_registered_users_multitenant_reverse
+from ..migrations import (
+    _get_first_membership_organization_id,
+    migrate_registered_users_multitenant_reverse,
+)
 from ..utils import load_model
 from .mixins import BaseTestCase
 
 RegisteredUser = load_model("RegisteredUser")
+OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
 
 class TestMigrations(BaseTestCase):
     app_label = "openwisp_radius"
 
-    def test_registered_user_organization_column_is_not_nullable(self):
-        registered_user_model = load_model("RegisteredUser")
-        table_name = registered_user_model._meta.db_table
-        column_name = registered_user_model._meta.get_field("organization").column
+    def _assert_column_not_nullable(self, model_name, field_name):
+        model = load_model(model_name)
+        table_name = model._meta.db_table
+        column_name = model._meta.get_field(field_name).column
         with connection.cursor() as cursor:
             columns = connection.introspection.get_table_description(
                 cursor,
@@ -36,6 +41,12 @@ class TestMigrations(BaseTestCase):
             column.null_ok,
             f"Column '{table_name}.{column_name}' must be NOT NULL at DB level",
         )
+
+    def test_registered_user_organization_column_is_not_nullable(self):
+        self._assert_column_not_nullable("RegisteredUser", "organization")
+
+    def test_phone_token_organization_column_is_not_nullable(self):
+        self._assert_column_not_nullable("PhoneToken", "organization")
 
     def test_multitenant_reverse_keeps_record_with_stronger_method(self):
         """
@@ -340,3 +351,54 @@ class TestMigrations(BaseTestCase):
             RegisteredUser.objects.filter(user=user2).count(),
             1,
         )
+
+
+class TestPhoneTokenOrganizationBackfillResolution(BaseTestCase):
+    app_label = "openwisp_radius"
+
+    def _set_org_user_created(self, org_user, created):
+        OrganizationUser.objects.filter(pk=org_user.pk).update(created=created)
+        org_user.refresh_from_db(fields=["created"])
+        return org_user
+
+    def test_get_first_membership_returns_earliest_membership(self):
+        user = self._create_user(username="phone-membership-user")
+        org1 = self.default_org
+        org2 = self._create_org(
+            name="phone-membership-org2", slug="phone-membership-org2"
+        )
+        org1_user = self._create_org_user(user=user, organization=org1)
+        org2_user = self._create_org_user(user=user, organization=org2)
+        base_time = timezone.now()
+        self._set_org_user_created(org1_user, base_time + timedelta(days=1))
+        self._set_org_user_created(org2_user, base_time)
+        organization_id = _get_first_membership_organization_id(
+            user.pk,
+            OrganizationUser,
+        )
+        self.assertEqual(organization_id, org2.pk)
+
+    def test_get_first_membership_tie_breaks_by_pk(self):
+        user = self._create_user(username="phone-membership-tie-user")
+        org1 = self.default_org
+        org2 = self._create_org(
+            name="phone-membership-tie-org2", slug="phone-membership-tie-org2"
+        )
+        org1_user = self._create_org_user(user=user, organization=org1)
+        org2_user = self._create_org_user(user=user, organization=org2)
+        base_time = timezone.now()
+        self._set_membership_created(org1_user, base_time)
+        self._set_membership_created(org2_user, base_time)
+        organization_id = _get_first_membership_organization_id(
+            user.pk,
+            OrganizationUser,
+        )
+        self.assertEqual(organization_id, org1.pk)
+
+    def test_get_first_membership_returns_none_without_membership(self):
+        user = self._create_user(username="phone-unresolved-user")
+        organization_id = _get_first_membership_organization_id(
+            user.pk,
+            OrganizationUser,
+        )
+        self.assertEqual(organization_id, None)

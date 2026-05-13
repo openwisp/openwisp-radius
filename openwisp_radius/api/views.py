@@ -640,6 +640,7 @@ class CreatePhoneTokenView(
         phone_number = request.data.get("phone_number", request.user.phone_number)
         phone_token = PhoneToken(
             user=request.user,
+            organization=self.organization,
             ip=self.get_ident(request),
             phone_number=phone_number,
         )
@@ -671,6 +672,7 @@ class CreatePhoneTokenView(
         last_phone_token = (
             PhoneToken.objects.filter(
                 user=self.request.user,
+                organization=self.organization,
                 phone_number=phone_number,
                 created__gt=datetime_now - timezone.timedelta(seconds=cooldown),
             )
@@ -713,6 +715,7 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         is_active = PhoneToken.objects.filter(
             user=request.user,
+            organization=self.organization,
             phone_number=user.phone_number,
             valid_until__gte=timezone.now(),
             verified=False,
@@ -749,7 +752,11 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_token = PhoneToken.objects.filter(user=user).order_by("-created").first()
+        phone_token = (
+            PhoneToken.objects.filter(user=user, organization=self.organization)
+            .order_by("-created")
+            .first()
+        )
         if not phone_token:
             return self._error_response(
                 _("No verification code found in the system for this user.")

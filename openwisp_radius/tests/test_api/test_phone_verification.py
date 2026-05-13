@@ -352,11 +352,15 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         # generate entropy to ensure correct token is used
         PhoneToken.objects.create(
             user=user,
+            organization=self.default_org,
             ip=phone_token.ip,
             phone_number=phone_token.phone_number,
         )
         phone_token = PhoneToken.objects.create(
-            user=user, ip=phone_token.ip, phone_number=phone_token.phone_number
+            user=user,
+            organization=self.default_org,
+            ip=phone_token.ip,
+            phone_number=phone_token.phone_number,
         )
         cache_key = f"rt-{phone_token.phone_number}"
         cache.set(cache_key, "test")
@@ -389,6 +393,54 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn("non_field_errors", r.data)
         self.assertIn("is not member", str(r.data["non_field_errors"]))
+
+    @capture_any_output()
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_validate_phone_token_400_token_from_different_org(self, *args):
+        org1 = self.default_org
+        org2 = self._create_org(name="org2", slug="org2")
+        org2_settings = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )[0]
+        org2_settings.sms_verification = True
+        org2_settings.needs_method = True
+        org2_settings.sms_sender = "+595972157633"
+        org2_settings.full_clean()
+        org2_settings.save()
+
+        self._register_user(expect_users=None)
+        user = User.objects.get(email=self._test_email)
+        self._create_org_user(user=user, organization=org2)
+        reg_org2 = RegisteredUser(
+            user=user,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=False,
+        )
+        reg_org2.full_clean()
+        reg_org2.save()
+        user_token = Token.objects.get(user=user)
+        url = reverse("radius:phone_token_create", args=[org1.slug])
+        response = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {user_token.key}")
+        self.assertEqual(response.status_code, 201)
+        phone_token = PhoneToken.objects.filter(user=user, organization=org1).first()
+
+        url = reverse("radius:phone_token_validate", args=[org2.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"code": phone_token.token}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 400)
+        reg_org2.refresh_from_db()
+        self.assertEqual(reg_org2.is_verified, False)
+        self.assertEqual(
+            RegisteredUser.objects.filter(
+                user=user, organization=org1, is_verified=False
+            ).count(),
+            1,
+        )
 
     def test_validate_phone_token_400_invalid(self):
         self.test_create_phone_token_201()
@@ -966,6 +1018,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
         phone_token = PhoneToken.objects.create(
             user=user,
+            organization=self.default_org,
             ip="127.0.0.1",
             phone_number="+393664255801",
         )

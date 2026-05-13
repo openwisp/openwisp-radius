@@ -7,7 +7,7 @@ import swapper
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend

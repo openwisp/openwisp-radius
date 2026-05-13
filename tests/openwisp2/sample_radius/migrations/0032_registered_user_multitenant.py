@@ -61,6 +61,32 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AddField(
+            model_name="phonetoken",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Organization associated with this phone token.",
+                null=True,
+                on_delete=models.deletion.CASCADE,
+                related_name="phone_tokens",
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
+            ),
+        ),
+        migrations.RunPython(
+            populate_sample_phonetoken_organization,
+            migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
+            model_name="phonetoken",
+            name="organization",
+            field=models.ForeignKey(
+                on_delete=models.deletion.CASCADE,
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
+            ),
+        ),
         migrations.SeparateDatabaseAndState(
             database_operations=[
                 migrations.CreateModel(

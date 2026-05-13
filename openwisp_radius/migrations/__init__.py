@@ -427,3 +427,63 @@ def populate_phonetoken_phone_number(apps, schema_editor):
     for phone_token in PhoneToken.objects.all():
         phone_token.phone_number = phone_token.user.phone_number
         phone_token.save(update_fields=["phone_number"])
+
+
+def _get_first_membership_organization_id(
+    user_id,
+    OrganizationUser,
+):
+    return (
+        OrganizationUser.objects.filter(
+            user_id=user_id,
+        )
+        .order_by("created", "pk")
+        .values_list("organization_id", flat=True)
+        .first()
+    )
+
+
+def populate_phonetoken_organization(
+    apps,
+    schema_editor,
+    app_label="openwisp_radius",
+):
+    """Populate PhoneToken.organization_id from the user's first organization.
+
+    For each user that has PhoneToken rows with a null organization_id,
+    find the user's first OrganizationUser membership (ordered by created, pk)
+    and set that organization_id on all their PhoneToken records that are
+    still null. Operates using the provided apps registry (for migrations).
+
+    Args:
+        apps: Django apps registry passed to migrations functions.
+        schema_editor: Schema editor passed to migrations functions (unused).
+        app_label: App label to load the PhoneToken model from.
+    """
+    PhoneToken = apps.get_model(app_label, "PhoneToken")
+    OrganizationUser = get_swapped_model(
+        apps,
+        "openwisp_users",
+        "OrganizationUser",
+    )
+    user_ids = (
+        PhoneToken.objects.filter(
+            organization_id__isnull=True,
+        )
+        .order_by()
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    for user_id in user_ids.iterator(chunk_size=BATCH_SIZE):
+        organization_id = _get_first_membership_organization_id(
+            user_id,
+            OrganizationUser,
+        )
+        if organization_id is None:
+            continue
+        PhoneToken.objects.filter(
+            user_id=user_id,
+            organization_id__isnull=True,
+        ).update(
+            organization_id=organization_id,
+        )

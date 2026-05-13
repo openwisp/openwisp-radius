@@ -3,6 +3,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import swapper
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
@@ -224,6 +225,135 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
                 user.refresh_from_db()
                 self.assertEqual(user.username, "org_user@example.com")
 
+    @capture_any_output()
+    def test_saml_login_marks_existing_email_verified(self):
+        org = Organization.objects.get(slug="default")
+        user = self._create_user(username="test-user", email="org_user@example.com")
+        user.emailaddress_set.all().delete()
+        email_address = EmailAddress.objects.create(
+            user=user,
+            email="org_user@example.com",
+            primary=True,
+            verified=False,
+        )
+        registered_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        relay_state = self._get_relay_state(
+            redirect_url="https://captive-portal.example.com", org_slug="default"
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        email_address.refresh_from_db()
+        registered_user.refresh_from_db()
+        self.assertTrue(email_address.verified)
+        self.assertTrue(email_address.primary)
+        self.assertEqual(EmailAddress.objects.filter(user=user).count(), 1)
+        self.assertEqual(registered_user.method, "saml")
+        self.assertEqual(registered_user.is_verified, app_settings.SAML_IS_VERIFIED)
+        self.assertEqual(
+            RegisteredUser.objects.filter(user=user, organization=org).count(), 1
+        )
+
+    @capture_any_output()
+    def test_saml_login_existing_email_already_verified(self):
+        org = Organization.objects.get(slug="default")
+        user = self._create_user(username="test-user", email="org_user@example.com")
+        user.emailaddress_set.all().delete()
+        email_address = EmailAddress.objects.create(
+            user=user,
+            email="org_user@example.com",
+            primary=True,
+            verified=True,
+        )
+        registered_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        relay_state = self._get_relay_state(
+            redirect_url="https://captive-portal.example.com", org_slug="default"
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        email_address.refresh_from_db()
+        registered_user.refresh_from_db()
+        self.assertEqual(email_address.verified, True)
+        self.assertEqual(email_address.primary, True)
+        self.assertEqual(EmailAddress.objects.filter(user=user).count(), 1)
+        self.assertEqual(registered_user.method, "saml")
+        self.assertEqual(registered_user.is_verified, app_settings.SAML_IS_VERIFIED)
+        self.assertEqual(
+            RegisteredUser.objects.filter(user=user, organization=org).count(), 1
+        )
+
+    @override_settings(SAML_DJANGO_USER_MAIN_ATTRIBUTE="username")
+    @capture_any_output()
+    def test_saml_login_preserves_existing_primary_email_different_uid(self):
+        org = Organization.objects.get(slug="default")
+        user = self._create_user(
+            username="saml-user@example.com",
+            email="existing-primary@example.com",
+        )
+        user.emailaddress_set.all().delete()
+        existing_primary = EmailAddress.objects.create(
+            user=user,
+            email="existing-primary@example.com",
+            primary=True,
+            verified=True,
+        )
+        registered_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        relay_state = self._get_relay_state(
+            redirect_url="https://captive-portal.example.com", org_slug="default"
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(
+            relay_state, uid="saml-user@example.com"
+        )
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        existing_primary.refresh_from_db()
+        self.assertEqual(existing_primary.primary, True)
+        self.assertEqual(existing_primary.verified, True)
+        new_email = EmailAddress.objects.get(user=user, email="saml-user@example.com")
+        self.assertEqual(new_email.primary, False)
+        self.assertEqual(new_email.verified, True)
+        self.assertEqual(EmailAddress.objects.filter(user=user).count(), 2)
+        registered_user.refresh_from_db()
+        self.assertEqual(registered_user.method, "saml")
+        self.assertEqual(registered_user.is_verified, app_settings.SAML_IS_VERIFIED)
+        self.assertEqual(
+            RegisteredUser.objects.filter(user=user, organization=org).count(), 1
+        )
+
 
 @override_settings(SAML_ALLOWED_HOSTS=["captive-portal.example.com"])
 class TestAdditionInfoView(TestSamlMixin, TestCase):
@@ -324,12 +454,15 @@ class TestLoginView(TestSamlMixin, TestCase):
         org.radius_settings.save()
         redirect_url = "https://captive-portal.example.com"
         with self.subTest("SAML authentication is disabled site-wide"):
-            with patch(
-                "openwisp_radius.settings.SAML_REGISTRATION_ENABLED", False
-            ), patch.object(
-                OrganizationRadiusSettings._meta.get_field("saml_registration_enabled"),
-                "fallback",
-                False,
+            with (
+                patch("openwisp_radius.settings.SAML_REGISTRATION_ENABLED", False),
+                patch.object(
+                    OrganizationRadiusSettings._meta.get_field(
+                        "saml_registration_enabled"
+                    ),
+                    "fallback",
+                    False,
+                ),
             ):
                 response = self.client.get(
                     self.login_url,

@@ -1466,7 +1466,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
         cache.delete(f"ip-{self.organization.pk}")
 
 
-class AbstractPhoneToken(TimeStampedEditableModel):
+class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     """
     Phone Verification Token (sent via SMS)
     """
@@ -1555,15 +1555,13 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return result
 
     def send_token(self):
-        OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
-        org_user = OrganizationUser.objects.filter(user=self.user).first()
-        if not org_user:
+        if self.organization is None:
             raise exceptions.NoOrgException(
                 _("The user {user} is not member of any organization").format(
                     user=self.user
                 )
             )
-        org_radius_settings = org_user.organization.radius_settings
+        org_radius_settings = self.organization.radius_settings
         message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
         )
@@ -1622,18 +1620,11 @@ class AbstractPhoneToken(TimeStampedEditableModel):
         return token == self.token
 
 
-class AbstractRegisteredUser(UUIDModel):
+class AbstractRegisteredUser(UUIDModel, OrgMixin):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="registered_users",
-    )
-    organization = models.ForeignKey(
-        swapper.get_model_name("openwisp_users", "Organization"),
-        on_delete=models.CASCADE,
-        related_name="registered_users",
-        verbose_name=_("organization"),
-        help_text=_("Organization associated with this registered user entry."),
     )
     method = models.CharField(
         _("registration method"),

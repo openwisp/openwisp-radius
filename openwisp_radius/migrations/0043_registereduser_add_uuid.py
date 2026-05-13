@@ -26,6 +26,19 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AddField(
+            model_name="phonetoken",
+            name="organization",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Organization associated with this phone token.",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="phone_tokens",
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
+            ),
+        ),
         migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AddField(

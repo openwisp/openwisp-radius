@@ -90,14 +90,35 @@ class AssertionConsumerServiceView(
                 registered_user.is_verified = app_settings.SAML_IS_VERIFIED
                 registered_user.full_clean()
                 registered_user.save()
-            if created and user.email:
-                # The user is just created, it will not have an email address
+            if user.email:
                 try:
-                    email_address = EmailAddress(
-                        user=user, email=user.email, primary=True, verified=True
+                    user_has_primary_email = EmailAddress.objects.filter(
+                        user=user, primary=True
                     )
-                    email_address.full_clean()
-                    email_address.save()
+                    email_address, email_created = EmailAddress.objects.get_or_create(
+                        user=user,
+                        email=user.email,
+                        defaults={
+                            "verified": True,
+                            "primary": not user_has_primary_email.exists(),
+                        },
+                    )
+                    if email_created:
+                        email_address.full_clean()
+                    else:
+                        changed_fields = []
+                        if not email_address.verified:
+                            email_address.verified = True
+                            changed_fields.append("verified")
+                        if (
+                            not email_address.primary
+                            and not user_has_primary_email.exists()
+                        ):
+                            email_address.primary = True
+                            changed_fields.append("primary")
+                        if changed_fields:
+                            email_address.full_clean()
+                            email_address.save(update_fields=changed_fields)
                 except ValidationError:
                     logger.exception(
                         f'Failed email validation for "{user}" during'
