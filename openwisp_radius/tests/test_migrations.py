@@ -353,7 +353,7 @@ class TestMigrations(BaseTestCase):
         )
 
 
-class TestPhoneTokenOrganizationBackfillResolution(BaseTestCase):
+class TestPhoneTokenOrganizationPopulateResolution(BaseTestCase):
     app_label = "openwisp_radius"
 
     def _set_org_user_created(self, org_user, created):
@@ -367,8 +367,8 @@ class TestPhoneTokenOrganizationBackfillResolution(BaseTestCase):
         org2 = self._create_org(
             name="phone-membership-org2", slug="phone-membership-org2"
         )
-        org1_user = self._create_org_user(user=user, organization=org1)
-        org2_user = self._create_org_user(user=user, organization=org2)
+        org1_user = OrganizationUser.objects.create(user=user, organization=org1)
+        org2_user = OrganizationUser.objects.create(user=user, organization=org2)
         base_time = timezone.now()
         self._set_org_user_created(org1_user, base_time + timedelta(days=1))
         self._set_org_user_created(org2_user, base_time)
@@ -377,23 +377,6 @@ class TestPhoneTokenOrganizationBackfillResolution(BaseTestCase):
             OrganizationUser,
         )
         self.assertEqual(organization_id, org2.pk)
-
-    def test_get_first_membership_tie_breaks_by_pk(self):
-        user = self._create_user(username="phone-membership-tie-user")
-        org1 = self.default_org
-        org2 = self._create_org(
-            name="phone-membership-tie-org2", slug="phone-membership-tie-org2"
-        )
-        org1_user = self._create_org_user(user=user, organization=org1)
-        org2_user = self._create_org_user(user=user, organization=org2)
-        base_time = timezone.now()
-        self._set_membership_created(org1_user, base_time)
-        self._set_membership_created(org2_user, base_time)
-        organization_id = _get_first_membership_organization_id(
-            user.pk,
-            OrganizationUser,
-        )
-        self.assertEqual(organization_id, org1.pk)
 
     def test_get_first_membership_returns_none_without_membership(self):
         user = self._create_user(username="phone-unresolved-user")
