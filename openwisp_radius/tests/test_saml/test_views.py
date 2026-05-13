@@ -12,6 +12,7 @@ from djangosaml2.tests import auth_response, conf
 from djangosaml2.utils import get_session_id_from_saml2, saml2_from_httpredirect_request
 from rest_framework.authtoken.models import Token
 
+from openwisp_radius import settings as app_settings
 from openwisp_radius.saml.utils import get_url_or_path
 from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests import capture_any_output
@@ -149,6 +150,34 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(get_url_or_path(response.url), expected_redirect_path)
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
+
+    @capture_any_output()
+    def test_pending_verification_registered_user_updated_for_org(self):
+        org = Organization.objects.get(slug="default")
+        user = self._create_user(username="test-user", email="org_user@example.com")
+        registered_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        relay_state = self._get_relay_state(
+            redirect_url="https://captive-portal.example.com", org_slug="default"
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        registered_users = RegisteredUser.objects.filter(user=user, organization=org)
+        self.assertEqual(registered_users.count(), 1)
+        registered_user.refresh_from_db()
+        self.assertEqual(registered_user.method, "saml")
+        self.assertEqual(registered_user.is_verified, app_settings.SAML_IS_VERIFIED)
 
     @capture_any_output()
     def test_user_registered_with_non_saml_method(self):

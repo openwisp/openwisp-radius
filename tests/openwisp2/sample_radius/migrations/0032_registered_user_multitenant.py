@@ -208,4 +208,17 @@ class Migration(migrations.Migration):
                 ),
             ),
         ),
+        migrations.AlterField(
+            model_name="registereduser",
+            name="organization",
+            field=models.ForeignKey(
+                help_text=(
+                    "Organization associated with this registered user entry."
+                ),
+                related_name="registered_users",
+                on_delete=django.db.models.deletion.CASCADE,
+                to=swapper.get_model_name("openwisp_users", "Organization"),
+                verbose_name="organization",
+            ),
+        ),
     ]

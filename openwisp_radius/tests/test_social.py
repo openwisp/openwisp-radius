@@ -110,6 +110,26 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         # so this should be always False when users sign up with this method
         self.assertEqual(reg_user.is_verified, False)
 
+    def test_pending_verification_registered_user_updated_for_org(self):
+        user = self._create_social_user()
+        registered_user = RegisteredUser.objects.create(
+            user=user,
+            organization=self.default_org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        self.client.force_login(user)
+        url = self.get_url()
+        response = self.client.get(url, {"cp": "http://wifi.openwisp.org/cp"})
+        self.assertEqual(response.status_code, 302)
+        registered_users = RegisteredUser.objects.filter(
+            user=user, organization=self.default_org
+        )
+        self.assertEqual(registered_users.count(), 1)
+        registered_user.refresh_from_db()
+        self.assertEqual(registered_user.method, "social_login")
+        self.assertEqual(registered_user.is_verified, False)
+
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()
         rad_token = RadiusToken.objects.filter(user__username="socialuser").first()

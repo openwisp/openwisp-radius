@@ -642,3 +642,62 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         self.assertEqual(len(org_points["traces"]), 0)
         self._assert_pending_verification_excluded(all_points)
+
+    def test_write_user_registration_metrics_uses_org_specific_methods(self):
+        """
+        Ensure organization metrics use the registration method associated
+        with that specific organization membership.
+
+        Scenario:
+        - One user belongs to two organizations.
+        - The user has one RegisteredUser row per organization.
+        - Each RegisteredUser uses a different registration method.
+
+        Expected behavior:
+        - Global metrics aggregate both methods.
+        - Each organization only counts its own method.
+        """
+        from ..tasks import write_user_registration_metrics
+
+        def _get_metric_traces(metric_key, organization_id):
+            chart = self.metric_model.objects.get(key=metric_key).chart_set.first()
+            points = self._read_chart(
+                chart,
+                organization_id=[str(organization_id)],
+            )
+            return {trace_name: values[-1] for trace_name, values in points["traces"]}
+
+        cache.clear()
+        create_general_metrics(None, None)
+        org1 = self._get_org()
+        org2 = self._create_org(name="org2", slug="org2")
+        user = self._create_user()
+        self._create_org_user(user=user, organization=org1)
+        self._create_org_user(user=user, organization=org2)
+        self._create_registered_user(
+            user=user,
+            organization=org1,
+            method="mobile_phone",
+        )
+        self._create_registered_user(
+            user=user,
+            organization=org2,
+            method="email",
+        )
+        write_user_registration_metrics.delay()
+        for metric_key in ["user_signups", "tot_user_signups"]:
+            all_points = _get_metric_traces(metric_key, "__all__")
+            org1_points = _get_metric_traces(metric_key, org1.pk)
+            org2_points = _get_metric_traces(metric_key, org2.pk)
+
+            # Global metrics aggregate registrations from all organizations.
+            self.assertEqual(all_points.get("mobile_phone", 0), 1)
+            self.assertEqual(all_points.get("email", 0), 1)
+
+            # org1 only counts its own registration method.
+            self.assertEqual(org1_points.get("mobile_phone", 0), 1)
+            self.assertEqual(org1_points.get("email", 0), 0)
+
+            # org2 only counts its own registration method.
+            self.assertEqual(org2_points.get("email", 0), 1)
+            self.assertEqual(org2_points.get("mobile_phone", 0), 0)

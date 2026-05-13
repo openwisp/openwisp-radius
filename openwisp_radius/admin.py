@@ -7,6 +7,7 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.db.models import Prefetch
 from django.forms.models import BaseInlineFormSet
 from django.http import HttpResponseRedirect
 from django.templatetags.static import static
@@ -571,12 +572,32 @@ UserAdmin.inlines += [
     PhoneTokenInline,
 ]
 UserAdmin.list_filter += (RegisteredUserFilter, "registered_users__method")
+user_admin_get_queryset = UserAdmin.get_queryset
+
+
+def get_queryset(self, request):
+    queryset = user_admin_get_queryset(self, request)
+    return queryset.prefetch_related(
+        Prefetch(
+            "registered_users",
+            queryset=RegisteredUser.objects.only("user_id", "is_verified"),
+            to_attr="prefetched_registered_users",
+        )
+    )
 
 
 def get_is_verified(self, obj):
     try:
-        is_verifieds = obj.registered_users.values_list("is_verified", flat=True)
-        if not len(is_verifieds):
+        prefetched_registered_users = getattr(obj, "prefetched_registered_users", None)
+        if prefetched_registered_users is not None:
+            is_verifieds = [
+                reg_user.is_verified for reg_user in prefetched_registered_users
+            ]
+        else:
+            is_verifieds = list(
+                obj.registered_users.values_list("is_verified", flat=True)
+            )
+        if not is_verifieds:
             value = "unknown"
         elif any(is_verifieds):
             value = "yes"
@@ -588,6 +609,7 @@ def get_is_verified(self, obj):
     return mark_safe(f'<img src="{icon_url}" alt="{value}">')
 
 
+UserAdmin.get_queryset = get_queryset
 UserAdmin.get_is_verified = get_is_verified
 UserAdmin.get_is_verified.short_description = _("Verified")
 UserAdmin.list_display.insert(3, "get_is_verified")

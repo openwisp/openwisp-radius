@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -1508,6 +1510,22 @@ class TestAdmin(
         self.assertContains(response, get_expected_html("yes"))
         self.assertContains(response, get_expected_html("no"))
         self.assertContains(response, get_expected_html("unknown"))
+
+    def test_get_is_verified_user_admin_list_avoids_nplus1_queries(self):
+        app_label = User._meta.app_label
+        path = reverse(f"admin:{app_label}_user_changelist")
+        # Create users
+        for i in range(5):
+            user = self._create_user(username=f"user-{i}", email=f"user-{i}@test.com")
+            RegisteredUser.objects.create(
+                user=user,
+                organization=self.default_org,
+                method="mobile_phone",
+                is_verified=(i % 2 == 0),
+            )
+        with self.assertNumQueries(8):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
 
     def test_registered_user_filter(self):
         unknown = User.objects.first()

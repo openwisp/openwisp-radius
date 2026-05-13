@@ -54,6 +54,9 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
                 defaults={"method": "social_login", "is_verified": False},
             )
             if not created:
+                if registered_user.method == "pending_verification":
+                    registered_user.method = "social_login"
+                    registered_user.is_verified = False
                 registered_user.full_clean()
                 registered_user.save()
 

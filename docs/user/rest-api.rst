@@ -803,8 +803,8 @@ Param        Description
 phone_number string
 ============ ===========
 
-Update Registered User Method
-+++++++++++++++++++++++++++++
+Update user registration method
++++++++++++++++++++++++++++++++
 
 **Requires the user auth token (Bearer Token)**.
 

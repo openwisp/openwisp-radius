@@ -128,7 +128,7 @@ def _write_user_signup_metrics_for_orgs(metric_key):
             user__openwisp_users_organizationuser__created__lte=end_time,
         )
     registered_users = registered_users_query.values_list(
-        "user__openwisp_users_organizationuser__organization_id", "method"
+        "organization_id", "method"
     ).annotate(count=Count("user_id", distinct=True))
 
     # There could be users which were manually created (e.g. superuser)

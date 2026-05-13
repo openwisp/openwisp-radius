@@ -81,6 +81,15 @@ class AssertionConsumerServiceView(
                     "is_verified": app_settings.SAML_IS_VERIFIED,
                 },
             )
+            if (
+                not created
+                and registered_user.method == "pending_verification"
+                and not registered_user.is_verified
+            ):
+                registered_user.method = "saml"
+                registered_user.is_verified = app_settings.SAML_IS_VERIFIED
+                registered_user.full_clean()
+                registered_user.save()
             if created and user.email:
                 # The user is just created, it will not have an email address
                 try:

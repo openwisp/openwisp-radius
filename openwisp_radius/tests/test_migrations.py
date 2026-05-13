@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.apps.registry import apps
+from django.db import connection
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -12,6 +13,30 @@ RegisteredUser = load_model("RegisteredUser")
 
 
 class TestMigrations(BaseTestCase):
+    app_label = "openwisp_radius"
+
+    def test_registered_user_organization_column_is_not_nullable(self):
+        registered_user_model = load_model("RegisteredUser")
+        table_name = registered_user_model._meta.db_table
+        column_name = registered_user_model._meta.get_field("organization").column
+        with connection.cursor() as cursor:
+            columns = connection.introspection.get_table_description(
+                cursor,
+                table_name,
+            )
+        column = next(
+            (col for col in columns if col.name == column_name),
+            None,
+        )
+        self.assertIsNotNone(
+            column,
+            f"Column '{column_name}' not found in '{table_name}'",
+        )
+        self.assertFalse(
+            column.null_ok,
+            f"Column '{table_name}.{column_name}' must be NOT NULL at DB level",
+        )
+
     def test_multitenant_reverse_keeps_record_with_stronger_method(self):
         """
         Test that a stronger verification method wins when verification
@@ -39,7 +64,7 @@ class TestMigrations(BaseTestCase):
             )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, stronger_record.pk)
@@ -55,8 +80,8 @@ class TestMigrations(BaseTestCase):
         Test that the already-strongest record remains after rollback.
         """
         user = self._create_user(
-            username="rollback-global-wins",
-            email="rollback-global-wins@example.com",
+            username="rollback-strongest-wins",
+            email="rollback-strongest-wins@example.com",
         )
         org1 = self._create_org(
             name="rollback-org-3",
@@ -82,7 +107,7 @@ class TestMigrations(BaseTestCase):
             )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, strongest_record.pk)
@@ -129,7 +154,7 @@ class TestMigrations(BaseTestCase):
         )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, newer_record.pk)
@@ -163,7 +188,7 @@ class TestMigrations(BaseTestCase):
                 method="email",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, org_weak_method.pk)
@@ -194,7 +219,7 @@ class TestMigrations(BaseTestCase):
                 method="email",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         self.assertEqual(
             RegisteredUser.objects.filter(user=user).count(),
@@ -236,7 +261,7 @@ class TestMigrations(BaseTestCase):
             )
         # Rollback: mobile_phone should win (highest method priority)
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.organization, org3)
@@ -273,7 +298,7 @@ class TestMigrations(BaseTestCase):
                 method="mobile_phone",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, strong_record.pk)
@@ -305,7 +330,7 @@ class TestMigrations(BaseTestCase):
             2,
         )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label="openwisp_radius"
+            apps, None, app_label=self.app_label
         )
         self.assertEqual(
             RegisteredUser.objects.filter(user=user1).count(),
