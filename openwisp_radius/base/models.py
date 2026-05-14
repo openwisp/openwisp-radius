@@ -1683,6 +1683,18 @@ class AbstractRegisteredUser(UUIDModel, OrgMixin):
 
     @classmethod
     def get_for_user_and_org(cls, user, organization):
+        prefetched_registered_users = getattr(user, "prefetched_registered_users", None)
+        if prefetched_registered_users is None:
+            prefetched_registered_users = getattr(
+                user,
+                "_prefetched_objects_cache",
+                {},
+            ).get("registered_users")
+        if prefetched_registered_users is not None:
+            for registered_user in prefetched_registered_users:
+                if registered_user.organization_id == organization.pk:
+                    return registered_user
+            return None
         try:
             return cls.objects.get(user=user, organization=organization)
         except cls.DoesNotExist:

@@ -770,6 +770,14 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
+            phone_number_changed = user.phone_number and str(user.phone_number) != str(
+                phone_token.phone_number
+            )
+            if phone_number_changed:
+                RegisteredUser.objects.filter(
+                    user=user,
+                    method="mobile_phone",
+                ).exclude(organization=self.organization,).update(is_verified=False)
             reg_user, __ = RegisteredUser.get_or_create_for_user_and_org(
                 user=user,
                 organization=self.organization,
@@ -862,6 +870,7 @@ class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
     )
     def post(self, request, slug):
         user = request.user
+        self.validate_membership(user)
         reg_user = get_object_or_404(
             RegisteredUser,
             user_id=user.pk,

@@ -2,10 +2,12 @@ from unittest import mock
 
 import lxml.html as lxml_html
 import swapper
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.test import RequestFactory
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -1576,6 +1578,116 @@ class TestAdmin(
             self.assertNotContains(response, get_expected_html("yes"))
             self.assertNotContains(response, get_expected_html("no"))
             self.assertContains(response, get_expected_html("unknown"))
+
+    def test_get_is_verified_scoped_to_managed_organizations(self):
+        org1 = self._create_org(name="org-1", slug="org-1")
+        org2 = self._create_org(name="org-2", slug="org-2")
+        manager = self._create_administrator([org1])
+        scoped_user = self._create_user(
+            username="scoped-user",
+            email="scoped-user@test.com",
+        )
+        other_org_user = self._create_user(
+            username="other-org-user",
+            email="other-org-user@test.com",
+        )
+        self._create_org_user(user=scoped_user, organization=org1)
+        self._create_org_user(user=other_org_user, organization=org1)
+        RegisteredUser.objects.create(
+            user=scoped_user,
+            organization=org1,
+            method="mobile_phone",
+            is_verified=False,
+        )
+        RegisteredUser.objects.create(
+            user=scoped_user,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        RegisteredUser.objects.create(
+            user=other_org_user,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        request = RequestFactory().get(
+            reverse(f"admin:{User._meta.app_label}_user_changelist")
+        )
+        request.user = manager
+        user_admin = admin.site._registry[User]
+        queryset = user_admin.get_queryset(request)
+        scoped_user = queryset.get(pk=scoped_user.pk)
+        other_org_user = queryset.get(pk=other_org_user.pk)
+        # The scoped user should show as unverified since the user admin
+        # should only consider the registration record from the managed
+        # organization (org1), while the other org user should show as
+        # unknown since their registration record in the managed
+        # organization is missing
+        self.assertIn("icon-no.svg", user_admin.get_is_verified(scoped_user))
+        self.assertIn("icon-unknown.svg", user_admin.get_is_verified(other_org_user))
+
+    def test_registered_user_filter_scoped_to_managed_organizations(self):
+        org1 = self._create_org(name="org-1", slug="org-1")
+        org2 = self._create_org(name="org-2", slug="org-2")
+        manager = self._create_administrator([org1])
+        org1_verified = self._create_user(
+            username="org1-verified",
+            email="org1-verified@test.com",
+        )
+        common_user_unverified = self._create_user(
+            username="common-user-unverified",
+            email="common-user-unverified@test.com",
+        )
+        org2_only = self._create_user(
+            username="org2-only",
+            email="org2-only@test.com",
+        )
+        self._create_org_user(user=org1_verified, organization=org1)
+        self._create_org_user(user=common_user_unverified, organization=org1)
+        self._create_org_user(user=org2_only, organization=org1)
+        RegisteredUser.objects.create(
+            user=org1_verified,
+            organization=org1,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        RegisteredUser.objects.create(
+            user=common_user_unverified,
+            organization=org1,
+            method="mobile_phone",
+            is_verified=False,
+        )
+        RegisteredUser.objects.create(
+            user=common_user_unverified,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        RegisteredUser.objects.create(
+            user=org2_only,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        self.client.force_login(manager)
+        app_label = User._meta.app_label
+        url = reverse(f"admin:{app_label}_user_changelist")
+
+        response = self.client.get(url, {"is_verified": "true"})
+        self.assertContains(response, org1_verified.username)
+        self.assertNotContains(response, common_user_unverified.username)
+        self.assertNotContains(response, org2_only.username)
+
+        response = self.client.get(url, {"is_verified": "false"})
+        self.assertContains(response, common_user_unverified.username)
+        self.assertNotContains(response, org1_verified.username)
+        self.assertNotContains(response, org2_only.username)
+
+        response = self.client.get(url, {"is_verified": "unknown"})
+        self.assertNotContains(response, org2_only.username)
+        self.assertNotContains(response, org1_verified.username)
+        self.assertNotContains(response, common_user_unverified.username)
 
     def test_admin_menu_groups(self):
         # Test menu group (openwisp-utils menu group) for RadiusAccounting, RadiusBatch,

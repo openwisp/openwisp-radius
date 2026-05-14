@@ -1,4 +1,5 @@
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 
@@ -14,10 +15,13 @@ class RegisteredUserFilter(SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
+        where = Q()
+        if not request.user.is_superuser:
+            where = Q(
+                registered_users__organization__in=request.user.organizations_managed
+            )
         if self.value() == "unknown":
-            return queryset.filter(registered_users__isnull=True)
+            where &= Q(registered_users__isnull=True)
         elif self.value():
-            return queryset.filter(
-                registered_users__is_verified=self.value() == "true"
-            ).distinct()
-        return queryset
+            where &= Q(registered_users__is_verified=self.value() == "true")
+        return queryset.filter(where).distinct()

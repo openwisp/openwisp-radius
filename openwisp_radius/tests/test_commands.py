@@ -405,6 +405,36 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(User.objects.count(), 1)
             self.assertEqual(User.objects.filter(pk=user.pk).exists(), True)
 
+        with self.subTest(
+            "Exclude methods keep users when any organization uses an excluded method"
+        ):
+            _create_old_users()
+            org2 = self._create_org(name="exclude org", slug="exclude-org")
+            user = self._create_user(
+                username="exclude_any_match",
+                email="exclude_any_match@test.com",
+                date_joined=now() - timedelta(days=3),
+            )
+            RegisteredUser.objects.create(
+                user=user,
+                organization=self.default_org,
+                method="email",
+                is_verified=False,
+            )
+            RegisteredUser.objects.create(
+                user=user,
+                organization=org2,
+                method="mobile_phone",
+                is_verified=False,
+            )
+            self.assertEqual(User.objects.count(), 4)
+            call_command(
+                "delete_unverified_users",
+                older_than_days=2,
+                exclude_methods="mobile_phone",
+            )
+            self.assertEqual(User.objects.filter(pk=user.pk).exists(), True)
+
     @capture_any_output()
     @patch.object(
         app_settings,

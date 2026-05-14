@@ -1227,17 +1227,32 @@ class TestRegisteredUser(BaseTestCase):
 
         with self.subTest("returns None when no records exist"):
             result = RegisteredUser.get_for_user_and_org(user, org1)
-            self.assertIsNone(result)
+            self.assertEqual(result, None)
 
         with self.subTest("returns only the requested organization record"):
             org2_ru = RegisteredUser.objects.create(
                 user=user, organization=org2, is_verified=True
             )
             result = RegisteredUser.get_for_user_and_org(user, org1)
-            self.assertIsNone(result)
+            self.assertEqual(result, None)
             result = RegisteredUser.get_for_user_and_org(user, org2)
             self.assertEqual(result, org2_ru)
             self.assertEqual(result.is_verified, True)
+
+        with self.subTest("uses prefetched registered_users without extra queries"):
+            org1_ru = RegisteredUser.objects.create(
+                user=user,
+                organization=org1,
+                is_verified=False,
+            )
+            prefetched_user = (
+                get_user_model()
+                .objects.prefetch_related("registered_users")
+                .get(pk=user.pk)
+            )
+            with self.assertNumQueries(0):
+                result = RegisteredUser.get_for_user_and_org(prefetched_user, org1)
+            self.assertEqual(result, org1_ru)
 
     def test_clean_requires_unique_org_specific_registered_user(self):
         user = self._create_user()

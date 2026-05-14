@@ -1047,6 +1047,64 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         reg_org1.refresh_from_db()
         self.assertEqual(reg_org1.is_verified, False)
 
+    @capture_any_output()
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_phone_change_requires_reverification_in_other_mobile_phone_orgs(
+        self, *args
+    ):
+        # User registers to both org1 and org2 with phone_number
+        org1 = self.default_org
+        org2 = self._create_org(name="org2", slug="org2")
+        self._register_user(expect_users=None)
+        user = User.objects.get(email=self._test_email)
+        self._create_org_user(user=user, organization=org2)
+        user.phone_number = "+393664255801"
+        user.save(update_fields=["phone_number"])
+        user_token = Token.objects.get(user=user)
+        reg_org1 = user.registered_users.get(organization=org1)
+        reg_org1.method = "mobile_phone"
+        reg_org1.is_verified = True
+        reg_org1.save(update_fields=["method", "is_verified"])
+        reg_org2 = RegisteredUser.objects.create(
+            user=user,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        # User changes phone number in org1, which should unverify user in org1 and org2
+        # since both orgs have same method and phone number
+        new_phone_number = "+595972157444"
+        url = reverse("radius:phone_number_change", args=[org1.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"phone_number": new_phone_number}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+        # Validate phone token for org1
+        phone_token = (
+            PhoneToken.objects.filter(user=user, organization=org1)
+            .order_by("-created")
+            .first()
+        )
+        url = reverse("radius:phone_token_validate", args=[org1.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"code": phone_token.token}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+        # User should be verified in org1 but not in org2 since phone number
+        # has changed and both orgs have same method and phone number
+        user.refresh_from_db()
+        reg_org1.refresh_from_db()
+        reg_org2.refresh_from_db()
+        self.assertEqual(user.phone_number, new_phone_number)
+        self.assertEqual(reg_org1.is_verified, True)
+        self.assertEqual(reg_org2.is_verified, False)
+
 
 class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
     def setUp(self):

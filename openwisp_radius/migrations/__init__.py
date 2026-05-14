@@ -453,7 +453,12 @@ def populate_phonetoken_organization(
     For each user that has PhoneToken rows with a null organization_id,
     find the user's first OrganizationUser membership (ordered by created, pk)
     and set that organization_id on all their PhoneToken records that are
-    still null. Operates using the provided apps registry (for migrations).
+    still null.
+
+    Any rows that cannot be resolved to an organization are
+    discarded before the later NOT NULL migration step.
+
+    Operates using the provided apps registry (for migrations).
 
     Args:
         apps: Django apps registry passed to migrations functions.
@@ -487,3 +492,4 @@ def populate_phonetoken_organization(
         ).update(
             organization_id=organization_id,
         )
+    PhoneToken.objects.filter(organization_id__isnull=True).delete()

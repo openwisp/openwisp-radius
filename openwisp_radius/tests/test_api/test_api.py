@@ -1698,7 +1698,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertIn("pending verification", response.data["method"][0])
 
     def test_update_registered_user_method_404_cases(self):
-        with self.subTest("not_found_without_registered_user"):
+        with self.subTest("non member without registered user"):
             user = self._create_user(username="noreguser", password="tester")
             user_token = Token.objects.create(user=user)
             url = self._get_update_method_url()
@@ -1707,9 +1707,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 {"method": "mobile_phone"},
                 HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
             )
-            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("non_field_errors", response.data)
+            self.assertIn("is not member", str(response.data["non_field_errors"]))
 
-        with self.subTest("only_owner_can_update"):
+        with self.subTest("non member cannot update other users record"):
             user, org2, user_token = self._create_pending_verification_user(
                 username_suffix="_owner"
             )
@@ -1723,7 +1725,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 {"method": "mobile_phone"},
                 HTTP_AUTHORIZATION=f"Bearer {other_user_token.key}",
             )
-            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("non_field_errors", response.data)
+            self.assertIn("is not member", str(response.data["non_field_errors"]))
 
         with self.subTest("invalid_org"):
             user, _, user_token = self._create_pending_verification_user(
@@ -1739,6 +1743,32 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
             )
             self.assertEqual(response.status_code, 404)
+
+    def test_update_registered_user_method_rejects_non_member_with_registered_user(
+        self,
+    ):
+        user = self._create_user(
+            username="nonmember-update",
+            password="tester",
+            email="nonmember-update@test.com",
+        )
+        org = self._create_org(name="org-update", slug="org-update")
+        RegisteredUser.objects.create(
+            user=user,
+            organization=org,
+            method="pending_verification",
+            is_verified=False,
+        )
+        user_token = Token.objects.create(user=user)
+        url = self._get_update_method_url(org)
+        response = self.client.post(
+            url,
+            {"method": "mobile_phone"},
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("non_field_errors", response.data)
+        self.assertIn("is not member", str(response.data["non_field_errors"]))
 
     def test_update_registered_user_method_requires_authentication(self):
         url = self._get_update_method_url()

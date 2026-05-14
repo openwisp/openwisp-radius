@@ -576,35 +576,44 @@ user_admin_get_queryset = UserAdmin.get_queryset
 
 
 def get_queryset(self, request):
+    self._verification_request = request
     queryset = user_admin_get_queryset(self, request)
+    registered_users = RegisteredUser.objects.only(
+        "user_id", "organization_id", "is_verified"
+    )
+    if not request.user.is_superuser:
+        registered_users = registered_users.filter(
+            organization__in=request.user.organizations_managed
+        )
     return queryset.prefetch_related(
         Prefetch(
             "registered_users",
-            queryset=RegisteredUser.objects.only("user_id", "is_verified"),
+            queryset=registered_users,
             to_attr="prefetched_registered_users",
         )
     )
 
 
 def get_is_verified(self, obj):
-    try:
-        prefetched_registered_users = getattr(obj, "prefetched_registered_users", None)
-        if prefetched_registered_users is not None:
-            is_verifieds = [
-                reg_user.is_verified for reg_user in prefetched_registered_users
-            ]
-        else:
-            is_verifieds = list(
-                obj.registered_users.values_list("is_verified", flat=True)
+    prefetched_registered_users = getattr(obj, "prefetched_registered_users", None)
+    if prefetched_registered_users is not None:
+        is_verifieds = [
+            reg_user.is_verified for reg_user in prefetched_registered_users
+        ]
+    else:
+        registered_users = obj.registered_users.all()
+        request = getattr(self, "_verification_request", None)
+        if request is not None and not request.user.is_superuser:
+            registered_users = registered_users.filter(
+                organization__in=request.user.organizations_managed
             )
-        if not is_verifieds:
-            value = "unknown"
-        elif any(is_verifieds):
-            value = "yes"
-        else:
-            value = "no"
-    except Exception:
+        is_verifieds = list(registered_users.values_list("is_verified", flat=True))
+    if not is_verifieds:
         value = "unknown"
+    elif any(is_verifieds):
+        value = "yes"
+    else:
+        value = "no"
     icon_url = static(f"admin/img/icon-{value}.svg")
     return mark_safe(f'<img src="{icon_url}" alt="{value}">')
 
