@@ -384,6 +384,44 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertIsNone(cache.get(cache_key))
 
     @capture_any_output()
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_validate_phone_token_200_clears_old_and_new_radius_token_cache_keys(
+        self, *args
+    ):
+        self._register_user(expect_users=None)
+        user = User.objects.get(email=self._test_email)
+        user_token = Token.objects.get(user=user)
+        old_phone_number = str(user.phone_number)
+        new_phone_number = "+595972157445"
+        url = reverse("radius:phone_number_change", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"phone_number": new_phone_number}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        phone_token = PhoneToken.objects.filter(
+            user=user, organization=self.default_org
+        ).last()
+        old_cache_key = f"rt-{old_phone_number}"
+        new_cache_key = f"rt-{phone_token.phone_number}"
+        cache.set(old_cache_key, "old-test")
+        cache.set(new_cache_key, "new-test")
+
+        url = reverse("radius:phone_token_validate", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"code": phone_token.token}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(cache.get(old_cache_key), None)
+        self.assertEqual(cache.get(new_cache_key), None)
+
+    @capture_any_output()
     def test_validate_phone_token_400_not_member(self):
         self.test_create_phone_token_201()
         OrganizationUser.objects.all().delete()

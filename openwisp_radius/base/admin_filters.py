@@ -15,6 +15,8 @@ class RegisteredUserFilter(SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
+        if self.value() is None:
+            return queryset
         where = Q()
         if not request.user.is_superuser:
             where = Q(

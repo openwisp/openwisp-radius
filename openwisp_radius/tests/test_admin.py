@@ -1689,6 +1689,20 @@ class TestAdmin(
         self.assertNotContains(response, org1_verified.username)
         self.assertNotContains(response, common_user_unverified.username)
 
+    def test_registered_user_filter_does_not_limit_default_changelist(self):
+        org = self._create_org(name="org-filter-default", slug="org-filter-default")
+        manager = self._create_administrator([org])
+        user = self._create_user(
+            username="no-registered-user",
+            email="no-registered-user@test.com",
+        )
+        self._create_org_user(user=user, organization=org)
+        self.client.force_login(manager)
+        app_label = User._meta.app_label
+        url = reverse(f"admin:{app_label}_user_changelist")
+        response = self.client.get(url)
+        self.assertContains(response, user.username)
+
     def test_admin_menu_groups(self):
         # Test menu group (openwisp-utils menu group) for RadiusAccounting, RadiusBatch,
         # RadiusCheck, RadiusGroup, Nas, RadiusPostAuth, RadiusToken, and RadiusReply

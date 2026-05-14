@@ -34,7 +34,8 @@ class IDVerificationHelper(object):
     def is_identity_verified_strong(self, user, organization):
         reg_user = None
         # We use all() to utilize the prefetch cache, otherwise
-        # it would cause an additional query to fetch the registered user
+        # it would cause an additional query to fetch the organization-specific
+        # registration record
         for ru in user.registered_users.all():
             if organization and ru.organization_id == organization.pk:
                 reg_user = ru

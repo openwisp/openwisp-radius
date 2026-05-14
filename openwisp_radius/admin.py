@@ -576,7 +576,6 @@ user_admin_get_queryset = UserAdmin.get_queryset
 
 
 def get_queryset(self, request):
-    self._verification_request = request
     queryset = user_admin_get_queryset(self, request)
     registered_users = RegisteredUser.objects.only(
         "user_id", "organization_id", "is_verified"
@@ -601,13 +600,7 @@ def get_is_verified(self, obj):
             reg_user.is_verified for reg_user in prefetched_registered_users
         ]
     else:
-        registered_users = obj.registered_users.all()
-        request = getattr(self, "_verification_request", None)
-        if request is not None and not request.user.is_superuser:
-            registered_users = registered_users.filter(
-                organization__in=request.user.organizations_managed
-            )
-        is_verifieds = list(registered_users.values_list("is_verified", flat=True))
+        is_verifieds = []
     if not is_verifieds:
         value = "unknown"
     elif any(is_verifieds):

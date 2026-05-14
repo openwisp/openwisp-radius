@@ -770,10 +770,13 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
-            phone_number_changed = user.phone_number and str(user.phone_number) != str(
+            old_phone_number = str(user.phone_number) if user.phone_number else None
+            phone_number_changed = old_phone_number and old_phone_number != str(
                 phone_token.phone_number
             )
             if phone_number_changed:
+                # The shipped registration methods only tie identity verification
+                # to the stored phone number for mobile_phone entries.
                 RegisteredUser.objects.filter(
                     user=user,
                     method="mobile_phone",
@@ -796,8 +799,13 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             user.phone_number = phone_token.phone_number
             user.save()
             reg_user.save()
-            # delete any radius token cache key if present
-            cache.delete(f"rt-{phone_token.phone_number}")
+            # Delete any cached radius token for either the previous or current
+            # phone number so callers cannot keep using stale cached entries.
+            cache_keys = {f"rt-{phone_token.phone_number}"}
+            if old_phone_number:
+                cache_keys.add(f"rt-{old_phone_number}")
+            for cache_key in cache_keys:
+                cache.delete(cache_key)
             return Response(None, status=200)
 
 
@@ -853,7 +861,8 @@ class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
     @swagger_auto_schema(
         operation_description=("""
             **Requires the user auth token (Bearer Token).**
-            Allows users to update their registered user method for an organization.
+            Allows users to update their organization-specific registration
+            method.
             The method can only be updated when it is currently
             set to 'pending_verification'.
             Once updated, it cannot be changed again via this endpoint.
