@@ -1,3 +1,4 @@
+from openwisp_radius.tests import test_migrations as base_migration_tests
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
 from openwisp_radius.tests.test_api.test_api import TestApi as BaseTestApi
 from openwisp_radius.tests.test_api.test_freeradius_api import (
@@ -31,7 +32,6 @@ from openwisp_radius.tests.test_batch_add_users import (
     TestCSVUpload as BaseTestCSVUpload,
 )
 from openwisp_radius.tests.test_commands import TestCommands as BaseTestCommands
-from openwisp_radius.tests.test_migrations import TestMigrations as BaseTestMigrations
 from openwisp_radius.tests.test_models import TestNas as BaseTestNas
 from openwisp_radius.tests.test_models import (
     TestPrivateCsvFile as BaseTestPrivateCsvFile,
@@ -186,8 +186,16 @@ class TestLoginView(BaseTestLoginView):
     pass
 
 
-class TestMigrations(BaseTestMigrations):
-    app_label = "sample_radius"
+class TestMigrationRegisteredUserMultitenancy(
+    base_migration_tests.TestMigrationRegisteredUserMultitenancy,
+):
+    pass
+
+
+class TestPhoneTokenOrganizationPopulateResolution(
+    base_migration_tests.TestPhoneTokenOrganizationPopulateResolution,
+):
+    pass
 
 
 del BaseTestAdmin
@@ -219,4 +227,4 @@ del BaseTestUtils
 del BaseTestUpgradeFromDjangoFreeradius
 del BaseTestAssertionConsumerServiceView
 del BaseTestLoginView
-del BaseTestMigrations
+del base_migration_tests

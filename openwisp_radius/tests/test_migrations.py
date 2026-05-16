@@ -11,6 +11,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from openwisp_users.tests.utils import TestOrganizationMixin
+from openwisp_utils.tests import capture_any_output
 
 from ..migrations import (
     _get_first_membership_organization_id,
@@ -20,11 +21,13 @@ from ..utils import load_model
 from .mixins import BaseTestCase
 
 RegisteredUser = load_model("RegisteredUser")
+RadiusBatch = load_model("RadiusBatch")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
 
-class TestMigrations(BaseTestCase):
-    app_label = "openwisp_radius"
+class TestMigrationRegisteredUserMultitenancy(BaseTestCase):
+    def _get_app_label(self):
+        return RegisteredUser._meta.app_label
 
     def _assert_column_not_nullable(self, model_name, field_name):
         model = load_model(model_name)
@@ -81,7 +84,7 @@ class TestMigrations(BaseTestCase):
             )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, stronger_record.pk)
@@ -124,7 +127,7 @@ class TestMigrations(BaseTestCase):
             )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, strongest_record.pk)
@@ -171,7 +174,7 @@ class TestMigrations(BaseTestCase):
         )
 
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, newer_record.pk)
@@ -205,7 +208,7 @@ class TestMigrations(BaseTestCase):
                 method="email",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, org_weak_method.pk)
@@ -236,7 +239,7 @@ class TestMigrations(BaseTestCase):
                 method="email",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         self.assertEqual(
             RegisteredUser.objects.filter(user=user).count(),
@@ -278,7 +281,7 @@ class TestMigrations(BaseTestCase):
             )
         # Rollback: mobile_phone should win (highest method priority)
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.organization, org3)
@@ -315,7 +318,7 @@ class TestMigrations(BaseTestCase):
                 method="mobile_phone",
             )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         surviving_record = RegisteredUser.objects.get(user=user)
         self.assertEqual(surviving_record.pk, strong_record.pk)
@@ -347,7 +350,7 @@ class TestMigrations(BaseTestCase):
             2,
         )
         migrate_registered_users_multitenant_reverse(
-            apps, None, app_label=self.app_label
+            apps, None, app_label=self._get_app_label()
         )
         self.assertEqual(
             RegisteredUser.objects.filter(user=user1).count(),
@@ -360,8 +363,6 @@ class TestMigrations(BaseTestCase):
 
 
 class TestPhoneTokenOrganizationPopulateResolution(BaseTestCase):
-    app_label = "openwisp_radius"
-
     def _set_org_user_created(self, org_user, created):
         OrganizationUser.objects.filter(pk=org_user.pk).update(created=created)
         org_user.refresh_from_db(fields=["created"])
@@ -394,18 +395,19 @@ class TestPhoneTokenOrganizationPopulateResolution(BaseTestCase):
 
 
 class TestMigrationRadiusBatchJsonField(TestOrganizationMixin, TestCase):
-    app_label = "openwisp_radius"
     migration_path = "openwisp_radius.migrations.0044_convert_user_credentials_data"
-    radius_batch_model = load_model("RadiusBatch")
+
+    def _get_app_label(self):
+        return RadiusBatch._meta.app_label
 
     def _get_convert_user_credentials_data(self):
         migration_module = importlib.import_module(self.migration_path)
         return migration_module.convert_user_credentials_data
 
     def _get_model(self, app_label, model_name):
-        self.assertEqual(app_label, self.app_label)
+        self.assertEqual(app_label, self._get_app_label())
         self.assertEqual(model_name, "RadiusBatch")
-        return self.radius_batch_model
+        return RadiusBatch
 
     def _get_apps(self):
         apps = MagicMock()
@@ -423,28 +425,29 @@ class TestMigrationRadiusBatchJsonField(TestOrganizationMixin, TestCase):
 
     def test_convert_user_credentials_data(self):
         org = self._get_org()
-        batch = self.radius_batch_model.objects.create(
+        batch = RadiusBatch.objects.create(
             name="test_batch_migration",
             strategy="prefix",
             prefix="test",
             organization=org,
         )
-        self.radius_batch_model.objects.filter(pk=batch.pk).update(
+        RadiusBatch.objects.filter(pk=batch.pk).update(
             user_credentials=json.dumps({"user1": "pass1"})
         )
         self._convert_user_credentials_data()
         batch.refresh_from_db()
         self.assertEqual(batch.user_credentials, {"user1": "pass1"})
 
+    @capture_any_output()
     def test_convert_user_credentials_data_invalid_json(self):
         org = self._get_org()
-        batch = self.radius_batch_model.objects.create(
+        batch = RadiusBatch.objects.create(
             name="test_batch_invalid",
             strategy="prefix",
             prefix="test2",
             organization=org,
         )
-        self.radius_batch_model.objects.filter(pk=batch.pk).update(
+        RadiusBatch.objects.filter(pk=batch.pk).update(
             user_credentials="invalid_json_string"
         )
         self._convert_user_credentials_data()
