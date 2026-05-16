@@ -2,7 +2,6 @@ import uuid
 
 import django.db.models.deletion
 import django.utils.timezone
-import jsonfield.fields
 import model_utils.fields
 import phonenumber_field.modelfields
 from django.conf import settings
@@ -47,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="organizationradiussettings",
             name="sms_meta_data",
-            field=jsonfield.fields.JSONField(
+            field=models.JSONField(
                 blank=True,
                 help_text=(
                     "Additional configuration for SMS backend in JSON format"

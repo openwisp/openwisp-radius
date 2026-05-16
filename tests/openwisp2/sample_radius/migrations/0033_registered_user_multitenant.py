@@ -62,7 +62,10 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         swapper.dependency("openwisp_users", "Organization"),
-        ("sample_radius", "0031_radiusbatch_status"),
+        (
+            "sample_radius",
+            "0032_alter_organizationradiussettings_sms_meta_data_and_more",
+        ),
     ]
 
     operations = [

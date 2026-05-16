@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         swapper.dependency("openwisp_users", "Organization"),
-        ("openwisp_radius", "0043_registereduser_add_uuid"),
+        ("openwisp_radius", "0045_registereduser_add_uuid"),
     ]
 
     operations = [
