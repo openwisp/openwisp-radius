@@ -3,6 +3,7 @@ import logging
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
+from . import settings as app_settings
 from .utils import load_model
 
 REGISTRATION_METHOD_CHOICES = [
@@ -59,3 +60,36 @@ def unregister_registration_method(name, fail_loud=True):
 
 def get_registration_choices():
     return REGISTRATION_METHOD_CHOICES
+
+
+def validate_user_settable_registration_methods(methods):
+    if not isinstance(methods, (list, tuple)):
+        raise ImproperlyConfigured(
+            "OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS must be a list or tuple"
+        )
+    methods = list(methods)
+    duplicates = []
+    seen = set()
+    for method in methods:
+        if method in seen and method not in duplicates:
+            duplicates.append(method)
+        seen.add(method)
+    if duplicates:
+        raise ImproperlyConfigured(
+            "OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS contains duplicate "
+            f"values: {', '.join(repr(method) for method in duplicates)}"
+        )
+    available_choices = dict(get_registration_choices())
+    invalid_methods = [method for method in methods if method not in available_choices]
+    if invalid_methods:
+        raise ImproperlyConfigured(
+            "OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS contains unknown "
+            f"values: {', '.join(repr(method) for method in invalid_methods)}"
+        )
+
+    return [(method, available_choices[method]) for method in methods]
+
+
+validate_user_settable_registration_methods(
+    app_settings.USER_SETTABLE_REGISTRATION_METHODS
+)

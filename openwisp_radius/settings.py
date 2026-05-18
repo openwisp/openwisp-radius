@@ -95,6 +95,9 @@ ALLOWED_MOBILE_PREFIXES = get_settings_value("ALLOWED_MOBILE_PREFIXES", [])
 ALLOW_FIXED_LINE_OR_MOBILE = get_settings_value("ALLOW_FIXED_LINE_OR_MOBILE", False)
 REGISTRATION_API_ENABLED = get_settings_value("REGISTRATION_API_ENABLED", True)
 NEEDS_IDENTITY_VERIFICATION = get_settings_value("NEEDS_IDENTITY_VERIFICATION", False)
+USER_SETTABLE_REGISTRATION_METHODS = get_settings_value(
+    "USER_SETTABLE_REGISTRATION_METHODS", ["", "email", "mobile_phone"]
+)
 SMS_MESSAGE_TEMPLATE = get_settings_value(
     "SMS_MESSAGE_TEMPLATE", _("{organization} verification code: {code}")
 )

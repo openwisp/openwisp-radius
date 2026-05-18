@@ -28,6 +28,8 @@ from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
+    RegisterSerializer,
+    UpdateRegisteredUserMethodSerializer,
     UserGroupCheckSerializer,
 )
 from openwisp_utils.tests import capture_any_output, capture_stderr
@@ -563,6 +565,54 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             r = self.client.post(url, params)
             self.assertEqual(r.status_code, 201)
             self.assertEqual(User.objects.count(), 2)
+
+    def test_register_serializer_user_settable_methods(self):
+        url = reverse("radius:rest_register", args=[self.default_org.slug])
+        for method in ["saml", "social_login"]:
+            with self.subTest(f"RegisterSerializer rejects {method}"):
+                response = self.client.post(
+                    url,
+                    {
+                        "username": f"{method}@example.com",
+                        "email": f"{method}@example.com",
+                        "password1": "password",
+                        "password2": "password",
+                        "method": method,
+                    },
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(
+                    '"{input}" is not a valid choice.'.format(input=method),
+                    response.data["method"],
+                )
+
+        with self.subTest("custom configured method is accepted"):
+            with mock.patch.object(
+                app_settings,
+                "USER_SETTABLE_REGISTRATION_METHODS",
+                ["", "email", "manual"],
+            ):
+                serializer = RegisterSerializer(context={"view": mock.MagicMock()})
+                self.assertEqual(
+                    list(serializer.fields["method"].choices.keys()),
+                    ["", "email", "manual"],
+                )
+                response = self.client.post(
+                    url,
+                    {
+                        "username": "manual@example.com",
+                        "email": "manual@example.com",
+                        "password1": "password",
+                        "password2": "password",
+                        "method": "manual",
+                    },
+                )
+                self.assertEqual(response.status_code, 201)
+                registered_user = RegisteredUser.objects.get(
+                    user__username="manual@example.com",
+                    organization=self.default_org,
+                )
+                self.assertEqual(registered_user.method, "manual")
 
     @override_settings(
         ACCOUNT_EMAIL_VERIFICATION="mandatory", ACCOUNT_EMAIL_REQUIRED=True
@@ -1651,7 +1701,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             username_suffix="_valid"
         )
         url = self._get_update_method_url(org2)
-        for method in ["", "manual", "email", "mobile_phone"]:
+        for method in ["", "email", "mobile_phone"]:
             with self.subTest(method=method):
                 registered_user = RegisteredUser.objects.get(
                     user=user, organization=org2
@@ -1665,6 +1715,56 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data["method"], method)
+
+    @mock.patch.object(
+        app_settings,
+        "USER_SETTABLE_REGISTRATION_METHODS",
+        ["", "email", "mobile_phone"],
+    )
+    def test_update_registered_user_method_user_settable_methods(self):
+        _, org2, user_token = self._create_pending_verification_user(
+            username_suffix="_choices"
+        )
+        url = self._get_update_method_url(org2)
+
+        with self.subTest("default field choices"):
+            serializer = UpdateRegisteredUserMethodSerializer()
+            self.assertEqual(
+                list(serializer.fields["method"].choices.keys()),
+                ["", "email", "mobile_phone"],
+            )
+
+        for method in ["saml", "social_login"]:
+            with self.subTest(f"UpdateRegisteredUserMethodSerializer rejects {method}"):
+                response = self.client.post(
+                    url,
+                    {"method": method},
+                    HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(
+                    '"{input}" is not a valid choice.'.format(input=method),
+                    response.data["method"],
+                )
+
+        with self.subTest("custom configured method is accepted"):
+            with mock.patch.object(
+                app_settings,
+                "USER_SETTABLE_REGISTRATION_METHODS",
+                ["", "email", "manual"],
+            ):
+                serializer = UpdateRegisteredUserMethodSerializer()
+                self.assertEqual(
+                    list(serializer.fields["method"].choices.keys()),
+                    ["", "email", "manual"],
+                )
+                response = self.client.post(
+                    url,
+                    {"method": "manual"},
+                    HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data["method"], "manual")
 
     def test_update_registered_user_method_validation_errors(self):
         user, org2, user_token = self._create_pending_verification_user()

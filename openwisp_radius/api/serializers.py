@@ -36,7 +36,6 @@ from openwisp_utils.api.serializers import ValidatedModelSerializer
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
 from ..counters.exceptions import SkipCheck
-from ..registration import get_registration_choices
 from ..utils import (
     get_group_checks,
     get_organization_radius_settings,
@@ -571,7 +570,7 @@ class RegisterSerializer(
             'verification in its "Organization RADIUS Settings."'
         ),
         default="",
-        choices=get_registration_choices(),
+        choices=app_settings.USER_SETTABLE_REGISTRATION_METHODS,
     )
 
     def validate_phone_number(self, phone_number):
@@ -767,7 +766,7 @@ class ChangePhoneNumberSerializer(
 
 class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
     method = serializers.ChoiceField(
-        choices=get_registration_choices(),
+        choices=app_settings.USER_SETTABLE_REGISTRATION_METHODS,
         help_text=_(
             "The registration method to set for the user. "
             "Cannot be 'pending_verification'."
@@ -777,10 +776,6 @@ class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
     class Meta:
         model = RegisteredUser
         fields = ["method"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["method"].choices = get_registration_choices()
 
     def validate_method(self, value):
         if value == "pending_verification":
