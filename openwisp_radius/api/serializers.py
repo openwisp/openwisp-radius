@@ -570,8 +570,14 @@ class RegisterSerializer(
             'verification in its "Organization RADIUS Settings."'
         ),
         default="",
-        choices=app_settings.USER_SETTABLE_REGISTRATION_METHODS,
+        choices=(),
     )
+
+    def __init__(self, instance=None, data=..., **kwargs):
+        super().__init__(instance, data, **kwargs)
+        self.fields["method"].choices = (
+            app_settings.USER_SETTABLE_REGISTRATION_METHODS
+        )
 
     def validate_phone_number(self, phone_number):
         org = self.context["view"].organization
@@ -776,6 +782,12 @@ class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
     class Meta:
         model = RegisteredUser
         fields = ["method"]
+
+    def __init__(self, instance=None, data=..., **kwargs):
+        super().__init__(instance, data, **kwargs)
+        self.fields["method"].choices = (
+            app_settings.USER_SETTABLE_REGISTRATION_METHODS
+        )
 
     def validate_method(self, value):
         if value == "pending_verification":
