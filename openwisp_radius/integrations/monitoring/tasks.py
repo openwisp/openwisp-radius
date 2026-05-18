@@ -3,7 +3,7 @@ import logging
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.utils import timezone
 from swapper import load_model
 
@@ -113,29 +113,33 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     else:
         get_metric_func = _get_total_user_signup_metric
 
-    # Get the registration data for the past hour.
-    # The query returns a tuple of organization_id, registration_method and
-    # count of users who registered with that organization and method.
+    # Get registration data grouped by organization and registration method.
+    # Scope OrganizationUser joins to the same organization as the
+    # RegisteredUser to avoid memberships from other organizations affecting
+    # this organization's signup metrics.
     registered_users_query = RegisteredUser.objects.exclude(
         method="pending_verification"
     ).exclude(
+        user__openwisp_users_organizationuser__organization_id=F("organization_id"),
         user__openwisp_users_organizationuser__created__gt=end_time,
     )
 
     if metric_key == "user_signups":
         registered_users_query = registered_users_query.filter(
+            user__openwisp_users_organizationuser__organization_id=F("organization_id"),
             user__openwisp_users_organizationuser__created__gt=start_time,
             user__openwisp_users_organizationuser__created__lte=end_time,
         )
     registered_users = registered_users_query.values_list(
-        "organization_id", "method"
+        "organization_id",
+        "method",
     ).annotate(count=Count("user_id", distinct=True))
 
-    # There could be users which were manually created (e.g. superuser)
-    # which do not have related RegisteredUser object. Add the count
-    # of such users with the "unspecified" method.
-    users_without_registereduser_query = OrganizationUser.objects.filter(
-        user__registered_users__isnull=True
+    # Count users without a RegisteredUser for this organization.
+    # A simple ``registered_users__isnull=True`` check would incorrectly
+    # exclude users having RegisteredUser rows only in other organizations.
+    users_without_registereduser_query = OrganizationUser.objects.exclude(
+        user__registered_users__organization_id=F("organization_id")
     )
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
@@ -150,11 +154,22 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     for org_id, registration_method, count in registered_users:
         registration_method = clean_registration_method(registration_method)
         if registration_method == "unspecified":
-            count += users_without_registereduser.get(org_id, 0)
+            count += users_without_registereduser.pop(org_id, 0)
         metric = get_metric_func(
             organization_id=org_id, registration_method=registration_method
         )
         metric_data.append((metric, {"value": count}))
+
+    # Write metrics for organizations having only users without a
+    # RegisteredUser for that organization. These organizations are not
+    # present in ``registered_users`` because they have no matching
+    # RegisteredUser rows.
+    for org_id, count in users_without_registereduser.items():
+        metric = get_metric_func(
+            organization_id=org_id, registration_method="unspecified"
+        )
+        metric_data.append((metric, {"value": count}))
+
     Metric.batch_write(metric_data)
 
 

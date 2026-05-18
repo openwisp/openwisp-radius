@@ -1639,13 +1639,13 @@ class TestAdmin(
             username="common-user-unverified",
             email="common-user-unverified@test.com",
         )
-        org2_only = self._create_user(
+        org2_registered = self._create_user(
             username="org2-only",
             email="org2-only@test.com",
         )
         self._create_org_user(user=org1_verified, organization=org1)
         self._create_org_user(user=common_user_unverified, organization=org1)
-        self._create_org_user(user=org2_only, organization=org1)
+        self._create_org_user(user=org2_registered, organization=org1)
         RegisteredUser.objects.create(
             user=org1_verified,
             organization=org1,
@@ -1665,7 +1665,7 @@ class TestAdmin(
             is_verified=True,
         )
         RegisteredUser.objects.create(
-            user=org2_only,
+            user=org2_registered,
             organization=org2,
             method="mobile_phone",
             is_verified=True,
@@ -1677,15 +1677,15 @@ class TestAdmin(
         response = self.client.get(url, {"is_verified": "true"})
         self.assertContains(response, org1_verified.username)
         self.assertNotContains(response, common_user_unverified.username)
-        self.assertNotContains(response, org2_only.username)
+        self.assertNotContains(response, org2_registered.username)
 
         response = self.client.get(url, {"is_verified": "false"})
         self.assertContains(response, common_user_unverified.username)
         self.assertNotContains(response, org1_verified.username)
-        self.assertNotContains(response, org2_only.username)
+        self.assertNotContains(response, org2_registered.username)
 
         response = self.client.get(url, {"is_verified": "unknown"})
-        self.assertNotContains(response, org2_only.username)
+        self.assertContains(response, org2_registered.username)
         self.assertNotContains(response, org1_verified.username)
         self.assertNotContains(response, common_user_unverified.username)
 

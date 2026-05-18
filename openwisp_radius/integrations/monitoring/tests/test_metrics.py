@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import tag
+from django.utils import timezone
 from swapper import load_model
 
 from openwisp_radius.tests import _RADACCT
@@ -16,6 +17,7 @@ from .mixins import CreateDeviceMonitoringMixin
 TASK_PATH = "openwisp_radius.integrations.monitoring.tasks"
 
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
+OrganizationUser = load_model("openwisp_users", "OrganizationUser")
 User = get_user_model()
 
 
@@ -25,6 +27,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         return chart.read(
             additional_query_kwargs={"additional_params": kwargs},
         )
+
+    def _get_metric_traces(self, metric_key, organization_id):
+        chart = self.metric_model.objects.get(key=metric_key).chart_set.first()
+        points = self._read_chart(
+            chart,
+            organization_id=[str(organization_id)],
+        )
+        return {trace_name: values[-1] for trace_name, values in points["traces"]}
 
     def _assert_pending_verification_excluded(self, points):
         """
@@ -701,3 +711,58 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             # org2 only counts its own registration method.
             self.assertEqual(org2_points.get("email", 0), 1)
             self.assertEqual(org2_points.get("mobile_phone", 0), 0)
+
+    def test_write_user_registration_metrics_scopes_membership_window_per_org(
+        self,
+    ):
+        """
+        Ensure signup metrics scope organization membership windows per organization.
+
+        Scenario:
+        - One user belongs to two organizations.
+        - The membership in org1 was created before the metric window.
+        - The membership in org2 was created within the metric window.
+        - The user has a RegisteredUser only for org1.
+
+        Expected behavior:
+        - org1 does not count the user in ``user_signups`` because the
+        membership is outside the current window.
+        - org2 counts the user as ``unspecified`` in ``user_signups`` because
+        the membership is within the current window and no RegisteredUser
+        exists for org2.
+        - ``tot_user_signups`` still counts org1 with its registration method.
+        - org2 must not inherit org1's registration method.
+        """
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        create_general_metrics(None, None)
+        org1 = self._get_org()
+        org2 = self._create_org(name="org2-window-scope", slug="org2-window-scope")
+        old_time = timezone.now() - timezone.timedelta(hours=2)
+        user = self._create_user(date_joined=old_time)
+        org1_membership = self._create_org_user(
+            user=user,
+            organization=org1,
+        )
+        OrganizationUser.objects.filter(pk=org1_membership.pk).update(created=old_time)
+        self._create_registered_user(
+            user=user,
+            organization=org1,
+            method="mobile_phone",
+        )
+        self._create_org_user(
+            user=user,
+            organization=org2,
+        )
+
+        write_user_registration_metrics.delay()
+
+        org1_user_signups = self._get_metric_traces("user_signups", org1.pk)
+        org2_user_signups = self._get_metric_traces("user_signups", org2.pk)
+        org1_total_signups = self._get_metric_traces("tot_user_signups", org1.pk)
+        org2_total_signups = self._get_metric_traces("tot_user_signups", org2.pk)
+        self.assertEqual(org1_user_signups.get("mobile_phone", 0), 0)
+        self.assertEqual(org2_user_signups.get("unspecified", 0), 1)
+        self.assertEqual(org1_total_signups.get("mobile_phone", 0), 1)
+        self.assertEqual(org2_total_signups.get("unspecified", 0), 1)

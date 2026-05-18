@@ -95,16 +95,19 @@ class AssertionConsumerServiceView(
                     user_has_primary_email = EmailAddress.objects.filter(
                         user=user, primary=True
                     )
-                    email_address, email_created = EmailAddress.objects.get_or_create(
-                        user=user,
-                        email=user.email,
-                        defaults={
-                            "verified": True,
-                            "primary": not user_has_primary_email.exists(),
-                        },
-                    )
-                    if email_created:
+                    try:
+                        email_address = EmailAddress.objects.get(
+                            user=user, email=user.email
+                        )
+                    except EmailAddress.DoesNotExist:
+                        email_address = EmailAddress(
+                            user=user,
+                            email=user.email,
+                            verified=True,
+                            primary=not user_has_primary_email.exists(),
+                        )
                         email_address.full_clean()
+                        email_address.save()
                     else:
                         changed_fields = []
                         if not email_address.verified:
