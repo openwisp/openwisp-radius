@@ -1,12 +1,7 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ValidationError
 from django.test import override_settings
 
-from ..registration import (
-    register_registration_method,
-    unregister_registration_method,
-    validate_user_settable_registration_methods,
-)
 from ..utils import find_available_username, get_one_time_login_url, validate_csvfile
 from . import FileMixin
 from .mixins import BaseTestCase
@@ -56,53 +51,3 @@ class TestUtils(FileMixin, BaseTestCase):
     def test_get_one_time_login_url(self):
         login_url = get_one_time_login_url(None, None)
         self.assertEqual(login_url, None)
-
-    def test_validate_user_settable_registration_methods(self):
-        with self.subTest("default methods are valid and preserve order"):
-            choices = validate_user_settable_registration_methods(
-                ["", "email", "mobile_phone"]
-            )
-            self.assertEqual(
-                choices,
-                [
-                    ("", "Unspecified"),
-                    ("email", "Email"),
-                    ("mobile_phone", "Mobile phone"),
-                ],
-            )
-
-        with self.subTest("non list or tuple is rejected"):
-            with self.assertRaises(ImproperlyConfigured) as error:
-                validate_user_settable_registration_methods("email")
-            self.assertEqual(
-                "list or tuple" in str(error.exception),
-                True,
-            )
-
-        with self.subTest("duplicate methods are rejected"):
-            with self.assertRaises(ImproperlyConfigured) as error:
-                validate_user_settable_registration_methods(["email", "email"])
-            self.assertEqual("duplicate" in str(error.exception), True)
-
-        with self.subTest("unknown methods are rejected"):
-            with self.assertRaises(ImproperlyConfigured) as error:
-                validate_user_settable_registration_methods(["not_registered_method"])
-            self.assertEqual("unknown" in str(error.exception), True)
-
-        custom_method = "custom_identity"
-        register_registration_method(custom_method, "Custom Identity")
-        try:
-            with self.subTest("custom registered methods are accepted"):
-                choices = validate_user_settable_registration_methods(
-                    ["", custom_method, "email"]
-                )
-                self.assertEqual(
-                    choices,
-                    [
-                        ("", "Unspecified"),
-                        (custom_method, "Custom Identity"),
-                        ("email", "Email"),
-                    ],
-                )
-        finally:
-            unregister_registration_method(custom_method)

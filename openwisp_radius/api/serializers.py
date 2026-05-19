@@ -573,8 +573,8 @@ class RegisterSerializer(
         choices=(),
     )
 
-    def __init__(self, instance=None, data=..., **kwargs):
-        super().__init__(instance, data, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fields["method"].choices = app_settings.USER_SETTABLE_REGISTRATION_METHODS
 
     def validate_phone_number(self, phone_number):
@@ -781,8 +781,8 @@ class UpdateRegisteredUserMethodSerializer(ValidatedModelSerializer):
         model = RegisteredUser
         fields = ["method"]
 
-    def __init__(self, instance=None, data=..., **kwargs):
-        super().__init__(instance, data, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fields["method"].choices = app_settings.USER_SETTABLE_REGISTRATION_METHODS
 
     def validate_method(self, value):

@@ -88,8 +88,3 @@ def validate_user_settable_registration_methods(methods):
         )
 
     return [(method, available_choices[method]) for method in methods]
-
-
-validate_user_settable_registration_methods(
-    app_settings.USER_SETTABLE_REGISTRATION_METHODS
-)
