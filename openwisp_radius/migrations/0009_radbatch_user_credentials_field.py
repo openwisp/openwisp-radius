@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="radiusbatch",
             name="user_credentials",
-            field=models.JSONField(
+            field=models.TextField(
                 blank=True,
                 null=True,
                 verbose_name="PDF",
