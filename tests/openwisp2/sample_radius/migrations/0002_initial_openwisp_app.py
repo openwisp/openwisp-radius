@@ -542,7 +542,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "sms_meta_data",
-                    models.JSONField(
+                    models.TextField(
                         blank=True,
                         help_text=(
                             "Additional configuration for SMS backend in JSON format"
@@ -694,7 +694,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "user_credentials",
-                    models.JSONField(blank=True, null=True, verbose_name="PDF"),
+                    models.TextField(blank=True, null=True, verbose_name="PDF"),
                 ),
                 (
                     "expiration_date",
