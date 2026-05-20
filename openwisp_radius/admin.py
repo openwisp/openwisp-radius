@@ -619,25 +619,6 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
 OrganizationAdmin.save_on_top = True
 OrganizationAdmin.inlines.append(OrganizationRadiusSettingsInline)
 
-# avoid cluttering the admin with too many models, leave only the
-# minimum required to configure social login and check if it's working
-if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
-    from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
-
-    class SocialAccountInline(admin.StackedInline):
-        model = SocialAccount
-        extra = 0
-        readonly_fields = ("provider", "uid", "extra_data")
-
-        def has_add_permission(self, request, obj):
-            return False
-
-        def has_delete_permission(self, request, obj=None):
-            return False
-
-    UserAdmin.inlines += [SocialAccountInline]
-    admin.site.register(SocialApp, SocialAppAdmin)
-
 
 if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 
