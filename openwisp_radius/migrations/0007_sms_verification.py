@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="organizationradiussettings",
             name="sms_meta_data",
-            field=models.JSONField(
+            field=models.TextField(
                 blank=True,
                 help_text=(
                     "Additional configuration for SMS backend in JSON format"
