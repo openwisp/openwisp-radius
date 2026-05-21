@@ -17,6 +17,12 @@ from openwisp_radius.api.views import (
 )
 from openwisp_radius.api.views import PasswordResetView as BasePasswordResetView
 from openwisp_radius.api.views import RadiusAccountingView as BaseRadiusAccountingView
+from openwisp_radius.api.views import (
+    RadiusGroupDetailView,
+    RadiusGroupListView,
+    RadiusUserGroupDetailView,
+    RadiusUserGroupListCreateView,
+)
 from openwisp_radius.api.views import RegisterView as BaseRegisterView
 from openwisp_radius.api.views import UserAccountingView as BaseUserAccountingView
 from openwisp_radius.api.views import UserRadiusUsageView as BaseUserRadiusUsageView
@@ -116,3 +122,7 @@ validate_phone_token = ValidatePhoneTokenView.as_view()
 change_phone_number = ChangePhoneNumberView.as_view()
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 radius_accounting = RadiusAccountingView.as_view()
+radius_group_list = RadiusGroupListView.as_view()
+radius_group_detail = RadiusGroupDetailView.as_view()
+radius_user_group_list = RadiusUserGroupListCreateView.as_view()
+radius_user_group_detail = RadiusUserGroupDetailView.as_view()

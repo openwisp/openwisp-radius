@@ -19,6 +19,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
+from django_filters import rest_framework as filters
 from django_filters.rest_framework import CharFilter, DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
@@ -26,12 +27,16 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
+    ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -42,7 +47,12 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
-from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
+from openwisp_users.api.filters import OrganizationManagedFilter
+from openwisp_users.api.mixins import (
+    FilterByOrganizationManaged,
+    FilterByParentManaged,
+    ProtectedAPIMixin,
+)
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
@@ -62,6 +72,8 @@ from .serializers import (
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
+    RadiusGroupSerializer,
+    RadiusUserGroupSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -84,6 +96,7 @@ RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
+RadiusGroup = load_model("RadiusGroup")
 RadiusGroupCheck = load_model("RadiusGroupCheck")
 auth_backend = UsersAuthenticationBackend()
 
@@ -601,13 +614,11 @@ class CreatePhoneTokenView(
     )
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, sends a code via SMS to the
             phone number of the user.
-            """
-        ),
+            """),
         request_body=no_body,
         responses={201: ""},
     )
@@ -681,14 +692,12 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
     serializer_class = serializers.Serializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Used for SMS verification, allows checking whether an active
             SMS token was already requested for the mobile phone number
             of the logged in account.
-            """
-        ),
+            """),
         responses={200: '`{"active":"true/false"}`'},
     )
     def get(self, request, *args, **kwargs):
@@ -772,13 +781,11 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
     serializer_class = ChangePhoneNumberSerializer
 
     @swagger_auto_schema(
-        operation_description=(
-            """
+        operation_description=("""
             **Requires the user auth token (Bearer Token).**
             Allows users to change their phone number, will flag the
             user as inactive and send them a verification code via SMS.
-            """
-        ),
+            """),
         responses={200: ""},
     )
     def post(self, request, *args, **kwargs):
@@ -847,3 +854,210 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
 
 
 radius_accounting = RadiusAccountingView.as_view()
+
+
+class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusGroup
+
+
+class RadiusGroupPaginator(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of RADIUS groups for the organizations managed by the user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS group for an organization managed by the user.
+        """,
+    ),
+)
+class RadiusGroupListView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, ListCreateAPIView
+):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.order_by("name")
+    filterset_class = RadiusGroupFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name"]
+    pagination_class = RadiusGroupPaginator
+
+
+radius_group_list = RadiusGroupListView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS group identified by its UUID.
+        """,
+    ),
+)
+class RadiusGroupDetailView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveUpdateDestroyAPIView
+):
+    serializer_class = RadiusGroupSerializer
+    queryset = RadiusGroup.objects.order_by("name")
+
+
+radius_group_detail = RadiusGroupDetailView.as_view()
+
+
+class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
+    """
+    Base view for RadiusUserGroup management.
+    Provides user parent filtering and queryset logic.
+    """
+
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
+        "-created"
+    )
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return self.queryset.none()
+        qs = (
+            super()
+            .get_queryset()
+            .filter(
+                user_id=self.kwargs["user_pk"],
+            )
+        )
+        if self.request.user.is_superuser:
+            return qs
+        return qs.filter(
+            group__organization__in=self.request.user.organizations_managed
+        )
+
+    def get_parent_queryset(self):
+        return User.objects.filter(pk=self.kwargs["user_pk"])
+
+    def get_organization_queryset(self, qs):
+        """Filter users by organizations the request user manages."""
+        orgs = self.request.user.organizations_managed
+        app_label = User._meta.app_config.label
+        filter_kwargs = {
+            # exclude superusers
+            "is_superuser": False,
+            # ensure user is member of the org
+            f"{app_label}_organizationuser__organization_id__in": orgs,
+        }
+        return qs.filter(**filter_kwargs).distinct()
+
+
+class RadiusUserGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    # Disable parent's organization_slug; use group__organization__slug instead
+    organization_slug = None
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusUserGroup
+        fields = ["group__organization", "group__organization__slug"]
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns the list of RADIUS user groups for a specific user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS user group assignment for the user.
+        """,
+    ),
+)
+class RadiusUserGroupListCreateView(BaseRadiusUserGroupView, ListCreateAPIView):
+    pagination_class = RadiusGroupPaginator
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RadiusUserGroupFilter
+
+
+radius_user_group_list = RadiusUserGroupListCreateView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS user group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+class RadiusUserGroupDetailView(BaseRadiusUserGroupView, RetrieveUpdateDestroyAPIView):
+    organization_field = "group__organization"
+
+
+radius_user_group_detail = RadiusUserGroupDetailView.as_view()

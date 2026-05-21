@@ -94,6 +94,7 @@ jobs:
         env:
           SELENIUM_HEADLESS: 1
           GECKO_LOG: 1
+          COVERAGE_PROCESS_START: pyproject.toml
 
       - name: Show gecko web driver log on failures
         if: ${{ failure() }}

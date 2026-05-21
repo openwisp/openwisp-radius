@@ -88,6 +88,26 @@ def get_api_urls(api_views=None):
                 api_views.radius_accounting,
                 name="radius_accounting_list",
             ),
+            path(
+                "radius/group/",
+                api_views.radius_group_list,
+                name="radius_group_list",
+            ),
+            path(
+                "radius/group/<uuid:pk>/",
+                api_views.radius_group_detail,
+                name="radius_group_detail",
+            ),
+            path(
+                "users/user/<str:user_pk>/radius-group/",
+                api_views.radius_user_group_list,
+                name="radius_user_group_list",
+            ),
+            path(
+                "users/user/<str:user_pk>/radius-group/<uuid:pk>/",
+                api_views.radius_user_group_detail,
+                name="radius_user_group_detail",
+            ),
         ]
     else:
         return []
