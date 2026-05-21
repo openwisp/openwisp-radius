@@ -129,6 +129,10 @@ Following is an example:
 
     ./manage.py delete_unverified_users --older-than-days 1 --exclude-methods mobile_phone,email
 
+If a user has multiple ``RegisteredUser`` rows across organizations, the
+command keeps that user when **any** related row uses one of the excluded
+methods.
+
 ``upgrade_from_django_freeradius``
 ----------------------------------
 

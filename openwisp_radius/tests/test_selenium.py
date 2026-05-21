@@ -21,6 +21,7 @@ OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 
 
 @tag("selenium_tests")
+@tag("no_parallel")
 class BasicTest(
     SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
 ):

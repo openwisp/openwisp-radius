@@ -696,6 +696,9 @@ verification method. The following choices are available by default:
 - ``mobile_phone``: Mobile phone number :ref:`verification via SMS
   <openwisp_radius_sms_verification_enabled>`
 - ``social_login``: :doc:`social login feature <social_login>`
+- ``pending_verification``: Transitional state used when a user
+  authenticates to a new organization but has not yet completed
+  verification for that organization.
 
 .. note::
 
@@ -713,6 +716,33 @@ verification method. The following choices are available by default:
 
     **Disclaimer:** these are just suggestions on possible configurations
     of OpenWISP RADIUS and must not be considered as legal advice.
+
+``OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``["", "email", "mobile_phone"]``
+
+Defines which ``RegisteredUser.method`` values can be written by users
+through the public registration APIs.
+
+Methods not included in this setting cannot be selected by users through
+those APIs, even if they are present in the full list returned by
+``get_registration_choices()``.
+
+This is especially useful to keep server-assigned provenance methods such
+as ``saml``, ``social_login`` or ``manual`` out of user-controlled API
+input. These methods may still be assigned internally by server-side
+authentication or integration flows when appropriate.
+
+Example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS = [
+        "",
+        "email",
+        "mobile_phone",
+    ]
 
 .. _openwisp_radius_register_registration_method:
 

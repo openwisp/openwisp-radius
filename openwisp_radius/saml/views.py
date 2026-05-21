@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView
@@ -67,30 +68,64 @@ class AssertionConsumerServiceView(
         org = self.get_organization_from_relay_state()
         is_member = user.is_member(org)
         # add user to organization
-        if not is_member:
-            orgUser = OrganizationUser(organization=org, user=user)
-            orgUser.full_clean()
-            orgUser.save()
-        try:
-            user.registered_user
-        except ObjectDoesNotExist:
-            registered_user = RegisteredUser(
-                user=user, method="saml", is_verified=app_settings.SAML_IS_VERIFIED
+        with transaction.atomic():
+            if not is_member:
+                orgUser = OrganizationUser(organization=org, user=user)
+                orgUser.full_clean()
+                orgUser.save()
+            registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
+                user=user,
+                organization=org,
+                defaults={
+                    "method": "saml",
+                    "is_verified": app_settings.SAML_IS_VERIFIED,
+                },
             )
-            registered_user.full_clean()
-            registered_user.save()
-            # The user is just created, it will not have an email address
+            if (
+                not created
+                and registered_user.method == "pending_verification"
+                and not registered_user.is_verified
+            ):
+                registered_user.method = "saml"
+                registered_user.is_verified = app_settings.SAML_IS_VERIFIED
+                registered_user.full_clean()
+                registered_user.save()
             if user.email:
                 try:
-                    email_address = EmailAddress(
-                        user=user, email=user.email, primary=True, verified=True
+                    user_has_primary_email = EmailAddress.objects.filter(
+                        user=user, primary=True
                     )
-                    email_address.full_clean()
-                    email_address.save()
+                    try:
+                        email_address = EmailAddress.objects.get(
+                            user=user, email=user.email
+                        )
+                    except EmailAddress.DoesNotExist:
+                        email_address = EmailAddress(
+                            user=user,
+                            email=user.email,
+                            verified=True,
+                            primary=not user_has_primary_email.exists(),
+                        )
+                        email_address.full_clean()
+                        email_address.save()
+                    else:
+                        changed_fields = []
+                        if not email_address.verified:
+                            email_address.verified = True
+                            changed_fields.append("verified")
+                        if (
+                            not email_address.primary
+                            and not user_has_primary_email.exists()
+                        ):
+                            email_address.primary = True
+                            changed_fields.append("primary")
+                        if changed_fields:
+                            email_address.full_clean()
+                            email_address.save(update_fields=changed_fields)
                 except ValidationError:
                     logger.exception(
-                        f'Failed email validation for "{user}"'
-                        " during SAML user creation"
+                        f'Failed email validation for "{user}" during'
+                        " SAML user creation"
                     )
 
     def customize_relay_state(self, relay_state):

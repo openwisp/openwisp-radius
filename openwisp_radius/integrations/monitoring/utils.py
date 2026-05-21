@@ -51,4 +51,6 @@ def sha1_hash(input_string):
 def clean_registration_method(method):
     if method == "":
         method = "unspecified"
+    elif method == "pending_verification":
+        return None
     return method

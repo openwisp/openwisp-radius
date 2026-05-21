@@ -57,6 +57,7 @@ logger = logging.getLogger(__name__)
 
 RadiusToken = load_model("RadiusToken")
 RadiusAccounting = load_model("RadiusAccounting")
+RegisteredUser = load_model("RegisteredUser")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 Organization = swapper.load_model("openwisp_users", "Organization")
@@ -290,7 +291,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         """
         conditions = self._get_user_query_conditions(request)
         try:
-            user = auth_backend.get_users(username).filter(conditions)[0]
+            user = auth_backend.get_users(username).filter(conditions).distinct()[0]
         except IndexError:
             return None
         # ensure user is member of the authenticated org
@@ -409,19 +410,21 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         # just ensure user is active
         if not needs_verification:
             return is_active
-        # if identity verification is enabled
-        is_verified = Q(registered_user__is_verified=True)
+        organization_id = request._auth
+        registered_user = Q(registered_users__organization_id=organization_id)
+        is_verified = Q(registered_users__is_verified=True)
         AUTHORIZE_UNVERIFIED = registration.AUTHORIZE_UNVERIFIED
-        # and no method should authorize unverified users
-        # ensure user is active AND verified
         if not AUTHORIZE_UNVERIFIED:
-            return is_active & is_verified
+            return is_active & registered_user & is_verified
         # in case some methods are allowed to authorize unverified users
         # ensure user is active AND
         # (user is verified OR user uses one of these methods)
         else:
-            authorize_unverified = Q(registered_user__method__in=AUTHORIZE_UNVERIFIED)
-            return is_active & (is_verified | authorize_unverified)
+            return (
+                is_active
+                & registered_user
+                & (is_verified | Q(registered_users__method__in=AUTHORIZE_UNVERIFIED))
+            )
 
     def authenticate_user(self, request, user, password):
         """
