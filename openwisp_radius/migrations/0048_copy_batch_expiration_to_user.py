@@ -10,10 +10,12 @@ from openwisp_radius.migrations import get_swapped_model
 def copy_batch_expiration_to_user(apps, schema_editor):
     RadiusBatch = get_swapped_model(apps, "openwisp_radius", "RadiusBatch")
     batches = RadiusBatch.objects.exclude(expiration_date__isnull=True).order_by(
-        "created", "pk"
+        "-created", "-pk"
     )
     for batch in batches.iterator():
-        batch.users.update(expiration_date=batch.expiration_date)
+        batch.users.filter(expiration_date__isnull=True).update(
+            expiration_date=batch.expiration_date
+        )
 
 
 class Migration(migrations.Migration):

@@ -426,7 +426,7 @@ class TestAdmin(
         path = self._get_path("static/test_batch.csv")
         csvfile = open(path, "rt")
         data = {
-            "expiration_date": "2019-03-20",
+            "expiration_date": "2099-03-20",
             "strategy": "csv",
             "csvfile": csvfile,
             "name": "test1",
@@ -436,7 +436,7 @@ class TestAdmin(
 
     def _get_prefix_post_data(self):
         data = {
-            "expiration_date": "2019-03-20",
+            "expiration_date": "2099-03-20",
             "strategy": "prefix",
             "prefix": "test-prefix12",
             "number_of_users": 10,

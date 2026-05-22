@@ -28,6 +28,27 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         user = batch.users.first()
         self.assertEqual(user.expiration_date, expiration_date)
 
+    def test_importing_users_override_expiration_date(self):
+        original_expiration_date = now().date() + timedelta(days=14)
+        batch_expiration_date = now().date() + timedelta(days=7)
+        existing_user = self._create_user(
+            username="rohith-existing",
+            email="rohith@openwisp.com",
+            expiration_date=original_expiration_date,
+        )
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test-existing-user",
+            strategy="csv",
+            csvfile=self._get_csvfile(reader),
+            expiration_date=batch_expiration_date,
+        )
+        batch.add(reader)
+        existing_user.refresh_from_db()
+        self.assertEqual(batch.users.count(), 1)
+        self.assertEqual(batch.users.first().pk, existing_user.pk)
+        self.assertEqual(existing_user.expiration_date, batch_expiration_date)
+
     def test_generate_username_from_email(self):
         reader = [["", "cleartext$password", "rohith@openwisp.com", "Rohith", "ASRK"]]
         batch = self._create_radius_batch(
@@ -116,6 +137,18 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
         self.assertEqual(batch.users.count(), 2)
         for user in batch.users.all():
             self.assertEqual(user.expiration_date, expiration_date)
+
+    def test_past_batch_expiration_date_is_rejected(self):
+        batch = self._create_radius_batch(
+            name="test-past-expiration",
+            strategy="prefix",
+            prefix="TestPast",
+            expiration_date=now().date() - timedelta(days=1),
+        )
+        with self.assertRaises(ValidationError):
+            batch.prefix_add("test-prefix17", 1)
+
+        self.assertEqual(batch.users.count(), 0)
 
     def test_invalid_username(self):
         self.assertRaises(

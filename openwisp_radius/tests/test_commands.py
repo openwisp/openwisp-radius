@@ -124,7 +124,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         options = dict(
             organization=self.default_org.slug,
             file=path,
-            expiration="28-01-2018",
+            expiration="28-01-2099",
             name="test",
         )
         self._call_command("batch_add_users", **options)
