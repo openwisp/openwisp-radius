@@ -138,17 +138,20 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
         for user in batch.users.all():
             self.assertEqual(user.expiration_date, expiration_date)
 
-    def test_past_batch_expiration_date_is_rejected(self):
+    def test_users_inherit_past_batch_expiration_date(self):
         batch = self._create_radius_batch(
             name="test-past-expiration",
             strategy="prefix",
             prefix="TestPast",
             expiration_date=now().date() - timedelta(days=1),
         )
-        with self.assertRaises(ValidationError):
-            batch.prefix_add("test-prefix17", 1)
+        batch.prefix_add("test-prefix17", 1)
 
-        self.assertEqual(batch.users.count(), 0)
+        self.assertEqual(batch.users.count(), 1)
+        self.assertEqual(
+            batch.users.first().expiration_date,
+            now().date() - timedelta(days=1),
+        )
 
     def test_invalid_username(self):
         self.assertRaises(

@@ -132,9 +132,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         radiusbatch = RadiusBatch.objects.first()
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 3)
-        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
+        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-99")
         for user in users:
-            self.assertEqual(user.expiration_date.strftime("%d-%m-%y"), "28-01-18")
+            self.assertEqual(user.expiration_date.strftime("%d-%m-%y"), "28-01-99")
         path = self._get_path("static/test_batch_new.csv")
         options = dict(organization=self.default_org.slug, file=path, name="test1")
         self._call_command("batch_add_users", **options)
