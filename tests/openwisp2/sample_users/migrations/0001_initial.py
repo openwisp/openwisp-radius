@@ -43,7 +43,6 @@ class Migration(migrations.Migration):
                             " passes and the user will no longer be able to log in."
                         ),
                         null=True,
-                        db_index=True,
                         verbose_name="expiration date",
                     ),
                 ),
