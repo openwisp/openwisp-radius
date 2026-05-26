@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail, management
 from django.test.utils import override_settings
 from django.utils.timezone import now
+from freezegun import freeze_time
 
 from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -34,13 +35,14 @@ class TestTasks(FileMixin, BaseTestCase):
         app.autodiscover_tasks()
         cls.celery_worker = start_worker(app)
 
-    def _get_expired_user_from_radius_batch(self, **kwargs):
+    @freeze_time("1998-01-28")
+    def _get_user_from_radius_batch(self, **kwargs):
         reader = [["sample", "admin", "user@openwisp.com", "SampleName", "Lastname"]]
         options = dict(
             name="test",
             strategy="csv",
             csvfile=self._get_csvfile(reader),
-            expiration_date="1998-01-28",
+            expiration_date=now().date(),
         )
         options.update(kwargs)
         batch = self._create_radius_batch(**options)
@@ -60,17 +62,8 @@ class TestTasks(FileMixin, BaseTestCase):
         self.assertEqual(session.update_time, session.stop_time)
 
     @capture_stdout()
-    def test_deactivate_expired_users(self):
-        user = self._get_expired_user_from_radius_batch()
-        self.assertTrue(user.is_active)
-        result = tasks.deactivate_expired_users.delay()
-        self.assertTrue(result.successful())
-        user.refresh_from_db()
-        self.assertFalse(user.is_active)
-
-    @capture_stdout()
     def test_delete_old_radiusbatch_users(self):
-        self._get_expired_user_from_radius_batch()
+        self._get_user_from_radius_batch()
         self.assertEqual(User.objects.all().count(), 1)
 
         with self.subTest('Ensure first argument is "older_than_month"'):
@@ -81,7 +74,7 @@ class TestTasks(FileMixin, BaseTestCase):
             self.assertEqual(User.objects.all().count(), 0)
 
         with self.subTest('Test "older_than_days" keyword argument'):
-            self._get_expired_user_from_radius_batch(
+            self._get_user_from_radius_batch(
                 name="test-older-than-days",
                 expiration_date=(now() - timedelta(days=31)),
             )
@@ -91,7 +84,7 @@ class TestTasks(FileMixin, BaseTestCase):
             self.assertEqual(User.objects.all().count(), 0)
 
         with self.subTest("Test with both positional arguments"):
-            self._get_expired_user_from_radius_batch(
+            self._get_user_from_radius_batch(
                 name="test-argument-precedence",
                 expiration_date=(now() - timedelta(days=31)),
             )

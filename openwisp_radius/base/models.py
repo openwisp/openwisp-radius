@@ -21,7 +21,7 @@ from django.db import models, transaction
 from django.db.models import JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now
+from django.utils.timezone import localdate, now
 from django.utils.translation import gettext_lazy as _
 from model_utils.fields import AutoLastModifiedField
 from openwisp_notifications.signals import notify
@@ -949,7 +949,30 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def __str__(self):
         return self.name
 
+    def _validate_expiration(self):
+        """Reject past expiration dates unless they already exist."""
+        if not self.expiration_date:
+            return
+        today = localdate()
+        is_past_expiration = self.expiration_date < today
+        previous_state = None
+        if not self._state.adding and is_past_expiration:
+            previous_state = (
+                self._meta.model.objects.filter(pk=self.pk)
+                .only("expiration_date")
+                .first()
+            )
+        if is_past_expiration:
+            db_expiration_date = None
+            if previous_state:
+                db_expiration_date = previous_state.expiration_date
+            if self._state.adding or db_expiration_date != self.expiration_date:
+                raise ValidationError(
+                    {"expiration_date": _("Expiration date cannot be in the past.")}
+                )
+
     def clean(self):
+        self._validate_expiration()
         if self.strategy == "csv" and not self.csvfile:
             raise ValidationError(
                 {"csvfile": _("This field cannot be blank.")}, code="invalid"
@@ -1060,6 +1083,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def save_user(self, user):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        if self.expiration_date is not None:
+            user.expiration_date = self.expiration_date
         user.save()
         radius_settings = self.organization.radius_settings
         registered_user, created = RegisteredUser.get_or_create_for_user_and_org(
@@ -1092,12 +1117,6 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         self.users.all().delete()
         super().delete()
         self._remove_files()
-
-    def expire(self):
-        users = self.users.all()
-        for u in users:
-            u.is_active = False
-            u.save()
 
     def _remove_files(self):
         if self.csvfile:

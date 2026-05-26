@@ -1,9 +1,11 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
+from django.utils.timezone import now
 
 from ..utils import load_model
 from . import FileMixin
@@ -13,6 +15,40 @@ RadiusBatch = load_model("RadiusBatch")
 
 
 class TestCSVUpload(FileMixin, BaseTestCase):
+    def test_users_inherit_batch_expiration_date(self):
+        expiration_date = now().date() + timedelta(days=7)
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test",
+            strategy="csv",
+            csvfile=self._get_csvfile(reader),
+            expiration_date=expiration_date,
+        )
+        batch.add(reader)
+        user = batch.users.first()
+        self.assertEqual(user.expiration_date, expiration_date)
+
+    def test_importing_users_override_expiration_date(self):
+        original_expiration_date = now().date() + timedelta(days=14)
+        batch_expiration_date = now().date() + timedelta(days=7)
+        existing_user = self._create_user(
+            username="rohith-existing",
+            email="rohith@openwisp.com",
+            expiration_date=original_expiration_date,
+        )
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test-existing-user",
+            strategy="csv",
+            csvfile=self._get_csvfile(reader),
+            expiration_date=batch_expiration_date,
+        )
+        batch.add(reader)
+        existing_user.refresh_from_db()
+        self.assertEqual(batch.users.count(), 1)
+        self.assertEqual(batch.users.first().pk, existing_user.pk)
+        self.assertEqual(existing_user.expiration_date, batch_expiration_date)
+
     def test_generate_username_from_email(self):
         reader = [["", "cleartext$password", "rohith@openwisp.com", "Rohith", "ASRK"]]
         batch = self._create_radius_batch(
@@ -89,6 +125,33 @@ class TestCSVUpload(FileMixin, BaseTestCase):
 
 
 class TestPrefixUpload(FileMixin, BaseTestCase):
+    def test_users_inherit_batch_expiration_date(self):
+        expiration_date = now().date() + timedelta(days=7)
+        batch = self._create_radius_batch(
+            name="test",
+            strategy="prefix",
+            prefix="Test1",
+            expiration_date=expiration_date,
+        )
+        batch.prefix_add("test-prefix16", 2)
+        self.assertEqual(batch.users.count(), 2)
+        for user in batch.users.all():
+            self.assertEqual(user.expiration_date, expiration_date)
+
+    def test_past_batch_expiration_date_not_allowed(self):
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_radius_batch(
+                name="test-past-expiration",
+                strategy="prefix",
+                prefix="TestPast",
+                expiration_date=now().date() - timedelta(days=1),
+            )
+
+        self.assertEqual(
+            context_manager.exception.message_dict["expiration_date"],
+            ["Expiration date cannot be in the past."],
+        )
+
     def test_invalid_username(self):
         self.assertRaises(
             ValidationError,

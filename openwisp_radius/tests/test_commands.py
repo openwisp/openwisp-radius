@@ -124,14 +124,17 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         options = dict(
             organization=self.default_org.slug,
             file=path,
-            expiration="28-01-2018",
+            expiration="28-01-2099",
             name="test",
         )
         self._call_command("batch_add_users", **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         radiusbatch = RadiusBatch.objects.first()
-        self.assertEqual(get_user_model().objects.all().count(), 3)
-        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
+        users = get_user_model().objects.all()
+        self.assertEqual(users.count(), 3)
+        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-99")
+        for user in users:
+            self.assertEqual(user.expiration_date.strftime("%d-%m-%y"), "28-01-99")
         path = self._get_path("static/test_batch_new.csv")
         options = dict(organization=self.default_org.slug, file=path, name="test1")
         self._call_command("batch_add_users", **options)
@@ -151,52 +154,37 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self._call_command("batch_add_users", **options)
 
-    @capture_stdout()
-    def test_deactivate_expired_users_command(self):
-        path = self._get_path("static/test_batch.csv")
-        options = dict(
-            organization=self.default_org.slug,
-            file=path,
-            expiration="28-01-1970",
-            name="test",
-        )
-        self._call_command("batch_add_users", **options)
-        self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 3)
-        call_command("deactivate_expired_users")
-        self.assertEqual(get_user_model().objects.filter(is_active=True).count(), 0)
-
     @freeze_time(_TEST_DATE)
     @capture_stdout()
     def test_delete_old_radiusbatch_users_command(self, subtest_id=None):
+        def _create_expired_batch(name, file_name, expiration_date):
+            with freeze_time(expiration_date - timedelta(days=1)):
+                options = dict(
+                    organization=self.default_org.slug,
+                    file=self._get_path(file_name),
+                    expiration=expiration_date.strftime("%d-%m-%Y"),
+                    name=name,
+                )
+                self._call_command("batch_add_users", **options)
+
         # Create RadiusBatch users that expired more than 18 months ago
-        path = self._get_path("static/test_batch.csv")
-        options = dict(
-            organization=self.default_org.slug,
-            file=path,
-            expiration="28-01-1970",
+        _create_expired_batch(
             name="test",
+            file_name="static/test_batch.csv",
+            expiration_date=now() - timedelta(days=30 * 18 + 1),
         )
-        self._call_command("batch_add_users", **options)
         # Create RadiusBatch users that expired 15 months ago
-        expiration_date = (now() - timedelta(days=30 * 15)).strftime("%d-%m-%Y")
-        path = self._get_path("static/test_batch_new.csv")
-        options = dict(
-            organization=self.default_org.slug,
-            file=path,
-            expiration=expiration_date,
+        _create_expired_batch(
             name="test1",
+            file_name="static/test_batch_new.csv",
+            expiration_date=now() - timedelta(days=30 * 15 + 1),
         )
-        self._call_command("batch_add_users", **options)
         # Create RadiusBatch users that expired 10 days ago
-        path = self._get_path("static/test_batch_users.csv")
-        expiration_date = (now() - timedelta(days=10)).strftime("%d-%m-%Y")
-        options = dict(
-            organization=self.default_org.slug,
-            file=path,
-            expiration=expiration_date,
+        _create_expired_batch(
             name="test2",
+            file_name="static/test_batch_users.csv",
+            expiration_date=now() - timedelta(days=10),
         )
-        self._call_command("batch_add_users", **options)
         self.assertEqual(get_user_model().objects.all().count(), 9)
 
         with self.subTest("Test executing command without arguments"):
@@ -215,8 +203,11 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(get_user_model().objects.all().count(), 0)
 
         with self.subTest("Test executing command with both arguments"):
-            options["name"] = "test3"
-            self._call_command("batch_add_users", **options)
+            _create_expired_batch(
+                name="test3",
+                file_name="static/test_batch_users.csv",
+                expiration_date=now() - timedelta(days=10),
+            )
             call_command(
                 "delete_old_radiusbatch_users",
                 older_than_days=9,
@@ -224,6 +215,56 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             # Users that expired more than 9 days ago should be deleted
             self.assertEqual(get_user_model().objects.all().count(), 0)
+
+    @freeze_time(_TEST_DATE)
+    @capture_stdout()
+    def test_delete_old_radiusbatch_users_command_uses_user_expiration_date(
+        self, subtest_id=None
+    ):
+        current_date = now().date()
+        threshold_date = (now() - timedelta(days=30)).date()
+        old_batch = self._create_radius_batch(
+            name="test-old-batch",
+            strategy="prefix",
+            prefix="test-old-batch",
+            expiration_date=current_date + timedelta(days=1),
+        )
+        RadiusBatch.objects.filter(pk=old_batch.pk).update(
+            expiration_date=threshold_date - timedelta(days=1)
+        )
+        new_batch = self._create_radius_batch(
+            name="test-new-batch",
+            strategy="prefix",
+            prefix="test-new-batch",
+            expiration_date=current_date + timedelta(days=30),
+        )
+        old_batch.refresh_from_db()
+        expired_user = self._create_user(
+            username="batch-expired-user",
+            email="batch-expired-user@example.com",
+        )
+        User.objects.filter(pk=expired_user.pk).update(
+            expiration_date=threshold_date - timedelta(days=1)
+        )
+        expired_user.refresh_from_db()
+        extended_user = self._create_user(
+            username="batch-extended-user",
+            email="batch-extended-user@example.com",
+            expiration_date=current_date + timedelta(days=1),
+        )
+        no_expiration_user = self._create_user(
+            username="batch-no-expiration-user",
+            email="batch-no-expiration-user@example.com",
+            expiration_date=None,
+        )
+        old_batch.users.add(expired_user)
+        old_batch.users.add(extended_user)
+        old_batch.users.add(no_expiration_user)
+        new_batch.users.add(extended_user)
+        call_command("delete_old_radiusbatch_users", older_than_days=30)
+        self.assertEqual(User.objects.filter(pk=expired_user.pk).exists(), False)
+        self.assertEqual(User.objects.filter(pk=extended_user.pk).exists(), True)
+        self.assertEqual(User.objects.filter(pk=no_expiration_user.pk).exists(), True)
 
     @capture_stdout()
     def test_prefix_add_users_command(self):
@@ -234,7 +275,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             prefix="test-prefix7",
             n=10,
             name="test",
-            expiration="28-01-2018",
+            expiration="28-01-2098",
             output=output_pdf,
         )
         self._call_command("prefix_add_users", **options)
@@ -246,7 +287,8 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(users.count(), 10)
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
-        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-18")
+            self.assertEqual(u.expiration_date.strftime("%d-%m-%y"), "28-01-98")
+        self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-98")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"
         )

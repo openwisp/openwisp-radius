@@ -453,3 +453,94 @@ class TestMigrationRadiusBatchJsonField(TestOrganizationMixin, TestCase):
         self._convert_user_credentials_data()
         batch.refresh_from_db()
         self.assertEqual(batch.user_credentials, "invalid_json_string")
+
+
+class TestMigrationRadiusBatchExpirationDateCopy(BaseTestCase):
+    migration_path = "openwisp_radius.migrations.0048_copy_batch_expiration_to_user"
+
+    def _get_copy_batch_expiration_to_user(self):
+        migration_module = importlib.import_module(self.migration_path)
+        return migration_module.copy_batch_expiration_to_user
+
+    def _get_model(self, app_label, model_name):
+        self.assertEqual(model_name, "RadiusBatch")
+        return RadiusBatch
+
+    def _get_apps(self):
+        apps = MagicMock()
+        apps.get_model.side_effect = self._get_model
+        return apps
+
+    def _copy_batch_expiration_to_user(self):
+        copy_batch_expiration_to_user = self._get_copy_batch_expiration_to_user()
+        copy_batch_expiration_to_user(self._get_apps(), MagicMock())
+
+    def test_copy_batch_expiration_to_user(self):
+        copied_expiration_date = timezone.now().date() + timedelta(days=7)
+        batch_with_expiration = self._create_radius_batch(
+            name="batch-with-expiration",
+            strategy="prefix",
+            prefix="batchcopy1",
+            expiration_date=copied_expiration_date,
+        )
+        batch_without_expiration = self._create_radius_batch(
+            name="batch-without-expiration",
+            strategy="prefix",
+            prefix="batchcopy2",
+        )
+        copied_user = self._create_user(username="batch-copy-user")
+        untouched_user = self._create_user(
+            username="batch-copy-user-no-exp", email="batch-copy-user-no-exp@text.com"
+        )
+        batch_with_expiration.users.add(copied_user)
+        batch_without_expiration.users.add(untouched_user)
+        self._copy_batch_expiration_to_user()
+        copied_user.refresh_from_db()
+        untouched_user.refresh_from_db()
+        self.assertEqual(copied_user.expiration_date, copied_expiration_date)
+        self.assertEqual(untouched_user.expiration_date, None)
+
+    def test_copy_batch_expiration_to_user_keeps_existing_user_expiration(self):
+        original_expiration_date = timezone.now().date() + timedelta(days=30)
+        batch_expiration_date = timezone.now().date() + timedelta(days=7)
+        batch = self._create_radius_batch(
+            name="batch-preserve-expiration",
+            strategy="prefix",
+            prefix="batchcopy3",
+            expiration_date=batch_expiration_date,
+        )
+        user = self._create_user(
+            username="batch-copy-preserve-user",
+            expiration_date=original_expiration_date,
+        )
+        batch.users.add(user)
+        self._copy_batch_expiration_to_user()
+        user.refresh_from_db()
+        self.assertEqual(user.expiration_date, original_expiration_date)
+
+    def test_copy_batch_expiration_to_user_prefers_latest_batch(self):
+        older_expiration_date = timezone.now().date() + timedelta(days=7)
+        newer_expiration_date = timezone.now().date() + timedelta(days=14)
+        older_batch = self._create_radius_batch(
+            name="batch-older-expiration",
+            strategy="prefix",
+            prefix="batchcopy4",
+            expiration_date=older_expiration_date,
+        )
+        newer_batch = self._create_radius_batch(
+            name="batch-newer-expiration",
+            strategy="prefix",
+            prefix="batchcopy5",
+            expiration_date=newer_expiration_date,
+        )
+        user = self._create_user(username="batch-copy-latest-user")
+
+        RadiusBatch.objects.filter(pk=older_batch.pk).update(
+            created=timezone.now() - timedelta(days=1)
+        )
+        RadiusBatch.objects.filter(pk=newer_batch.pk).update(created=timezone.now())
+        older_batch.users.add(user)
+        newer_batch.users.add(user)
+        self._copy_batch_expiration_to_user()
+        user.refresh_from_db()
+        self.assertEqual(user.expiration_date, newer_expiration_date)

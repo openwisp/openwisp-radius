@@ -231,10 +231,11 @@ class TestAdmin(
 
     def test_radiusbatch_change(self):
         obj = self._create_radius_batch(
+            organization=self.default_org,
             name="test",
             strategy="prefix",
             prefix="test-prefix4",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[obj.pk])
         response = self.client.get(url)
@@ -243,10 +244,11 @@ class TestAdmin(
 
     def test_radiusbatch_change_contains_pdf_download(self):
         obj = self._create_radius_batch(
+            organization=self.default_org,
             name="test-prefix17",
             strategy="prefix",
             prefix="test-prefix17",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[obj.pk])
         response = self.client.get(url)
@@ -393,7 +395,7 @@ class TestAdmin(
             name="test",
             strategy="prefix",
             prefix="test-prefix4",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         self._test_action_permission(
             path=reverse(f"admin:{self.app_label}_radiusbatch_changelist"),
@@ -426,7 +428,7 @@ class TestAdmin(
         path = self._get_path("static/test_batch.csv")
         csvfile = open(path, "rt")
         data = {
-            "expiration_date": "2019-03-20",
+            "expiration_date": "2099-03-20",
             "strategy": "csv",
             "csvfile": csvfile,
             "name": "test1",
@@ -436,7 +438,7 @@ class TestAdmin(
 
     def _get_prefix_post_data(self):
         data = {
-            "expiration_date": "2019-03-20",
+            "expiration_date": "2099-03-20",
             "strategy": "prefix",
             "prefix": "test-prefix12",
             "number_of_users": 10,

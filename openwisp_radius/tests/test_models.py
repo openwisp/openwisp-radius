@@ -751,6 +751,17 @@ class TestRadiusBatch(BaseTestCase):
     def test_clean_method(self):
         with self.assertRaises(ValidationError):
             self._create_radius_batch()
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_radius_batch(
+                strategy="prefix",
+                prefix="test-prefix16",
+                name="test-past-expiration",
+                expiration_date=timezone.now().date() - timezone.timedelta(days=1),
+            )
+        self.assertEqual(
+            context_manager.exception.message_dict["expiration_date"],
+            ["Expiration date cannot be in the past."],
+        )
         # missing csvfile
         try:
             self._create_radius_batch(strategy="csv", name="test")
@@ -778,6 +789,19 @@ class TestRadiusBatch(BaseTestCase):
         else:
             os.remove(dummy_file)
             self.fail("ValidationError not raised")
+
+    def test_clean_method_allows_unchanged_past_expiration_date(self):
+        expiration_date = timezone.now().date() - timezone.timedelta(days=1)
+        radiusbatch = RadiusBatch.objects.create(
+            organization=self.default_org,
+            name="test-legacy-expiration",
+            strategy="prefix",
+            prefix="test-legacy-exp",
+            expiration_date=expiration_date,
+        )
+
+        radiusbatch.name = "test-legacy-expiration-updated"
+        radiusbatch.full_clean()
 
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):

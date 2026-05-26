@@ -36,11 +36,6 @@ def delete_old_postauth(number_of_days=365):
 
 
 @shared_task
-def deactivate_expired_users():
-    management.call_command("deactivate_expired_users")
-
-
-@shared_task
 def delete_old_radiusbatch_users(
     older_than_months=None,
     older_than_days=app_settings.BATCH_DELETE_EXPIRED,

@@ -245,11 +245,17 @@ else:
 
 TEST_RUNNER = "openwisp_utils.tests.TimeLoggingTestRunner"
 
+CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     "deactivate_expired_users": {
-        "task": "openwisp_radius.tasks.cleanup_stale_radacct",
-        "schedule": crontab(hour=0, minute=0),
+        "task": "openwisp_users.tasks.deactivate_expired_users",
+        "schedule": crontab(hour=0, minute=1),
         "args": None,
+        "relative": True,
+    },
+    "expiration_reminder_email": {
+        "task": "openwisp_users.tasks.expiration_reminder_email",
+        "schedule": crontab(hour=0, minute=1),
         "relative": True,
     },
     "delete_old_radiusbatch_users": {

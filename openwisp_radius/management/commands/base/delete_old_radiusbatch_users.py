@@ -10,7 +10,7 @@ RadiusBatch = load_model("RadiusBatch")
 
 
 class BaseDeleteOldRadiusBatchUsersCommand(BaseCommand):
-    help = "Deactivating users added in batches which have expired"
+    help = "Deletes users added in batches which have expired"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -35,7 +35,15 @@ class BaseDeleteOldRadiusBatchUsersCommand(BaseCommand):
             days = BATCH_DELETE_EXPIRED
         threshold_date = (now() - timedelta(days=days)).date()
         batches = RadiusBatch.objects.filter(expiration_date__lt=threshold_date)
-        for b in batches.iterator():
-            b.delete()
+        for batch in batches.iterator():
+            # Delete only users whose own expiration is older than the threshold,
+            # then remove empty batches that no longer reference any users.
+            expired_users = batch.users.filter(
+                expiration_date__isnull=False,
+                expiration_date__lt=threshold_date,
+            )
+            expired_users.delete()
+            if not batch.users.exists():
+                batch.delete()
         time_period = threshold_date.strftime("%Y-%m-%d %H:%M:%S")
         self.stdout.write(f"Deleted accounts older than {time_period}")
