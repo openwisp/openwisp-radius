@@ -235,7 +235,7 @@ class TestAdmin(
             name="test",
             strategy="prefix",
             prefix="test-prefix4",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[obj.pk])
         response = self.client.get(url)
@@ -248,7 +248,7 @@ class TestAdmin(
             name="test-prefix17",
             strategy="prefix",
             prefix="test-prefix17",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         url = reverse(f"admin:{self.app_label}_radiusbatch_change", args=[obj.pk])
         response = self.client.get(url)
@@ -395,7 +395,7 @@ class TestAdmin(
             name="test",
             strategy="prefix",
             prefix="test-prefix4",
-            expiration_date="1998-01-28",
+            expiration_date="2098-01-28",
         )
         self._test_action_permission(
             path=reverse(f"admin:{self.app_label}_radiusbatch_changelist"),
