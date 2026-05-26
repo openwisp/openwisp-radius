@@ -86,8 +86,8 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |
-          coverage run runtests.py --parallel > /dev/null 2>&1 || ./runtests.py --parallel
-          SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py --parallel
+          coverage run runtests.py --parallel > /dev/null 2>&1 || ./runtests.py
+          SAMPLE_APP=1 coverage run ./runtests.py --parallel > /dev/null 2>&1 || SAMPLE_APP=1 ./runtests.py
           MONITORING_INTEGRATION=1 coverage run runtests.py
           coverage combine
           coverage xml
