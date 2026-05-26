@@ -74,8 +74,6 @@ jobs:
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
-          # TODO: Remove when openwisp-users PR is merged
-          pip install --force-reinstall --no-cache-dir --no-deps https://github.com/openwisp/openwisp-users/tarball/issues/499-user-expiration
           pip install ${{ matrix.django-version }}
 
       - name: Start InfluxDB and Redis container
