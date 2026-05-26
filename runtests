@@ -19,7 +19,7 @@ MONITORING_INTEGRATION=1 coverage run runtests.py \
   --exclude-tag=no_parallel \
   --exclude-tag=selenium_tests
 
-# Tests which cannot be run in parallel mode (eg: selenium tets)
+# Tests which cannot be run in parallel mode (eg: selenium tests)
 coverage run runtests.py --tag=no_parallel
 
 coverage combine
