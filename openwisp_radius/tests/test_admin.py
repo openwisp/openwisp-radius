@@ -231,6 +231,7 @@ class TestAdmin(
 
     def test_radiusbatch_change(self):
         obj = self._create_radius_batch(
+            organization=self.default_org,
             name="test",
             strategy="prefix",
             prefix="test-prefix4",
@@ -243,6 +244,7 @@ class TestAdmin(
 
     def test_radiusbatch_change_contains_pdf_download(self):
         obj = self._create_radius_batch(
+            organization=self.default_org,
             name="test-prefix17",
             strategy="prefix",
             prefix="test-prefix17",

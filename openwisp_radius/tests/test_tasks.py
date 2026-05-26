@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail, management
 from django.test.utils import override_settings
 from django.utils.timezone import now
+from freezegun import freeze_time
 
 from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -34,13 +35,14 @@ class TestTasks(FileMixin, BaseTestCase):
         app.autodiscover_tasks()
         cls.celery_worker = start_worker(app)
 
+    @freeze_time("1998-01-28")
     def _get_user_from_radius_batch(self, **kwargs):
         reader = [["sample", "admin", "user@openwisp.com", "SampleName", "Lastname"]]
         options = dict(
             name="test",
             strategy="csv",
             csvfile=self._get_csvfile(reader),
-            expiration_date="1998-01-28",
+            expiration_date=now().date(),
         )
         options.update(kwargs)
         batch = self._create_radius_batch(**options)
