@@ -1,5 +1,6 @@
 import importlib
 import json
+import uuid
 from datetime import timedelta
 from unittest.mock import MagicMock
 
@@ -14,7 +15,9 @@ from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests import capture_any_output
 
 from ..migrations import (
-    _get_first_membership_organization_id,
+    _filter_valid_organization_memberships,
+    _filter_valid_registered_users,
+    _get_first_valid_membership_organization_id,
     migrate_registered_users_multitenant_reverse,
 )
 from ..utils import load_model
@@ -361,12 +364,183 @@ class TestMigrationRegisteredUserMultitenancy(BaseTestCase):
             1,
         )
 
+    def test_registered_user_filter_skips_rows_with_missing_user(self):
+        valid_suffix = uuid.uuid4().hex[:8]
+        orphan_suffix = uuid.uuid4().hex[:8]
+        valid_user = self._create_user(
+            username=f"valid-user-{valid_suffix}",
+            email=f"valid-user-{valid_suffix}@example.com",
+        )
+        orphan_user = self._create_user(
+            username=f"orphan-user-{orphan_suffix}",
+            email=f"orphan-user-{orphan_suffix}@example.com",
+        )
+        valid_registered_user = RegisteredUser.objects.create(
+            user=valid_user,
+            organization=self.default_org,
+            method="email",
+            is_verified=True,
+        )
+        orphan_registered_user = RegisteredUser.objects.create(
+            user=orphan_user,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        # Simulate a dangling user reference by setting the user_id to
+        #  a non-existent value
+        with connection.constraint_checks_disabled():
+            missing_user_id = uuid.uuid4()
+            registered_user_pk = RegisteredUser._meta.pk.get_db_prep_value(
+                orphan_registered_user.pk,
+                connection,
+            )
+            missing_user_db_value = RegisteredUser._meta.get_field(
+                "user"
+            ).target_field.get_db_prep_value(
+                missing_user_id,
+                connection,
+            )
+            with connection.cursor() as cursor:
+                # We have to use raw SQL here because the ORM would not allow
+                # us to set a non-existent user_id
+                cursor.execute(
+                    f'UPDATE "{RegisteredUser._meta.db_table}" '
+                    f'SET "{RegisteredUser._meta.get_field("user").column}" = %s '
+                    f'WHERE "{RegisteredUser._meta.pk.column}" = %s',
+                    [missing_user_db_value, registered_user_pk],
+                )
+            self.assertEqual(
+                RegisteredUser.objects.get(pk=orphan_registered_user.pk).user_id,
+                missing_user_id,
+            )
+
+            filtered_ids = list(
+                _filter_valid_registered_users(
+                    RegisteredUser.objects.order_by("pk"),
+                    apps,
+                ).values_list("pk", flat=True)
+            )
+            self.assertEqual(filtered_ids, [valid_registered_user.pk])
+            RegisteredUser.objects.filter(pk=orphan_registered_user.pk).delete()
+
 
 class TestPhoneTokenOrganizationPopulateResolution(BaseTestCase):
+    def _delete_org_user_row(self, org_user):
+        org_user_pk = OrganizationUser._meta.pk.get_db_prep_value(
+            org_user.pk,
+            connection,
+        )
+        with connection.cursor() as cursor:
+            # We have to use raw SQL here because the ORM would not allow
+            # us to delete the row since it would violate foreign key constraints
+            cursor.execute(
+                f'DELETE FROM "{OrganizationUser._meta.db_table}" '
+                f'WHERE "{OrganizationUser._meta.pk.column}" = %s',
+                [org_user_pk],
+            )
+
     def _set_org_user_created(self, org_user, created):
         OrganizationUser.objects.filter(pk=org_user.pk).update(created=created)
         org_user.refresh_from_db(fields=["created"])
         return org_user
+
+    def _set_org_user_user_id(self, org_user, user_id):
+        org_user_pk = OrganizationUser._meta.pk.get_db_prep_value(
+            org_user.pk,
+            connection,
+        )
+        user_db_value = OrganizationUser._meta.get_field(
+            "user"
+        ).target_field.get_db_prep_value(
+            user_id,
+            connection,
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'UPDATE "{OrganizationUser._meta.db_table}" '
+                f'SET "{OrganizationUser._meta.get_field("user").column}" = %s '
+                f'WHERE "{OrganizationUser._meta.pk.column}" = %s',
+                [user_db_value, org_user_pk],
+            )
+
+    def _set_org_user_organization_id(self, org_user, organization_id):
+        org_user_pk = OrganizationUser._meta.pk.get_db_prep_value(
+            org_user.pk,
+            connection,
+        )
+        organization_db_value = OrganizationUser._meta.get_field(
+            "organization"
+        ).target_field.get_db_prep_value(
+            organization_id,
+            connection,
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'UPDATE "{OrganizationUser._meta.db_table}" '
+                f'SET "{OrganizationUser._meta.get_field("organization").column}" = %s '
+                f'WHERE "{OrganizationUser._meta.pk.column}" = %s',
+                [organization_db_value, org_user_pk],
+            )
+
+    def test_filter_memberships_skips_rows_with_missing_organization(self):
+        user = self._create_user(username="membership-filter-user")
+        org1 = self.default_org
+        org2 = self._create_org(
+            name="membership-filter-org2", slug="membership-filter-org2"
+        )
+        invalid_membership = OrganizationUser.objects.create(
+            user=user, organization=org1
+        )
+        valid_membership = OrganizationUser.objects.create(user=user, organization=org2)
+
+        with connection.constraint_checks_disabled():
+            self._set_org_user_organization_id(invalid_membership, uuid.uuid4())
+            organization_ids = list(
+                _filter_valid_organization_memberships(
+                    OrganizationUser.objects.filter(user=user).order_by(
+                        "created", "pk"
+                    ),
+                    apps,
+                ).values_list("organization_id", flat=True)
+            )
+            self.assertEqual(organization_ids, [valid_membership.organization_id])
+            self._delete_org_user_row(invalid_membership)
+
+    def test_filter_memberships_skips_rows_with_missing_user(self):
+        valid_suffix = uuid.uuid4().hex[:8]
+        broken_suffix = uuid.uuid4().hex[:8]
+        valid_user = self._create_user(
+            username=f"membership-filter-valid-user-{valid_suffix}",
+            email=f"membership-filter-valid-user-{valid_suffix}@example.com",
+        )
+        broken_user = self._create_user(
+            username=f"membership-filter-broken-user-{broken_suffix}",
+            email=f"membership-filter-broken-user-{broken_suffix}@example.com",
+        )
+        org1 = self.default_org
+        org2 = self._create_org(
+            name="membership-filter-user-org2", slug="membership-filter-user-org2"
+        )
+        invalid_membership = OrganizationUser.objects.create(
+            user=broken_user, organization=org1
+        )
+        valid_membership = OrganizationUser.objects.create(
+            user=valid_user, organization=org2
+        )
+
+        with connection.constraint_checks_disabled():
+            self._set_org_user_user_id(invalid_membership, uuid.uuid4())
+            membership_ids = list(
+                _filter_valid_organization_memberships(
+                    OrganizationUser.objects.filter(
+                        pk__in=[invalid_membership.pk, valid_membership.pk]
+                    ).order_by("created", "pk"),
+                    apps,
+                ).values_list("pk", flat=True)
+            )
+            self.assertEqual(membership_ids, [valid_membership.pk])
+            self._delete_org_user_row(invalid_membership)
 
     def test_get_first_membership_returns_earliest_membership(self):
         user = self._create_user(username="phone-membership-user")
@@ -379,17 +553,61 @@ class TestPhoneTokenOrganizationPopulateResolution(BaseTestCase):
         base_time = timezone.now()
         self._set_org_user_created(org1_user, base_time + timedelta(days=1))
         self._set_org_user_created(org2_user, base_time)
-        organization_id = _get_first_membership_organization_id(
+        organization_id = _get_first_valid_membership_organization_id(
             user.pk,
             OrganizationUser,
+            apps,
         )
         self.assertEqual(organization_id, org2.pk)
 
+    def test_get_first_membership_skips_missing_organization(self):
+        user = self._create_user(username="phone-membership-dangling-user")
+        org1 = self.default_org
+        org2 = self._create_org(
+            name="phone-membership-valid-org", slug="phone-membership-valid-org"
+        )
+        invalid_membership = OrganizationUser.objects.create(
+            user=user, organization=org1
+        )
+        valid_membership = OrganizationUser.objects.create(user=user, organization=org2)
+        base_time = timezone.now()
+        self._set_org_user_created(invalid_membership, base_time)
+        self._set_org_user_created(valid_membership, base_time + timedelta(days=1))
+
+        with connection.constraint_checks_disabled():
+            self._set_org_user_organization_id(invalid_membership, uuid.uuid4())
+            organization_id = _get_first_valid_membership_organization_id(
+                user.pk,
+                OrganizationUser,
+                apps,
+            )
+            self.assertEqual(organization_id, valid_membership.organization_id)
+            self._delete_org_user_row(invalid_membership)
+
+    def test_get_first_membership_returns_none_for_missing_user_membership(self):
+        user = self._create_user(username="phone-membership-missing-user")
+        membership = OrganizationUser.objects.create(
+            user=user,
+            organization=self.default_org,
+        )
+
+        with connection.constraint_checks_disabled():
+            missing_user_id = uuid.uuid4()
+            self._set_org_user_user_id(membership, missing_user_id)
+            organization_id = _get_first_valid_membership_organization_id(
+                missing_user_id,
+                OrganizationUser,
+                apps,
+            )
+            self.assertEqual(organization_id, None)
+            self._delete_org_user_row(membership)
+
     def test_get_first_membership_returns_none_without_membership(self):
         user = self._create_user(username="phone-unresolved-user")
-        organization_id = _get_first_membership_organization_id(
+        organization_id = _get_first_valid_membership_organization_id(
             user.pk,
             OrganizationUser,
+            apps,
         )
         self.assertEqual(organization_id, None)
 
