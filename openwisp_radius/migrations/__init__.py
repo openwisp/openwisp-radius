@@ -4,7 +4,7 @@ import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
-from django.db.models import Case, IntegerField, Prefetch, Value, When
+from django.db.models import Case, Exists, IntegerField, OuterRef, Prefetch, Value, When
 
 from ..utils import create_default_groups
 
@@ -40,6 +40,39 @@ def _registered_user_extra_kwargs(registered_user, extra_fields=()):
     }
 
 
+def _filter_valid_registered_users(queryset, apps):
+    """
+    Return RegisteredUser rows whose related user still exists.
+
+    It can happen that database can contain dangling user references. The copy helpers
+    call this before bulk inserts so later foreign-key checks do not fail.
+    """
+    User = apps.get_model(settings.AUTH_USER_MODEL)
+    existing_user = User.objects.filter(pk=OuterRef("user_id"))
+    return queryset.annotate(user_exists=Exists(existing_user)).filter(user_exists=True)
+
+
+def _filter_valid_organization_memberships(queryset, apps):
+    """
+    Return OrganizationUser rows whose user and organization still exist.
+
+    The multitenant RegisteredUser migration and the PhoneToken backfill both
+    reuse OrganizationUser foreign keys. Filtering dangling memberships here
+    prevents later inserts and updates from writing broken references.
+    """
+    User = apps.get_model(settings.AUTH_USER_MODEL)
+    Organization = get_swapped_model(apps, "openwisp_users", "Organization")
+    existing_user = User.objects.filter(pk=OuterRef("user_id"))
+    existing_organization = Organization.objects.filter(pk=OuterRef("organization_id"))
+    return queryset.annotate(
+        user_exists=Exists(existing_user),
+        organization_exists=Exists(existing_organization),
+    ).filter(
+        user_exists=True,
+        organization_exists=True,
+    )
+
+
 def _registered_user_method_priority_case():
     # Strong methods (anything that is not '' or 'email') must rank above the
     # weak fallbacks so rollback restores the strongest verification state.
@@ -65,7 +98,10 @@ def copy_registered_users_ctcr_forward(
         return
 
     new_objects = []
-    queryset = RegisteredUser.objects.order_by("user_id")
+    queryset = _filter_valid_registered_users(
+        RegisteredUser.objects,
+        apps,
+    ).order_by("user_id")
     for registered_user in queryset.iterator(chunk_size=BATCH_SIZE):
         copied = RegisteredUserNew(
             id=uuid.uuid4(),
@@ -100,9 +136,14 @@ def copy_registered_users_ctcr_reverse(
     # methods (anything that is not '' or 'email') sort before weaker ones.
     # Lexical ordering of 'method' would place '' first, picking the weakest.
     method_priority = _registered_user_method_priority_case()
-    queryset = RegisteredUserNew.objects.annotate(
-        method_priority=method_priority
-    ).order_by("user_id", "-is_verified", "-method_priority", "-modified")
+    queryset = (
+        _filter_valid_registered_users(
+            RegisteredUserNew.objects,
+            apps,
+        )
+        .annotate(method_priority=method_priority)
+        .order_by("user_id", "-is_verified", "-method_priority", "-modified")
+    )
     for registered_user in queryset.iterator(chunk_size=BATCH_SIZE):
         if registered_user.user_id == previous_user_id:
             continue
@@ -155,6 +196,15 @@ def migrate_registered_users_multitenant_forward(
         "openwisp_users",
         "OrganizationUser",
     )
+    # Ignore memberships that would copy broken foreign keys into the new
+    # multitenant RegisteredUser rows.
+    valid_memberships = _filter_valid_organization_memberships(
+        OrganizationUser.objects.only(
+            "user_id",
+            "organization_id",
+        ),
+        apps,
+    )
 
     queryset = User.objects.prefetch_related(
         Prefetch(
@@ -174,10 +224,7 @@ def migrate_registered_users_multitenant_forward(
         ),
         Prefetch(
             "openwisp_users_organizationuser",
-            queryset=OrganizationUser.objects.only(
-                "user_id",
-                "organization_id",
-            ),
+            queryset=valid_memberships,
             to_attr="organization_memberships",
         ),
     ).order_by("id")
@@ -429,15 +476,20 @@ def populate_phonetoken_phone_number(apps, schema_editor):
         phone_token.save(update_fields=["phone_number"])
 
 
-def _get_first_membership_organization_id(
+def _get_first_valid_membership_organization_id(
     user_id,
     OrganizationUser,
+    apps,
 ):
-    return (
+    """Return the first organization id from a user's valid memberships."""
+    queryset = _filter_valid_organization_memberships(
         OrganizationUser.objects.filter(
             user_id=user_id,
-        )
-        .order_by("created", "pk")
+        ),
+        apps,
+    )
+    return (
+        queryset.order_by("created", "pk")
         .values_list("organization_id", flat=True)
         .first()
     )
@@ -480,9 +532,10 @@ def populate_phonetoken_organization(
         .distinct()
     )
     for user_id in user_ids.iterator(chunk_size=BATCH_SIZE):
-        organization_id = _get_first_membership_organization_id(
+        organization_id = _get_first_valid_membership_organization_id(
             user_id,
             OrganizationUser,
+            apps,
         )
         if organization_id is None:
             continue
