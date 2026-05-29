@@ -37,7 +37,6 @@ from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
     get_object_or_404,
 )
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -57,6 +56,7 @@ from openwisp_users.api.mixins import (
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
+from openwisp_utils.api.pagination import OpenWispPagination
 
 from .. import settings as app_settings
 from ..exceptions import (
@@ -950,12 +950,6 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
         model = RadiusGroup
 
 
-class RadiusGroupPaginator(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -980,7 +974,8 @@ class RadiusGroupListView(
     filterset_class = RadiusGroupFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["name"]
-    pagination_class = RadiusGroupPaginator
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
 
 
 radius_group_list = RadiusGroupListView.as_view()
@@ -1101,7 +1096,8 @@ class RadiusUserGroupFilter(OrganizationManagedFilter, filters.FilterSet):
     ),
 )
 class RadiusUserGroupListCreateView(BaseRadiusUserGroupView, ListCreateAPIView):
-    pagination_class = RadiusGroupPaginator
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
     filter_backends = [DjangoFilterBackend]
     filterset_class = RadiusUserGroupFilter
 
