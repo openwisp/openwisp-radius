@@ -17,6 +17,8 @@ Core code lives in `openwisp_radius/`:
 - Use `.github/workflows/ci.yml` for CI-tested dependencies, QA/test commands, env vars, and supported Python/Django versions.
 - Use GitHub issue/PR templates when asked to open issues or PRs.
 
+Follow the DRY principle: do not duplicate information or code across files.
+
 If instructions conflict, repository config and CI workflows win first, official docs next, and this file is supplemental.
 
 ## Development Notes
@@ -24,6 +26,7 @@ If instructions conflict, repository config and CI workflows win first, official
 - Keep changes focused. Avoid unrelated refactors and formatting churn.
 - Preserve public APIs, migrations, swappable models, FreeRADIUS schema behavior, private storage behavior, and integration points unless explicitly required.
 - Mark user-facing strings for translation with Django i18n helpers in Django code.
+- Place imports at the top of the file. Only defer imports when necessary (e.g., Django model imports inside functions or methods where the app registry is not yet ready).
 - Avoid unnecessary blank lines inside function and method bodies.
 - Update docs when behavior, settings, public APIs, setup steps, or supported versions change.
 
