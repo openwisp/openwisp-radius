@@ -803,6 +803,48 @@ Param        Description
 phone_number string
 ============ ===========
 
+Update user registration method
++++++++++++++++++++++++++++++++
+
+**Requires the user auth token (Bearer Token)**.
+
+Allows users to update their registered user method for an organization.
+The method can only be updated when it is currently set to
+``pending_verification``. Once updated, it cannot be changed again via
+this endpoint.
+
+This endpoint is used during cross-organization login when a user
+authenticates to a new organization. The user must complete verification
+for that organization before they can create account with the new
+organization.
+
+.. code-block:: text
+
+    /api/v1/radius/organization/<organization-slug>/account/registration-method/
+
+Responds only to **POST**.
+
+Parameters:
+
+====== ===========
+Param  Description
+====== ===========
+method string (\*)
+====== ===========
+
+(\*) ``method`` must be one of the available
+:ref:`registration/verification methods
+<openwisp_radius_needs_identity_verification>`, excluding
+``pending_verification``.
+
+**Success Response (200 OK)**:
+
+.. code-block:: json
+
+    {
+        "method": "mobile_phone"
+    }
+
 .. _radius_batch_user_creation:
 
 Batch user creation
@@ -905,8 +947,9 @@ Pagination
 """"""""""
 
 Pagination is provided using page number pagination, the default page size
-is 20, which can be overridden using the ``page_size`` parameter (maximum
-100).
+is 20, which can be overridden using the ``page_size`` parameter, up to
+:ref:`OPENWISP_API_MAX_PAGE_SIZE <openwisp_api_max_page_size>` (100 by
+default).
 
 .. code-block:: text
 
@@ -961,3 +1004,92 @@ DELETE
 ^^^^^^
 
 Deletes a RADIUS group identified by its UUID.
+
+RADIUS User Groups
+++++++++++++++++++
+
+.. code-block:: text
+
+    /api/v1/users/user/<user_pk>/radius-group/
+
+GET
+^^^
+
+Returns the list of RADIUS group assignments for the specified user.
+Pagination is provided using page number pagination. The default page size
+is 20 and can be overridden using the ``page_size`` parameter, up to
+:ref:`OPENWISP_API_MAX_PAGE_SIZE <openwisp_api_max_page_size>` (100 by
+default).
+
+.. code-block:: text
+
+    GET /api/v1/users/user/<user_pk>/radius-group/
+
+It supports filtering by organization id and organization slug.
+
+Filters
+"""""""
+
+========================= ============================
+Filter Parameter          Description
+========================= ============================
+group__organization       Filter organizations by id
+group__organization__slug Filter organizations by slug
+========================= ============================
+
+POST
+^^^^
+
+Creates a RADIUS user group assignment for the specified user.
+
+======== ==============================================
+Param    Description
+======== ==============================================
+group    UUID of the RADIUS group to assign (required)
+priority Priority of the assignment (optional, integer)
+======== ==============================================
+
+.. note::
+
+    The provided ``group`` must belong to the same organization as the
+    user; attempting to assign a group from another organization will
+    return a ``400`` error with ``does_not_exist`` for the ``group``
+    field.
+
+.. code-block:: text
+
+    /api/v1/users/user/<user_pk>/radius-group/<uuid>/
+
+GET (detail)
+^^^^^^^^^^^^
+
+Returns a single RADIUS user group assignment by its UUID.
+
+PUT
+^^^
+
+Fully updates the RADIUS user group assignment.
+
+======== ==============================================
+Param    Description
+======== ==============================================
+group    UUID of the RADIUS group to assign (optional)
+priority Priority of the assignment (optional, integer)
+======== ==============================================
+
+PATCH
+^^^^^
+
+Partially updates a RADIUS user group assignment.
+
+======== ==============================================
+Param    Description
+======== ==============================================
+group    UUID of the RADIUS group to assign (optional)
+priority Priority of the assignment (optional, integer)
+======== ==============================================
+
+DELETE
+^^^^^^
+
+Deletes the RADIUS user group assignment identified by the UUID.

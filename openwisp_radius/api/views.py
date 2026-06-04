@@ -11,8 +11,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -35,8 +35,8 @@ from rest_framework.generics import (
     ListCreateAPIView,
     RetrieveAPIView,
     RetrieveUpdateDestroyAPIView,
+    get_object_or_404,
 )
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (
     DjangoModelPermissions,
     IsAdminUser,
@@ -48,10 +48,15 @@ from rest_framework.throttling import BaseThrottle  # get_ident method
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
 from openwisp_users.api.filters import OrganizationManagedFilter
-from openwisp_users.api.mixins import FilterByOrganizationManaged, ProtectedAPIMixin
+from openwisp_users.api.mixins import (
+    FilterByOrganizationManaged,
+    FilterByParentManaged,
+    ProtectedAPIMixin,
+)
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.backends import UsersAuthenticationBackend
+from openwisp_utils.api.pagination import OpenWispPagination
 
 from .. import settings as app_settings
 from ..exceptions import (
@@ -69,6 +74,8 @@ from .serializers import (
     RadiusAccountingSerializer,
     RadiusBatchSerializer,
     RadiusGroupSerializer,
+    RadiusUserGroupSerializer,
+    UpdateRegisteredUserMethodSerializer,
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
@@ -87,6 +94,7 @@ User = get_user_model()
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 PhoneToken = load_model("PhoneToken")
+RegisteredUser = load_model("RegisteredUser")
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusToken = load_model("RadiusToken")
 RadiusBatch = load_model("RadiusBatch")
@@ -310,13 +318,13 @@ class ObtainAuthTokenView(
         self.update_user_details(user)
         context = {"view": self, "request": request}
         serializer = self.serializer_class(instance=token, context=context)
-        response = RadiusUserSerializer(user).data
+        response = RadiusUserSerializer(user, context=context).data
         response.update(serializer.data)
         status_code = 200 if user.is_active else 401
         # If identity verification is required, check if user is verified
         if self._needs_identity_verification(
             {"slug": kwargs["slug"]}
-        ) and not self.is_identity_verified_strong(user):
+        ) and not self.is_identity_verified_strong(user, self.organization):
             status_code = 401
         return Response(response, status=status_code)
 
@@ -330,24 +338,23 @@ class ObtainAuthTokenView(
             if get_organization_radius_settings(
                 self.organization, "registration_enabled"
             ):
-                if self._needs_identity_verification(
-                    org=self.organization
-                ) and not self.is_identity_verified_strong(user):
-                    raise PermissionDenied
                 try:
-                    org_user = OrganizationUser(
-                        user=user, organization=self.organization
-                    )
-                    org_user.full_clean()
-                    org_user.save()
+                    with transaction.atomic():
+                        OrganizationUser.objects.get_or_create(
+                            user=user, organization=self.organization
+                        )
+                        RegisteredUser.get_or_create_for_user_and_org(
+                            user=user,
+                            organization=self.organization,
+                            defaults={"method": "pending_verification"},
+                        )
                 except ValidationError as error:
                     raise serializers.ValidationError(
                         {"non_field_errors": error.message_dict.pop("__all__")}
                     )
             else:
                 message = _(
-                    "{organization} does not allow self registration "
-                    "of new accounts."
+                    "{organization} does not allow self registration of new accounts."
                 ).format(organization=self.organization.name)
                 raise PermissionDenied(message)
 
@@ -378,9 +385,15 @@ class ValidateAuthTokenView(
         response = {"response_code": "BLANK_OR_INVALID_TOKEN"}
         if request_token:
             try:
-                token = UserToken.objects.select_related(
-                    "user", "user__registered_user"
-                ).get(key=request_token)
+                token = (
+                    UserToken.objects.select_related(
+                        "user",
+                    )
+                    .prefetch_related(
+                        "user__registered_users",
+                    )
+                    .get(key=request_token)
+                )
             except UserToken.DoesNotExist:
                 pass
             else:
@@ -390,7 +403,7 @@ class ValidateAuthTokenView(
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)
-                if not self.is_identity_verified_strong(user):
+                if not self.is_identity_verified_strong(user, self.organization):
                     phone_token = (
                         PhoneToken.objects.filter(user=user)
                         .order_by("-created")
@@ -399,8 +412,8 @@ class ValidateAuthTokenView(
                     user.phone_number = (
                         phone_token.phone_number if phone_token else user.phone_number
                     )
-                response = RadiusUserSerializer(user).data
                 context = {"view": self, "request": request}
+                response = RadiusUserSerializer(user, context=context).data
                 token_data = rest_auth_settings.api_settings.TOKEN_SERIALIZER(
                     token, context=context
                 ).data
@@ -627,13 +640,14 @@ class CreatePhoneTokenView(
         phone_number = request.data.get("phone_number", request.user.phone_number)
         phone_token = PhoneToken(
             user=request.user,
+            organization=self.organization,
             ip=self.get_ident(request),
             phone_number=phone_number,
         )
         try:
             phone_token.full_clean()
             if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified()
+                phone_token._validate_already_verified(organization=self.organization)
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
@@ -658,6 +672,7 @@ class CreatePhoneTokenView(
         last_phone_token = (
             PhoneToken.objects.filter(
                 user=self.request.user,
+                organization=self.organization,
                 phone_number=phone_number,
                 created__gt=datetime_now - timezone.timedelta(seconds=cooldown),
             )
@@ -700,6 +715,7 @@ class GetPhoneTokenStatusView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         is_active = PhoneToken.objects.filter(
             user=request.user,
+            organization=self.organization,
             phone_number=user.phone_number,
             valid_until__gte=timezone.now(),
             verified=False,
@@ -736,21 +752,45 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_token = PhoneToken.objects.filter(user=user).order_by("-created").first()
+        phone_token = (
+            PhoneToken.objects.filter(user=user, organization=self.organization)
+            .order_by("-created")
+            .first()
+        )
         if not phone_token:
             return self._error_response(
                 _("No verification code found in the system for this user.")
             )
         try:
-            is_valid = phone_token.is_valid(serializer.data["code"])
+            is_valid = phone_token.is_valid(
+                serializer.data["code"], organization=self.organization
+            )
         except PhoneTokenException as e:
             return self._error_response(str(e))
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
-            user.registered_user.is_verified = True
-            user.registered_user.method = "mobile_phone"
-            user.is_active = True
+            old_phone_number = str(user.phone_number) if user.phone_number else None
+            phone_number_changed = old_phone_number and old_phone_number != str(
+                phone_token.phone_number
+            )
+            if phone_number_changed:
+                # The shipped registration methods only tie identity verification
+                # to the stored phone number for mobile_phone entries.
+                RegisteredUser.objects.filter(
+                    user=user,
+                    method="mobile_phone",
+                ).exclude(organization=self.organization,).update(is_verified=False)
+            reg_user, __ = RegisteredUser.get_or_create_for_user_and_org(
+                user=user,
+                organization=self.organization,
+                defaults={
+                    "is_verified": True,
+                    "method": "mobile_phone",
+                },
+            )
+            reg_user.is_verified = True
+            reg_user.method = "mobile_phone"
             # Update username if phone_number is used as username
             if user.username == user.phone_number:
                 user.username = phone_token.phone_number
@@ -758,9 +798,14 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
             # we can write it to the user field
             user.phone_number = phone_token.phone_number
             user.save()
-            user.registered_user.save()
-            # delete any radius token cache key if present
-            cache.delete(f"rt-{phone_token.phone_number}")
+            reg_user.save()
+            # Delete any cached radius token for either the previous or current
+            # phone number so callers cannot keep using stale cached entries.
+            cache_keys = {f"rt-{phone_token.phone_number}"}
+            if old_phone_number:
+                cache_keys.add(f"rt-{old_phone_number}")
+            for cache_key in cache_keys:
+                cache.delete(cache_key)
             return Response(None, status=200)
 
 
@@ -806,6 +851,51 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
 
 
 change_phone_number = ChangePhoneNumberView.as_view()
+
+
+class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UpdateRegisteredUserMethodSerializer
+
+    @swagger_auto_schema(
+        operation_description=("""
+            **Requires the user auth token (Bearer Token).**
+            Allows users to update their organization-specific registration
+            method.
+            The method can only be updated when it is currently
+            set to 'pending_verification'.
+            Once updated, it cannot be changed again via this endpoint.
+            """),
+        responses={
+            200: "Method updated successfully",
+            400: (
+                "Invalid request (method is not 'pending_verification' "
+                "or invalid method value)"
+            ),
+            401: "Authentication required",
+            404: "RegisteredUser not found for this user and organization",
+        },
+    )
+    def post(self, request, slug):
+        user = request.user
+        self.validate_membership(user)
+        reg_user = get_object_or_404(
+            RegisteredUser,
+            user_id=user.pk,
+            organization=self.organization,
+        )
+        serializer = self.get_serializer(
+            instance=reg_user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"method": serializer.instance.method}, status=status.HTTP_200_OK
+        )
+
+
+update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
 
 
 class RadiusAccountingFilter(AccountingFilter):
@@ -860,12 +950,6 @@ class RadiusGroupFilter(OrganizationManagedFilter, filters.FilterSet):
         model = RadiusGroup
 
 
-class RadiusGroupPaginator(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -890,7 +974,8 @@ class RadiusGroupListView(
     filterset_class = RadiusGroupFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["name"]
-    pagination_class = RadiusGroupPaginator
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
 
 
 radius_group_list = RadiusGroupListView.as_view()
@@ -936,3 +1021,124 @@ class RadiusGroupDetailView(
 
 
 radius_group_detail = RadiusGroupDetailView.as_view()
+
+
+class BaseRadiusUserGroupView(ProtectedAPIMixin, FilterByParentManaged):
+    """
+    Base view for RadiusUserGroup management.
+    Provides user parent filtering and queryset logic.
+    """
+
+    serializer_class = RadiusUserGroupSerializer
+    queryset = RadiusUserGroup.objects.select_related("group", "user").order_by(
+        "-created"
+    )
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return self.queryset.none()
+        qs = (
+            super()
+            .get_queryset()
+            .filter(
+                user_id=self.kwargs["user_pk"],
+            )
+        )
+        if self.request.user.is_superuser:
+            return qs
+        return qs.filter(
+            group__organization__in=self.request.user.organizations_managed
+        )
+
+    def get_parent_queryset(self):
+        return User.objects.filter(pk=self.kwargs["user_pk"])
+
+    def get_organization_queryset(self, qs):
+        """Filter users by organizations the request user manages."""
+        orgs = self.request.user.organizations_managed
+        app_label = User._meta.app_config.label
+        filter_kwargs = {
+            # exclude superusers
+            "is_superuser": False,
+            # ensure user is member of the org
+            f"{app_label}_organizationuser__organization_id__in": orgs,
+        }
+        return qs.filter(**filter_kwargs).distinct()
+
+
+class RadiusUserGroupFilter(OrganizationManagedFilter, filters.FilterSet):
+    """
+    Filter RADIUS groups by organizations managed by the user.
+    """
+
+    # Disable parent's organization_slug; use group__organization__slug instead
+    organization_slug = None
+
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusUserGroup
+        fields = ["group__organization", "group__organization__slug"]
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns the list of RADIUS user groups for a specific user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Creates a new RADIUS user group assignment for the user.
+        """,
+    ),
+)
+class RadiusUserGroupListCreateView(BaseRadiusUserGroupView, ListCreateAPIView):
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RadiusUserGroupFilter
+
+
+radius_user_group_list = RadiusUserGroupListCreateView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a single RADIUS user group by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="put",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Partially updates a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a RADIUS user group identified by its UUID.
+        """,
+    ),
+)
+class RadiusUserGroupDetailView(BaseRadiusUserGroupView, RetrieveUpdateDestroyAPIView):
+    organization_field = "group__organization"
+
+
+radius_user_group_detail = RadiusUserGroupDetailView.as_view()

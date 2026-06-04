@@ -67,28 +67,11 @@ hours instead of days:
 
     ./manage.py cleanup_stale_radacct --number_of_hours=4
 
-``deactivate_expired_users``
-----------------------------
-
-.. note::
-
-    :doc:`Find out more about this feature in its dedicated page
-    <generating_users>`
-
-This command deactivates expired user accounts which were created with
-batch operation temporarily (e.g.: for en event) and have an expiration
-date set.
-
-.. code-block:: shell
-
-    ./manage.py deactivate_expired_users
-
 ``delete_old_radiusbatch_users``
 --------------------------------
 
 This command deletes users created using batch operation that have expired
-(and should have been deactivated by ``deactivate_expired_users``) for
-more than the specified ``<duration_in_days>``.
+for more than the specified ``<duration_in_days>``.
 
 .. code-block:: shell
 
@@ -128,6 +111,10 @@ Following is an example:
 .. code-block:: shell
 
     ./manage.py delete_unverified_users --older-than-days 1 --exclude-methods mobile_phone,email
+
+If a user has multiple ``RegisteredUser`` rows across organizations, the
+command keeps that user when **any** related row uses one of the excluded
+methods.
 
 ``upgrade_from_django_freeradius``
 ----------------------------------

@@ -37,6 +37,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         params.pop("last_login", None)
         params.pop("password_updated", None)
         params.pop("birth_date", None)
+        params.pop("expiration_date", None)
         params = self._additional_params_pop(params)
         params.update(self._get_user_edit_form_inline_params(user, org))
         url = reverse(f"admin:{self.app_label}_user_change", args=[user.pk])
@@ -96,11 +97,23 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
     @capture_stdout()
     def test_export_users_command(self):
         temp_file = NamedTemporaryFile(delete=False)
-        user = self._create_org_user().user
-        RegisteredUser.objects.create(
-            user=user, method="mobile_phone", is_verified=False
+        org_user = self._create_org_user()
+        user = org_user.user
+        org2 = self._create_org(name="Test Organization 2")
+        self._create_org_user(organization=org2, user=user)
+        org1_reg_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org_user.organization,
+            method="mobile_phone",
+            is_verified=False,
         )
-        with self.assertNumQueries(1):
+        org2_reg_user = RegisteredUser.objects.create(
+            user=user,
+            organization=org2,
+            method="mobile_phone",
+            is_verified=True,
+        )
+        with self.assertNumQueries(3):
             call_command("export_users", filename=temp_file.name)
 
         with open(temp_file.name, "r") as file:
@@ -108,10 +121,19 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             csv_data = list(csv_reader)
 
         self.assertEqual(len(csv_data), 2)
-        self.assertIn("registered_user.method", csv_data[0])
-        self.assertIn("registered_user.is_verified", csv_data[0])
-        self.assertEqual(csv_data[1][-2], "mobile_phone")
-        self.assertEqual(csv_data[1][-1], "False")
+        self.assertIn(
+            "registered_users (organization_id, method, is_verified)", csv_data[0]
+        )
+        self.assertEqual(
+            csv_data[1][-1],
+            (
+                f"({org1_reg_user.organization_id},{org1_reg_user.method},"
+                f"{org1_reg_user.is_verified})"
+                "\n"
+                f"({org2_reg_user.organization_id},{org2_reg_user.method},"
+                f"{org2_reg_user.is_verified})"
+            ),
+        )
 
     def test_radiususergroup_inline(self):
         """
@@ -132,6 +154,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         params.pop("last_login", None)
         params.pop("password_updated", None)
         params.pop("birth_date", None)
+        params.pop("expiration_date", None)
         params = self._additional_params_pop(params)
         params.update(self._get_user_edit_form_inline_params(user, org))
         params.update(
