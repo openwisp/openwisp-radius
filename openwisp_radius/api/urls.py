@@ -77,6 +77,11 @@ def get_api_urls(api_views=None):
                 api_views.change_phone_number,
                 name="phone_number_change",
             ),
+            path(
+                "radius/organization/<slug:slug>/account/registration-method/",
+                api_views.update_registered_user_registration_method,
+                name="update_registered_user_registration_method",
+            ),
             path("radius/batch/", api_views.batch, name="batch"),
             path(
                 "radius/organization/<slug:slug>/batch/<uuid:pk>/pdf/",

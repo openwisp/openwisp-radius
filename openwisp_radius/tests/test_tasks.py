@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail, management
 from django.test.utils import override_settings
 from django.utils.timezone import now
+from freezegun import freeze_time
 
 from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
@@ -34,13 +35,14 @@ class TestTasks(FileMixin, BaseTestCase):
         app.autodiscover_tasks()
         cls.celery_worker = start_worker(app)
 
-    def _get_expired_user_from_radius_batch(self, **kwargs):
+    @freeze_time("1998-01-28")
+    def _get_user_from_radius_batch(self, **kwargs):
         reader = [["sample", "admin", "user@openwisp.com", "SampleName", "Lastname"]]
         options = dict(
             name="test",
             strategy="csv",
             csvfile=self._get_csvfile(reader),
-            expiration_date="1998-01-28",
+            expiration_date=now().date(),
         )
         options.update(kwargs)
         batch = self._create_radius_batch(**options)
@@ -60,17 +62,8 @@ class TestTasks(FileMixin, BaseTestCase):
         self.assertEqual(session.update_time, session.stop_time)
 
     @capture_stdout()
-    def test_deactivate_expired_users(self):
-        user = self._get_expired_user_from_radius_batch()
-        self.assertTrue(user.is_active)
-        result = tasks.deactivate_expired_users.delay()
-        self.assertTrue(result.successful())
-        user.refresh_from_db()
-        self.assertFalse(user.is_active)
-
-    @capture_stdout()
     def test_delete_old_radiusbatch_users(self):
-        self._get_expired_user_from_radius_batch()
+        self._get_user_from_radius_batch()
         self.assertEqual(User.objects.all().count(), 1)
 
         with self.subTest('Ensure first argument is "older_than_month"'):
@@ -81,7 +74,7 @@ class TestTasks(FileMixin, BaseTestCase):
             self.assertEqual(User.objects.all().count(), 0)
 
         with self.subTest('Test "older_than_days" keyword argument'):
-            self._get_expired_user_from_radius_batch(
+            self._get_user_from_radius_batch(
                 name="test-older-than-days",
                 expiration_date=(now() - timedelta(days=31)),
             )
@@ -91,7 +84,7 @@ class TestTasks(FileMixin, BaseTestCase):
             self.assertEqual(User.objects.all().count(), 0)
 
         with self.subTest("Test with both positional arguments"):
-            self._get_expired_user_from_radius_batch(
+            self._get_user_from_radius_batch(
                 name="test-argument-precedence",
                 expiration_date=(now() - timedelta(days=31)),
             )
@@ -139,9 +132,7 @@ class TestTasks(FileMixin, BaseTestCase):
         management.call_command("batch_add_users", **options)
         User.objects.update(date_joined=now() - timedelta(days=3))
         for user in User.objects.all():
-            user.registered_user.is_verified = False
-            user.registered_user.method = "email"
-            user.registered_user.save(update_fields=["is_verified", "method"])
+            user.registered_users.update(is_verified=False, method="email")
         self.assertEqual(User.objects.count(), 3)
         tasks.delete_unverified_users.delay(older_than_days=2)
         self.assertEqual(User.objects.count(), 0)
@@ -320,19 +311,35 @@ class TestTasks(FileMixin, BaseTestCase):
         User.objects.exclude(id=active_user.id).update(
             last_login=today - timedelta(days=60)
         )
-        RegisteredUser.objects.create(user=admin, is_verified=True)
-        RegisteredUser.objects.create(user=active_user, is_verified=True)
         RegisteredUser.objects.create(
-            user=unspecified_user, method="", is_verified=True
+            user=admin, organization=self.default_org, is_verified=True
         )
         RegisteredUser.objects.create(
-            user=manually_registered_user, method="manual", is_verified=True
+            user=active_user, organization=self.default_org, is_verified=True
         )
         RegisteredUser.objects.create(
-            user=email_registered_user, method="email", is_verified=True
+            user=unspecified_user,
+            organization=self.default_org,
+            method="",
+            is_verified=True,
         )
         RegisteredUser.objects.create(
-            user=mobile_registered_user, method="mobile_phone", is_verified=True
+            user=manually_registered_user,
+            organization=self.default_org,
+            method="manual",
+            is_verified=True,
+        )
+        RegisteredUser.objects.create(
+            user=email_registered_user,
+            organization=self.default_org,
+            method="email",
+            is_verified=True,
+        )
+        RegisteredUser.objects.create(
+            user=mobile_registered_user,
+            organization=self.default_org,
+            method="mobile_phone",
+            is_verified=True,
         )
 
         tasks.unverify_inactive_users.delay()
@@ -342,12 +349,38 @@ class TestTasks(FileMixin, BaseTestCase):
         manually_registered_user.refresh_from_db()
         email_registered_user.refresh_from_db()
         mobile_registered_user.refresh_from_db()
-        self.assertEqual(admin.registered_user.is_verified, True)
-        self.assertEqual(active_user.registered_user.is_verified, True)
-        self.assertEqual(unspecified_user.registered_user.is_verified, True)
-        self.assertEqual(manually_registered_user.registered_user.is_verified, True)
-        self.assertEqual(email_registered_user.registered_user.is_verified, True)
-        self.assertEqual(mobile_registered_user.registered_user.is_verified, False)
+        self.assertEqual(
+            admin.registered_users.get(organization=self.default_org).is_verified,
+            True,
+        )
+        self.assertEqual(
+            active_user.registered_users.get(organization=self.default_org).is_verified,
+            True,
+        )
+        self.assertEqual(
+            unspecified_user.registered_users.get(
+                organization=self.default_org
+            ).is_verified,
+            True,
+        )
+        self.assertEqual(
+            manually_registered_user.registered_users.get(
+                organization=self.default_org
+            ).is_verified,
+            True,
+        )
+        self.assertEqual(
+            email_registered_user.registered_users.get(
+                organization=self.default_org
+            ).is_verified,
+            True,
+        )
+        self.assertEqual(
+            mobile_registered_user.registered_users.get(
+                organization=self.default_org
+            ).is_verified,
+            False,
+        )
 
     @mock.patch.object(app_settings, "DELETE_INACTIVE_USERS", 30)
     def test_delete_inactive_users(self, *args):

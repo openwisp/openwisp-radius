@@ -35,6 +35,18 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "expiration_date",
+                    models.DateField(
+                        blank=True,
+                        help_text=(
+                            "If set, the account will be deactivated after this date"
+                            " passes and the user will no longer be able to log in."
+                        ),
+                        null=True,
+                        verbose_name="expiration date",
+                    ),
+                ),
+                (
                     "is_superuser",
                     models.BooleanField(
                         default=False,
@@ -218,7 +230,11 @@ class Migration(migrations.Migration):
                     models.Index(
                         fields=["id", "email"],
                         name="user_id_email_idx",
-                    )
+                    ),
+                    models.Index(
+                        fields=["is_active", "expiration_date"],
+                        name="user_active_expiry_idx",
+                    ),
                 ],
             },
             managers=[
