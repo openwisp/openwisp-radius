@@ -245,9 +245,6 @@ else:
 
 TEST_RUNNER = "openwisp_utils.tests.TimeLoggingTestRunner"
 
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-SESSION_CACHE_ALIAS = "sessions"
-
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     "deactivate_expired_users": {
@@ -331,47 +328,34 @@ OPENWISP_USERS_AUTH_API = True
 
 ASGI_APPLICATION = "openwisp2.routing.application"
 
-if "--exclude-tag=no_parallel" not in sys.argv:
-    DATABASES["default"]["TEST"] = {
-        "NAME": os.path.join(BASE_DIR, "test_openwisp_radius.db"),
-    }
-
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [f"redis://{redis_host if not TESTING else 'localhost'}/3"]
-        },
-    }
-}
-
 if TESTING:
-    CACHES = {
+    if "--exclude-tag=no_parallel" not in sys.argv:
+        DATABASES["default"]["TEST"] = {
+            "NAME": os.path.join(BASE_DIR, "test_openwisp_radius.db"),
+        }
+    CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "openwisp-radius",
-        },
-        "sessions": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "openwisp-radius-sessions",
-        },
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [f"redis://{redis_host}/3"],
+            },
+        }
     }
 else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [f"redis://{redis_host}/3"]},
+        }
+    }
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://127.0.0.1:6379/0",
+            "LOCATION": f"redis://{redis_host}/0",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             },
-        },
-        "sessions": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://127.0.0.1:6379/1",
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
+        }
     }
 
 if os.environ.get("MONITORING_INTEGRATION", False):
