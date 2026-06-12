@@ -23,7 +23,11 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     help = "Correct Called Station IDs of Radius Sessions"
 
     def _get_raw_management_info(self, host, port, password):
-        with telnetlib.Telnet(host, port, timeout=TELNET_CONNECTION_TIMEOUT) as tn:
+        tn = telnetlib.Telnet(host, port, timeout=TELNET_CONNECTION_TIMEOUT)
+        try:
+            logger.info(
+                f"Established telnet connection to {host}:{port} for OpenVPN status"
+            )
             if password:
                 tn.read_until(b"ENTER PASSWORD:", timeout=TELNET_CONNECTION_TIMEOUT)
                 tn.write(password.encode("ascii") + b"\n")
@@ -36,6 +40,9 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             raw_management_info = tn.read_until(
                 b"END", timeout=TELNET_CONNECTION_TIMEOUT
             )
+        finally:
+            tn.close()
+            logger.info(f"Closed telnet connection to {host}:{port}")
         return raw_management_info
 
     def _get_openvpn_routing_info(self, host, port=7505, password=None):
