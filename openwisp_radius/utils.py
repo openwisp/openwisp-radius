@@ -34,6 +34,13 @@ def load_model(model):
     return swapper.load_model("openwisp_radius", model)
 
 
+def emit_radius_accounting_closed(sessions):
+    from .signals import radius_accounting_closed
+
+    for session in sessions:
+        radius_accounting_closed.send(sender=session.__class__, instance=session)
+
+
 def get_model(apps, model_path):
     app, model = model_path.split(".")
     return apps.get_model(app, model)

@@ -121,7 +121,12 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                 _register_chart_configuration_choice(chart_key, chart_config)
 
     def connect_signal_receivers(self):
+        from openwisp_radius.signals import radius_accounting_closed
+
         from .receivers import post_save_radiusaccounting
+        from .receivers import (
+            radius_accounting_closed as radius_accounting_closed_handler,
+        )
 
         RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 
@@ -129,4 +134,9 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
             post_save_radiusaccounting,
             sender=RadiusAccounting,
             dispatch_uid="post_save_radiusaccounting_radius_acc_metric",
+        )
+        radius_accounting_closed.connect(
+            radius_accounting_closed_handler,
+            sender=RadiusAccounting,
+            dispatch_uid="radius_accounting_closed_radius_acc_metric",
         )

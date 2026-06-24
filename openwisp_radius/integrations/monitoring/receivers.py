@@ -1,11 +1,15 @@
 from django.db import transaction
+from django.utils import timezone
 
 from . import tasks
 
 
-def post_save_radiusaccounting(instance, *args, **kwargs):
+def enqueue_radiusaccounting_metric(instance):
     if instance.stop_time is None:
         return
+    metric_time = instance.stop_time
+    if timezone.is_naive(metric_time):
+        metric_time = timezone.make_aware(metric_time)
     transaction.on_commit(
         lambda: tasks.post_save_radiusaccounting.delay(
             username=instance.username,
@@ -14,5 +18,14 @@ def post_save_radiusaccounting(instance, *args, **kwargs):
             output_octets=instance.output_octets,
             calling_station_id=instance.calling_station_id,
             called_station_id=instance.called_station_id,
+            time=metric_time,
         )
     )
+
+
+def post_save_radiusaccounting(instance, *args, **kwargs):
+    enqueue_radiusaccounting_metric(instance)
+
+
+def radius_accounting_closed(instance, *args, **kwargs):
+    enqueue_radiusaccounting_metric(instance)

@@ -55,6 +55,7 @@ from ..settings import (
 from ..utils import (
     SmsMessage,
     decode_byte_data,
+    emit_radius_accounting_closed,
     find_available_username,
     generate_sms_token,
     get_sms_default_valid_until,
@@ -583,9 +584,15 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             called_station_id=called_station_id,
             stop_time__isnull=True,
         )
-        closed_count = stale_sessions.update(
-            stop_time=now(), terminate_cause="NAS-Reboot"
+        closed_sessions = list(stale_sessions)
+        stop_time = now()
+        for session in closed_sessions:
+            session.stop_time = stop_time
+            session.terminate_cause = "NAS-Reboot"
+        closed_count = cls.objects.bulk_update(
+            closed_sessions, fields=["stop_time", "terminate_cause"]
         )
+        emit_radius_accounting_closed(closed_sessions)
         return closed_count
 
 

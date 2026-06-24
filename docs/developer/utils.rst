@@ -27,6 +27,30 @@ completes successfully, just before the response is returned.
 The ``view`` argument can also be used to access the ``request`` object
 i.e. ``view.request``.
 
+``radius_accounting_closed``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Path**: ``openwisp_radius.signals.radius_accounting_closed``
+
+**Arguments**:
+
+- ``sender``: ``RadiusAccounting`` model class
+- ``instance``: closed ``RadiusAccounting`` instance
+
+This signal is emitted when a ``RadiusAccounting`` session is closed by
+code paths which use bulk updates and therefore bypass Django's
+``post_save`` signal.
+
+Integrations which need to react to closed accounting sessions should
+listen to this signal in addition to ``post_save``. For example, the
+monitoring integration uses this signal to write RADIUS traffic snapshots
+for sessions closed by ``Accounting-On`` packets and automatic
+stale-session cleanup.
+
+When closing multiple sessions with ``bulk_update()``, use
+``openwisp_radius.utils.emit_radius_accounting_closed`` after the database
+update to emit this signal once for each closed session.
+
 .. _radius_captive_portal_mock_views:
 
 Captive portal mock views
