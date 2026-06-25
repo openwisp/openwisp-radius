@@ -233,7 +233,7 @@ OPENWISP_RADIUS_PASSWORD_RESET_URLS = {
 }
 
 if not TESTING:
-    CELERY_BROKER_URL = os.getenv("REDIS_URL", f"redis://{redis_host}/1")
+    CELERY_BROKER_URL = os.getenv("REDIS_URL", f"redis://{redis_host}/2")
 else:
     OPENWISP_RADIUS_GROUPCHECK_ADMIN = True
     OPENWISP_RADIUS_GROUPREPLY_ADMIN = True
@@ -337,7 +337,7 @@ if TESTING:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("localhost", 6379)],
+                "hosts": [f"redis://{redis_host}/3"],
             },
         }
     }
@@ -345,13 +345,13 @@ else:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [f"redis://{redis_host}/7"]},
+            "CONFIG": {"hosts": [f"redis://{redis_host}/3"]},
         }
     }
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://127.0.0.1:6379/6",
+            "LOCATION": f"redis://{redis_host}/0",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             },
