@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
-from django.utils.timezone import now
+from django.utils.timezone import localdate
 
 from ..utils import load_model
 from . import FileMixin
@@ -16,7 +16,7 @@ RadiusBatch = load_model("RadiusBatch")
 
 class TestCSVUpload(FileMixin, BaseTestCase):
     def test_users_inherit_batch_expiration_date(self):
-        expiration_date = now().date() + timedelta(days=7)
+        expiration_date = localdate() + timedelta(days=7)
         reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
         batch = self._create_radius_batch(
             name="test",
@@ -29,8 +29,8 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         self.assertEqual(user.expiration_date, expiration_date)
 
     def test_importing_users_override_expiration_date(self):
-        original_expiration_date = now().date() + timedelta(days=14)
-        batch_expiration_date = now().date() + timedelta(days=7)
+        original_expiration_date = localdate() + timedelta(days=14)
+        batch_expiration_date = localdate() + timedelta(days=7)
         existing_user = self._create_user(
             username="rohith-existing",
             email="rohith@openwisp.com",
@@ -126,7 +126,7 @@ class TestCSVUpload(FileMixin, BaseTestCase):
 
 class TestPrefixUpload(FileMixin, BaseTestCase):
     def test_users_inherit_batch_expiration_date(self):
-        expiration_date = now().date() + timedelta(days=7)
+        expiration_date = localdate() + timedelta(days=7)
         batch = self._create_radius_batch(
             name="test",
             strategy="prefix",
@@ -144,7 +144,7 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
                 name="test-past-expiration",
                 strategy="prefix",
                 prefix="TestPast",
-                expiration_date=now().date() - timedelta(days=1),
+                expiration_date=localdate() - timedelta(days=1),
             )
 
         self.assertEqual(
