@@ -219,21 +219,6 @@ class TestRadiusBatchWebSockets(
         self.org = self._create_org()
         self.login()
 
-    def _get_relevant_browser_errors(self):
-        ignored_firefox_logs = (
-            "BackupService.sys.mjs",
-            "PrivateBrowsingUtils.sys.mjs",
-            "PathUtils.join: PathUtils does not support empty paths",
-        )
-        return [
-            log
-            for log in self.get_browser_logs()
-            if log.get("level") == "SEVERE"
-            if not any(
-                ignored_log in log["message"] for ignored_log in ignored_firefox_logs
-            )
-        ]
-
     def test_batch_change_view_reloads_on_status_update(self):
         batch = self._create_radius_batch(
             name="websocket-test-batch",
@@ -258,4 +243,4 @@ class TestRadiusBatchWebSockets(
         WebDriverWait(self.web_driver, 10).until(
             expected_conditions.text_to_be_present_in_element(status_field, "Completed")
         )
-        self.assertEqual(self._get_relevant_browser_errors(), [])
+        self.assertEqual(self.get_browser_errors(), [])
