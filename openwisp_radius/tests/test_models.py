@@ -756,7 +756,7 @@ class TestRadiusBatch(BaseTestCase):
                 strategy="prefix",
                 prefix="test-prefix16",
                 name="test-past-expiration",
-                expiration_date=timezone.now().date() - timezone.timedelta(days=1),
+                expiration_date=timezone.localdate() - timezone.timedelta(days=1),
             )
         self.assertEqual(
             context_manager.exception.message_dict["expiration_date"],
@@ -791,7 +791,7 @@ class TestRadiusBatch(BaseTestCase):
             self.fail("ValidationError not raised")
 
     def test_clean_method_allows_unchanged_past_expiration_date(self):
-        expiration_date = timezone.now().date() - timezone.timedelta(days=1)
+        expiration_date = timezone.localdate() - timezone.timedelta(days=1)
         radiusbatch = RadiusBatch.objects.create(
             organization=self.default_org,
             name="test-legacy-expiration",
