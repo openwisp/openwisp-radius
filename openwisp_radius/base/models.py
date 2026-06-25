@@ -5,6 +5,7 @@ import os
 import string
 from datetime import timedelta
 from io import StringIO
+from itertools import islice
 
 import django
 import phonenumbers
@@ -18,7 +19,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models, transaction
-from django.db.models import JSONField, ProtectedError, Q
+from django.db.models import DEFERRED, JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import localdate, now
@@ -530,10 +531,24 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         blank=True,
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_initial_stop_time()
+
+    def _set_initial_stop_time(self):
+        self._initial_stop_time = self.__dict__.get("stop_time", DEFERRED)
+
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        fields = kwargs.get("fields")
+        if fields is None or "stop_time" in fields:
+            self._set_initial_stop_time()
+
     def save(self, *args, **kwargs):
         if not self.start_time:
             self.start_time = now()
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
+        self._set_initial_stop_time()
 
     class Meta:
         db_table = "radacct"
@@ -583,16 +598,26 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         stale_sessions = cls.objects.filter(
             called_station_id=called_station_id,
             stop_time__isnull=True,
+        ).only(
+            "unique_id",
+            "username",
+            "organization_id",
+            "input_octets",
+            "output_octets",
+            "calling_station_id",
+            "called_station_id",
         )
-        closed_sessions = list(stale_sessions)
+        stale_sessions = stale_sessions.iterator(chunk_size=1000)
         stop_time = now()
-        for session in closed_sessions:
-            session.stop_time = stop_time
-            session.terminate_cause = "NAS-Reboot"
-        closed_count = cls.objects.bulk_update(
-            closed_sessions, fields=["stop_time", "terminate_cause"]
-        )
-        emit_radius_accounting_closed(closed_sessions)
+        closed_count = 0
+        while closed_sessions := list(islice(stale_sessions, 1000)):
+            for session in closed_sessions:
+                session.stop_time = stop_time
+                session.terminate_cause = "NAS-Reboot"
+            closed_count += cls.objects.bulk_update(
+                closed_sessions, fields=["stop_time", "terminate_cause"]
+            )
+            emit_radius_accounting_closed(closed_sessions)
         return closed_count
 
 

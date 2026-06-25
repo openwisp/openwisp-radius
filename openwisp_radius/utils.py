@@ -21,6 +21,7 @@ from weasyprint import HTML
 
 from . import settings as app_settings
 from .counters.exceptions import MaxQuotaReached, SkipCheck
+from .signals import radius_accounting_closed
 
 SESSION_TIME_ATTRIBUTE = "Max-Daily-Session"
 SESSION_TRAFFIC_ATTRIBUTE = "Max-Daily-Session-Traffic"
@@ -35,8 +36,6 @@ def load_model(model):
 
 
 def emit_radius_accounting_closed(sessions):
-    from .signals import radius_accounting_closed
-
     for session in sessions:
         radius_accounting_closed.send(sender=session.__class__, instance=session)
 

@@ -37,15 +37,16 @@ i.e. ``view.request``.
 - ``sender``: ``RadiusAccounting`` model class
 - ``instance``: closed ``RadiusAccounting`` instance
 
-This signal is emitted when a ``RadiusAccounting`` session is closed by
-code paths which use bulk updates and therefore bypass Django's
-``post_save`` signal.
+This signal is emitted when a ``RadiusAccounting`` session is closed. For
+regular ``save()`` paths, it is emitted only when ``stop_time`` changes
+from ``None`` to any value, or when a closed session is created directly.
+Editing an already closed session does not emit this signal again.
 
 Integrations which need to react to closed accounting sessions should
-listen to this signal in addition to ``post_save``. For example, the
-monitoring integration uses this signal to write RADIUS traffic snapshots
-for sessions closed by ``Accounting-On`` packets and automatic
-stale-session cleanup.
+listen to this signal. For example, the monitoring integration uses this
+signal to write RADIUS traffic snapshots for sessions closed by regular
+``post_save`` paths, ``Accounting-On`` packets and automatic stale-session
+cleanup.
 
 When closing multiple sessions with ``bulk_update()``, use
 ``openwisp_radius.utils.emit_radius_accounting_closed`` after the database

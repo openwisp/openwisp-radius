@@ -23,9 +23,5 @@ def enqueue_radiusaccounting_metric(instance):
     )
 
 
-def post_save_radiusaccounting(instance, *args, **kwargs):
-    enqueue_radiusaccounting_metric(instance)
-
-
 def radius_accounting_closed(instance, *args, **kwargs):
     enqueue_radiusaccounting_metric(instance)

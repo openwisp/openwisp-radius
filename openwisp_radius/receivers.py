@@ -6,6 +6,7 @@ import logging
 
 from celery.exceptions import OperationalError
 from django.db import transaction
+from django.db.models import DEFERRED
 from django.utils.timezone import now
 
 from openwisp_radius.tasks import send_login_email
@@ -127,6 +128,20 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
         closed_sessions, fields=["stop_time", "terminate_cause"]
     )
     emit_radius_accounting_closed(closed_sessions)
+
+
+def emit_radius_accounting_closed_on_save(instance, created, *args, **kwargs):
+    if instance.stop_time is None:
+        return
+    if created:
+        emit_radius_accounting_closed([instance])
+        return
+    initial_stop_time = getattr(instance, "_initial_stop_time", DEFERRED)
+    if initial_stop_time is DEFERRED:
+        return
+    if initial_stop_time is not None:
+        return
+    emit_radius_accounting_closed([instance])
 
 
 def radius_user_group_change(sender, instance, **kwargs):
