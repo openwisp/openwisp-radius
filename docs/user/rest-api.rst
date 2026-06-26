@@ -947,8 +947,9 @@ Pagination
 """"""""""
 
 Pagination is provided using page number pagination, the default page size
-is 20, which can be overridden using the ``page_size`` parameter (maximum
-100).
+is 20, which can be overridden using the ``page_size`` parameter, up to
+:ref:`OPENWISP_API_MAX_PAGE_SIZE <openwisp_api_max_page_size>` (100 by
+default).
 
 .. code-block:: text
 
@@ -1015,8 +1016,10 @@ GET
 ^^^
 
 Returns the list of RADIUS group assignments for the specified user.
-Pagination is provided using page number pagination; default page size is
-20 and can be overridden with the ``page_size`` parameter (maximum 100).
+Pagination is provided using page number pagination. The default page size
+is 20 and can be overridden using the ``page_size`` parameter, up to
+:ref:`OPENWISP_API_MAX_PAGE_SIZE <openwisp_api_max_page_size>` (100 by
+default).
 
 .. code-block:: text
 
