@@ -19,7 +19,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models, transaction
-from django.db.models import DEFERRED, JSONField, ProtectedError, Q
+from django.db.models import JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.timezone import localdate, now
@@ -531,12 +531,16 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         blank=True,
     )
 
+    class Meta:
+        db_table = "radacct"
+        verbose_name = _("accounting")
+        verbose_name_plural = _("accountings")
+        abstract = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # used for radius_accounting_closed signal
         self._set_initial_stop_time()
-
-    def _set_initial_stop_time(self):
-        self._initial_stop_time = self.__dict__.get("stop_time", DEFERRED)
 
     def refresh_from_db(self, *args, **kwargs):
         super().refresh_from_db(*args, **kwargs)
@@ -545,16 +549,27 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             self._set_initial_stop_time()
 
     def save(self, *args, **kwargs):
+        created = self._state.adding
+        update_fields = kwargs.get("update_fields")
         if not self.start_time:
             self.start_time = now()
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
-        self._set_initial_stop_time()
+        self._emit_radius_accounting_closed(created, update_fields)
+        # reset after save
+        if update_fields is None or "stop_time" in update_fields:
+            self._set_initial_stop_time()
 
-    class Meta:
-        db_table = "radacct"
-        verbose_name = _("accounting")
-        verbose_name_plural = _("accountings")
-        abstract = True
+    def _set_initial_stop_time(self):
+        self._initial_stop_time = self.stop_time
+
+    def _emit_radius_accounting_closed(self, created, update_fields=None):
+        if update_fields is not None and "stop_time" not in update_fields:
+            return
+        being_closed = self.stop_time is not None and (
+            created or self._initial_stop_time is None
+        )
+        if being_closed:
+            emit_radius_accounting_closed([self])
 
     def __str__(self):
         return self.unique_id
@@ -606,6 +621,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             "output_octets",
             "calling_station_id",
             "called_station_id",
+            "stop_time",
         )
         stale_sessions = stale_sessions.iterator(chunk_size=1000)
         stop_time = now()

@@ -15,7 +15,6 @@ from .receivers import (
     close_previous_radius_accounting_sessions,
     convert_radius_called_station_id,
     create_default_groups_handler,
-    emit_radius_accounting_closed_on_save,
     organization_post_save,
     organization_pre_save,
     radius_user_group_change,
@@ -127,11 +126,6 @@ class OpenwispRadiusConfig(ApiAppConfig):
             close_previous_radius_accounting_sessions,
             sender=RadiusAccounting,
             dispatch_uid="openwisp_radius_close_previous_radius_accounting_sessions",
-        )
-        post_save.connect(
-            emit_radius_accounting_closed_on_save,
-            sender=RadiusAccounting,
-            dispatch_uid="openwisp_radius_emit_radius_accounting_closed_on_save",
         )
         pre_save.connect(
             radius_user_group_change,

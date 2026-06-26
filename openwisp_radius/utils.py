@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -37,7 +38,11 @@ def load_model(model):
 
 def emit_radius_accounting_closed(sessions):
     for session in sessions:
-        radius_accounting_closed.send(sender=session.__class__, instance=session)
+        transaction.on_commit(
+            lambda session=session: radius_accounting_closed.send(
+                sender=session.__class__, instance=session
+            )
+        )
 
 
 def get_model(apps, model_path):

@@ -42,6 +42,8 @@ regular ``save()`` paths, it is emitted only when ``stop_time`` changes
 from ``None`` to any value, or when a closed session is created directly.
 Editing an already closed session does not emit this signal again.
 
+The signal is emitted after the database transaction is committed.
+
 Integrations which need to react to closed accounting sessions should
 listen to this signal. For example, the monitoring integration uses this
 signal to write RADIUS traffic snapshots for sessions closed by regular

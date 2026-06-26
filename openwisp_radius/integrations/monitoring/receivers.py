@@ -4,7 +4,7 @@ from django.utils import timezone
 from . import tasks
 
 
-def enqueue_radiusaccounting_metric(instance):
+def _enqueue_radiusaccounting_metric(instance):
     if instance.stop_time is None:
         return
     metric_time = instance.stop_time
@@ -23,5 +23,5 @@ def enqueue_radiusaccounting_metric(instance):
     )
 
 
-def radius_accounting_closed(instance, *args, **kwargs):
-    enqueue_radiusaccounting_metric(instance)
+def radius_accounting_closed_handler(instance, *args, **kwargs):
+    _enqueue_radiusaccounting_metric(instance)
