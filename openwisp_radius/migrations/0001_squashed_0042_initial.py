@@ -65,7 +65,6 @@ def set_existing_batches_completed(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     replaces = [
         ("openwisp_radius", "0001_initial_freeradius"),
         ("openwisp_radius", "0002_initial_openwisp_radius"),
@@ -207,11 +206,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -291,11 +290,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -361,11 +360,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -607,11 +606,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -774,12 +773,6 @@ class Migration(migrations.Migration):
             name="RadiusAccounting",
             fields=[
                 (
-                    "id",
-                    models.BigAutoField(
-                        db_column="radacctid", primary_key=True, serialize=False
-                    ),
-                ),
-                (
                     "session_id",
                     models.CharField(
                         db_column="acctsessionid",
@@ -793,6 +786,8 @@ class Migration(migrations.Migration):
                     models.CharField(
                         db_column="acctuniqueid",
                         max_length=32,
+                        primary_key=True,
+                        serialize=False,
                         unique=True,
                         verbose_name="accounting unique ID",
                     ),
@@ -1028,11 +1023,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -1145,11 +1140,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 ("username", models.CharField(max_length=64, verbose_name="username")),
@@ -1213,11 +1208,11 @@ class Migration(migrations.Migration):
             fields=[
                 (
                     "id",
-                    models.AutoField(
-                        auto_created=True,
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
                         primary_key=True,
                         serialize=False,
-                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -1578,186 +1573,6 @@ class Migration(migrations.Migration):
                 verbose_name="CSV",
             ),
         ),
-        migrations.AddField(
-            model_name="nas",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiuscheck",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiusgroupcheck",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiusgroupreply",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiuspostauth",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiusreply",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.AddField(
-            model_name="radiususergroup",
-            name="uuid",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, null=True, serialize=False
-            ),
-        ),
-        migrations.RunPython(
-            code=openwisp_radius.migrations.popluate_uuids,
-        ),
-        migrations.RemoveField(
-            model_name="nas",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiusaccounting",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiuscheck",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiusgroupcheck",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiusgroupreply",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiuspostauth",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiusreply",
-            name="id",
-        ),
-        migrations.RemoveField(
-            model_name="radiususergroup",
-            name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiusaccounting",
-            name="unique_id",
-            field=models.CharField(
-                db_column="acctuniqueid",
-                max_length=32,
-                primary_key=True,
-                serialize=False,
-                unique=True,
-                verbose_name="accounting unique ID",
-            ),
-        ),
-        migrations.RenameField(
-            model_name="nas",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="nas",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiuscheck",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiuscheck",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiusgroupcheck",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiusgroupcheck",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiusgroupreply",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiusgroupreply",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiuspostauth",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiuspostauth",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiusreply",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiusreply",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
-        migrations.RenameField(
-            model_name="radiususergroup",
-            old_name="uuid",
-            new_name="id",
-        ),
-        migrations.AlterField(
-            model_name="radiususergroup",
-            name="id",
-            field=models.UUIDField(
-                default=uuid.uuid4, editable=False, primary_key=True, serialize=False
-            ),
-        ),
         migrations.RunPython(
             code=openwisp_radius.migrations.delete_old_radius_token,
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
@@ -1845,7 +1660,12 @@ class Migration(migrations.Migration):
                     "method",
                     models.CharField(
                         blank=True,
-                        choices=openwisp_radius.registration.get_registration_choices,
+                        choices=(
+                            openwisp_radius.registration.REGISTRATION_METHOD_CHOICES
+                            if django.VERSION < (5, 0)
+                            # TODO: Remove when dropping support for Django 4.2
+                            else openwisp_radius.registration.get_registration_choices
+                        ),
                         default="",
                         help_text=(
                             "users can sign up in different ways, some methods are"
