@@ -10,7 +10,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import validate_email
-from django.db import transaction
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -22,7 +21,6 @@ from weasyprint import HTML
 
 from . import settings as app_settings
 from .counters.exceptions import MaxQuotaReached, SkipCheck
-from .signals import radius_accounting_closed
 
 SESSION_TIME_ATTRIBUTE = "Max-Daily-Session"
 SESSION_TRAFFIC_ATTRIBUTE = "Max-Daily-Session-Traffic"
@@ -34,15 +32,6 @@ logger = logging.getLogger(__name__)
 
 def load_model(model):
     return swapper.load_model("openwisp_radius", model)
-
-
-def emit_radius_accounting_closed(sessions):
-    for session in sessions:
-        transaction.on_commit(
-            lambda session=session: radius_accounting_closed.send(
-                sender=session.__class__, instance=session
-            )
-        )
 
 
 def get_model(apps, model_path):

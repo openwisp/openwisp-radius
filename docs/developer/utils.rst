@@ -51,7 +51,7 @@ signal to write RADIUS traffic snapshots for sessions closed by regular
 cleanup.
 
 When closing multiple sessions with ``bulk_update()``, use
-``openwisp_radius.utils.emit_radius_accounting_closed`` after the database
+``RadiusAccounting.emit_radius_accounting_closed()`` after the database
 update to emit this signal once for each closed session.
 
 .. _radius_captive_portal_mock_views:

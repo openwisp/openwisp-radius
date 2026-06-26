@@ -6,6 +6,7 @@ import string
 from datetime import timedelta
 from io import StringIO
 from itertools import islice
+from typing import Iterable
 
 import django
 import phonenumbers
@@ -53,10 +54,10 @@ from ..settings import (
     BATCH_MAIL_SUBJECT,
     DEFAULT_PASSWORD_RESET_URL,
 )
+from ..signals import radius_accounting_closed
 from ..utils import (
     SmsMessage,
     decode_byte_data,
-    emit_radius_accounting_closed,
     find_available_username,
     generate_sms_token,
     get_sms_default_valid_until,
@@ -545,8 +546,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
     def refresh_from_db(self, *args, **kwargs):
         super().refresh_from_db(*args, **kwargs)
         fields = kwargs.get("fields")
-        if fields is None or "stop_time" in fields:
-            self._set_initial_stop_time()
+        self._set_initial_stop_time(fields=fields)
 
     def save(self, *args, **kwargs):
         created = self._state.adding
@@ -554,25 +554,40 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         if not self.start_time:
             self.start_time = now()
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
-        self._emit_radius_accounting_closed(created, update_fields)
+        self._emit_radius_accounting_closed(
+            created=created, update_fields=update_fields
+        )
         # reset after save
-        if update_fields is None or "stop_time" in update_fields:
-            self._set_initial_stop_time()
+        self._set_initial_stop_time(update_fields)
 
-    def _set_initial_stop_time(self):
-        self._initial_stop_time = self.stop_time
+    def _set_initial_stop_time(self, fields=None):
+        if fields is None or "stop_time" in fields:
+            self._initial_stop_time = self.stop_time
 
     def _emit_radius_accounting_closed(self, created, update_fields=None):
+        """Detect whether this save closed the session and emit the signal."""
         if update_fields is not None and "stop_time" not in update_fields:
             return
         being_closed = self.stop_time is not None and (
             created or self._initial_stop_time is None
         )
         if being_closed:
-            emit_radius_accounting_closed([self])
+            self.emit_radius_accounting_closed([self])
 
     def __str__(self):
         return self.unique_id
+
+    @classmethod
+    def emit_radius_accounting_closed(
+        cls, sessions: Iterable["AbstractRadiusAccounting"]
+    ) -> None:
+        """Emit radius_accounting_closed after commit for closed sessions."""
+        for session in sessions:
+            transaction.on_commit(
+                lambda session=session: radius_accounting_closed.send(
+                    sender=session.__class__, instance=session
+                )
+            )
 
     @classmethod
     def close_stale_sessions(cls, days=None, hours=None):
@@ -633,7 +648,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             closed_count += cls.objects.bulk_update(
                 closed_sessions, fields=["stop_time", "terminate_cause"]
             )
-            emit_radius_accounting_closed(closed_sessions)
+            cls.emit_radius_accounting_closed(closed_sessions)
         return closed_count
 
 

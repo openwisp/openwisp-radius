@@ -12,7 +12,7 @@ from openwisp_radius.tasks import send_login_email
 
 from . import settings as app_settings
 from . import tasks
-from .utils import create_default_groups, emit_radius_accounting_closed, load_model
+from .utils import create_default_groups, load_model
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
     RadiusAccounting.objects.bulk_update(
         closed_sessions, fields=["stop_time", "terminate_cause"]
     )
-    emit_radius_accounting_closed(closed_sessions)
+    RadiusAccounting.emit_radius_accounting_closed(closed_sessions)
 
 
 def radius_user_group_change(sender, instance, **kwargs):
