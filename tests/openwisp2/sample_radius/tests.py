@@ -55,9 +55,6 @@ from openwisp_radius.tests.test_saml.test_views import (
 from openwisp_radius.tests.test_social import TestSocial as BaseTestSocial
 from openwisp_radius.tests.test_token import TestPhoneToken as BaseTestPhoneToken
 from openwisp_radius.tests.test_token import TestRadiusToken as BaseTestRadiusToken
-from openwisp_radius.tests.test_upgrader_script import (
-    TestUpgradeFromDjangoFreeradius as BaseTestUpgradeFromDjangoFreeradius,
-)
 from openwisp_radius.tests.test_users_integration import (
     TestUsersIntegration as BaseTestUsersIntegration,
 )
@@ -114,10 +111,6 @@ class TestCommands(BaseTestCommands):
 
 
 class TestNas(BaseTestNas):
-    pass
-
-
-class TestUpgradeFromDjangoFreeradius(BaseTestUpgradeFromDjangoFreeradius):
     pass
 
 
@@ -224,7 +217,6 @@ del BaseTestRadiusToken
 del BaseTestPhoneToken
 del BaseTestUsersIntegration
 del BaseTestUtils
-del BaseTestUpgradeFromDjangoFreeradius
 del BaseTestAssertionConsumerServiceView
 del BaseTestLoginView
 del base_migration_tests
