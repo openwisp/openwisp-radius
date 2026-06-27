@@ -243,4 +243,4 @@ class TestRadiusBatchWebSockets(
         WebDriverWait(self.web_driver, 10).until(
             expected_conditions.text_to_be_present_in_element(status_field, "Completed")
         )
-        self.assertEqual(len(self.get_browser_logs()), 0)
+        self.assertEqual(self.get_browser_errors(), [])
