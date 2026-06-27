@@ -244,11 +244,24 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             username="nas-reboot-query-count-2",
         )
         self._create_radius_accounting(**session_options)
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
                 called_station_id=radiusaccounting_options["called_station_id"]
             )
         self.assertEqual(closed_count, 2)
+
+    def test_save_update_fields_persists_backfilled_start_time(self):
+        options = _RADACCT.copy()
+        session = self._create_radius_accounting(
+            unique_id="start-time-update-fields", **options
+        )
+        RadiusAccounting.objects.filter(pk=session.pk).update(start_time=None)
+        session.refresh_from_db()
+        session.terminate_cause = "User-Request"
+        session.save(update_fields=["terminate_cause"])
+        session.refresh_from_db()
+        self.assertIsNotNone(session.start_time)
+        self.assertEqual(session.terminate_cause, "User-Request")
 
     @capture_any_output()
     @mock.patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")

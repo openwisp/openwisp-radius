@@ -5,7 +5,6 @@ import os
 import string
 from datetime import timedelta
 from io import StringIO
-from itertools import islice
 from typing import Iterable
 
 import django
@@ -553,6 +552,9 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         update_fields = kwargs.get("update_fields")
         if not self.start_time:
             self.start_time = now()
+            if update_fields is not None:
+                update_fields = set(update_fields) | {"start_time"}
+                kwargs["update_fields"] = update_fields
         super(AbstractRadiusAccounting, self).save(*args, **kwargs)
         self._emit_radius_accounting_closed(
             created=created, update_fields=update_fields
@@ -625,30 +627,39 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         """
         if not called_station_id:
             return 0
-        stale_sessions = cls.objects.filter(
-            called_station_id=called_station_id,
-            stop_time__isnull=True,
-        ).only(
-            "unique_id",
-            "username",
-            "organization_id",
-            "input_octets",
-            "output_octets",
-            "calling_station_id",
-            "called_station_id",
-            "stop_time",
-        )
-        stale_sessions = stale_sessions.iterator(chunk_size=1000)
         stop_time = now()
         closed_count = 0
-        while closed_sessions := list(islice(stale_sessions, 1000)):
-            for session in closed_sessions:
-                session.stop_time = stop_time
-                session.terminate_cause = "NAS-Reboot"
-            closed_count += cls.objects.bulk_update(
-                closed_sessions, fields=["stop_time", "terminate_cause"]
-            )
-            cls.emit_radius_accounting_closed(closed_sessions)
+        batch_size = 1000
+        has_more_sessions = True
+        while has_more_sessions:
+            with transaction.atomic():
+                closed_sessions = list(
+                    cls.objects.select_for_update()
+                    .filter(
+                        called_station_id=called_station_id,
+                        stop_time__isnull=True,
+                    )
+                    .only(
+                        "unique_id",
+                        "username",
+                        "organization_id",
+                        "input_octets",
+                        "output_octets",
+                        "calling_station_id",
+                        "called_station_id",
+                        "stop_time",
+                    )[:batch_size]
+                )
+                has_more_sessions = len(closed_sessions) == batch_size
+                if not closed_sessions:
+                    continue
+                for session in closed_sessions:
+                    session.stop_time = stop_time
+                    session.terminate_cause = "NAS-Reboot"
+                closed_count += cls.objects.bulk_update(
+                    closed_sessions, fields=["stop_time", "terminate_cause"]
+                )
+                cls.emit_radius_accounting_closed(closed_sessions)
         return closed_count
 
 
