@@ -116,48 +116,6 @@ If a user has multiple ``RegisteredUser`` rows across organizations, the
 command keeps that user when **any** related row uses one of the excluded
 methods.
 
-``upgrade_from_django_freeradius``
-----------------------------------
-
-If you are upgrading from `django-freeradius
-<https://github.com/openwisp/django-freeradius>`_ to openwisp-radius,
-there is an easy migration script that will import your freeradius
-database, sites, social website account users, users & groups to
-openwisp-radius instance:
-
-.. code-block:: shell
-
-    ./manage.py upgrade_from_django_freeradius
-
-The management command accepts an argument ``--backup``, that you can pass
-to give the location of the backup files, by default it looks in the
-``tests/`` directory, e.g.:
-
-.. code-block:: shell
-
-    ./manage.py upgrade_from_django_freeradius --backup /home/user/django_freeradius/
-
-The management command accepts another argument ``--organization``, if you
-want to import data to a specific organization, you can give its UUID for
-the same, by default the data is added to the first found organization,
-e.g.:
-
-::
-
-    ./manage.py upgrade_from_django_freeradius --organization 900856da-c89a-412d-8fee-45a9c763ca0b
-
-.. note::
-
-    You can follow the `tutorial to migrate database from
-    django-freeradius
-    <https://github.com/openwisp/django-freeradius/blob/master/README.rst>`_.
-
-.. warning::
-
-    It is not possible to export user credential data for ``RadiusBatch``
-    created using prefix, please manually preserve the PDF files if you
-    want to access the data in the future.
-
 .. _radius_convert_called_station_id:
 
 ``convert_called_station_id``
