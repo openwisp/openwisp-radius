@@ -25,43 +25,6 @@ import openwisp_users.mixins
 import openwisp_utils.fields
 import openwisp_utils.utils
 from openwisp_radius import settings as app_settings
-from openwisp_utils.fields import FallbackMixin
-
-
-# Copied verbatim from 0038_clean_fallbackfields and 0042_set_existing_batches_completed
-# because squashmigrations cannot import functions from modules whose names start
-# with a digit. Keep these in sync if the originals ever change.
-def clean_fallback_fields(apps, schema_editor):
-    OrganizationRadiusSettings = openwisp_radius.migrations.get_swapped_model(
-        apps, "openwisp_radius", "organizationradiussettings"
-    )
-    fallback_fields = []
-    for field in OrganizationRadiusSettings._meta.get_fields():
-        if isinstance(field, FallbackMixin):
-            fallback_fields.append(field)
-    updated_settings = []
-    for radius_settings in OrganizationRadiusSettings.objects.iterator():
-        changed = False
-        for field in fallback_fields:
-            if getattr(radius_settings, field.name) == field.fallback:
-                setattr(radius_settings, field.name, None)
-                changed = True
-        if changed:
-            updated_settings.append(radius_settings)
-        if len(updated_settings) > 100:
-            OrganizationRadiusSettings.objects.bulk_update(
-                updated_settings, fields=[f.name for f in fallback_fields]
-            )
-            updated_settings = []
-    if updated_settings:
-        OrganizationRadiusSettings.objects.bulk_update(
-            updated_settings, fields=[f.name for f in fallback_fields]
-        )
-
-
-def set_existing_batches_completed(apps, schema_editor):
-    RadiusBatch = apps.get_model("openwisp_radius", "RadiusBatch")
-    RadiusBatch.objects.all().update(status="completed")
 
 
 class Migration(migrations.Migration):
@@ -1340,10 +1303,6 @@ class Migration(migrations.Migration):
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
         ),
         migrations.RunPython(
-            code=openwisp_radius.migrations.add_default_group_to_existing_users,
-            reverse_code=django.db.migrations.operations.special.RunPython.noop,
-        ),
-        migrations.RunPython(
             code=openwisp_radius.migrations.assign_permissions_to_groups,
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
         ),
@@ -1573,10 +1532,6 @@ class Migration(migrations.Migration):
                 verbose_name="CSV",
             ),
         ),
-        migrations.RunPython(
-            code=openwisp_radius.migrations.delete_old_radius_token,
-            reverse_code=django.db.migrations.operations.special.RunPython.noop,
-        ),
         migrations.AddField(
             model_name="radiustoken",
             name="can_auth",
@@ -1627,10 +1582,6 @@ class Migration(migrations.Migration):
             field=phonenumber_field.modelfields.PhoneNumberField(
                 blank=True, max_length=128, null=True, region=None
             ),
-        ),
-        migrations.RunPython(
-            code=openwisp_radius.migrations.populate_phonetoken_phone_number,
-            reverse_code=django.db.migrations.operations.special.RunPython.noop,
         ),
         migrations.AlterField(
             model_name="phonetoken",
@@ -1996,10 +1947,6 @@ class Migration(migrations.Migration):
                 verbose_name="Password reset URL",
             ),
         ),
-        migrations.RunPython(
-            code=clean_fallback_fields,
-            reverse_code=django.db.migrations.operations.special.RunPython.noop,
-        ),
         migrations.AlterField(
             model_name="radiusaccounting",
             name="called_station_id",
@@ -2070,8 +2017,5 @@ class Migration(migrations.Migration):
                 default="pending",
                 max_length=16,
             ),
-        ),
-        migrations.RunPython(
-            code=set_existing_batches_completed,
         ),
     ]
