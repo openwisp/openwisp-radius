@@ -115,6 +115,56 @@ Run quality assurance tests with:
 
     ./run-qa-checks
 
+.. _radius_dev_docker:
+
+Install and Run on Docker
+-------------------------
+
+.. warning::
+
+    This Docker image is for development purposes only.
+
+    For the official OpenWISP Docker images, see: :doc:`docker-openwisp
+    </docker/index>`.
+
+Ensure `Docker <https://docs.docker.com/get-docker/>`_ and
+`Docker Compose <https://docs.docker.com/compose/install/>`_ are installed
+on your system.
+
+Fork and clone the forked repository:
+
+.. code-block:: shell
+
+    git clone git://github.com/<your_fork>/openwisp-radius
+
+Navigate into the cloned repository:
+
+.. code-block:: shell
+
+    cd openwisp-radius/
+
+Build the development image:
+
+.. code-block:: shell
+
+    docker compose build
+
+Start all services (Redis, InfluxDB, and the development server):
+
+.. code-block:: shell
+
+    docker compose up
+
+The development server will be available at ``http://127.0.0.1:8000/``.
+The admin interface is at ``http://127.0.0.1:8000/admin/`` with credentials
+``admin`` / ``admin``.
+
+To run the test suite inside the container:
+
+.. code-block:: shell
+
+    docker compose run --rm radius bash -c "cd /opt/openwisp && ./runtests"
+
 Alternative Sources
 -------------------
 
