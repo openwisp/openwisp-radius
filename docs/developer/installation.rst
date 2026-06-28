@@ -127,9 +127,8 @@ Install and Run on Docker
     For the official OpenWISP Docker images, see: :doc:`docker-openwisp
     </docker/index>`.
 
-Ensure `Docker <https://docs.docker.com/get-docker/>`_ and
-`Docker Compose <https://docs.docker.com/compose/install/>`_ are installed
-on your system.
+Ensure `Docker <https://docs.docker.com/get-docker/>`_ and `Docker Compose
+<https://docs.docker.com/compose/install/>`_ are installed on your system.
 
 Fork and clone the forked repository:
 
@@ -156,8 +155,8 @@ Start all services (Redis, InfluxDB, and the development server):
     docker compose up
 
 The development server will be available at ``http://127.0.0.1:8000/``.
-The admin interface is at ``http://127.0.0.1:8000/admin/`` with credentials
-``admin`` / ``admin``.
+The admin interface is at ``http://127.0.0.1:8000/admin/`` with
+credentials ``admin`` / ``admin``.
 
 To run the test suite inside the container:
 
