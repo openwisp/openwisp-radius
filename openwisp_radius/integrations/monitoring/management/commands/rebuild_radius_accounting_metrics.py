@@ -76,7 +76,9 @@ class Command(BaseCommand):
             self.stdout.write(f"Dry run: {count} closed sessions would be processed.")
             return
         processed = 0
-        for session in queryset.iterator(chunk_size=options["chunk_size"]):
+        chunk_size = options["chunk_size"]
+        self.stdout.write(f"Starting to rebuild {count} accounting metrics.")
+        for session in queryset.iterator(chunk_size=chunk_size):
             self._delete_radius_accounting_metric(session)
             tasks.post_save_radiusaccounting(
                 username=session.username,
@@ -88,7 +90,10 @@ class Command(BaseCommand):
                 time=session.stop_time,
             )
             processed += 1
-        self.stdout.write(f"Processed {processed} closed sessions.")
+            if processed % chunk_size == 0 or processed == count:
+                self.stdout.write(
+                    f"Processed {processed} of {count} accounting metrics."
+                )
 
     def _parse_datetime(self, value, option):
         parsed = parse_datetime(value)

@@ -93,7 +93,9 @@ class TestRebuildRadiusAccountingMetrics(
         )
         out = StringIO()
         call_command("rebuild_radius_accounting_metrics", commit=True, stdout=out)
-        self.assertIn("Processed 1 closed sessions.", out.getvalue())
+        output = out.getvalue()
+        self.assertIn("Starting to rebuild 1 accounting metrics.", output)
+        self.assertIn("Processed 1 of 1 accounting metrics.", output)
         delete_queries = [
             call.args[0]
             for call in mocked_query.call_args_list
@@ -140,7 +142,9 @@ class TestRebuildRadiusAccountingMetrics(
             commit=True,
             stdout=out,
         )
-        self.assertIn("Processed 1 closed sessions.", out.getvalue())
+        output = out.getvalue()
+        self.assertIn("Starting to rebuild 1 accounting metrics.", output)
+        self.assertIn("Processed 1 of 1 accounting metrics.", output)
         metric = self.metric_model.objects.get(configuration="radius_acc")
         points = metric.chart_set.get(configuration="radius_traffic").read()
         self.assertEqual(points["summary"], {"upload": 9, "download": 8})
