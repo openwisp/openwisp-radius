@@ -675,3 +675,62 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+
+    @capture_any_output()
+    @patch.object(
+        app_settings,
+        "CALLED_STATION_IDS",
+        {
+            "1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1": {
+                "openvpn_config": [
+                    {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
+                ],
+                "unconverted_ids": ["AA-AA-AA-AA-AA-0A"],
+            }
+        },
+    )
+    @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
+    @patch("openwisp_radius.tasks.convert_called_station_id")
+    def test_convert_called_station_id_telnet_connection_management(self, *args):
+        """
+        Test that Telnet connection is properly opened and closed.
+        This test verifies the fix for the bug where the Telnet connection
+        was not properly established due to Exscript's telnetlib not supporting
+        context managers.
+        """
+        org = self._create_org(
+            id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
+            name="command test",
+            slug="command-test",
+        )
+        options = _RADACCT.copy()
+        options["calling_station_id"] = str(EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix))
+        options["called_station_id"] = "AA-AA-AA-AA-AA-0A"
+        options["unique_id"] = "122"
+        options["organization"] = org
+        radius_acc = self._create_radius_accounting(**options)
+
+        # Mock telnetlib.Telnet to verify it's properly opened and closed
+        from unittest.mock import MagicMock
+
+        from Exscript.protocols import telnetlib
+
+        mock_telnet = MagicMock()
+        # Mock the read_until and write methods to return the expected data
+        mock_telnet.read_until.return_value = self._get_openvpn_status().encode()
+        mock_telnet.write.return_value = None
+
+        with patch.object(
+            telnetlib, "Telnet", return_value=mock_telnet
+        ) as mock_telnet_class:
+            call_command("convert_called_station_id")
+
+            # Verify that Telnet was instantiated with correct parameters
+            mock_telnet_class.assert_called_once_with("127.0.0.1", 7505, timeout=30)
+
+            # Verify that close() was called to properly cleanup the connection
+            mock_telnet.close.assert_called_once()
+
+            # Verify the session was updated
+            radius_acc.refresh_from_db()
+            self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
