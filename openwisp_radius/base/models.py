@@ -1372,7 +1372,6 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 
     @property
     def freeradius_allowed_hosts_list(self):
-        addresses = []
         addresses = [
             (ip or "").strip()
             for ip in (self.freeradius_allowed_hosts or "").split(",")
@@ -1429,7 +1428,7 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                         {
                             "freeradius_allowed_hosts": _(
                                 "Invalid input. Please enter valid ip addresses "
-                                "or subnets separated by comma. (no spaces)"
+                                "or subnets separated by comma."
                             )
                         }
                     )

@@ -2480,6 +2480,47 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data["detail"], test_fail_msg)
 
+    def test_ip_from_radsetting_cidr_range_valid(self):
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(
+                organization=self._get_org()
+            )
+            radsetting.freeradius_allowed_hosts = "172.18.0.0/16"
+            radsetting.save()
+
+        with mock.patch(
+            "openwisp_radius.api.freeradius_views.get_client_ip",
+            return_value=("172.18.0.10", True),
+        ):
+            response = self.client.post(reverse("radius:authorize"), self.params)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("control:Auth-Type", response.data)
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+    @capture_any_output()
+    def test_ip_outside_cidr_range_rejected(self):
+        with mock.patch(self.freeradius_hosts_path, []):
+            radsetting = OrganizationRadiusSettings.objects.get(
+                organization=self._get_org()
+            )
+            radsetting.freeradius_allowed_hosts = "172.18.0.0/16"
+            radsetting.save()
+
+        with mock.patch(
+            "openwisp_radius.api.freeradius_views.get_client_ip",
+            return_value=("10.0.0.5", True),
+        ):
+            response = self.client.post(reverse("radius:authorize"), self.params)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.data["detail"],
+            "Request rejected: Client IP address (10.0.0.5) is not in "
+            "the list of IP addresses allowed to consume the freeradius API.",
+        )
+
 
 class TestTransactionClientIpApi(
     TestClientIpApiMixin, ApiTokenMixin, BaseTransactionTestCase

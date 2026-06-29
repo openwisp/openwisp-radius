@@ -190,6 +190,10 @@ You can use subnets when freeradius is hosted on a variable IP, e.g.:
 - ``198.168.0.0/24`` to allow the entire LAN.
 - ``0.0.0.0/0`` to allow any address (useful for development / testing).
 
+Entries with host bits set (e.g. ``172.18.0.5/16``) and extra whitespace
+around comma-separated entries in the organization settings are handled
+gracefully.
+
 This value can be overridden per organization in the organization change
 page. You can skip setting this option if you intend to set it from
 organization change page for each organization.
