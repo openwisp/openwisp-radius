@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   influxdb:
     image: influxdb:1.8-alpine
@@ -11,12 +9,36 @@ services:
       INFLUXDB_DB: openwisp2
       INFLUXDB_USER: openwisp
       INFLUXDB_USER_PASSWORD: openwisp
+    networks:
+      - openwisp
 
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
-    entrypoint: redis-server --appendonly yes
+    command: redis-server --appendonly yes
+    networks:
+      - openwisp
+
+  radius:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openwisp-radius-dev
+    working_dir: /opt/openwisp/tests
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/opt/openwisp/
+    depends_on:
+      - redis
+      - influxdb
+    networks:
+      - openwisp
 
 volumes:
-  influxdb-data: {}
+  influxdb-data:
+
+networks:
+  openwisp:
+    driver: bridge
