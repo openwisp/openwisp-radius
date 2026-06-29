@@ -111,6 +111,8 @@ The default encryption format for storing radius check values.
 A list of disabled encryption formats, by default all formats are enabled
 in order to keep backward compatibility with legacy systems.
 
+.. _openwisp_radius_batch_async_threshold:
+
 ``OPENWISP_RADIUS_BATCH_ASYNC_THRESHOLD``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,6 +124,12 @@ background task (asynchronously) using Celery. This prevents timeouts and
 keeps the user interface responsive when creating a large number of users.
 For batches smaller than the threshold, users will be created immediately
 (synchronously).
+
+.. note::
+
+    When batch processing runs asynchronously, the final batch status
+    (``"completed"`` or ``"failed"``) is delivered to connected clients in
+    real time via the :ref:`WebSocket API <radius_websocket_api>`.
 
 ``OPENWISP_RADIUS_BATCH_DEFAULT_PASSWORD_LENGTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -696,6 +704,9 @@ verification method. The following choices are available by default:
 - ``mobile_phone``: Mobile phone number :ref:`verification via SMS
   <openwisp_radius_sms_verification_enabled>`
 - ``social_login``: :doc:`social login feature <social_login>`
+- ``pending_verification``: Transitional state used when a user
+  authenticates to a new organization but has not yet completed
+  verification for that organization.
 
 .. note::
 
@@ -713,6 +724,33 @@ verification method. The following choices are available by default:
 
     **Disclaimer:** these are just suggestions on possible configurations
     of OpenWISP RADIUS and must not be considered as legal advice.
+
+``OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``["", "email", "mobile_phone"]``
+
+Defines which ``RegisteredUser.method`` values can be written by users
+through the public registration APIs.
+
+Methods not included in this setting cannot be selected by users through
+those APIs, even if they are present in the full list returned by
+``get_registration_choices()``.
+
+This is especially useful to keep server-assigned provenance methods such
+as ``saml``, ``social_login`` or ``manual`` out of user-controlled API
+input. These methods may still be assigned internally by server-side
+authentication or integration flows when appropriate.
+
+Example:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_USER_SETTABLE_REGISTRATION_METHODS = [
+        "",
+        "email",
+        "mobile_phone",
+    ]
 
 .. _openwisp_radius_register_registration_method:
 

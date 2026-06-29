@@ -7,6 +7,8 @@ from django.contrib.admin import ModelAdmin, StackedInline
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.db.models import Prefetch
+from django.forms.models import BaseInlineFormSet
 from django.http import HttpResponseRedirect
 from django.templatetags.static import static
 from django.urls import reverse
@@ -534,11 +536,31 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
+class RegisteredUserFormset(BaseInlineFormSet):
+    def get_unique_error_message(self, unique_check):
+        # Django inline formsets perform their own uniqueness validation
+        # (BaseModelFormSet.validate_unique) *before* model-level validation runs.
+        # Because of this, the custom `violation_error_message` defined on
+        # `UniqueConstraint` is never surfaced in the admin UI.
+        #
+        # Overriding this method allows us to replace Django’s generic
+        # "Please correct the duplicate data for <field>." message with a
+        # domain-specific, user-friendly error that matches our constraint.
+        if unique_check == ("user", "organization"):
+            return _(
+                "A user cannot have more than one registration record in the"
+                " same organization."
+            )
+
+
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
     form = AlwaysHasChangedForm
+    formset = RegisteredUserFormset
     extra = 0
     readonly_fields = ("modified",)
+    fields = ("organization", "method", "is_verified", "modified")
+    autocomplete_fields = ("organization",)
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -549,22 +571,50 @@ UserAdmin.inlines += [
     RadiusUserGroupInline,
     PhoneTokenInline,
 ]
-UserAdmin.list_filter += (RegisteredUserFilter, "registered_user__method")
+UserAdmin.list_filter += (RegisteredUserFilter, "registered_users__method")
+user_admin_get_queryset = UserAdmin.get_queryset
+
+
+def get_queryset(self, request):
+    queryset = user_admin_get_queryset(self, request)
+    registered_users = RegisteredUser.objects.only(
+        "user_id", "organization_id", "is_verified"
+    )
+    if not request.user.is_superuser:
+        registered_users = registered_users.filter(
+            organization__in=request.user.organizations_managed
+        )
+    return queryset.prefetch_related(
+        Prefetch(
+            "registered_users",
+            queryset=registered_users,
+            to_attr="prefetched_registered_users",
+        )
+    )
 
 
 def get_is_verified(self, obj):
-    try:
-        value = "yes" if obj.registered_user.is_verified else "no"
-    except Exception:
+    prefetched_registered_users = getattr(obj, "prefetched_registered_users", None)
+    if prefetched_registered_users is not None:
+        is_verifieds = [
+            reg_user.is_verified for reg_user in prefetched_registered_users
+        ]
+    else:
+        is_verifieds = []
+    if not is_verifieds:
         value = "unknown"
+    elif any(is_verifieds):
+        value = "yes"
+    else:
+        value = "no"
     icon_url = static(f"admin/img/icon-{value}.svg")
     return mark_safe(f'<img src="{icon_url}" alt="{value}">')
 
 
+UserAdmin.get_queryset = get_queryset
 UserAdmin.get_is_verified = get_is_verified
 UserAdmin.get_is_verified.short_description = _("Verified")
 UserAdmin.list_display.insert(3, "get_is_verified")
-UserAdmin.list_select_related = ("registered_user",)
 
 
 class OrganizationRadiusSettingsInline(admin.StackedInline):
@@ -618,25 +668,6 @@ class OrganizationRadiusSettingsInline(admin.StackedInline):
 
 OrganizationAdmin.save_on_top = True
 OrganizationAdmin.inlines.append(OrganizationRadiusSettingsInline)
-
-# avoid cluttering the admin with too many models, leave only the
-# minimum required to configure social login and check if it's working
-if app_settings.SOCIAL_REGISTRATION_CONFIGURED:
-    from allauth.socialaccount.admin import SocialAccount, SocialApp, SocialAppAdmin
-
-    class SocialAccountInline(admin.StackedInline):
-        model = SocialAccount
-        extra = 0
-        readonly_fields = ("provider", "uid", "extra_data")
-
-        def has_add_permission(self, request, obj):
-            return False
-
-        def has_delete_permission(self, request, obj=None):
-            return False
-
-    UserAdmin.inlines += [SocialAccountInline]
-    admin.site.register(SocialApp, SocialAppAdmin)
 
 
 if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:

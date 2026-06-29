@@ -51,3 +51,6 @@ class OrganizationInvitation(AbstractOrganizationInvitation):
 class Group(BaseGroup, AbstractGroup):
     class Meta(BaseGroup.Meta):
         abstract = False
+
+
+from openwisp_users.base.models import ApiKey  # noqa

@@ -42,6 +42,7 @@ RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusBatch = load_model("RadiusBatch")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
+RegisteredUser = load_model("RegisteredUser")
 
 
 class TestNas(BaseTestCase):
@@ -750,6 +751,17 @@ class TestRadiusBatch(BaseTestCase):
     def test_clean_method(self):
         with self.assertRaises(ValidationError):
             self._create_radius_batch()
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_radius_batch(
+                strategy="prefix",
+                prefix="test-prefix16",
+                name="test-past-expiration",
+                expiration_date=timezone.localdate() - timezone.timedelta(days=1),
+            )
+        self.assertEqual(
+            context_manager.exception.message_dict["expiration_date"],
+            ["Expiration date cannot be in the past."],
+        )
         # missing csvfile
         try:
             self._create_radius_batch(strategy="csv", name="test")
@@ -777,6 +789,19 @@ class TestRadiusBatch(BaseTestCase):
         else:
             os.remove(dummy_file)
             self.fail("ValidationError not raised")
+
+    def test_clean_method_allows_unchanged_past_expiration_date(self):
+        expiration_date = timezone.localdate() - timezone.timedelta(days=1)
+        radiusbatch = RadiusBatch.objects.create(
+            organization=self.default_org,
+            name="test-legacy-expiration",
+            strategy="prefix",
+            prefix="test-legacy-exp",
+            expiration_date=expiration_date,
+        )
+
+        radiusbatch.name = "test-legacy-expiration-updated"
+        radiusbatch.full_clean()
 
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
@@ -1216,6 +1241,63 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         self.assertEqual(org1_session.groupname, org1_power_user_group.name)
         org2_session.refresh_from_db()
         self.assertEqual(org2_session.groupname, f"{org2.slug}-users")
+
+
+class TestRegisteredUser(BaseTestCase):
+    def test_get_for_user_and_org(self):
+        user = self._create_user()
+        org1 = self._create_org(name="ru-test-org-1", slug="ru-test-org-1")
+        org2 = self._create_org(name="ru-test-org-2", slug="ru-test-org-2")
+
+        with self.subTest("returns None when no records exist"):
+            result = RegisteredUser.get_for_user_and_org(user, org1)
+            self.assertEqual(result, None)
+
+        with self.subTest("returns only the requested organization record"):
+            org2_ru = RegisteredUser.objects.create(
+                user=user, organization=org2, is_verified=True
+            )
+            result = RegisteredUser.get_for_user_and_org(user, org1)
+            self.assertEqual(result, None)
+            result = RegisteredUser.get_for_user_and_org(user, org2)
+            self.assertEqual(result, org2_ru)
+            self.assertEqual(result.is_verified, True)
+
+        with self.subTest("uses prefetched registered_users without extra queries"):
+            org1_ru = RegisteredUser.objects.create(
+                user=user,
+                organization=org1,
+                is_verified=False,
+            )
+            prefetched_user = (
+                get_user_model()
+                .objects.prefetch_related("registered_users")
+                .get(pk=user.pk)
+            )
+            with self.assertNumQueries(0):
+                result = RegisteredUser.get_for_user_and_org(prefetched_user, org1)
+            self.assertEqual(result, org1_ru)
+
+    def test_clean_requires_unique_org_specific_registered_user(self):
+        user = self._create_user()
+        org = self._create_org(name="dup-test-org", slug="dup-test-org")
+        other_org = self._create_org(name="dup-test-org-2", slug="dup-test-org-2")
+
+        with self.subTest("duplicate org-specific raises ValidationError"):
+            RegisteredUser.objects.create(user=user, organization=org)
+            duplicate = RegisteredUser(user=user, organization=org)
+            with self.assertRaises(ValidationError):
+                duplicate.full_clean()
+
+        with self.subTest("different organizations are allowed"):
+            record = RegisteredUser(user=user, organization=other_org)
+            record.full_clean()
+
+    def test_clean_requires_organization(self):
+        user = self._create_user()
+
+        with self.assertRaises(ValidationError):
+            RegisteredUser(user=user).full_clean()
 
 
 del BaseTestCase

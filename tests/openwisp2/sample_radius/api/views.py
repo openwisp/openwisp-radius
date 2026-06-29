@@ -24,6 +24,9 @@ from openwisp_radius.api.views import (
     RadiusUserGroupListCreateView,
 )
 from openwisp_radius.api.views import RegisterView as BaseRegisterView
+from openwisp_radius.api.views import (
+    UpdateRegisteredUserMethodView as BaseUpdateRegisteredUserMethodView,
+)
 from openwisp_radius.api.views import UserAccountingView as BaseUserAccountingView
 from openwisp_radius.api.views import UserRadiusUsageView as BaseUserRadiusUsageView
 from openwisp_radius.api.views import ValidateAuthTokenView as BaseValidateAuthTokenView
@@ -104,6 +107,10 @@ class RadiusAccountingView(BaseRadiusAccountingView):
     pass
 
 
+class UpdateRegisteredUserMethodView(BaseUpdateRegisteredUserMethodView):
+    pass
+
+
 authorize = AuthorizeView.as_view()
 postauth = PostAuthView.as_view()
 accounting = AccountingView.as_view()
@@ -126,3 +133,4 @@ radius_group_list = RadiusGroupListView.as_view()
 radius_group_detail = RadiusGroupDetailView.as_view()
 radius_user_group_list = RadiusUserGroupListCreateView.as_view()
 radius_user_group_detail = RadiusUserGroupDetailView.as_view()
+update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
