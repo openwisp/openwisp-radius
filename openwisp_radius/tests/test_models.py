@@ -14,11 +14,12 @@ from django.utils import timezone
 from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
-from openwisp_utils.tests import capture_any_output, capture_stderr
+from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
 
 from .. import settings as app_settings
 from ..counters.exceptions import MaxQuotaReached
 from ..radclient.client import RadClient
+from ..signals import radius_accounting_closed
 from ..tasks import perform_change_of_authorization
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
@@ -154,6 +155,86 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             self.assertEqual(radiusaccounting1.terminate_cause, "Session-Timeout")
             self.assertEqual(radiusaccounting1.stop_time, radiusaccounting1.update_time)
             self.assertEqual(radiusaccounting2.stop_time, None)
+
+    def test_radius_accounting_closed_signal_on_commit(self):
+        radiusaccounting_options = _RADACCT.copy()
+        radiusaccounting_options.update(
+            {
+                "organization": self.default_org,
+                "nas_ip_address": "192.168.182.3",
+            }
+        )
+
+        def assert_signal_not_emitted_on_save(session, **save_kwargs):
+            with catch_signal(radius_accounting_closed) as handler:
+                with self.captureOnCommitCallbacks(execute=True):
+                    session.full_clean()
+                    session.save(**save_kwargs)
+                    handler.assert_not_called()
+                handler.assert_not_called()
+
+        def assert_signal_emitted_on_save(session, **save_kwargs):
+            with catch_signal(radius_accounting_closed) as handler:
+                with self.captureOnCommitCallbacks(execute=True):
+                    session.full_clean()
+                    session.save(**save_kwargs)
+                    handler.assert_not_called()
+                handler.assert_called_once()
+                self.assertEqual(handler.call_args.kwargs["sender"], RadiusAccounting)
+                self.assertEqual(handler.call_args.kwargs["instance"], session)
+
+        with self.subTest("Open session creation does not emit"):
+            session = RadiusAccounting(unique_id="closed-signal-1")
+            for key, value in radiusaccounting_options.items():
+                setattr(session, key, value)
+            assert_signal_not_emitted_on_save(session)
+
+        with self.subTest("Closed session creation emits on commit"):
+            session = RadiusAccounting(unique_id="closed-signal-2")
+            for key, value in radiusaccounting_options.items():
+                setattr(session, key, value)
+            session.stop_time = timezone.now()
+            assert_signal_emitted_on_save(session)
+
+        with self.subTest("Open session updated as closed emits on commit"):
+            session = self._create_radius_accounting(
+                unique_id="closed-signal-3", **radiusaccounting_options
+            )
+            session.stop_time = timezone.now()
+            assert_signal_emitted_on_save(session)
+
+        with self.subTest("Already closed session saved again does not emit"):
+            session = self._create_radius_accounting(
+                unique_id="closed-signal-4",
+                stop_time=timezone.now(),
+                **radiusaccounting_options,
+            )
+            assert_signal_not_emitted_on_save(session)
+
+        with self.subTest("Unsaved stop_time change does not emit"):
+            session = self._create_radius_accounting(
+                unique_id="closed-signal-5", **radiusaccounting_options
+            )
+            session.stop_time = timezone.now()
+            session.terminate_cause = "User-Request"
+            assert_signal_not_emitted_on_save(
+                session, update_fields=["terminate_cause"]
+            )
+            self.assertIsNone(session._initial_stop_time)
+            assert_signal_emitted_on_save(session, update_fields=["stop_time"])
+
+    def test_save_update_fields_persists_backfilled_start_time(self):
+        options = _RADACCT.copy()
+        session = self._create_radius_accounting(
+            unique_id="start-time-update-fields", **options
+        )
+        RadiusAccounting.objects.filter(pk=session.pk).update(start_time=None)
+        session.refresh_from_db()
+        session.terminate_cause = "User-Request"
+        session.save(update_fields=["terminate_cause"])
+        session.refresh_from_db()
+        self.assertIsNotNone(session.start_time)
+        self.assertEqual(session.terminate_cause, "User-Request")
 
     @capture_any_output()
     @mock.patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")

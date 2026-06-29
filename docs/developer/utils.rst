@@ -27,6 +27,30 @@ completes successfully, just before the response is returned.
 The ``view`` argument can also be used to access the ``request`` object
 i.e. ``view.request``.
 
+``radius_accounting_closed``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Path**: ``openwisp_radius.signals.radius_accounting_closed``
+
+**Arguments**:
+
+- ``sender``: ``RadiusAccounting`` model class
+- ``instance``: closed ``RadiusAccounting`` instance
+
+This signal is emitted when a ``RadiusAccounting`` session is closed. For
+regular ``save()`` paths, it is emitted only when ``stop_time`` changes
+from ``None`` to any value, or when a closed session is created directly.
+Editing an already closed session does not emit this signal again.
+
+The signal is emitted after the database transaction is committed.
+
+Integrations which need to react to closed accounting sessions should
+listen to this signal.
+
+When closing multiple sessions with ``bulk_update()``, use
+``RadiusAccounting.emit_radius_accounting_closed()`` after the database
+update to emit this signal once for each closed session.
+
 .. _radius_captive_portal_mock_views:
 
 Captive portal mock views
