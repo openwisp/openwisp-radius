@@ -28,8 +28,6 @@ RUN apt-get update && \
   shared-mime-info \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/openwisp
-
 # Install test requirements first so this layer is cached separately
 # from the source code copy below.
 COPY requirements-test.txt .
