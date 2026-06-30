@@ -89,7 +89,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
 
         self._create_radius_accounting(**options)
         self.assertEqual(
@@ -140,7 +140,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
         self._create_radius_accounting(**options)
         with self.subTest("location_id should not be set"):
             self.assertEqual(
@@ -169,13 +169,79 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 0,
             )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting")
-    def test_post_save_radiusaccouting_open_session(self, mocked_task):
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_post_save_radiusaccouting_open_session(self, mocked_delay):
+        """
+        Regression test ensuring open or interim accounting sessions do not
+        write monitoring metrics before their cumulative octet values are final.
+        """
         radius_options = _RADACCT.copy()
         radius_options["unique_id"] = "117"
         session = self._create_radius_accounting(**radius_options)
         self.assertEqual(session.stop_time, None)
-        mocked_task.assert_not_called()
+        mocked_delay.assert_not_called()
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_closed_radius_accounting_metric_uses_stop_time(self, mocked_delay):
+        """
+        Regression test ensuring sessions created already closed are
+        snapshotted at stop_time rather than task execution time.
+        """
+        stop_time = timezone.now() - timezone.timedelta(days=1)
+        radius_options = _RADACCT.copy()
+        radius_options.update(
+            {
+                "unique_id": "closed-session-stop-time",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": 8000000000,
+                "output_octets": 9000000000,
+                "stop_time": stop_time,
+            }
+        )
+        self._create_radius_accounting(**radius_options)
+        mocked_delay.assert_called_once_with(
+            username=radius_options["username"],
+            organization_id=str(self.default_org.id),
+            input_octets=radius_options["input_octets"],
+            output_octets=radius_options["output_octets"],
+            calling_station_id=radius_options["calling_station_id"],
+            called_station_id=radius_options["called_station_id"],
+            time=stop_time,
+        )
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_editing_closed_radius_accounting_does_not_write_metric_again(
+        self, mocked_delay
+    ):
+        """
+        Regression test ensuring edits to already closed sessions do not write
+        duplicate monitoring metrics after the first close snapshot.
+        """
+        stop_time = timezone.now()
+        radius_options = _RADACCT.copy()
+        radius_options.update(
+            {
+                "unique_id": "closed-session-edit",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": 8000000000,
+                "output_octets": 9000000000,
+                "stop_time": stop_time,
+            }
+        )
+        session = self._create_radius_accounting(**radius_options)
+        mocked_delay.assert_called_once()
+        mocked_delay.reset_mock()
+        session.terminate_cause = "User-Request"
+        session.save(update_fields=["terminate_cause"])
+        mocked_delay.assert_not_called()
 
     @patch("logging.Logger.warning")
     def test_post_save_radius_accounting_shared_accounting(self, mocked_logger):
@@ -206,7 +272,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
         device_metric_qs = self.metric_model.objects.filter(
             configuration="radius_acc",
             name="RADIUS Accounting",
@@ -290,7 +356,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
         # Remove calls for user registration from mocked logger
         mocked_logger.reset_mock()
         self._create_radius_accounting(**options)
@@ -367,7 +433,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
 
         self._create_radius_accounting(**options)
         self.assertEqual(
@@ -429,7 +495,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
         self._create_radius_accounting(**options)
         self.assertEqual(
             self.metric_model.objects.filter(
@@ -479,7 +545,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "output_octets": "9000000000",
             }
         )
-        options["stop_time"] = options["start_time"]
+        options["stop_time"] = timezone.now()
         self._create_radius_accounting(**options)
         self.assertEqual(
             self.metric_model.objects.filter(
