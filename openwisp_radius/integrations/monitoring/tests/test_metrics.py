@@ -18,6 +18,7 @@ TASK_PATH = "openwisp_radius.integrations.monitoring.tasks"
 
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 OrganizationUser = load_model("openwisp_users", "OrganizationUser")
+RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 User = get_user_model()
 
 
@@ -182,6 +183,137 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         session = self._create_radius_accounting(**radius_options)
         self.assertEqual(session.stop_time, None)
         mocked_delay.assert_not_called()
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_radius_accounting_closed_handler_open_session(self, mocked_delay):
+        # Import locally because the standard test suite runs without monitoring.
+        from ..receivers import radius_accounting_closed_handler
+
+        radius_options = _RADACCT.copy()
+        radius_options["unique_id"] = "open-session-handler"
+        session = RadiusAccounting(**radius_options)
+        self.assertEqual(session.stop_time, None)
+        radius_accounting_closed_handler(session)
+        mocked_delay.assert_not_called()
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_radius_accounting_closed_handler_naive_stop_time(self, mocked_delay):
+        # Import locally because the standard test suite runs without monitoring.
+        from ..receivers import radius_accounting_closed_handler
+
+        naive_stop_time = timezone.datetime(2026, 1, 1, 12, 0, 0)
+        radius_options = _RADACCT.copy()
+        radius_options.update(
+            {
+                "unique_id": "naive-stop-time-handler",
+                "organization": self.default_org,
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "00:00:00:00:00:00",
+                "stop_time": naive_stop_time,
+            }
+        )
+        session = RadiusAccounting(**radius_options)
+        radius_accounting_closed_handler(session)
+        mocked_delay.assert_called_once_with(
+            username=radius_options["username"],
+            organization_id=str(self.default_org.id),
+            input_octets=radius_options["input_octets"],
+            output_octets=radius_options["output_octets"],
+            calling_station_id=radius_options["calling_station_id"],
+            called_station_id=radius_options["called_station_id"],
+            time=timezone.make_aware(naive_stop_time),
+        )
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_accounting_on_nas_reboot_writes_monitoring_metric(self, mocked_delay):
+        """
+        Regression test for https://github.com/openwisp/openwisp-radius/issues/734.
+
+        Sessions closed by Accounting-On must write monitoring metrics even
+        though the closure path uses bulk_update instead of model save().
+        """
+        radius_options = _RADACCT.copy()
+        radius_options.update(
+            {
+                "unique_id": "nas-reboot-session",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": 8000000000,
+                "output_octets": 9000000000,
+                "stop_time": None,
+            }
+        )
+        self._create_radius_accounting(**radius_options)
+        mocked_delay.assert_not_called()
+        closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+            called_station_id=radius_options["called_station_id"]
+        )
+        self.assertEqual(closed_count, 1)
+        session = RadiusAccounting.objects.get(unique_id=radius_options["unique_id"])
+        mocked_delay.assert_called_once_with(
+            username=radius_options["username"],
+            organization_id=str(self.default_org.id),
+            input_octets=radius_options["input_octets"],
+            output_octets=radius_options["output_octets"],
+            calling_station_id=radius_options["calling_station_id"],
+            called_station_id=radius_options["called_station_id"],
+            time=session.stop_time,
+        )
+        mocked_delay.reset_mock()
+        closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+            called_station_id=radius_options["called_station_id"]
+        )
+        self.assertEqual(closed_count, 0)
+        mocked_delay.assert_not_called()
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_close_previous_radius_accounting_writes_monitoring_metric(
+        self, mocked_delay
+    ):
+        """
+        Regression test ensuring sessions closed by the previous-session
+        cleanup path write monitoring metrics despite using bulk_update.
+        """
+        radius_options = _RADACCT.copy()
+        radius_options.update(
+            {
+                "unique_id": "previous-session",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": 8000000000,
+                "output_octets": 9000000000,
+                "stop_time": None,
+            }
+        )
+        self._create_radius_accounting(**radius_options)
+        mocked_delay.assert_not_called()
+        new_session_options = radius_options.copy()
+        new_session_options.update(
+            {
+                "unique_id": "new-session",
+                "input_octets": 1000000000,
+                "output_octets": 2000000000,
+            }
+        )
+        self._create_radius_accounting(**new_session_options)
+        session = RadiusAccounting.objects.get(unique_id=radius_options["unique_id"])
+        mocked_delay.assert_called_once_with(
+            username=radius_options["username"],
+            organization_id=str(self.default_org.id),
+            input_octets=radius_options["input_octets"],
+            output_octets=radius_options["output_octets"],
+            calling_station_id=radius_options["calling_station_id"],
+            called_station_id=radius_options["called_station_id"],
+            time=session.stop_time,
+        )
 
     @patch(
         "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"

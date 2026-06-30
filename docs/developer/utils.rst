@@ -45,7 +45,10 @@ Editing an already closed session does not emit this signal again.
 The signal is emitted after the database transaction is committed.
 
 Integrations which need to react to closed accounting sessions should
-listen to this signal.
+listen to this signal. For example, the monitoring integration uses this
+signal to write RADIUS traffic snapshots for sessions closed by regular
+``post_save`` paths, ``Accounting-On`` packets and automatic stale-session
+cleanup.
 
 When closing multiple sessions with ``bulk_update()``, use
 ``RadiusAccounting.emit_radius_accounting_closed()`` after the database
