@@ -223,6 +223,33 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             self.assertIsNone(session._initial_stop_time)
             assert_signal_emitted_on_save(session, update_fields=["stop_time"])
 
+    def test_close_stale_sessions_on_nas_boot_query_count(self):
+        radiusaccounting_options = _RADACCT.copy()
+        radiusaccounting_options.update(
+            {
+                "organization": self.default_org,
+                "nas_ip_address": "192.168.182.3",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+            }
+        )
+        session_options = radiusaccounting_options.copy()
+        session_options.update(
+            unique_id="nas-reboot-query-count-1",
+            username="nas-reboot-query-count-1",
+        )
+        self._create_radius_accounting(**session_options)
+        session_options = radiusaccounting_options.copy()
+        session_options.update(
+            unique_id="nas-reboot-query-count-2",
+            username="nas-reboot-query-count-2",
+        )
+        self._create_radius_accounting(**session_options)
+        with self.assertNumQueries(4):
+            closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+                called_station_id=radiusaccounting_options["called_station_id"]
+            )
+        self.assertEqual(closed_count, 2)
+
     def test_save_update_fields_persists_backfilled_start_time(self):
         options = _RADACCT.copy()
         session = self._create_radius_accounting(
