@@ -126,6 +126,7 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
     RadiusAccounting.objects.bulk_update(
         closed_sessions, fields=["stop_time", "terminate_cause"]
     )
+    RadiusAccounting.emit_radius_accounting_closed(closed_sessions)
 
 
 def radius_user_group_change(sender, instance, **kwargs):
