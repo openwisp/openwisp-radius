@@ -4,7 +4,6 @@ from django.apps import AppConfig
 from django.db import models
 from django.db.models import Count, Sum
 from django.db.models.functions import Cast, Round
-from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.monitoring.configuration import (
     _register_chart_configuration_choice,
@@ -12,6 +11,7 @@ from openwisp_monitoring.monitoring.configuration import (
 )
 from swapper import load_model
 
+from openwisp_radius.signals import radius_accounting_closed
 from openwisp_utils.admin_theme import register_dashboard_chart
 
 from .utils import (
@@ -121,12 +121,12 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                 _register_chart_configuration_choice(chart_key, chart_config)
 
     def connect_signal_receivers(self):
-        from .receivers import post_save_radiusaccounting
+        from .receivers import radius_accounting_closed_handler
 
         RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 
-        post_save.connect(
-            post_save_radiusaccounting,
+        radius_accounting_closed.connect(
+            radius_accounting_closed_handler,
             sender=RadiusAccounting,
-            dispatch_uid="post_save_radiusaccounting_radius_acc_metric",
+            dispatch_uid="radius_accounting_closed_radius_acc_metric",
         )
