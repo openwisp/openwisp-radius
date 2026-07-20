@@ -330,7 +330,12 @@ class Migration(migrations.Migration):
                         default=django.utils.timezone.now, editable=False
                     ),
                 ),
-                ("is_admin", models.BooleanField(default=False)),
+                (
+                    "is_admin",
+                    models.BooleanField(
+                        default=False, verbose_name="Organization manager"
+                    ),
+                ),
                 (
                     "id",
                     models.UUIDField(
