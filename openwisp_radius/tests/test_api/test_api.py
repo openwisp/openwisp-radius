@@ -1057,6 +1057,8 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
+        self.assertIn("non_field_errors", response.data)
+        self.assertIn("is not member", str(response.data["non_field_errors"]))
         user.refresh_from_db()
         self.assertTrue(user.check_password("test_password"))
 
