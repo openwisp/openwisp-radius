@@ -1034,6 +1034,34 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.get(password_reset_url)
         self.assertEqual(response.status_code, 405)
 
+    def test_api_password_reset_confirm_json_enforces_membership(self):
+        other_org = self._create_org(name="other-org")
+        user = User.objects.create_user(
+            username="other-org-user",
+            password="test_password",
+            email="other-org-user@email.com",
+        )
+        self._create_org_user(organization=other_org, user=user)
+        data = {
+            "new_password1": "test_new_password",
+            "new_password2": "test_new_password",
+            "uid": user_pk_to_url_str(user),
+            "token": default_token_generator.make_token(user),
+        }
+        password_confirm_url = reverse(
+            "radius:rest_password_reset_confirm", args=[self.default_org.slug]
+        )
+        response = self.client.post(
+            password_confirm_url,
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("non_field_errors", response.data)
+        self.assertIn("is not member", str(response.data["non_field_errors"]))
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("test_password"))
+
     def test_user_accounting_list_200(self):
         auth_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
         self._get_org_user()
