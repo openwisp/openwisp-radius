@@ -582,7 +582,7 @@ class TestAdmin(
                 response,
                 _(
                     "Invalid input. Please enter valid ip addresses "
-                    "or subnets separated by comma. (no spaces)"
+                    "or subnets separated by comma."
                 ),
             )
 
