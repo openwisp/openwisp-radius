@@ -1,0 +1,37 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Test / coverage / type-check caches
+.pytest_cache/
+.coverage
+.coverage.*
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# Git / editor / OS files
+.git/
+.gitignore
+.gitattributes
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+docker-compose*.yml
+Dockerfile*
