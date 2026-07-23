@@ -343,11 +343,17 @@ def migrate_registered_users_multitenant_reverse(
             RegisteredUser.objects.filter(pk__in=to_delete_pks).delete()
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def delete_old_radius_token(apps, schema_editor):
     RadiusToken = get_swapped_model(apps, "openwisp_radius", "RadiusToken")
     RadiusToken.objects.all().delete()
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def add_default_organization(apps, schema_editor):
     """
     Set default organization using
@@ -371,6 +377,9 @@ def add_default_organization(apps, schema_editor):
     OrganizationRadiusSettings.objects.create(organization_id=default_org_id)
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def add_default_groups(apps, schema_editor):
     Organization = get_swapped_model(apps, "openwisp_users", "Organization")
     RadiusGroup = get_swapped_model(apps, "openwisp_radius", "RadiusGroup")
@@ -379,6 +388,9 @@ def add_default_groups(apps, schema_editor):
             create_default_groups(organization, apps=apps)
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def add_default_group_to_existing_users(apps, schema_editor):
     Organization = get_swapped_model(apps, "openwisp_users", "Organization")
     OrganizationUser = get_swapped_model(apps, "openwisp_users", "OrganizationUser")
@@ -403,6 +415,10 @@ def add_default_group_to_existing_users(apps, schema_editor):
                     user_group.save()
 
 
+# Flagged for removal (#705): helper for assign_permissions_to_groups, used only
+# by the squashed 0001-0042 range (released <= 1.2.x). Remove in the future
+# cleanup that deletes the original 0001-0042 files and drops their RunPython
+# steps from the squashed migration.
 def create_default_permissions(apps, schema_editor):
     for app_config in apps.get_app_configs():
         app_config.models_module = True
@@ -410,6 +426,9 @@ def create_default_permissions(apps, schema_editor):
         app_config.models_module = None
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def assign_permissions_to_groups(apps, schema_editor):
     create_default_permissions(apps, schema_editor)
     Group = get_swapped_model(apps, "openwisp_users", "Group")
@@ -452,6 +471,9 @@ def assign_permissions_to_groups(apps, schema_editor):
             admin.permissions.add(permission_ad.pk)
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def popluate_uuids(apps, schema_editor):
     models = [
         "RadiusCheck",
@@ -469,6 +491,9 @@ def popluate_uuids(apps, schema_editor):
             obj.save(update_fields=["uuid"])
 
 
+# Flagged for removal (#705): data migration for the squashed 0001-0042 range
+# (released <= 1.2.x). Remove in the future cleanup that deletes the original
+# 0001-0042 files and drops their RunPython steps from the squashed migration.
 def populate_phonetoken_phone_number(apps, schema_editor):
     PhoneToken = get_swapped_model(apps, "openwisp_radius", "PhoneToken")
     for phone_token in PhoneToken.objects.all():
