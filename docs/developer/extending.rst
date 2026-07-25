@@ -175,7 +175,7 @@ You have to replicate and adapt that code in your project.
 
 For more information regarding the concept of ``AppConfig`` please refer
 to the `"Applications" section in the django documentation
-<https://docs.djangoproject.com/en/4.2/ref/applications/>`_.
+<https://docs.djangoproject.com/en/5.2/ref/applications/>`_.
 
 8. Create your custom models
 ----------------------------
@@ -188,7 +188,7 @@ You can add fields in a similar way in your ``models.py`` file.
 
 For doubts regarding how to use, extend or develop models please refer to
 the `"Models" section in the django documentation
-<https://docs.djangoproject.com/en/4.2/topics/db/models/>`_.
+<https://docs.djangoproject.com/en/5.2/topics/db/models/>`_.
 
 9. Add swapper configurations
 -----------------------------
@@ -243,7 +243,7 @@ read the guide in the setup <radius_migrate_existing_freeradius_db>`.
 
 For more information, refer to the `"Migrations" section in the django
 documentation
-<https://docs.djangoproject.com/en/4.2/topics/migrations/>`_.
+<https://docs.djangoproject.com/en/5.2/topics/migrations/>`_.
 
 11. Create the admin
 --------------------
@@ -257,7 +257,7 @@ are described below.
 For more information regarding how the django admin works, or how it can
 be customized, please refer to `"The django admin site" section in the
 django documentation
-<https://docs.djangoproject.com/en/4.2/ref/contrib/admin/>`_.
+<https://docs.djangoproject.com/en/5.2/ref/contrib/admin/>`_.
 
 1. Monkey patching
 ~~~~~~~~~~~~~~~~~~
@@ -462,7 +462,7 @@ comments):
 
 For more information about URL configuration in django, please refer to
 the `"URL dispatcher" section in the django documentation
-<https://docs.djangoproject.com/en/4.2/topics/http/urls/>`_.
+<https://docs.djangoproject.com/en/5.2/topics/http/urls/>`_.
 
 15. Import the automated tests
 ------------------------------
@@ -511,7 +511,7 @@ want only extend the API views and not social views, you can use
 
 For more information about django views, please refer to the `views
 section in the django documentation
-<https://docs.djangoproject.com/en/4.2/topics/http/views/>`_.
+<https://docs.djangoproject.com/en/5.2/topics/http/views/>`_.
 
 2. Extending the Social Views
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -546,4 +546,4 @@ use ``get_urls(api_views, social_views, None)`` to get saml_views from
 
 For more information about django views, please refer to the `views
 section in the django documentation
-<https://docs.djangoproject.com/en/4.2/topics/http/views/>`_.
+<https://docs.djangoproject.com/en/5.2/topics/http/views/>`_.
