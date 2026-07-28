@@ -915,18 +915,22 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(password_reset_url, data={})
         self.assertEqual(response.status_code, 400)
 
-        # email does not exist in database
+        # email does not exist in database: indistinguishable from a match,
+        # to avoid leaking which identifiers are registered
         reset_payload = {"input": "wrong@email.com"}
         response = self.client.post(password_reset_url, data=reset_payload)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), mail_count)
 
-        # email not registered with org
+        # email not registered with org: also indistinguishable from a
+        # match, to avoid leaking organization membership
         User.objects.create_user(
             username="test_name1", password="test_password", email="test1@email.com"
         )
         reset_payload = {"input": "test1@email.com"}
         response = self.client.post(password_reset_url, data=reset_payload)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), mail_count)
 
         # valid payload
         reset_payload = {"input": "test@email.com"}
@@ -960,7 +964,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         confirm_response = self.client.post(password_confirm_url, data=data)
         self.assertEqual(confirm_response.status_code, 400)
 
-        # wrong uid
+        # wrong uid: the uid/token pair is already an unguessable secret,
+        # so there is nothing left to enumerate here, hence a plain 400
+        # rather than a 404 (see PasswordResetConfirmView docstring)
         data = {
             "new_password1": "test_new_password",
             "new_password2": "test_new_password",
@@ -968,7 +974,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "token": url_kwargs["token"],
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
-        self.assertEqual(confirm_response.status_code, 404)
+        self.assertEqual(confirm_response.status_code, 400)
 
         # wrong token and uid
         data = {
@@ -978,7 +984,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "token": "-wrong-token-",
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
-        self.assertEqual(confirm_response.status_code, 404)
+        self.assertEqual(confirm_response.status_code, 400)
 
         # valid payload
         data = {
@@ -1149,9 +1155,14 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_org_user(user=user, organization=org)
         path = reverse("radius:rest_password_reset", args=[org.slug])
         r = self.client.post(path, {"input": user.email})
+        # The reset password view does not leak whether an account exists or not.
+        # It returns success response in both cases.
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data["detail"], "Password reset e-mail has been sent.")
-        mocked_send.assert_called_once()
+        if is_active:
+            mocked_send.assert_called_once()
+        else:
+            mocked_send.assert_not_called()
 
     def test_active_user_reset_password(self):
         self._test_user_reset_password_helper(True)

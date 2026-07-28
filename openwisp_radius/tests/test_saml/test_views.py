@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+from unittest import mock
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -7,14 +9,17 @@ from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import TestCase, modify_settings, override_settings
 from django.urls import reverse, reverse_lazy
+from django.utils.timezone import now
 from djangosaml2.tests import auth_response, conf
 from djangosaml2.utils import get_session_id_from_saml2, saml2_from_httpredirect_request
 from rest_framework.authtoken.models import Token
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.saml.utils import get_url_or_path
+from openwisp_users.auth import EXTERNAL
+from openwisp_users.auth import SESSION_KEY as OPENWISP_SESSION_KEY
 from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests import capture_any_output
 
@@ -353,6 +358,43 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(
             RegisteredUser.objects.filter(user=user, organization=org).count(), 1
         )
+
+    @modify_settings(
+        MIDDLEWARE={"append": "openwisp_users.middleware.PasswordExpirationMiddleware"}
+    )
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    # @capture_any_output()
+    def test_saml_login_marks_session_as_externally_authenticated(self):
+        # The SAML user has a usable but expired local password: without the
+        # session being marked as externally authenticated, PasswordExpirationMiddleware
+        # would redirect every request from this session to the password-change page.
+        org_slug = "default"
+        user = self._create_user(
+            username="org_user@example.com", email="org_user@example.com"
+        )
+        User.objects.update(password_updated=now() - timedelta(days=60))
+        user.refresh_from_db()
+        self.assertEqual(user.has_password_expired(), True)
+
+        relay_state = self._get_relay_state(
+            redirect_url="/radius/saml2/additional-info/", org_slug=org_slug
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertNotEqual(
+            get_url_or_path(response.url), reverse("account_change_password")
+        )
+        self.assertEqual(self.client.session[OPENWISP_SESSION_KEY], EXTERNAL)
+        # subsequent requests from the same session must not be blocked either
+        additional_info_response = self.client.get(response.url)
+        self.assertEqual(additional_info_response.status_code, 302)
 
 
 @override_settings(SAML_ALLOWED_HOSTS=["captive-portal.example.com"])

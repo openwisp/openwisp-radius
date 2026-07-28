@@ -7,13 +7,8 @@ from allauth.account.utils import setup_user_email
 from dj_rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
 )
-from dj_rest_auth.serializers import (
-    PasswordResetSerializer as BasePasswordResetSerializer,
-)
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import Http404
@@ -30,11 +25,13 @@ from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_users.api.serializers import (
+    PasswordResetSerializer as BasePasswordResetSerializer,
+)
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.serializers import ValidatedModelSerializer
 
 from .. import settings as app_settings
-from ..base.forms import PasswordResetForm
 from ..counters.exceptions import SkipCheck
 from ..utils import (
     get_group_checks,
@@ -57,6 +54,13 @@ RegisteredUser = load_model("RegisteredUser")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 Organization = swapper.load_model("openwisp_users", "Organization")
 User = get_user_model()
+
+
+class PasswordResetSerializer(BasePasswordResetSerializer):
+    """
+    DEPRECATED: Use openwisp_users.api.serializers.PasswordResetSerializer instead.
+    TODO: Remove in 1.4.0
+    """
 
 
 class AllowAllUsersModelBackend(UsersAuthenticationBackend):
@@ -512,38 +516,6 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         model = RadiusBatch
         fields = "__all__"
         read_only_fields = ("status", "user_credentials", "created", "modified")
-
-
-class PasswordResetSerializer(BasePasswordResetSerializer):
-    input = serializers.CharField()
-    email = None
-    password_reset_form_class = PasswordResetForm
-
-    def validate_input(self, value):
-        # Create PasswordResetForm with the serializer.
-        # Check BasePasswordResetSerializer.validate_email for details.
-        user = self.context.get("request").user
-        self.reset_form = self.password_reset_form_class(data={"email": user.email})
-        self.reset_form.is_valid()
-        return value
-
-    def save(self):
-        request = self.context.get("request")
-        password_reset_url = self.context.get("password_reset_url")
-        # Set some values to trigger the send_email method.
-        opts = {
-            "use_https": request.is_secure(),
-            "from_email": getattr(settings, "DEFAULT_FROM_EMAIL"),
-            "email_template_name": ("custom_password_reset_email.html"),
-            "request": request,
-            "extra_email_context": {
-                "subject": _("Password reset on %s") % (get_current_site(request).name),
-                "call_to_action_url": password_reset_url,
-                "call_to_action_text": _("Reset password"),
-            },
-        }
-        opts.update(self.get_email_options())
-        self.reset_form.save(**opts)
 
 
 class RegisterSerializer(
