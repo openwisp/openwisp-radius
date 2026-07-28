@@ -5,8 +5,6 @@ from allauth.account.forms import default_token_generator
 from allauth.account.utils import url_str_to_user_pk, user_pk_to_url_str
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
-from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
-from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
 from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
@@ -55,6 +53,10 @@ from openwisp_users.api.mixins import (
 )
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
+from openwisp_users.api.views import (
+    PasswordResetConfirmView as BasePasswordResetConfirmView,
+)
+from openwisp_users.api.views import PasswordResetView as BasePasswordResetView
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.pagination import OpenWispPagination
 
@@ -535,45 +537,48 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         The input field can be an email, an username or
         a phone number (if mobile phone verification is in use).
         """
-        request.user = self.get_user(request)
-        return super().post(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": _("Password reset e-mail has been sent.")})
 
-    def get_serializer_context(self):
-        user = self.request.user
-        if not user.pk:
-            return
-        uid = user_pk_to_url_str(user)
-        token = default_token_generator.make_token(user)
-        password_reset_urls = app_settings.PASSWORD_RESET_URLS
-        password_reset_url = app_settings.DEFAULT_PASSWORD_RESET_URL
-        domain = get_current_site(self.request).domain
-        if getattr(self, "swagger_fake_view", False):
-            organization_pk, organization_slug = None, None  # pragma: no cover
-        else:
-            organization_pk = self.organization.pk
-            organization_slug = self.organization.slug
-            org_radius_settings = self.organization.radius_settings
-            if org_radius_settings.password_reset_url:
-                password_reset_url = org_radius_settings.password_reset_url
-            else:
-                password_reset_url = password_reset_urls.get(
-                    str(organization_pk), password_reset_url
-                )
-        password_reset_url = password_reset_url.format(
-            organization=organization_slug, uid=uid, token=token, site=domain
+    def get_users(self, identifier):
+        """
+        Return active users matching ``identifier`` who belong to this organization.
+
+        Always returns a queryset and never reveals whether ``identifier`` exists
+        outside this organization. Both an unknown identifier and a user who is
+        not a member of this organization produce an empty queryset, allowing the
+        password reset endpoint to return the same success response in all cases
+        and preventing user enumeration.
+        """
+        return (
+            auth_backend.get_users(identifier)
+            .filter(
+                is_active=True,
+                openwisp_users_organizationuser__organization=self.organization,
+            )
+            .distinct()
         )
-        context = {"request": self.request, "password_reset_url": password_reset_url}
-        return context
 
-    def get_user(self, request):
-        if request.data.get("input", None):
-            input = request.data["input"]
-            user = auth_backend.get_users(input).first()
-            if user is None:
-                raise Http404("No user was found with given details.")
-            self.validate_membership(user)
-            return user
-        raise ParseError(_("The email field is required."))
+    def get_password_reset_url(self, user, token):
+
+        uid = user_pk_to_url_str(user)
+        password_reset_urls = app_settings.PASSWORD_RESET_URLS
+        password_reset_url_template = app_settings.DEFAULT_PASSWORD_RESET_URL
+        org_radius_settings = self.organization.radius_settings
+        if org_radius_settings.password_reset_url:
+            password_reset_url_template = org_radius_settings.password_reset_url
+        else:
+            password_reset_url_template = password_reset_urls.get(
+                str(self.organization.pk), password_reset_url_template
+            )
+        return password_reset_url_template.format(
+            organization=self.organization.slug,
+            uid=uid,
+            token=token,
+            site=get_current_site(self.request).domain,
+        )
 
 
 password_reset = PasswordResetView.as_view()
@@ -594,18 +599,10 @@ class PasswordResetConfirmView(
         Allows users to confirm their reset password after having
         it requested via the `Reset password` endpoint.
         """
-        self.validate_user()
         return super().post(request, *args, **kwargs)
 
-    def validate_user(self, *args, **kwargs):
-        if self.request.data.get("uid", None):
-            try:
-                uid = url_str_to_user_pk(self.request.data["uid"])
-                user = User.objects.get(pk=uid)
-            except (User.DoesNotExist, ValidationError):
-                raise Http404()
-            self.validate_membership(user)
-            return user
+    def validate_user(self, user):
+        self.validate_membership(user)
 
 
 password_reset_confirm = PasswordResetConfirmView.as_view()

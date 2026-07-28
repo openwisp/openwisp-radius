@@ -21,6 +21,8 @@ from djangosaml2.views import LoginView as BaseLoginView
 from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
 from rest_framework.authtoken.models import Token
 
+from openwisp_users.auth import EXTERNAL, set_authentication_method
+
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
@@ -61,6 +63,7 @@ class AssertionConsumerServiceView(
 ):
     def post_login_hook(self, request, user, session_info):
         """If desired, a hook to add logic after a user has successfully logged in."""
+        set_authentication_method(request, EXTERNAL)
         # In some cases, it possible that the organization cache for
         # the user is not updated before execution of the following
         # code. Hence, the cache is manually updated here.
