@@ -161,10 +161,6 @@ should be able to use it with OpenWISP RADIUS (and extended apps) easily:
     ./manage.py migrate --fake openwisp-radius 0001_initial_freeradius
     ./manage.py migrate
 
-Fresh installations automatically use the squashed migrations. Migrations
-0011-0013 remain separate because they safely update identifiers in
-existing FreeRADIUS tables.
-
 Troubleshooting Steps for Common Installation Issues
 ----------------------------------------------------
 
