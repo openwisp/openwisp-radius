@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
@@ -1056,9 +1057,10 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox.pop()
         email_body = email.alternatives[0][0]
+        uid = user_pk_to_url_str(test_user)
         self.assertIn(self.default_org.slug, email_body)
         self.assertIn("Reset password", email_body)
-        self.assertIn("password/reset/confirm/", email_body)
+        self.assertIn(f"password/reset/confirm/{uid}/", email_body)
 
     def test_get_password_reset_url_org_radius_settings(self):
         """Test password reset URL from org radius_settings."""
@@ -1070,7 +1072,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_org_user(organization=self.default_org, user=test_user)
         self.default_org.radius_settings.password_reset_url = (
             "https://custom.example.com/reset?org={organization}"
-            "&uid={uid}&token={token}"
+            "&uid={uid}&token={token}&site={site}"
         )
         self.default_org.radius_settings.save()
         password_reset_url = reverse(
@@ -1082,7 +1084,79 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox.pop()
         email_body = email.alternatives[0][0]
-        self.assertIn("https://custom.example.com/reset?org=", email_body)
+        uid = user_pk_to_url_str(test_user)
+        site_domain = Site.objects.get_current().domain
+        self.assertIn(
+            f"https://custom.example.com/reset?org={self.default_org.slug}"
+            f"&amp;uid={uid}&amp;token=",
+            email_body,
+        )
+        self.assertIn(f"&amp;site={site_domain}", email_body)
+
+    def test_get_password_reset_url_org_radius_settings_precedence(self):
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        self.default_org.radius_settings.password_reset_url = (
+            "https://org-override.example.com/{organization}/{uid}/{token}"
+        )
+        self.default_org.radius_settings.save()
+        password_reset_urls = {
+            str(self.default_org.pk): (
+                "https://org-specific.example.com/{organization}/{uid}/{token}"
+            )
+        }
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        with mock.patch.object(
+            app_settings, "PASSWORD_RESET_URLS", password_reset_urls
+        ):
+            response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        self.assertIn("https://org-override.example.com/", email_body)
+        self.assertNotIn("https://org-specific.example.com/", email_body)
+
+    def test_get_password_reset_url_password_reset_urls_org_specific(self):
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        self.assertEqual(
+            self.default_org.radius_settings.password_reset_url,
+            app_settings.DEFAULT_PASSWORD_RESET_URL,
+        )
+        uid = user_pk_to_url_str(test_user)
+        password_reset_urls = {
+            str(self.default_org.pk): (
+                "https://org-specific.example.com/{organization}/{uid}/{token}"
+            )
+        }
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        with mock.patch.object(
+            app_settings, "PASSWORD_RESET_URLS", password_reset_urls
+        ):
+            response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        self.assertIn(
+            f"https://org-specific.example.com/{self.default_org.slug}/{uid}/",
+            email_body,
+        )
 
     def test_api_password_reset_confirm_json_enforces_membership(self):
         other_org = self._create_org(name="other-org")
