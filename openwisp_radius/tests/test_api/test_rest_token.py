@@ -1,6 +1,7 @@
 from unittest import mock
 
 import swapper
+from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.urls import reverse
@@ -9,6 +10,7 @@ from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 
 from openwisp_radius.api import views as api_views
+from openwisp_users.auth import EXTERNAL
 from openwisp_utils.tests import capture_any_output
 
 from ... import settings as app_settings
@@ -29,7 +31,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         return reverse("radius:user_auth_token", args=[self.default_org.slug])
 
     def _post_credentials(self):
-        with self.assertNumQueries(21):
+        with self.assertNumQueries(22):
             return self.client.post(
                 self._get_url(), {"username": "tester", "password": "tester"}
             )
@@ -298,10 +300,14 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_user_auth_token_password_expired(self):
-        self._get_org_user()
+        user = self._get_org_user().user
         User.objects.update(password_updated=now() - timedelta(days=60))
+        user.refresh_from_db()
+        self.assertTrue(user.has_password_expired())
         response = self._user_auth_token_helper("tester")
         self.assertEqual(response.data["password_expired"], True)
+        user.refresh_from_db()
+        self.assertEqual(user.last_login_method, "password")
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_password_login_triggers_password_expiration(self):
@@ -484,6 +490,19 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         User.objects.update(password_updated=now() - timedelta(days=60))
         response = self._test_validate_auth_token_helper(user)
         self.assertEqual(response.data["password_expired"], True)
+
+        # A user who registered with a password (so it has a usable,
+        # expirable one) and also logs in via a linked social account must
+        # not be told to reset it: this endpoint has no session of its own
+        # to read the login method from, so it must come from the user.
+        SocialAccount.objects.create(
+            user=user, provider="facebook", uid="12345", extra_data="{}"
+        )
+        User.objects.filter(pk=user.pk).update(last_login_method=EXTERNAL)
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+        response = self.client.post(self._get_url(), {"token": token.key})
+        self.assertEqual(response.data["password_expired"], False)
 
     @capture_any_output()
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
