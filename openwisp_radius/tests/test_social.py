@@ -1,13 +1,19 @@
-from unittest.mock import patch
+from datetime import timedelta
+from unittest.mock import MagicMock, patch
 
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.backends.db import SessionStore
+from django.test import RequestFactory
 from django.urls import reverse
+from django.utils.timezone import now
 from rest_framework.authtoken.models import Token
 from swapper import load_model
 
 from openwisp_radius import settings as app_settings
+from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_radius.utils import get_organization_radius_settings
+from openwisp_users.auth import EXTERNAL, set_authentication_method
 from openwisp_utils.tests import capture_stderr
 
 from .mixins import ApiTokenMixin, BaseTestCase
@@ -129,6 +135,46 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         registered_user.refresh_from_db()
         self.assertEqual(registered_user.method, "social_login")
         self.assertEqual(registered_user.is_verified, False)
+
+    @patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_password_expired_not_reported_for_social_login(self):
+        org_user = self._get_org_user()
+        user = org_user.user
+        sa = SocialAccount(user=user, provider="facebook", uid="12345", extra_data="{}")
+        sa.full_clean()
+        sa.save()
+        User.objects.filter(pk=user.pk).update(
+            password_updated=(now() - timedelta(days=60)).date()
+        )
+        user.refresh_from_db()
+        self.assertEqual(user.has_password_expired(), True)
+
+        request = RequestFactory().get("/")
+        request.session = SessionStore()
+        set_authentication_method(request, EXTERNAL)
+        view = MagicMock()
+        view.organization = self.default_org
+        view.request = request
+        data = RadiusUserSerializer(user, context={"view": view}).data
+        self.assertEqual(data["password_expired"], False)
+
+    @patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_password_expired_reported_for_password_login(self):
+        org_user = self._get_org_user()
+        user = org_user.user
+        User.objects.filter(pk=user.pk).update(
+            password_updated=(now() - timedelta(days=60)).date()
+        )
+        user.refresh_from_db()
+        self.assertEqual(user.has_password_expired(), True)
+
+        request = RequestFactory().get("/")
+        request.session = SessionStore()
+        view = MagicMock()
+        view.organization = self.default_org
+        view.request = request
+        data = RadiusUserSerializer(user, context={"view": view}).data
+        self.assertEqual(data["password_expired"], True)
 
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()

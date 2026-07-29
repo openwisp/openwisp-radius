@@ -42,7 +42,6 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.settings import api_settings as drf_api_settings
 from rest_framework.throttling import BaseThrottle  # get_ident method
-from rest_framework.throttling import ScopedRateThrottle
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
