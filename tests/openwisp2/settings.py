@@ -17,6 +17,14 @@ ALLOWED_HOSTS = []
 OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ["127.0.0.1"]
 OPENWISP_RADIUS_COA_ENABLED = True
 OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ["+44", "+39", "+237", "+595"]
+TIMESERIES_DATABASE = {
+    "BACKEND": "openwisp_monitoring.db.backends.influxdb",
+    "USER": "openwisp",
+    "PASSWORD": "openwisp",
+    "NAME": "openwisp2",
+    "HOST": os.getenv("INFLUXDB_HOST", "localhost"),
+    "PORT": "8086",
+}
 
 INSTALLED_APPS = [
     "daphne",
@@ -392,14 +400,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
         + INSTALLED_APPS[dj_rest_auth_index:]
     )
 
-    TIMESERIES_DATABASE = {
-        "BACKEND": "openwisp_monitoring.db.backends.influxdb",
-        "USER": "openwisp",
-        "PASSWORD": "openwisp",
-        "NAME": "openwisp2",
-        "HOST": os.getenv("INFLUXDB_HOST", "localhost"),
-        "PORT": "8086",
-    }
     EXTENDED_APPS = ["django_x509", "django_loci"]
 
     DATABASES["default"]["ENGINE"] = "openwisp_utils.db.backends.spatialite"
