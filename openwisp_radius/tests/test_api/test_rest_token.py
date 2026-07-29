@@ -303,6 +303,24 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         response = self._user_auth_token_helper("tester")
         self.assertEqual(response.data["password_expired"], True)
 
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_password_login_triggers_password_expiration(self):
+        user = self._get_org_user().user
+        # Set password_updated to 60 days ago to trigger expiration
+        User.objects.filter(pk=user.pk).update(
+            password_updated=(now() - timedelta(days=60)).date()
+        )
+        user.refresh_from_db()
+        self.assertTrue(user.has_password_expired())
+        # Login via password
+        login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
+        response = self.client.post(
+            login_url, data={"username": "tester", "password": "tester"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("password_expired", response.data)
+        self.assertTrue(response.data["password_expired"])
+
 
 class TestApiUserTokenTransactions(ApiTokenMixin, BaseTransactionTestCase):
     @capture_any_output()
