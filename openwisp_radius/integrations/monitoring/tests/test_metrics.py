@@ -796,10 +796,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             org_points = self._read_chart(
                 user_signup_chart, organization_id=[str(org.id)]
             )
-            self.assertEqual(all_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
-            self.assertEqual(all_points["summary"]["mobile_phone"], 1)
-            self.assertEqual(all_points["summary"].get("unspecified", 0), 0)
+            self.assertEqual(org_points["traces"][0][0], "mobile_phone")
+            self.assertEqual(org_points["traces"][0][1][-1], 1)
+            self.assertEqual(org_points["summary"]["mobile_phone"], 1)
+            self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
             org_points = self._read_chart(
@@ -812,10 +812,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
-            self.assertEqual(all_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
-            self.assertEqual(all_points["summary"]["mobile_phone"], 1)
-            self.assertEqual(all_points["summary"].get("unspecified", 0), 0)
+            self.assertEqual(org_points["traces"][0][0], "mobile_phone")
+            self.assertEqual(org_points["traces"][0][1][-1], 1)
+            self.assertEqual(org_points["summary"]["mobile_phone"], 1)
+            self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
     def test_pending_verification_excluded_from_metrics(self):
         from ..tasks import write_user_registration_metrics
