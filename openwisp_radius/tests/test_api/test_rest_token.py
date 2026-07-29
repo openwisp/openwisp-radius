@@ -312,7 +312,6 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         )
         user.refresh_from_db()
         self.assertTrue(user.has_password_expired())
-        # Login via password
         login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
         response = self.client.post(
             login_url, data={"username": "tester", "password": "tester"}

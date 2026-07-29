@@ -567,7 +567,11 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         password_reset_url_template = app_settings.DEFAULT_PASSWORD_RESET_URL
         org_radius_settings = self.organization.radius_settings
-        if org_radius_settings.password_reset_url:
+        if (
+            org_radius_settings.password_reset_url
+            and org_radius_settings.password_reset_url
+            != app_settings.DEFAULT_PASSWORD_RESET_URL
+        ):
             password_reset_url_template = org_radius_settings.password_reset_url
         else:
             password_reset_url_template = password_reset_urls.get(
