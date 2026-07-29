@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import phonenumbers
 import swapper
@@ -61,6 +62,16 @@ class PasswordResetSerializer(BasePasswordResetSerializer):
     DEPRECATED: Use openwisp_users.api.serializers.PasswordResetSerializer instead.
     TODO: Remove in 1.4.0
     """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "openwisp_radius.api.serializers.PasswordResetSerializer is deprecated. "
+            "Use openwisp_users.api.serializers.PasswordResetSerializer instead. "
+            "This class will be removed in openwisp-radius 1.4.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
 
 
 class AllowAllUsersModelBackend(UsersAuthenticationBackend):

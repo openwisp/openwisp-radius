@@ -1,8 +1,7 @@
 import logging
 
 import swapper
-from allauth.account.forms import default_token_generator
-from allauth.account.utils import url_str_to_user_pk, user_pk_to_url_str
+from allauth.account.utils import user_pk_to_url_str
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
 from django.contrib.auth import get_user_model
@@ -24,7 +23,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
@@ -42,6 +41,7 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle  # get_ident method
+from rest_framework.throttling import ScopedRateThrottle
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
@@ -526,8 +526,8 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
     @swagger_auto_schema(
         responses={
             200: '`{"detail": "Password reset e-mail has been sent."}`',
-            400: '`{"detail": "The input field is required."}`',
-            404: '`{"detail": "Not found."}`',
+            400: '`{"input": ["This field is required."]}`',
+            404: '`{"detail": "No Organization matches the given query."}`',
         }
     )
     def post(self, request, *args, **kwargs):
@@ -537,10 +537,7 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         The input field can be an email, an username or
         a phone number (if mobile phone verification is in use).
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"detail": _("Password reset e-mail has been sent.")})
+        return super().post(request, *args, **kwargs)
 
     def get_users(self, identifier):
         """
@@ -552,17 +549,20 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         password reset endpoint to return the same success response in all cases
         and preventing user enumeration.
         """
+        app_label = User._meta.app_config.label
         return (
             auth_backend.get_users(identifier)
             .filter(
                 is_active=True,
-                openwisp_users_organizationuser__organization=self.organization,
+                **{
+                    f"{app_label}_organizationuser__organization": self.organization,
+                    f"{app_label}_organizationuser__organization__is_active": True,
+                },
             )
             .distinct()
         )
 
     def get_password_reset_url(self, user, token):
-
         uid = user_pk_to_url_str(user)
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         password_reset_url_template = app_settings.DEFAULT_PASSWORD_RESET_URL
@@ -588,6 +588,7 @@ class PasswordResetConfirmView(
     ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
 ):
     authentication_classes = tuple()
+    throttle_classes = [ScopedRateThrottle]
 
     @swagger_auto_schema(
         responses={

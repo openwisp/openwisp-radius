@@ -1,6 +1,5 @@
 import os
 from datetime import timedelta
-from unittest import mock
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -362,8 +361,8 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
     @modify_settings(
         MIDDLEWARE={"append": "openwisp_users.middleware.PasswordExpirationMiddleware"}
     )
-    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
-    # @capture_any_output()
+    @patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    @capture_any_output()
     def test_saml_login_marks_session_as_externally_authenticated(self):
         # The SAML user has a usable but expired local password: without the
         # session being marked as externally authenticated, PasswordExpirationMiddleware
@@ -372,7 +371,9 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         user = self._create_user(
             username="org_user@example.com", email="org_user@example.com"
         )
-        User.objects.update(password_updated=now() - timedelta(days=60))
+        User.objects.filter(pk=user.pk).update(
+            password_updated=(now() - timedelta(days=60)).date()
+        )
         user.refresh_from_db()
         self.assertEqual(user.has_password_expired(), True)
 
@@ -395,6 +396,10 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         # subsequent requests from the same session must not be blocked either
         additional_info_response = self.client.get(response.url)
         self.assertEqual(additional_info_response.status_code, 302)
+        self.assertNotEqual(
+            get_url_or_path(additional_info_response.url),
+            reverse("account_change_password"),
+        )
 
 
 @override_settings(SAML_ALLOWED_HOSTS=["captive-portal.example.com"])
