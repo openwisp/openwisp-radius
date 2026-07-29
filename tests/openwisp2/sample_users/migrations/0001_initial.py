@@ -35,6 +35,17 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "last_login_method",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        help_text=("Records whether the last login used a local password"
+                        " or an external method (eg: SSO, SAML), so password expiration"
+                        " is not enforced for logins that never used the password."),
+                        max_length=16,
+                        verbose_name="last login method",
+                    ),
+                )(
                     "expiration_date",
                     models.DateField(
                         blank=True,

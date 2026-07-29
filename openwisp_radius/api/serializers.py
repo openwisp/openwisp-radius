@@ -849,8 +849,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
 
     def get_password_expired(self, obj):
         view = self.context.get("view")
-        if view and getattr(view, "request", None):
-            return (
-                is_password_authenticated(view.request) and obj.has_password_expired()
-            )
-        return obj.has_password_expired()
+        request = getattr(view, "request", None) if view else None
+        return (
+            is_password_authenticated(request, user=obj) and obj.has_password_expired()
+        )
