@@ -34,14 +34,59 @@ class TestMigrationGraph(TestCase):
         loader = MigrationLoader(connection, ignore_no_migrations=True)
         app_label = "openwisp_radius"
         self.assertIn((app_label, "0001_initial_freeradius"), loader.graph.nodes)
-        migration = loader.disk_migrations[(app_label, "0002_squashed_0042")]
+        first_squash = loader.disk_migrations[(app_label, "0002_squashed_0010")]
+        expected_first_replacements = [
+            "0002_initial_openwisp_radius",
+            "0003_default_radius_groups",
+            "0004_default_permissions",
+            "0005_radiustoken",
+            "0006_add_radactt_fields",
+            "0007_sms_verification",
+            "0008_sms_sender",
+            "0009_radbatch_user_credentials_field",
+            "0010_csv_private_storage",
+        ]
         self.assertEqual(
-            migration.replaces[0],
-            (app_label, "0002_initial_openwisp_radius"),
+            first_squash.replaces,
+            [(app_label, name) for name in expected_first_replacements],
         )
+        self.assertIn((app_label, "0011_add_null_uuid_field"), loader.graph.nodes)
+        self.assertIn((app_label, "0013_remove_null_uuid_field"), loader.graph.nodes)
+        second_squash = loader.disk_migrations[(app_label, "0014_squashed_0042")]
+        expected_second_replacements = [
+            "0014_radiustoken_freeradius_auth",
+            "0015_freeradius_allowed_hosts",
+            "0016_allowed_mobile_prefixes",
+            "0017_phonetoken_phone_number",
+            "0018_populate_phonetoken_phone_number",
+            "0019_made_phonetoken_phone_number_required",
+            "0020_added_optional_registration_fields",
+            "0021_radius_user_group_unique_together",
+            "0022_organizationradiussettings_registration_enabled",
+            "0023_registered_user",
+            "0024_registereduser_modified",
+            "0025_sms_verification",
+            "0026_login_status_url_org_settings",
+            "0027_password_reset_url_org_settings",
+            "0028_organizationradiussettings_saml_social_registration_enabled",
+            "0029_remove_check_customizations",
+            "0030_remove_radiuscheck_notes",
+            "0031_added_fallback_model_fields",
+            "0032_organizationradiussettings_sms_message",
+            "0033_alter_organizationradiussettings_password_reset_url",
+            "0034_organizationradiussettings_coa_enabled",
+            "0035_organizationradiussettings_sms_cooldown",
+            "0036_organizationradiussettings_mac_addr_roaming_enabled",
+            "0037_alter_organizationradiussettings_allowed_mobile_prefixes_and_more",
+            "0038_clean_fallbackfields",
+            "0039_alter_radiusaccounting_called_station_id_and_more",
+            "0040_rename_phonetoken_index",
+            "0041_radiusbatch_status",
+            "0042_set_existing_batches_completed",
+        ]
         self.assertEqual(
-            migration.replaces[-1],
-            (app_label, "0042_set_existing_batches_completed"),
+            second_squash.replaces,
+            [(app_label, name) for name in expected_second_replacements],
         )
 
 
