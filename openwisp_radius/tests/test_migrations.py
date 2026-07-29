@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import swapper
 from django.apps.registry import apps
 from django.db import connection
+from django.db.migrations.loader import MigrationLoader
 from django.test import TestCase
 from django.utils import timezone
 from freezegun import freeze_time
@@ -26,6 +27,22 @@ from .mixins import BaseTestCase
 RegisteredUser = load_model("RegisteredUser")
 RadiusBatch = load_model("RadiusBatch")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
+
+
+class TestMigrationGraph(TestCase):
+    def test_freeradius_initial_migration_remains_addressable(self):
+        loader = MigrationLoader(connection, ignore_no_migrations=True)
+        app_label = "openwisp_radius"
+        self.assertIn((app_label, "0001_initial_freeradius"), loader.graph.nodes)
+        migration = loader.disk_migrations[(app_label, "0002_squashed_0042")]
+        self.assertEqual(
+            migration.replaces[0],
+            (app_label, "0002_initial_openwisp_radius"),
+        )
+        self.assertEqual(
+            migration.replaces[-1],
+            (app_label, "0042_set_existing_batches_completed"),
+        )
 
 
 class TestMigrationRegisteredUserMultitenancy(BaseTestCase):
