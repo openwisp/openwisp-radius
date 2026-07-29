@@ -40,6 +40,7 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 from rest_framework.response import Response
+from rest_framework.settings import api_settings as drf_api_settings
 from rest_framework.throttling import BaseThrottle  # get_ident method
 from rest_framework.throttling import ScopedRateThrottle
 
@@ -522,6 +523,7 @@ password_change = PasswordChangeView.as_view()
 
 class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
+    throttle_classes = drf_api_settings.DEFAULT_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={
@@ -592,7 +594,7 @@ class PasswordResetConfirmView(
     ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
 ):
     authentication_classes = tuple()
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = drf_api_settings.DEFAULT_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={
