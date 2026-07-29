@@ -1041,6 +1041,21 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.get(password_reset_url)
         self.assertEqual(response.status_code, 405)
 
+    def test_api_password_reset_superuser_without_organization_membership(self):
+        user = User.objects.create_superuser(
+            username="superuser",
+            email="superuser@example.com",
+            password="test_password",
+        )
+        self.assertFalse(user.is_member(self.default_org))
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        response = self.client.post(password_reset_url, data={"input": user.email})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [user.email])
+
     def test_get_password_reset_url_default(self):
         test_user = User.objects.create_user(
             username="test_name",
