@@ -550,21 +550,30 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         """
         Return active users matching ``identifier`` who belong to this organization.
 
-        Always returns a queryset and never reveals whether ``identifier`` exists
+        Superusers are always included, regardless of organization membership,
+        consistent with ``DispatchOrgMixin.validate_membership()``. Always
+        returns a queryset and never reveals whether ``identifier`` exists
         outside this organization. Both an unknown identifier and a user who is
-        not a member of this organization produce an empty queryset, allowing the
-        password reset endpoint to return the same success response in all cases
-        and preventing user enumeration.
+        not a member of this organization (and not a superuser) produce an
+        empty queryset, allowing the password reset endpoint to return the same
+        success response in all cases and preventing user enumeration.
         """
         app_label = User._meta.app_config.label
         return (
             auth_backend.get_users(identifier)
+            .filter(is_active=True)
             .filter(
-                is_active=True,
-                **{
-                    f"{app_label}_organizationuser__organization": self.organization,
-                    f"{app_label}_organizationuser__organization__is_active": True,
-                },
+                Q(is_superuser=True)
+                | Q(
+                    **{
+                        f"{app_label}_organizationuser__organization": (
+                            self.organization
+                        ),
+                        f"{app_label}_organizationuser__organization__is_active": (
+                            True
+                        ),
+                    }
+                )
             )
             .distinct()
         )
