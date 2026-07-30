@@ -57,7 +57,7 @@ from openwisp_users.api.views import (
     PasswordResetConfirmView as BasePasswordResetConfirmView,
 )
 from openwisp_users.api.views import PasswordResetView as BasePasswordResetView
-from openwisp_users.auth import EXTERNAL, PASSWORD, record_authentication_method
+from openwisp_users.auth import record_password_based_token
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.pagination import OpenWispPagination
 
@@ -316,11 +316,11 @@ class ObtainAuthTokenView(
             )
             serializer.is_valid(raise_exception=True)
             user = self.get_user(serializer, *args, **kwargs)
-            record_authentication_method(user, PASSWORD)
+            record_password_based_token(user, True)
         else:
-            # Magic-link login: mark as external so password expiration is not enforced.
-            # Don't create a session; this endpoint is stateless.
-            record_authentication_method(user, EXTERNAL)
+            # Magic-link login: record as not password-based so password
+            # expiration is not enforced.
+            record_password_based_token(user, False)
         token, _ = UserToken.objects.get_or_create(user=user)
         self.get_or_create_radius_token(user, self.organization, renew=renew_required)
         self.update_user_details(user)

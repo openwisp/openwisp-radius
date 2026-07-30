@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from rest_framework.authtoken.models import Token
 
-from openwisp_users.auth import EXTERNAL, record_authentication_method
+from openwisp_users.auth import record_password_based_token
 
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
@@ -71,9 +71,9 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)
         # This token is handed to the captive page out-of-band (in the
-        # redirect URL, not via the browser session), so the login method
+        # redirect URL, not via the browser session), so its provenance
         # must be recorded on the user, not on a session marker.
-        record_authentication_method(user, EXTERNAL)
+        record_password_based_token(user, False)
         rad_token = self.get_or_create_radius_token(user, organization)
         return (
             f"{cp}?username={user.username}&token={token.key}&"

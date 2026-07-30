@@ -18,7 +18,6 @@ from rest_framework.authtoken.models import Token
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.saml.utils import get_url_or_path
-from openwisp_users.auth import EXTERNAL
 from openwisp_users.auth import SESSION_KEY as OPENWISP_SESSION_KEY
 from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests import capture_any_output
@@ -492,9 +491,9 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
     )
     @patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     @capture_any_output()
-    def test_saml_login_marks_session_as_externally_authenticated(self):
+    def test_saml_login_marks_session_as_not_password_based(self):
         # The SAML user has a usable but expired local password: without the
-        # session being marked as externally authenticated, PasswordExpirationMiddleware
+        # session being marked as not password-based, PasswordExpirationMiddleware
         # would redirect every request from this session to the password-change page.
         org_slug = "default"
         user = self._create_user(
@@ -521,7 +520,7 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertNotEqual(
             get_url_or_path(response.url), reverse("account_change_password")
         )
-        self.assertEqual(self.client.session[OPENWISP_SESSION_KEY], EXTERNAL)
+        self.assertEqual(self.client.session[OPENWISP_SESSION_KEY], False)
         # subsequent requests from the same session must not be blocked either
         additional_info_response = self.client.get(response.url)
         self.assertEqual(additional_info_response.status_code, 302)

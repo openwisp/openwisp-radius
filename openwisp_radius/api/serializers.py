@@ -29,7 +29,7 @@ from openwisp_users.api.mixins import FilterSerializerByOrgManaged
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as BasePasswordResetSerializer,
 )
-from openwisp_users.auth import is_password_authenticated
+from openwisp_users.auth import is_password_based_login
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.serializers import ValidatedModelSerializer
 
@@ -850,6 +850,4 @@ class RadiusUserSerializer(serializers.ModelSerializer):
     def get_password_expired(self, obj):
         view = self.context.get("view")
         request = getattr(view, "request", None) if view else None
-        return (
-            is_password_authenticated(request, user=obj) and obj.has_password_expired()
-        )
+        return is_password_based_login(request, user=obj) and obj.has_password_expired()

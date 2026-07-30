@@ -13,7 +13,7 @@ from swapper import load_model
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_radius.utils import get_organization_radius_settings
-from openwisp_users.auth import EXTERNAL, record_authentication_method
+from openwisp_users.auth import record_password_based_token
 from openwisp_utils.tests import capture_stderr
 
 from .mixins import ApiTokenMixin, BaseTestCase
@@ -148,7 +148,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         )
         user.refresh_from_db()
         self.assertEqual(user.has_password_expired(), True)
-        record_authentication_method(user, EXTERNAL)
+        record_password_based_token(user, False)
         request = RequestFactory().get("/")
         request.session = SessionStore()
         view = MagicMock()
