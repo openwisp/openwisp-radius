@@ -10,7 +10,6 @@ from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 
 from openwisp_radius.api import views as api_views
-from openwisp_users.auth import EXTERNAL
 from openwisp_utils.tests import capture_any_output
 
 from ... import settings as app_settings
@@ -307,7 +306,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         response = self._user_auth_token_helper("tester")
         self.assertEqual(response.data["password_expired"], True)
         user.refresh_from_db()
-        self.assertEqual(user.last_login_method, "password")
+        self.assertEqual(user.password_based_token, True)
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_password_login_triggers_password_expiration(self):
@@ -494,11 +493,11 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         # A user who registered with a password (so it has a usable,
         # expirable one) and also logs in via a linked social account must
         # not be told to reset it: this endpoint has no session of its own
-        # to read the login method from, so it must come from the user.
+        # to read the token's provenance from, so it must come from the user.
         SocialAccount.objects.create(
             user=user, provider="facebook", uid="12345", extra_data="{}"
         )
-        User.objects.filter(pk=user.pk).update(last_login_method=EXTERNAL)
+        User.objects.filter(pk=user.pk).update(password_based_token=False)
         Token.objects.filter(user=user).delete()
         token = Token.objects.create(user=user)
         response = self.client.post(self._get_url(), {"token": token.key})

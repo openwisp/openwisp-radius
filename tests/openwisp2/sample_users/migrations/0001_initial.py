@@ -35,18 +35,20 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "last_login_method",
-                    models.CharField(
+                    "password_based_token",
+                    models.BooleanField(
                         blank=True,
-                        default="",
+                        default=None,
                         help_text=(
-                            "Records whether the last login used a local password"
-                            " or an external method (eg: SSO, SAML), so password"
-                            " expiration is not enforced for logins that never"
-                            " used the password."
+                            "Indicates whether the last authentication token was"
+                            " obtained using the local password. When false, the"
+                            " token came from an external method (eg: SSO, SAML)"
+                            " and password expiration is not enforced for it. None"
+                            " means no token has been issued for this user since"
+                            " this feature was introduced."
                         ),
-                        max_length=16,
-                        verbose_name="last login method",
+                        null=True,
+                        verbose_name="password based token",
                     ),
                 ),
                 (
