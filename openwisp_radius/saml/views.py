@@ -21,7 +21,11 @@ from djangosaml2.views import LoginView as BaseLoginView
 from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
 from rest_framework.authtoken.models import Token
 
-from openwisp_users.auth import EXTERNAL, set_authentication_method
+from openwisp_users.auth import (
+    EXTERNAL,
+    record_authentication_method,
+    set_authentication_method,
+)
 
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
@@ -146,6 +150,10 @@ class AssertionConsumerServiceView(
         """
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)
+        # This token is issued outside any Django session (the SAML flow
+        # redirects the browser with the token in the URL), so the login
+        # method must be recorded on the user, not on a session marker.
+        record_authentication_method(user, EXTERNAL)
         next = "{relay_state}?{params}".format(
             relay_state=relay_state,
             params=urlencode(

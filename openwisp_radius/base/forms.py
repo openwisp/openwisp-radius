@@ -1,6 +1,10 @@
+import warnings
+
 from django import forms
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
+
+from openwisp_users.base.forms import PasswordResetForm as BasePasswordResetForm
 
 from .models import AbstractNas, AbstractRadiusCheck
 
@@ -46,3 +50,20 @@ class RadiusBatchForm(forms.ModelForm):
             help_text = f"Refer to the <b><u><a href='{docs_link}'>docs</a></u></b> \
                 for more details on importing users from a CSV"
             self.fields["csvfile"].help_text = help_text
+
+
+class PasswordResetForm(BasePasswordResetForm):
+    """
+    DEPRECATED: Use openwisp_users.base.forms.PasswordResetForm instead.
+    TODO: Remove in 1.4.0
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "openwisp_radius.base.forms.PasswordResetForm is deprecated. "
+            "Use openwisp_users.base.forms.PasswordResetForm instead. "
+            "This class will be removed in openwisp-radius 1.4.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

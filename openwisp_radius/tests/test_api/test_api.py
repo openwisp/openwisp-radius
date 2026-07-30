@@ -27,12 +27,18 @@ from rest_framework.test import APIClient
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
+    PasswordResetSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
     UpdateRegisteredUserMethodSerializer,
     UserGroupCheckSerializer,
 )
+from openwisp_radius.base.forms import PasswordResetForm
+from openwisp_users.api.serializers import (
+    PasswordResetSerializer as UsersPasswordResetSerializer,
+)
+from openwisp_users.base.forms import PasswordResetForm as UsersPasswordResetForm
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ...utils import load_model
@@ -1055,6 +1061,16 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [user.email])
+
+    def test_password_reset_form_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            form = PasswordResetForm(data={"email": "test@example.com"})
+        self.assertIsInstance(form, UsersPasswordResetForm)
+
+    def test_password_reset_serializer_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            serializer = PasswordResetSerializer(data={"input": "test@example.com"})
+        self.assertIsInstance(serializer, UsersPasswordResetSerializer)
 
     def test_get_password_reset_url_default(self):
         test_user = User.objects.create_user(
