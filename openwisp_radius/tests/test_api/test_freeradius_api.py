@@ -159,6 +159,25 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertNotEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         self.assertEqual(response.data, None)
 
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_authorize_password_expired_with_saml_login(self):
+        org_user = self._get_org_user()
+        user = org_user.user
+        RegisteredUser.objects.update_or_create(
+            user=user,
+            organization=self._get_org(),
+            defaults={"method": "saml", "is_verified": True},
+        )
+        User.objects.filter(pk=user.pk).update(
+            password_updated=now() - timedelta(days=60),
+            password_based_token=False,
+        )
+        user.refresh_from_db()
+        self.assertEqual(user.has_password_expired(), True)
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+
     def test_authorize_failed(self):
         response = self._authorize_user(
             username="baldo", password="ugo", auth_header=self.auth_header
