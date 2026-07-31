@@ -583,6 +583,10 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         password_reset_urls = app_settings.PASSWORD_RESET_URLS
         password_reset_url_template = app_settings.DEFAULT_PASSWORD_RESET_URL
         org_radius_settings = self.organization.radius_settings
+        # password_reset_url is a FallbackCharField, so it always resolves to
+        # DEFAULT_PASSWORD_RESET_URL. Only a value different from the default
+        # indicates an organization-specific override; otherwise fall back to
+        # OPENWISP_RADIUS_PASSWORD_RESET_URLS.
         if (
             org_radius_settings.password_reset_url
             and org_radius_settings.password_reset_url

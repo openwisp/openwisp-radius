@@ -16,6 +16,7 @@ from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_yasg.utils import swagger_serializer_method
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumbers import PhoneNumberType, phonenumberutil
 from rest_framework import serializers
@@ -847,7 +848,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
         reg_user = self._get_registered_user(obj)
         return reg_user.method if reg_user else None
 
+    @swagger_serializer_method(serializer_or_field=serializers.BooleanField)
     def get_password_expired(self, obj):
-        view = self.context.get("view")
-        request = getattr(view, "request", None) if view else None
+        request = self.context.get("request")
         return is_password_based_login(request, user=obj) and obj.has_password_expired()
