@@ -24,6 +24,7 @@ from rest_framework.exceptions import (
 from rest_framework.generics import CreateAPIView, GenericAPIView, ListCreateAPIView
 from rest_framework.response import Response
 
+from openwisp_users.auth import is_password_based_login
 from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import registration
@@ -435,7 +436,10 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         return bool(
             getattr(request, "_mac_allowed", False)
             or (
-                not user.has_password_expired()
+                (
+                    not is_password_based_login(request, user=user)
+                    or not user.has_password_expired()
+                )
                 and (
                     user.check_password(password)
                     or self.check_user_token(request, user, password)
