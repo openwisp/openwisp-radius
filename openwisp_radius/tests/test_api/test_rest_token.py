@@ -3,13 +3,17 @@ from unittest import mock
 import swapper
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.backends.db import SessionStore
 from django.db import IntegrityError
+from django.test import RequestFactory
 from django.urls import reverse
-from django.utils.timezone import localtime, now, timedelta
+from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
 
 from openwisp_radius.api import views as api_views
+from openwisp_radius.api.serializers import RadiusUserSerializer
+from openwisp_users.auth import SESSION_KEY
 from openwisp_utils.tests import capture_any_output
 
 from ... import settings as app_settings
@@ -300,30 +304,22 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_user_auth_token_password_expired(self):
         user = self._get_org_user().user
-        User.objects.update(password_updated=now() - timedelta(days=60))
-        user.refresh_from_db()
-        self.assertTrue(user.has_password_expired())
+        self._backdate_password(user, days=60)
+        self.assertEqual(user.has_password_expired(), True)
         response = self._user_auth_token_helper("tester")
         self.assertEqual(response.data["password_expired"], True)
         user.refresh_from_db()
         self.assertEqual(user.password_based_token, True)
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
-    def test_password_login_triggers_password_expiration(self):
+    def test_password_expired_reported_for_password_login(self):
         user = self._get_org_user().user
-        # Set password_updated to 60 days ago to trigger expiration
-        User.objects.filter(pk=user.pk).update(
-            password_updated=(now() - timedelta(days=60)).date()
-        )
-        user.refresh_from_db()
-        self.assertTrue(user.has_password_expired())
-        login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
-        response = self.client.post(
-            login_url, data={"username": "tester", "password": "tester"}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("password_expired", response.data)
-        self.assertTrue(response.data["password_expired"])
+        self._backdate_password(user, days=60)
+        self.assertEqual(user.has_password_expired(), True)
+        request = RequestFactory().get("/")
+        request.session = SessionStore()
+        data = RadiusUserSerializer(user, context={"request": request}).data
+        self.assertEqual(data["password_expired"], True)
 
 
 class TestApiUserTokenTransactions(ApiTokenMixin, BaseTransactionTestCase):
@@ -486,7 +482,7 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_validate_auth_token_password_expired(self):
         user = self._get_org_user().user
-        User.objects.update(password_updated=now() - timedelta(days=60))
+        self._backdate_password(user, days=60)
         response = self._test_validate_auth_token_helper(user)
         self.assertEqual(response.data["password_expired"], True)
 
@@ -497,9 +493,25 @@ class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
         SocialAccount.objects.create(
             user=user, provider="facebook", uid="12345", extra_data="{}"
         )
-        User.objects.filter(pk=user.pk).update(password_based_token=False)
-        Token.objects.filter(user=user).delete()
-        token = Token.objects.create(user=user)
+        self.client.force_login(user)
+        session = self.client.session
+        session[SESSION_KEY] = False
+        session.save()
+        with mock.patch(
+            "openwisp_radius.settings.SOCIAL_REGISTRATION_ENABLED", True
+        ), mock.patch.object(
+            OrganizationRadiusSettings._meta.get_field("social_registration_enabled"),
+            "fallback",
+            True,
+        ):
+            redirect_response = self.client.get(
+                reverse("radius:redirect_cp", args=[self.default_org.slug]),
+                {"cp": "http://wifi.openwisp.org/cp"},
+            )
+        self.assertEqual(redirect_response.status_code, 302)
+        user.refresh_from_db()
+        self.assertEqual(user.password_based_token, False)
+        token = Token.objects.filter(user=user).first()
         response = self.client.post(self._get_url(), {"token": token.key})
         self.assertEqual(response.data["password_expired"], False)
 

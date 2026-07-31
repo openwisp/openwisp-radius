@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
@@ -13,7 +13,7 @@ from swapper import load_model
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_radius.utils import get_organization_radius_settings
-from openwisp_users.auth import record_password_based_token
+from openwisp_users.auth import SESSION_KEY, record_password_based_token
 from openwisp_utils.tests import capture_stderr
 
 from .mixins import ApiTokenMixin, BaseTestCase
@@ -91,6 +91,12 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
     def test_redirect_cp_301(self):
         user = self._create_social_user()
         self.client.force_login(user)
+        # force_login goes through the password-based login signal by
+        # default; mark the session as social like a real social login
+        # would, so the assertion below exercises the intended scenario.
+        session = self.client.session
+        session[SESSION_KEY] = False
+        session.save()
         url = self.get_url()
         r = self.client.get(url, {"cp": "http://wifi.openwisp.org/cp"})
         self.assertEqual(r.status_code, 302)
@@ -106,6 +112,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         )
         self.assertIn(querystring, r.url)
         user = User.objects.filter(username="socialuser").first()
+        self.assertEqual(user.password_based_token, False)
         self.assertTrue(user.is_member(self.default_org))
         try:
             reg_user = user.registered_users.get(organization=self.default_org)
@@ -151,29 +158,8 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         record_password_based_token(user, False)
         request = RequestFactory().get("/")
         request.session = SessionStore()
-        view = MagicMock()
-        view.organization = self.default_org
-        view.request = request
-        data = RadiusUserSerializer(user, context={"view": view}).data
+        data = RadiusUserSerializer(user, context={"request": request}).data
         self.assertEqual(data["password_expired"], False)
-
-    @patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
-    def test_password_expired_reported_for_password_login(self):
-        org_user = self._get_org_user()
-        user = org_user.user
-        User.objects.filter(pk=user.pk).update(
-            password_updated=(now() - timedelta(days=60)).date()
-        )
-        user.refresh_from_db()
-        self.assertEqual(user.has_password_expired(), True)
-
-        request = RequestFactory().get("/")
-        request.session = SessionStore()
-        view = MagicMock()
-        view.organization = self.default_org
-        view.request = request
-        data = RadiusUserSerializer(user, context={"view": view}).data
-        self.assertEqual(data["password_expired"], True)
 
     def test_authorize_using_radius_user_token_200(self):
         self.test_redirect_cp_301()

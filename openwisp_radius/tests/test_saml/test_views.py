@@ -76,6 +76,7 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(User.objects.count(), 1)
         user_id = self.client.session[SESSION_KEY]
         user = User.objects.get(id=user_id)
+        self.assertEqual(user.password_based_token, False)
         self.assertEqual(
             user.emailaddress_set.filter(verified=True, primary=True).count(), 1
         )
