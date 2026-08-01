@@ -16,14 +16,16 @@ Therefore, RadiusAccounting inline is added using HTML and JS.
             <h2>{% trans "RADIUS Sessions" %}</h2>
             <table id="device-radius-sessions-table" class="hide">
                 <thead>
-                    <th class="original"></th>
-                    <th class="column-session_id">{% trans "session ID" %}</th>
-                    <th class="column-username">{% trans "username" %}</th>
-                    <th class="column-input_octets">{% trans "input octets" %}</th>
-                    <th class="column-output_octets">{% trans "ouput octets" %}</th>
-                    <th class="column-calling_station_id">{% trans "calling station ID" %}</th>
-                    <th class="column-start_time">{% trans "start time" %}</th>
-                    <th class="column-stop_time">{% trans "stop time" %}</th>
+                    <tr>
+                        <th class="original"></th>
+                        <th class="column-session_id">{% trans "session ID" %}</th>
+                        <th class="column-username">{% trans "username" %}</th>
+                        <th class="column-input_octets">{% trans "input octets" %}</th>
+                        <th class="column-output_octets">{% trans "ouput octets" %}</th>
+                        <th class="column-calling_station_id">{% trans "calling station ID" %}</th>
+                        <th class="column-start_time">{% trans "start time" %}</th>
+                        <th class="column-stop_time">{% trans "stop time" %}</th>
+                    </tr>
                 </thead>
                 <tbody id="radius-session-tbody"></tbody>
             </table>
