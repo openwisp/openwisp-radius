@@ -492,6 +492,66 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     )
     @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
     @patch("openwisp_radius.tasks.convert_called_station_id")
+    def test_convert_called_station_id_closes_telnet(self, *args):
+        # regression for #727: Exscript's telnetlib.Telnet has no context
+        # manager protocol, so `with Telnet(...)` raised a TypeError that was
+        # swallowed upstream and the id was never converted. The command must
+        # open the connection and close it explicitly (not via `with`).
+        org = self._create_org(
+            id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
+            name="telnet close test",
+            slug="telnet-close-test",
+        )
+        options = _RADACCT.copy()
+        options["calling_station_id"] = str(EUI("bb:bb:bb:bb:bb:0b", dialect=mac_unix))
+        options["called_station_id"] = "AA-AA-AA-AA-AA-0A"
+        options["unique_id"] = "727"
+        options["organization"] = org
+        radius_acc = self._create_radius_accounting(**options)
+
+        status = self._get_openvpn_status().encode()
+        closed = []
+
+        class FakeTelnet:
+            # mimics Exscript's Telnet: no __enter__/__exit__
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def read_until(self, *args, **kwargs):
+                return status
+
+            def write(self, *args, **kwargs):
+                pass
+
+            def close(self):
+                closed.append(True)
+
+        with patch(
+            "openwisp_radius.management.commands.base."
+            "convert_called_station_id.telnetlib.Telnet",
+            FakeTelnet,
+        ):
+            call_command("convert_called_station_id")
+
+        radius_acc.refresh_from_db()
+        self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+        self.assertTrue(closed, "the telnet connection should be closed")
+
+    @capture_any_output()
+    @patch.object(
+        app_settings,
+        "CALLED_STATION_IDS",
+        {
+            "1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1": {
+                "openvpn_config": [
+                    {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
+                ],
+                "unconverted_ids": ["AA-AA-AA-AA-AA-0A"],
+            }
+        },
+    )
+    @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
+    @patch("openwisp_radius.tasks.convert_called_station_id")
     def test_convert_called_station_id_command_with_org_id(self, *args):
         org = self._create_org(
             id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
