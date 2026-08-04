@@ -23,7 +23,12 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     help = "Correct Called Station IDs of Radius Sessions"
 
     def _get_raw_management_info(self, host, port, password):
-        with telnetlib.Telnet(host, port, timeout=TELNET_CONNECTION_TIMEOUT) as tn:
+        # Exscript's telnetlib.Telnet is a re-implementation that does not
+        # support the context manager protocol, so a `with` statement raised
+        # a TypeError that was silently swallowed upstream. Open the
+        # connection explicitly and always close it in a finally block.
+        tn = telnetlib.Telnet(host, port, timeout=TELNET_CONNECTION_TIMEOUT)
+        try:
             if password:
                 tn.read_until(b"ENTER PASSWORD:", timeout=TELNET_CONNECTION_TIMEOUT)
                 tn.write(password.encode("ascii") + b"\n")
@@ -36,6 +41,8 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             raw_management_info = tn.read_until(
                 b"END", timeout=TELNET_CONNECTION_TIMEOUT
             )
+        finally:
+            tn.close()
         return raw_management_info
 
     def _get_openvpn_routing_info(self, host, port=7505, password=None):
