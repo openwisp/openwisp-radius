@@ -27,6 +27,7 @@ from rest_framework.test import APIClient
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
+    RadiusAccountingSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
@@ -2243,6 +2244,30 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     self.assertEqual(item["stop_time_display"], expected_stop)
                 else:
                     self.assertIsNone(item["stop_time_display"])
+
+        with self.subTest("Serializer mapping branches"):
+            serializer = RadiusAccountingSerializer()
+            for unique_id, _, _ in accounting_sessions:
+                radius_accounting = RadiusAccounting.objects.get(unique_id=unique_id)
+                data = {
+                    "start_time": radius_accounting.start_time,
+                    "stop_time": radius_accounting.stop_time,
+                }
+                self.assertEqual(
+                    serializer.get_start_time_display(data),
+                    formats.localize(
+                        timezone.template_localtime(radius_accounting.start_time)
+                    ),
+                )
+                if radius_accounting.stop_time:
+                    self.assertEqual(
+                        serializer.get_stop_time_display(data),
+                        formats.localize(
+                            timezone.template_localtime(radius_accounting.stop_time)
+                        ),
+                    )
+                else:
+                    self.assertIsNone(serializer.get_stop_time_display(data))
 
 
 del BaseTestCase
