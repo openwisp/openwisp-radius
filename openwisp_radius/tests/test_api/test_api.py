@@ -2200,7 +2200,6 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
 
-    @override_settings(TIME_ZONE="Asia/Kolkata")
     def test_radius_accounting_datetime_display(self):
         path = reverse("radius:radius_accounting_list")
         accounting_sessions = (
