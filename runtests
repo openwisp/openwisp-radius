@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+coverage erase
+
 # Standard tests
 coverage run runtests.py --parallel \
   --exclude-tag=no_parallel 2>&1 \
