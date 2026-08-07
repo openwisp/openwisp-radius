@@ -35,6 +35,23 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "password_based_token",
+                    models.BooleanField(
+                        blank=True,
+                        default=None,
+                        help_text=(
+                            "Indicates whether the last authentication token was"
+                            " obtained using the local password. When false, the"
+                            " token came from an external method (eg: SSO, SAML)"
+                            " and password expiration is not enforced for it. None"
+                            " means no token has been issued for this user since"
+                            " this feature was introduced."
+                        ),
+                        null=True,
+                        verbose_name="password based token",
+                    ),
+                ),
+                (
                     "expiration_date",
                     models.DateField(
                         blank=True,

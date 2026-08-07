@@ -21,6 +21,8 @@ from djangosaml2.views import LoginView as BaseLoginView
 from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
 from rest_framework.authtoken.models import Token
 
+from openwisp_users.auth import record_password_based_login, record_password_based_token
+
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
@@ -61,6 +63,7 @@ class AssertionConsumerServiceView(
 ):
     def post_login_hook(self, request, user, session_info):
         """If desired, a hook to add logic after a user has successfully logged in."""
+        record_password_based_login(request, False)
         # In some cases, it possible that the organization cache for
         # the user is not updated before execution of the following
         # code. Hence, the cache is manually updated here.
@@ -143,6 +146,10 @@ class AssertionConsumerServiceView(
         """
         Token.objects.filter(user=user).delete()
         token, _ = Token.objects.get_or_create(user=user)
+        # This token is issued outside any Django session (the SAML flow
+        # redirects the browser with the token in the URL), so its
+        # provenance must be recorded on the user, not on a session marker.
+        record_password_based_token(user, False)
         next = "{relay_state}?{params}".format(
             relay_state=relay_state,
             params=urlencode(
