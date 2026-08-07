@@ -20,12 +20,14 @@ from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import formats, timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
+    RadiusAccountingSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
@@ -40,6 +42,7 @@ from .test_freeradius_api import AcctMixin
 
 User = get_user_model()
 RadiusToken = load_model("RadiusToken")
+RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusGroup = load_model("RadiusGroup")
@@ -2185,7 +2188,6 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
-
             response = self.client.get(
                 path, {"calling_station_id": "11:22:33:44:55:66"}
             )
@@ -2197,6 +2199,74 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
+
+    def test_radius_accounting_datetime_display(self):
+        path = reverse("radius:radius_accounting_list")
+        accounting_sessions = (
+            ("77889900", "4090012", "2025-02-12T18:39:00+00:00"),
+            ("99887700", "4090013", None),
+        )
+        for unique_id, session_id, stop_time in accounting_sessions:
+            options = {
+                **self.acct_post_data,
+                "session_id": session_id,
+                "unique_id": unique_id,
+                "username": "tester",
+                "organization": self.default_org,
+                "calling_station_id": "11-22-33-44-55-66",
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "start_time": "2025-02-12T18:29:00+00:00",
+            }
+            if stop_time:
+                options["stop_time"] = stop_time
+            self._create_radius_accounting(**options)
+        admin = self._create_admin()
+        self.client.force_login(admin)
+        response = self.client.get(path)
+        self.assertEqual(response.status_code, 200)
+        for unique_id, _, stop_time in accounting_sessions:
+            with self.subTest(unique_id=unique_id):
+                item = next(
+                    result
+                    for result in response.data
+                    if result["unique_id"] == unique_id
+                )
+                radius_accounting = RadiusAccounting.objects.get(unique_id=unique_id)
+                expected_start = formats.localize(
+                    timezone.template_localtime(radius_accounting.start_time)
+                )
+                self.assertEqual(item["start_time_display"], expected_start)
+                if stop_time:
+                    expected_stop = formats.localize(
+                        timezone.template_localtime(radius_accounting.stop_time)
+                    )
+                    self.assertEqual(item["stop_time_display"], expected_stop)
+                else:
+                    self.assertIsNone(item["stop_time_display"])
+
+        with self.subTest("Serializer mapping branches"):
+            serializer = RadiusAccountingSerializer()
+            for unique_id, _, _ in accounting_sessions:
+                radius_accounting = RadiusAccounting.objects.get(unique_id=unique_id)
+                data = {
+                    "start_time": radius_accounting.start_time,
+                    "stop_time": radius_accounting.stop_time,
+                }
+                self.assertEqual(
+                    serializer.get_start_time_display(data),
+                    formats.localize(
+                        timezone.template_localtime(radius_accounting.start_time)
+                    ),
+                )
+                if radius_accounting.stop_time:
+                    self.assertEqual(
+                        serializer.get_stop_time_display(data),
+                        formats.localize(
+                            timezone.template_localtime(radius_accounting.stop_time)
+                        ),
+                    )
+                else:
+                    self.assertIsNone(serializer.get_stop_time_display(data))
 
 
 del BaseTestCase
