@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView
@@ -90,47 +90,51 @@ class AssertionConsumerServiceView(
                 registered_user.is_verified = app_settings.SAML_IS_VERIFIED
                 registered_user.full_clean()
                 registered_user.save()
-            if user.email:
-                email_lowercase = user.email.lower()
+        if user.email:
+            email_lowercase = user.email.lower()
+            try:
+                user_has_primary_email = EmailAddress.objects.filter(
+                    user=user, primary=True
+                )
                 try:
-                    user_has_primary_email = EmailAddress.objects.filter(
-                        user=user, primary=True
+                    email_address = EmailAddress.objects.get(
+                        user=user, email__iexact=email_lowercase
                     )
-                    try:
-                        email_address = EmailAddress.objects.get(
-                            user=user, email__iexact=email_lowercase
-                        )
-                    except EmailAddress.DoesNotExist:
-                        email_address = EmailAddress(
-                            user=user,
-                            email=email_lowercase,
-                            verified=True,
-                            primary=not user_has_primary_email.exists(),
-                        )
+                except EmailAddress.DoesNotExist:
+                    email_address = EmailAddress(
+                        user=user,
+                        email=email_lowercase,
+                        verified=True,
+                        primary=not user_has_primary_email.exists(),
+                    )
+                    email_address.full_clean()
+                    email_address.save()
+                else:
+                    changed_fields = []
+                    if email_address.email != email_lowercase:
+                        email_address.email = email_lowercase
+                        changed_fields.append("email")
+                    if not email_address.verified:
+                        email_address.verified = True
+                        changed_fields.append("verified")
+                    if (
+                        not email_address.primary
+                        and not user_has_primary_email.exists()
+                    ):
+                        email_address.primary = True
+                        changed_fields.append("primary")
+                    if changed_fields:
                         email_address.full_clean()
-                        email_address.save()
-                    else:
-                        changed_fields = []
-                        if email_address.email != email_lowercase:
-                            email_address.email = email_lowercase
-                            changed_fields.append("email")
-                        if not email_address.verified:
-                            email_address.verified = True
-                            changed_fields.append("verified")
-                        if (
-                            not email_address.primary
-                            and not user_has_primary_email.exists()
-                        ):
-                            email_address.primary = True
-                            changed_fields.append("primary")
-                        if changed_fields:
-                            email_address.full_clean()
-                            email_address.save(update_fields=changed_fields)
-                except ValidationError:
-                    logger.exception(
-                        f'Failed email validation for "{user}" during'
-                        " SAML user creation"
-                    )
+                        email_address.save(update_fields=changed_fields)
+            except (
+                ValidationError,
+                IntegrityError,
+                EmailAddress.MultipleObjectsReturned,
+            ):
+                logger.exception(
+                    f'Failed email synchronization for "{user}" during'
+                    " SAML user creation"
+                )
 
     def customize_relay_state(self, relay_state):
         """
