@@ -91,18 +91,19 @@ class AssertionConsumerServiceView(
                 registered_user.full_clean()
                 registered_user.save()
             if user.email:
+                email_lowercase = user.email.lower()
                 try:
                     user_has_primary_email = EmailAddress.objects.filter(
                         user=user, primary=True
                     )
                     try:
                         email_address = EmailAddress.objects.get(
-                            user=user, email=user.email
+                            user=user, email__iexact=email_lowercase
                         )
                     except EmailAddress.DoesNotExist:
                         email_address = EmailAddress(
                             user=user,
-                            email=user.email,
+                            email=email_lowercase,
                             verified=True,
                             primary=not user_has_primary_email.exists(),
                         )
@@ -110,6 +111,9 @@ class AssertionConsumerServiceView(
                         email_address.save()
                     else:
                         changed_fields = []
+                        if email_address.email != email_lowercase:
+                            email_address.email = email_lowercase
+                            changed_fields.append("email")
                         if not email_address.verified:
                             email_address.verified = True
                             changed_fields.append("verified")

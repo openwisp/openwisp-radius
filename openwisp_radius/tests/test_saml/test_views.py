@@ -133,6 +133,48 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         )
 
     @capture_any_output()
+    def test_saml_login_email_case_insensitive(self):
+        def login(uid):
+            relay_state = self._get_relay_state(
+                redirect_url="https://captive-portal.example.com", org_slug="default"
+            )
+            saml_response, relay_state = self._get_saml_response_for_acs_view(
+                relay_state, uid=uid
+            )
+            return self.client.post(
+                reverse("radius:saml2_acs"),
+                {
+                    "SAMLResponse": self.b64_for_post(saml_response),
+                    "RelayState": relay_state,
+                },
+            )
+
+        with self.subTest("new email address"):
+            response = login("Org_User@example.com")
+            self.assertEqual(response.status_code, 302)
+            user = User.objects.get(email="Org_User@example.com")
+            email_address = EmailAddress.objects.get(user=user)
+            self.assertEqual(email_address.email, "org_user@example.com")
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login("Org_User@example.com")
+            self.assertEqual(response.status_code, 302)
+            mocked_logger.assert_not_called()
+            self.assertEqual(EmailAddress.objects.filter(user=user).count(), 1)
+
+        with self.subTest("existing email address"):
+            user = self._create_user(
+                username="test-user", email="Existing_User@example.com"
+            )
+            user.refresh_from_db()
+            EmailAddress.objects.filter(user=user).update(email=user.email.upper())
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login(user.email)
+            self.assertEqual(response.status_code, 302)
+            mocked_logger.assert_not_called()
+            email_address = EmailAddress.objects.get(user=user)
+            self.assertEqual(email_address.email, user.email)
+
+    @capture_any_output()
     def test_relay_state_relative_path(self):
         expected_redirect_path = "/radius/saml2/additional-info/"
         org_slug = "default"
