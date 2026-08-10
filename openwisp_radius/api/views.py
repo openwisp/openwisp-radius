@@ -57,7 +57,7 @@ from openwisp_users.api.views import (
     PasswordResetConfirmView as BasePasswordResetConfirmView,
 )
 from openwisp_users.api.views import PasswordResetView as BasePasswordResetView
-from openwisp_users.auth import record_password_based_token
+from openwisp_users.auth import create_auth_token, is_password_based_user
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.pagination import OpenWispPagination
 
@@ -236,7 +236,7 @@ class RadiusTokenMixin(object):
             used_radtoken.delete()
 
     def get_or_create_radius_token(
-        self, user, organization, enable_auth=True, renew=True
+        self, user, organization, enable_auth=True, renew=True, password_based=None
     ):
         if renew:
             self._delete_used_token(user, organization)
@@ -249,6 +249,7 @@ class RadiusTokenMixin(object):
             self._radius_accounting_nas_stop(user, radius_token.organization)
             radius_token.organization = organization
         radius_token.can_auth = enable_auth
+        radius_token.password_based = password_based
         radius_token.full_clean()
         radius_token.save()
         # Create a cache for 24 hours so that next
@@ -316,13 +317,13 @@ class ObtainAuthTokenView(
             )
             serializer.is_valid(raise_exception=True)
             user = self.get_user(serializer, *args, **kwargs)
-            record_password_based_token(user, True)
-        else:
-            # Magic-link login: record as not password-based so password
-            # expiration is not enforced.
-            record_password_based_token(user, False)
-        token, _ = UserToken.objects.get_or_create(user=user)
-        self.get_or_create_radius_token(user, self.organization, renew=renew_required)
+        token = create_auth_token(request, user)
+        self.get_or_create_radius_token(
+            user,
+            self.organization,
+            renew=renew_required,
+            password_based=is_password_based_user(user),
+        )
         self.update_user_details(user)
         context = {"view": self, "request": request}
         serializer = self.serializer_class(instance=token, context=context)
@@ -407,7 +408,10 @@ class ValidateAuthTokenView(
             else:
                 user = token.user
                 self.get_or_create_radius_token(
-                    user, self.organization, renew=renew_required
+                    user,
+                    self.organization,
+                    renew=renew_required,
+                    password_based=is_password_based_user(user),
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)

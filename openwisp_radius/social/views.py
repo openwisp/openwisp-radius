@@ -5,9 +5,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from django.views import View
-from rest_framework.authtoken.models import Token
 
-from openwisp_users.auth import record_password_based_token
+from openwisp_users.auth import create_auth_token, is_password_based_user
 
 from ..api.views import RadiusTokenMixin
 from ..utils import get_organization_radius_settings, load_model
@@ -68,13 +67,10 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
         """
         cp = request.GET.get("cp")
         user = request.user
-        Token.objects.filter(user=user).delete()
-        token, _ = Token.objects.get_or_create(user=user)
-        # This token is handed to the captive page out-of-band (in the
-        # redirect URL, not via the browser session), so its provenance
-        # must be recorded on the user, not on a session marker.
-        record_password_based_token(user, False)
-        rad_token = self.get_or_create_radius_token(user, organization)
+        token = create_auth_token(request, user, renew=True)
+        rad_token = self.get_or_create_radius_token(
+            user, organization, password_based=is_password_based_user(user)
+        )
         return (
             f"{cp}?username={user.username}&token={token.key}&"
             f"radius_user_token={rad_token.key}"

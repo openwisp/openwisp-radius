@@ -19,9 +19,8 @@ from djangosaml2.views import (
 )
 from djangosaml2.views import LoginView as BaseLoginView
 from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
-from rest_framework.authtoken.models import Token
 
-from openwisp_users.auth import record_password_based_login, record_password_based_token
+from openwisp_users.auth import create_auth_token, record_password_based_login
 
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
@@ -152,12 +151,7 @@ class AssertionConsumerServiceView(
         For example, some sites may require user registration if the user has not
         yet been provisioned.
         """
-        Token.objects.filter(user=user).delete()
-        token, _ = Token.objects.get_or_create(user=user)
-        # This token is issued outside any Django session (the SAML flow
-        # redirects the browser with the token in the URL), so its
-        # provenance must be recorded on the user, not on a session marker.
-        record_password_based_token(user, False)
+        token = create_auth_token(self.request, user, renew=True)
         next = "{relay_state}?{params}".format(
             relay_state=relay_state,
             params=urlencode(

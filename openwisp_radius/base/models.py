@@ -1277,6 +1277,17 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
             "Enable the radius token to be used for freeradius authorization request"
         ),
     )
+    password_based = models.BooleanField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text=(
+            "Indicates whether this radius token was issued after an"
+            " authentication which used the local password. When false, the"
+            " token was obtained through an external method (eg: SSO, SAML)"
+            " and the local password expiration policy does not apply to it."
+        ),
+    )
 
     class Meta:
         db_table = "radiustoken"
