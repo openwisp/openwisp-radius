@@ -1,12 +1,13 @@
 import os
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import swapper
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core import mail
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.urls import reverse, reverse_lazy
 from djangosaml2.tests import auth_response, conf
@@ -128,9 +129,137 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
                 },
             )
         mocked_logger.assert_called_once_with(
-            'Failed email validation for "invalid_email@example" during'
+            'Failed email synchronization for "invalid_email@example" during'
             " SAML user creation"
         )
+
+    @capture_any_output()
+    def test_saml_login_email_case_insensitive(self):
+        redirect_url = "https://captive-portal.example.com"
+
+        def login(uid):
+            relay_state = self._get_relay_state(
+                redirect_url=redirect_url, org_slug="default"
+            )
+            saml_response, relay_state = self._get_saml_response_for_acs_view(
+                relay_state, uid=uid
+            )
+            return self.client.post(
+                reverse("radius:saml2_acs"),
+                {
+                    "SAMLResponse": self.b64_for_post(saml_response),
+                    "RelayState": relay_state,
+                },
+            )
+
+        def assert_redirect(response, user):
+            user.refresh_from_db()
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(
+                get_url_or_path(response.url), "/radius/saml2/additional-info/"
+            )
+            self.assertDictEqual(
+                parse_qs(urlparse(response.url).query),
+                {
+                    "next": [
+                        f"{redirect_url}"
+                        f"?username={quote(user.username)}"
+                        f"&token={Token.objects.get(user=user).key}"
+                        "&login_method=saml"
+                    ]
+                },
+            )
+
+        with self.subTest("new email address"):
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login("Org_User@example.com")
+            user = User.objects.get(email="Org_User@example.com")
+            assert_redirect(response, user)
+            mocked_logger.assert_not_called()
+            email_address = EmailAddress.objects.get(user=user)
+            self.assertEqual(email_address.email, "org_user@example.com")
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login("Org_User@example.com")
+            assert_redirect(response, user)
+            mocked_logger.assert_not_called()
+            self.assertEqual(EmailAddress.objects.filter(user=user).count(), 1)
+
+        with self.subTest("existing email address"):
+            user = self._create_user(
+                username="test-user", email="Existing_User@example.com"
+            )
+            user.refresh_from_db()
+            EmailAddress.objects.filter(user=user).update(email=user.email.upper())
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login(user.email)
+            assert_redirect(response, user)
+            mocked_logger.assert_not_called()
+            email_address = EmailAddress.objects.get(user=user)
+            self.assertEqual(email_address.email, user.email)
+
+        with self.subTest("multiple email addresses with lowercase address"):
+            user = self._create_user(
+                username="multiple-emails", email="multiple@example.com"
+            )
+            user.refresh_from_db()
+            EmailAddress.objects.filter(user=user).update(email=user.email.upper())
+            EmailAddress.objects.create(user=user, email=user.email, verified=True)
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login(user.email)
+            assert_redirect(response, user)
+            mocked_logger.assert_called_once_with(
+                f'Failed email synchronization for "{user}" during'
+                " SAML user creation"
+            )
+            self.assertEqual(EmailAddress.objects.filter(user=user).count(), 2)
+
+        with self.subTest("multiple email addresses without lowercase address"):
+            user = self._create_user(
+                username="multiple-uppercase-emails", email="multiple2@example.com"
+            )
+            user.refresh_from_db()
+            EmailAddress.objects.filter(user=user).update(email=user.email.upper())
+            EmailAddress.objects.create(
+                user=user, email=user.email.title(), verified=True
+            )
+            with patch("openwisp_radius.saml.views.logger.exception") as mocked_logger:
+                response = login(user.email)
+            assert_redirect(response, user)
+            mocked_logger.assert_called_once_with(
+                f'Failed email synchronization for "{user}" during'
+                " SAML user creation"
+            )
+            self.assertSetEqual(
+                set(
+                    EmailAddress.objects.filter(user=user).values_list(
+                        "email", flat=True
+                    )
+                ),
+                {user.email.upper(), user.email.title()},
+            )
+
+        with self.subTest("concurrent email address creation"):
+            with patch.object(EmailAddress, "save", side_effect=IntegrityError):
+                with patch(
+                    "openwisp_radius.saml.views.logger.exception"
+                ) as mocked_logger:
+                    response = login("concurrent@example.com")
+            user = User.objects.get(email="concurrent@example.com")
+            assert_redirect(response, user)
+            mocked_logger.assert_called_once_with(
+                'Failed email synchronization for "concurrent@example.com" '
+                "during SAML user creation"
+            )
+            self.assertTrue(
+                OrganizationUser.objects.filter(
+                    organization__slug="default", user=user
+                ).exists()
+            )
+            self.assertTrue(
+                RegisteredUser.objects.filter(
+                    organization__slug="default", user=user, method="saml"
+                ).exists()
+            )
 
     @capture_any_output()
     def test_relay_state_relative_path(self):
