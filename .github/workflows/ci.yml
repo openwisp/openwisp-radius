@@ -75,7 +75,6 @@ jobs:
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
           pip install -U ${{ matrix.django-version }}
-          pip install --no-deps --no-cache-dir --force-reinstall https://github.com/openwisp/openwisp-users/archive/refs/heads/issues/511-passowrd-expiration-sso.tar.gz
 
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
