@@ -331,7 +331,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         user = self._get_org_user().user
         self._backdate_password(user, days=60)
         self.assertEqual(user.has_password_expired(), True)
-        request = RequestFactory().get("/")
+        request = RequestFactory().get(self._get_url())
         request.session = SessionStore()
         data = RadiusUserSerializer(user, context={"request": request}).data
         self.assertEqual(data["password_expired"], True)

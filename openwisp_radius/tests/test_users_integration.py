@@ -29,7 +29,9 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
     def test_radiustoken_inline_excluded_fields(self):
         user = self._create_user()
         inline = RadiusTokenInline(user.__class__, admin.site)
-        request = RequestFactory().get("/")
+        request = RequestFactory().get(
+            reverse(f"admin:{self.app_label}_user_change", args=[user.pk])
+        )
 
         with self.subTest("add"):
             excluded = inline.get_exclude(request)
