@@ -50,7 +50,6 @@ from .test_freeradius_api import AcctMixin
 
 User = get_user_model()
 RadiusToken = load_model("RadiusToken")
-RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
 RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusGroup = load_model("RadiusGroup")
@@ -2268,9 +2267,11 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 organization=org1,
                 calling_station_id="11:22:33:44:55:66",
                 called_station_id="AA:BB:CC:DD:EE:FF",
+                start_time="2025-02-12T18:29:00+00:00",
+                stop_time="2025-02-12T18:39:00+00:00",
             )
         )
-        self._create_radius_accounting(**data1)
+        ra1 = self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
         data2.update(
             dict(
@@ -2284,7 +2285,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 called_station_id="AA-BB-CC-DD-EE-FF",
             )
         )
-        self._create_radius_accounting(**data2)
+        ra2 = self._create_radius_accounting(**data2)
         data3 = self.acct_post_data
         data3.update(
             dict(
@@ -2318,6 +2319,19 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(len(response.data), 2)
             self.assertEqual(response.data[0]["unique_id"], data2["unique_id"])
             self.assertEqual(response.data[1]["unique_id"], data1["unique_id"])
+            self.assertEqual(
+                response.data[0]["start_time_display"],
+                formats.localize(timezone.template_localtime(ra2.start_time)),
+            )
+            self.assertIsNone(response.data[0]["stop_time_display"])
+            self.assertEqual(
+                response.data[1]["start_time_display"],
+                formats.localize(timezone.template_localtime(ra1.start_time)),
+            )
+            self.assertEqual(
+                response.data[1]["stop_time_display"],
+                formats.localize(timezone.template_localtime(ra1.stop_time)),
+            )
 
         with self.subTest("Test superuser can view all sessions"):
             admin = self._create_admin()
@@ -2365,50 +2379,6 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
-
-    def test_radius_accounting_datetime_display(self):
-        path = reverse("radius:radius_accounting_list")
-        accounting_sessions = (
-            ("77889900", "4090012", "2025-02-12T18:39:00+00:00"),
-            ("99887700", "4090013", None),
-        )
-        for unique_id, session_id, stop_time in accounting_sessions:
-            options = {
-                **self.acct_post_data,
-                "session_id": session_id,
-                "unique_id": unique_id,
-                "username": "tester",
-                "organization": self.default_org,
-                "calling_station_id": "11-22-33-44-55-66",
-                "called_station_id": "AA-BB-CC-DD-EE-FF",
-                "start_time": "2025-02-12T18:29:00+00:00",
-            }
-            if stop_time:
-                options["stop_time"] = stop_time
-            self._create_radius_accounting(**options)
-        admin = self._create_admin()
-        self.client.force_login(admin)
-        response = self.client.get(path)
-        self.assertEqual(response.status_code, 200)
-        for unique_id, _, stop_time in accounting_sessions:
-            with self.subTest(unique_id=unique_id):
-                item = next(
-                    result
-                    for result in response.data
-                    if result["unique_id"] == unique_id
-                )
-                radius_accounting = RadiusAccounting.objects.get(unique_id=unique_id)
-                expected_start = formats.localize(
-                    timezone.template_localtime(radius_accounting.start_time)
-                )
-                self.assertEqual(item["start_time_display"], expected_start)
-                if stop_time:
-                    expected_stop = formats.localize(
-                        timezone.template_localtime(radius_accounting.stop_time)
-                    )
-                    self.assertEqual(item["stop_time_display"], expected_stop)
-                else:
-                    self.assertIsNone(item["stop_time_display"])
 
 
 del BaseTestCase

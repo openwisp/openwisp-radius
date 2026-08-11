@@ -50,11 +50,11 @@
           );
 
           response.forEach((element, index) => {
-            element.start_time = element.start_time_display || element.start_time;
+            element.start_time = element.start_time_display;
             if (!element.stop_time) {
               element.stop_time = `<strong>${onlineMsg}</strong>`;
             } else {
-              element.stop_time = element.stop_time_display || element.stop_time;
+              element.stop_time = element.stop_time_display;
             }
             $("#radius-session-tbody").append(
               `<tr class="form-row has_original dynamic-radiussession_set" id="radiussession_set-${index}">
