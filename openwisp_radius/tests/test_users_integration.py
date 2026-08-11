@@ -46,6 +46,9 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             url,
         )
         self.assertContains(response, 'id="id_radius_token-__prefix__-organization"')
+        self.assertNotContains(
+            response, 'id="id_radius_token-__prefix__-password_based"'
+        )
         # TODO: Remove this while dropping support for Django 4.2
         if django.VERSION < (5, 1):
             self.assertNotContains(response, 'id="id_radius_token-__prefix__-key"')
@@ -71,6 +74,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         response = self.client.post(url, params, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(RadiusToken.objects.count(), 1)
+        self.assertNotContains(response, 'id="id_radius_token-0-password_based"')
         radius_token = user.radius_token.key
         self.assertContains(
             response,

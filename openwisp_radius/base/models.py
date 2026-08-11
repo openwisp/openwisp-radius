@@ -1282,7 +1282,7 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text=(
+        help_text=_(
             "Indicates whether the user's most recent authentication used the"
             " local password. When false, the radius token is treated as"
             " externally authenticated (eg: SSO, SAML), so the local password"

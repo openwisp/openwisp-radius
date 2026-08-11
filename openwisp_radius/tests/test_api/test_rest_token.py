@@ -77,6 +77,8 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             HTTP_AUTHORIZATION=f"{sesame_settings.TOKEN_NAME} {token}",
         )
         self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertFalse(user.password_based_token)
         self.assertEqual(RadiusToken.objects.get(user=user).password_based, False)
 
     def test_user_language_preference_stored(self):
