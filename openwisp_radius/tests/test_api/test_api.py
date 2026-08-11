@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
@@ -24,16 +25,23 @@ from django.utils import formats, timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+from rest_framework.throttling import ScopedRateThrottle
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
-    RadiusAccountingSerializer,
+    PasswordResetSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
     UpdateRegisteredUserMethodSerializer,
     UserGroupCheckSerializer,
 )
+from openwisp_radius.api.views import PasswordResetConfirmView, PasswordResetView
+from openwisp_radius.base.forms import PasswordResetForm
+from openwisp_users.api.serializers import (
+    PasswordResetSerializer as UsersPasswordResetSerializer,
+)
+from openwisp_users.base.forms import PasswordResetForm as UsersPasswordResetForm
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ...utils import load_model
@@ -59,6 +67,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def setUp(self):
         cache.clear()
         super().setUp()
+
+    def test_password_reset_uses_scoped_throttle(self):
+        for view in (PasswordResetView, PasswordResetConfirmView):
+            with self.subTest(view=view.__name__):
+                self.assertIn(ScopedRateThrottle, view.throttle_classes)
 
     def _radius_batch_post_request(self, data, username="admin", password="tester"):
         if username == "admin":
@@ -918,18 +931,22 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.client.post(password_reset_url, data={})
         self.assertEqual(response.status_code, 400)
 
-        # email does not exist in database
+        # email does not exist in database: indistinguishable from a match,
+        # to avoid leaking which identifiers are registered
         reset_payload = {"input": "wrong@email.com"}
         response = self.client.post(password_reset_url, data=reset_payload)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), mail_count)
 
-        # email not registered with org
+        # email not registered with org: also indistinguishable from a
+        # match, to avoid leaking organization membership
         User.objects.create_user(
             username="test_name1", password="test_password", email="test1@email.com"
         )
         reset_payload = {"input": "test1@email.com"}
         response = self.client.post(password_reset_url, data=reset_payload)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), mail_count)
 
         # valid payload
         reset_payload = {"input": "test@email.com"}
@@ -963,7 +980,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         confirm_response = self.client.post(password_confirm_url, data=data)
         self.assertEqual(confirm_response.status_code, 400)
 
-        # wrong uid
+        # wrong uid: the uid/token pair is already an unguessable secret,
+        # so there is nothing left to enumerate here, hence a plain 400
+        # rather than a 404 (see PasswordResetConfirmView docstring)
         data = {
             "new_password1": "test_new_password",
             "new_password2": "test_new_password",
@@ -971,7 +990,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "token": url_kwargs["token"],
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
-        self.assertEqual(confirm_response.status_code, 404)
+        self.assertEqual(confirm_response.status_code, 400)
 
         # wrong token and uid
         data = {
@@ -981,7 +1000,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             "token": "-wrong-token-",
         }
         confirm_response = self.client.post(password_confirm_url, data=data)
-        self.assertEqual(confirm_response.status_code, 404)
+        self.assertEqual(confirm_response.status_code, 400)
 
         # valid payload
         data = {
@@ -1036,6 +1055,148 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         response = self.client.get(password_reset_url)
         self.assertEqual(response.status_code, 405)
+
+    def test_api_password_reset_superuser_without_organization_membership(self):
+        user = User.objects.create_superuser(
+            username="superuser",
+            email="superuser@example.com",
+            password="test_password",
+        )
+        self.assertFalse(user.is_member(self.default_org))
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        response = self.client.post(password_reset_url, data={"input": user.email})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [user.email])
+
+    def test_password_reset_form_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            form = PasswordResetForm(data={"email": "test@example.com"})
+        self.assertIsInstance(form, UsersPasswordResetForm)
+
+    def test_password_reset_serializer_deprecated(self):
+        with self.assertWarns(DeprecationWarning):
+            serializer = PasswordResetSerializer(data={"input": "test@example.com"})
+        self.assertIsInstance(serializer, UsersPasswordResetSerializer)
+
+    def test_get_password_reset_url_default(self):
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        uid = user_pk_to_url_str(test_user)
+        self.assertIn(self.default_org.slug, email_body)
+        self.assertIn("Reset password", email_body)
+        self.assertIn(f"password/reset/confirm/{uid}/", email_body)
+
+    def test_get_password_reset_url_org_radius_settings(self):
+        """Test password reset URL from org radius_settings."""
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        self.default_org.radius_settings.password_reset_url = (
+            "https://custom.example.com/reset?org={organization}"
+            "&uid={uid}&token={token}&site={site}"
+        )
+        self.default_org.radius_settings.save()
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        uid = user_pk_to_url_str(test_user)
+        site_domain = Site.objects.get_current().domain
+        self.assertIn(
+            f"https://custom.example.com/reset?org={self.default_org.slug}"
+            f"&amp;uid={uid}&amp;token=",
+            email_body,
+        )
+        self.assertIn(f"&amp;site={site_domain}", email_body)
+
+    def test_get_password_reset_url_org_radius_settings_precedence(self):
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        self.default_org.radius_settings.password_reset_url = (
+            "https://org-override.example.com/{organization}/{uid}/{token}"
+        )
+        self.default_org.radius_settings.save()
+        password_reset_urls = {
+            str(self.default_org.pk): (
+                "https://org-specific.example.com/{organization}/{uid}/{token}"
+            )
+        }
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        with mock.patch.object(
+            app_settings, "PASSWORD_RESET_URLS", password_reset_urls
+        ):
+            response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        self.assertIn("https://org-override.example.com/", email_body)
+        self.assertNotIn("https://org-specific.example.com/", email_body)
+
+    def test_get_password_reset_url_password_reset_urls_org_specific(self):
+        test_user = User.objects.create_user(
+            username="test_name",
+            password="test_password",
+            email="test@email.com",
+        )
+        self._create_org_user(organization=self.default_org, user=test_user)
+        self.assertEqual(
+            self.default_org.radius_settings.password_reset_url,
+            app_settings.DEFAULT_PASSWORD_RESET_URL,
+        )
+        uid = user_pk_to_url_str(test_user)
+        password_reset_urls = {
+            str(self.default_org.pk): (
+                "https://org-specific.example.com/{organization}/{uid}/{token}"
+            )
+        }
+        password_reset_url = reverse(
+            "radius:rest_password_reset", args=[self.default_org.slug]
+        )
+        reset_payload = {"input": "test@email.com"}
+        with mock.patch.object(
+            app_settings, "PASSWORD_RESET_URLS", password_reset_urls
+        ):
+            response = self.client.post(password_reset_url, data=reset_payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox.pop()
+        email_body = email.alternatives[0][0]
+        self.assertIn(
+            f"https://org-specific.example.com/{self.default_org.slug}/{uid}/",
+            email_body,
+        )
 
     def test_api_password_reset_confirm_json_enforces_membership(self):
         other_org = self._create_org(name="other-org")
@@ -1152,9 +1313,14 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._create_org_user(user=user, organization=org)
         path = reverse("radius:rest_password_reset", args=[org.slug])
         r = self.client.post(path, {"input": user.email})
+        # The reset password view does not leak whether an account exists or not.
+        # It returns success response in both cases.
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data["detail"], "Password reset e-mail has been sent.")
-        mocked_send.assert_called_once()
+        if is_active:
+            mocked_send.assert_called_once()
+        else:
+            mocked_send.assert_not_called()
 
     def test_active_user_reset_password(self):
         self._test_user_reset_password_helper(True)
@@ -2243,30 +2409,6 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     self.assertEqual(item["stop_time_display"], expected_stop)
                 else:
                     self.assertIsNone(item["stop_time_display"])
-
-        with self.subTest("Serializer mapping branches"):
-            serializer = RadiusAccountingSerializer()
-            for unique_id, _, _ in accounting_sessions:
-                radius_accounting = RadiusAccounting.objects.get(unique_id=unique_id)
-                data = {
-                    "start_time": radius_accounting.start_time,
-                    "stop_time": radius_accounting.stop_time,
-                }
-                self.assertEqual(
-                    serializer.get_start_time_display(data),
-                    formats.localize(
-                        timezone.template_localtime(radius_accounting.start_time)
-                    ),
-                )
-                if radius_accounting.stop_time:
-                    self.assertEqual(
-                        serializer.get_stop_time_display(data),
-                        formats.localize(
-                            timezone.template_localtime(radius_accounting.stop_time)
-                        ),
-                    )
-                else:
-                    self.assertIsNone(serializer.get_stop_time_display(data))
 
 
 del BaseTestCase

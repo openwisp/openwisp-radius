@@ -428,20 +428,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     def authenticate_user(self, request, user, password):
         """
-        returns ``True`` if the password value supplied is
-        a valid user password or a valid user token
-        can be overridden to implement more complex checks
+        Returns ``True`` if the password value supplied is a valid user
+        password or a valid radius user token.
+        Can be overridden to implement more complex checks.
+
+        The local password and the radius token are two distinct
+        credentials with independent expiration rules: a password login is
+        always subject to the user's password expiration policy, while a
+        radius token is judged by how that specific token was issued.
         """
-        return bool(
-            getattr(request, "_mac_allowed", False)
-            or (
-                not user.has_password_expired()
-                and (
-                    user.check_password(password)
-                    or self.check_user_token(request, user, password)
-                )
-            )
-        )
+        if getattr(request, "_mac_allowed", False):
+            return True
+        if user.check_password(password):
+            return not user.has_password_expired()
+        return self.check_user_token(request, user, password)
 
     def check_user_token(self, request, user, password):
         """
@@ -456,6 +456,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 organization_id=self.request.auth,
             )
         except RadiusToken.DoesNotExist:
+            return False
+        if token.password_based is not False and user.has_password_expired():
             return False
         if app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
             token.can_auth = False
@@ -520,6 +522,7 @@ class AccountingView(ListCreateAPIView):
                 self._handle_accounting_on(data)
             return Response(status=status.HTTP_200_OK)
         # Create or Update
+        organization = Organization.objects.get(pk=request.auth)
         try:
             instance = self.get_queryset().get(unique_id=data.get("unique_id"))
         except RadiusAccounting.DoesNotExist:
@@ -530,21 +533,18 @@ class AccountingView(ListCreateAPIView):
                 if self._is_interim_update_corner_case(error, data):
                     return Response(status=status.HTTP_200_OK)
                 raise error
-            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
             try:
-                serializer.create(acct_data)
+                serializer.save(organization=organization)
             # on large systems using mac auth roaming this could happen
             except IntegrityError:
-                logger.info(f"Ignoring duplicate session {acct_data}")
+                logger.info(f"Ignoring duplicate session {serializer.validated_data}")
                 return Response(status=status.HTTP_200_OK)
-            headers = self.get_success_headers(serializer.data)
             self.send_radius_accounting_signal(serializer.validated_data)
-            return Response(status=status.HTTP_201_CREATED, headers=headers)
+            return Response(status=status.HTTP_201_CREATED)
         else:
             serializer = self.get_serializer(instance, data=data, partial=False)
             serializer.is_valid(raise_exception=True)
-            acct_data = self._data_to_acct_model(serializer.validated_data.copy())
-            serializer.update(instance, acct_data)
+            serializer.save(organization=organization)
             self.send_radius_accounting_signal(serializer.validated_data)
             return Response(status=status.HTTP_200_OK)
 
@@ -588,12 +588,6 @@ class AccountingView(ListCreateAPIView):
                 if rad.organization_id != self.request.auth:
                     return True
         return False
-
-    def _data_to_acct_model(self, valid_data):
-        acct_org = Organization.objects.get(pk=self.request.auth)
-        valid_data.pop("status_type", None)
-        valid_data["organization"] = acct_org
-        return valid_data
 
     def send_radius_accounting_signal(self, accounting_data):
         radius_accounting_success.send(

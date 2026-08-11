@@ -678,6 +678,8 @@ if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 
         def get_exclude(self, request, obj=None):
             fields = super().get_exclude(request, obj) or []
+            if "password_based" not in fields:
+                fields.append("password_based")
             if not hasattr(obj, "radius_token"):
                 return fields + ["key"]
             return fields

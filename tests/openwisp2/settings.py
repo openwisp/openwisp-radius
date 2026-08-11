@@ -307,7 +307,9 @@ OPENWISP_RADIUS_EXTRA_NAS_TYPES = (("cisco", "Cisco Router"),)
 
 REST_AUTH = {
     "SESSION_LOGIN": False,
-    "PASSWORD_RESET_SERIALIZER": "openwisp_radius.api.serializers.PasswordResetSerializer",
+    "PASSWORD_RESET_SERIALIZER": (
+        "openwisp_users.api.serializers.PasswordResetSerializer"
+    ),
     "REGISTER_SERIALIZER": "openwisp_radius.api.serializers.RegisterSerializer",
 }
 
