@@ -619,10 +619,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     @capture_any_output()
     @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     @mock.patch(
-        "openwisp_radius.api.serializers.RadiusAccountingSerializer.create",
+        "openwisp_radius.api.serializers.RadiusAccountingSerializer.save",
         side_effect=IntegrityError,
     )
-    def test_accounting_start_integrity_error(self, create, send_login_email):
+    def test_accounting_start_integrity_error(self, save, send_login_email):
         data = self.acct_post_data
         data["status_type"] = "Start"
         data = self._get_accounting_params(**data)
@@ -630,7 +630,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
         self.assertEqual(RadiusAccounting.objects.count(), 0)
-        create.assert_called_once()
+        save.assert_called_once()
         send_login_email.assert_not_called()
 
     @mock.patch(
@@ -758,7 +758,12 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     @capture_any_output()
-    def test_accounting_start_201(self):
+    @mock.patch(
+        "openwisp_radius.api.serializers.RadiusAccountingSerializer.to_representation",
+        side_effect=AssertionError,
+    )
+    @mock.patch("openwisp_radius.api.freeradius_views.radius_accounting_success.send")
+    def test_accounting_start_201(self, send, to_representation):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         data = self.acct_post_data
         data["status_type"] = "Start"
@@ -766,11 +771,18 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.post_json(data)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
+        send.assert_called_once()
+        accounting_data = send.call_args.kwargs["accounting_data"]
+        self.assertNotIn("organization", accounting_data)
+        self.assertNotIn("status_type", accounting_data)
+        # Avoid serializing accounting data for an intentionally empty response.
+        to_representation.assert_not_called()
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         self.assertAcctData(RadiusAccounting.objects.first(), data)
 
     @freeze_time(START_DATE)
-    def test_accounting_update_200(self):
+    @mock.patch("openwisp_radius.api.freeradius_views.radius_accounting_success.send")
+    def test_accounting_update_200(self, send):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
         data = self.acct_post_data
@@ -779,6 +791,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         response = self.post_json(data)
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.data)
+        send.assert_called_once()
+        accounting_data = send.call_args.kwargs["accounting_data"]
+        self.assertNotIn("organization", accounting_data)
+        self.assertNotIn("status_type", accounting_data)
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertEqual(ra.update_time.timetuple(), now().timetuple())
