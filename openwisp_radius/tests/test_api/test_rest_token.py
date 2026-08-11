@@ -10,6 +10,8 @@ from django.urls import reverse
 from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework.authtoken.models import Token
+from sesame import settings as sesame_settings
+from sesame.utils import get_token as get_one_time_auth_token_for_user
 
 from openwisp_radius.api import views as api_views
 from openwisp_radius.api.serializers import RadiusUserSerializer
@@ -66,6 +68,16 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
             org_user.user.phone_number = "+23767778243"
             org_user.save()
             self._user_auth_token_helper(org_user.user.phone_number)
+
+    def test_sesame_login_issues_external_radius_token(self):
+        user = self._get_org_user().user
+        token = get_one_time_auth_token_for_user(user)
+        response = self.client.post(
+            self._get_url(),
+            HTTP_AUTHORIZATION=f"{sesame_settings.TOKEN_NAME} {token}",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusToken.objects.get(user=user).password_based, False)
 
     def test_user_language_preference_stored(self):
         test_user = self._get_user()
@@ -310,6 +322,7 @@ class TestApiUserToken(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.data["password_expired"], True)
         user.refresh_from_db()
         self.assertEqual(user.password_based_token, True)
+        self.assertEqual(RadiusToken.objects.get(user=user).password_based, True)
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_password_expired_reported_for_password_login(self):

@@ -41,7 +41,10 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.settings import api_settings as drf_api_settings
-from rest_framework.throttling import BaseThrottle  # get_ident method
+from rest_framework.throttling import (  # get_ident method
+    BaseThrottle,
+    ScopedRateThrottle,
+)
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
@@ -92,6 +95,10 @@ accounting = freeradius_views.accounting
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
 renew_required = app_settings.DISPOSABLE_RADIUS_USER_TOKEN
 logger = logging.getLogger(__name__)
+
+PASSWORD_RESET_THROTTLE_CLASSES = tuple(
+    dict.fromkeys((*drf_api_settings.DEFAULT_THROTTLE_CLASSES, ScopedRateThrottle))
+)
 
 User = get_user_model()
 Organization = swapper.load_model("openwisp_users", "Organization")
@@ -532,7 +539,7 @@ password_change = PasswordChangeView.as_view()
 
 class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
-    throttle_classes = drf_api_settings.DEFAULT_THROTTLE_CLASSES
+    throttle_classes = PASSWORD_RESET_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={
@@ -616,7 +623,7 @@ class PasswordResetConfirmView(
     ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
 ):
     authentication_classes = tuple()
-    throttle_classes = drf_api_settings.DEFAULT_THROTTLE_CLASSES
+    throttle_classes = PASSWORD_RESET_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={

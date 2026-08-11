@@ -115,6 +115,28 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         query_params = parse_qs(urlparse(response.url).query)
         self._post_successful_auth_assertions(query_params, org_slug)
 
+    def test_saml_login_issues_external_radius_token(self):
+        org_slug = "default"
+        relay_state = self._get_relay_state(
+            redirect_url="/radius/saml2/additional-info/", org_slug=org_slug
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(username="org_user@example.com")
+        token = Token.objects.get(user=user)
+        response = self.client.post(
+            reverse("radius:validate_auth_token", args=[org_slug]), {"token": token.key}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusToken.objects.get(user=user).password_based, False)
+
     @capture_any_output()
     def test_invalid_email_raise_validation_error(self):
         invalid_email = "invalid_email@example"

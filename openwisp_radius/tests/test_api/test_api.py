@@ -24,6 +24,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+from rest_framework.throttling import ScopedRateThrottle
 
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
@@ -34,6 +35,7 @@ from openwisp_radius.api.serializers import (
     UpdateRegisteredUserMethodSerializer,
     UserGroupCheckSerializer,
 )
+from openwisp_radius.api.views import PasswordResetConfirmView, PasswordResetView
 from openwisp_radius.base.forms import PasswordResetForm
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as UsersPasswordResetSerializer,
@@ -63,6 +65,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
     def setUp(self):
         cache.clear()
         super().setUp()
+
+    def test_password_reset_uses_scoped_throttle(self):
+        for view in (PasswordResetView, PasswordResetConfirmView):
+            with self.subTest(view=view.__name__):
+                self.assertIn(ScopedRateThrottle, view.throttle_classes)
 
     def _radius_batch_post_request(self, data, username="admin", password="tester"):
         if username == "admin":

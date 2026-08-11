@@ -17,10 +17,10 @@ class Migration(migrations.Migration):
                 blank=True,
                 default=None,
                 help_text=(
-                    "Indicates whether this radius token was issued after an"
-                    " authentication which used the local password. When false, the"
-                    " token was obtained through an external method (eg: SSO, SAML)"
-                    " and the local password expiration policy does not apply to it."
+                    "Indicates whether the user's most recent authentication used the"
+                    " local password. When false, the radius token is treated as"
+                    " externally authenticated (eg: SSO, SAML), so the local password"
+                    " expiration policy does not apply to it."
                 ),
                 null=True,
             ),

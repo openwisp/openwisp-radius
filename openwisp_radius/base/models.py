@@ -1265,7 +1265,6 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
     # key field is a primary key so additional id field will be redundant
     id = None
-    # tokens are not supposed to be modified, can be regenerated if necessary
     modified = None
     key = models.CharField(_("Key"), max_length=40, primary_key=True)
     user = models.OneToOneField(
@@ -1277,15 +1276,17 @@ class AbstractRadiusToken(OrgMixin, TimeStampedEditableModel, models.Model):
             "Enable the radius token to be used for freeradius authorization request"
         ),
     )
+    # The key stays stable for non-disposable tokens. This authorization state
+    # is refreshed from the user's most recent authentication event.
     password_based = models.BooleanField(
         blank=True,
         null=True,
         default=None,
         help_text=(
-            "Indicates whether this radius token was issued after an"
-            " authentication which used the local password. When false, the"
-            " token was obtained through an external method (eg: SSO, SAML)"
-            " and the local password expiration policy does not apply to it."
+            "Indicates whether the user's most recent authentication used the"
+            " local password. When false, the radius token is treated as"
+            " externally authenticated (eg: SSO, SAML), so the local password"
+            " expiration policy does not apply to it."
         ),
     )
 

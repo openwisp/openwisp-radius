@@ -113,6 +113,7 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
         self.assertIn(querystring, r.url)
         user = User.objects.filter(username="socialuser").first()
         self.assertEqual(user.password_based_token, False)
+        self.assertEqual(rad_token.password_based, False)
         self.assertTrue(user.is_member(self.default_org))
         try:
             reg_user = user.registered_users.get(organization=self.default_org)
