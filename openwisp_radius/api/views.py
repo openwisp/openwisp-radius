@@ -96,6 +96,8 @@ _TOKEN_AUTH_FAILED = _("Token authentication failed")
 renew_required = app_settings.DISPOSABLE_RADIUS_USER_TOKEN
 logger = logging.getLogger(__name__)
 
+# Keep password-reset endpoints protected by the "others" scope without
+# dropping global DRF throttles.
 PASSWORD_RESET_THROTTLE_CLASSES = tuple(
     dict.fromkeys((*drf_api_settings.DEFAULT_THROTTLE_CLASSES, ScopedRateThrottle))
 )
