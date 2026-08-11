@@ -428,20 +428,20 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
     def authenticate_user(self, request, user, password):
         """
-        returns ``True`` if the password value supplied is
-        a valid user password or a valid user token
-        can be overridden to implement more complex checks
+        Returns ``True`` if the password value supplied is a valid user
+        password or a valid radius user token.
+        Can be overridden to implement more complex checks.
+
+        The local password and the radius token are two distinct
+        credentials with independent expiration rules: a password login is
+        always subject to the user's password expiration policy, while a
+        radius token is judged by how that specific token was issued.
         """
-        return bool(
-            getattr(request, "_mac_allowed", False)
-            or (
-                not user.has_password_expired()
-                and (
-                    user.check_password(password)
-                    or self.check_user_token(request, user, password)
-                )
-            )
-        )
+        if getattr(request, "_mac_allowed", False):
+            return True
+        if user.check_password(password):
+            return not user.has_password_expired()
+        return self.check_user_token(request, user, password)
 
     def check_user_token(self, request, user, password):
         """
@@ -456,6 +456,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
                 organization_id=self.request.auth,
             )
         except RadiusToken.DoesNotExist:
+            return False
+        if token.password_based is not False and user.has_password_expired():
             return False
         if app_settings.DISPOSABLE_RADIUS_USER_TOKEN:
             token.can_auth = False

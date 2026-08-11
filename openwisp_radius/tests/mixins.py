@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
+from django.utils.timezone import now, timedelta
 
 from openwisp_utils.tests import AssertNumQueriesSubTestMixin
 
@@ -141,6 +142,13 @@ class ApiTokenMixin(BasePostParamsMixin):
         rad = self.default_org.radius_settings
         self.auth_header = f"Bearer {org.pk} {rad.token}"
         self.token_querystring = f"?token={rad.token}&uuid={str(org.pk)}"
+
+    def _backdate_password(self, user, days):
+        """Backdate ``password_updated`` for a single user to trigger expiration."""
+        User.objects.filter(pk=user.pk).update(
+            password_updated=(now() - timedelta(days=days)).date()
+        )
+        user.refresh_from_db()
 
     def _register_user(self, extra_params=None, expect_201=True, expect_users=1):
         self._superuser_login()

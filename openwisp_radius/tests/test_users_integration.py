@@ -1,13 +1,16 @@
 import csv
 
 import django
+from django.contrib import admin
 from django.core.files.temp import NamedTemporaryFile
 from django.core.management import call_command
+from django.test import RequestFactory
 from django.urls import reverse
 
 from openwisp_users.tests.test_admin import TestBasicUsersIntegration
 from openwisp_utils.tests import capture_stdout
 
+from ..admin import RadiusTokenInline
 from ..utils import load_model
 from .mixins import GetEditFormInlineMixin
 
@@ -23,6 +26,25 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
 
     is_integration_test = True
 
+    def test_radiustoken_inline_excluded_fields(self):
+        user = self._create_user()
+        inline = RadiusTokenInline(user.__class__, admin.site)
+        request = RequestFactory().get(
+            reverse(f"admin:{self.app_label}_user_change", args=[user.pk])
+        )
+
+        with self.subTest("add"):
+            excluded = inline.get_exclude(request)
+            self.assertIn("password_based", excluded)
+            self.assertIn("key", excluded)
+
+        RadiusToken.objects.create(user=user, organization=self._get_org())
+
+        with self.subTest("change"):
+            excluded = inline.get_exclude(request, user)
+            self.assertIn("password_based", excluded)
+            self.assertNotIn("key", excluded)
+
     def test_radiustoken_inline(self):
         admin = self._create_admin()
         self.client.force_login(admin)
@@ -36,6 +58,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         params.pop("bio", None)
         params.pop("last_login", None)
         params.pop("password_updated", None)
+        params.pop("password_based_token", None)
         params.pop("birth_date", None)
         params.pop("expiration_date", None)
         params = self._additional_params_pop(params)
@@ -45,6 +68,9 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
             url,
         )
         self.assertContains(response, 'id="id_radius_token-__prefix__-organization"')
+        self.assertNotContains(
+            response, 'id="id_radius_token-__prefix__-password_based"'
+        )
         # TODO: Remove this while dropping support for Django 4.2
         if django.VERSION < (5, 1):
             self.assertNotContains(response, 'id="id_radius_token-__prefix__-key"')
@@ -70,6 +96,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         response = self.client.post(url, params, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(RadiusToken.objects.count(), 1)
+        self.assertNotContains(response, 'id="id_radius_token-0-password_based"')
         radius_token = user.radius_token.key
         self.assertContains(
             response,
@@ -150,6 +177,7 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         params.pop("phone_number")
         params.pop("password", None)
         params.pop("_password", None)
+        params.pop("password_based_token", None)
         params.pop("bio", None)
         params.pop("last_login", None)
         params.pop("password_updated", None)

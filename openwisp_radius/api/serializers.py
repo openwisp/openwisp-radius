@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import phonenumbers
 import swapper
@@ -7,19 +8,15 @@ from allauth.account.utils import setup_user_email
 from dj_rest_auth.registration.serializers import (
     RegisterSerializer as BaseRegisterSerializer,
 )
-from dj_rest_auth.serializers import (
-    PasswordResetSerializer as BasePasswordResetSerializer,
-)
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_yasg.utils import swagger_serializer_method
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumbers import PhoneNumberType, phonenumberutil
 from rest_framework import serializers
@@ -30,11 +27,14 @@ from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_users.api.serializers import (
+    PasswordResetSerializer as BasePasswordResetSerializer,
+)
+from openwisp_users.auth import is_password_based_login
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.serializers import ValidatedModelSerializer
 
 from .. import settings as app_settings
-from ..base.forms import PasswordResetForm
 from ..counters.exceptions import SkipCheck
 from ..utils import (
     get_group_checks,
@@ -57,6 +57,23 @@ RegisteredUser = load_model("RegisteredUser")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 Organization = swapper.load_model("openwisp_users", "Organization")
 User = get_user_model()
+
+
+class PasswordResetSerializer(BasePasswordResetSerializer):
+    """
+    DEPRECATED: Use openwisp_users.api.serializers.PasswordResetSerializer instead.
+    TODO: Remove in 1.4.0
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "openwisp_radius.api.serializers.PasswordResetSerializer is deprecated. "
+            "Use openwisp_users.api.serializers.PasswordResetSerializer instead. "
+            "This class will be removed in openwisp-radius 1.4.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
 
 
 class AllowAllUsersModelBackend(UsersAuthenticationBackend):
@@ -514,38 +531,6 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
-class PasswordResetSerializer(BasePasswordResetSerializer):
-    input = serializers.CharField()
-    email = None
-    password_reset_form_class = PasswordResetForm
-
-    def validate_input(self, value):
-        # Create PasswordResetForm with the serializer.
-        # Check BasePasswordResetSerializer.validate_email for details.
-        user = self.context.get("request").user
-        self.reset_form = self.password_reset_form_class(data={"email": user.email})
-        self.reset_form.is_valid()
-        return value
-
-    def save(self):
-        request = self.context.get("request")
-        password_reset_url = self.context.get("password_reset_url")
-        # Set some values to trigger the send_email method.
-        opts = {
-            "use_https": request.is_secure(),
-            "from_email": getattr(settings, "DEFAULT_FROM_EMAIL"),
-            "email_template_name": ("custom_password_reset_email.html"),
-            "request": request,
-            "extra_email_context": {
-                "subject": _("Password reset on %s") % (get_current_site(request).name),
-                "call_to_action_url": password_reset_url,
-                "call_to_action_text": _("Reset password"),
-            },
-        }
-        opts.update(self.get_email_options())
-        self.reset_form.save(**opts)
-
-
 class RegisterSerializer(
     ErrorDictMixin,
     AllowedMobilePrefixMixin,
@@ -816,7 +801,7 @@ class RadiusUserSerializer(serializers.ModelSerializer):
 
     is_verified = serializers.SerializerMethodField()
     method = serializers.SerializerMethodField()
-    password_expired = serializers.BooleanField(source="has_password_expired")
+    password_expired = serializers.SerializerMethodField()
     radius_user_token = serializers.CharField(source="radius_token.key", default=None)
 
     class Meta:
@@ -862,3 +847,8 @@ class RadiusUserSerializer(serializers.ModelSerializer):
     def get_method(self, obj):
         reg_user = self._get_registered_user(obj)
         return reg_user.method if reg_user else None
+
+    @swagger_serializer_method(serializer_or_field=serializers.BooleanField)
+    def get_password_expired(self, obj):
+        request = self.context.get("request")
+        return is_password_based_login(request, user=obj) and obj.has_password_expired()

@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
@@ -153,10 +153,62 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_authorize_password_expired(self):
-        self._get_org_user()
-        User.objects.update(password_updated=now() - timedelta(days=60))
+        org_user = self._get_org_user()
+        self._backdate_password(org_user.user, 60)
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertNotEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
+        self.assertEqual(response.data, None)
+
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_authorize_password_expired_with_saml_login(self):
+        # A SAML (or any SSO) login must not resurrect an expired local
+        # password: the local password and the radius token are distinct
+        # credentials, each subject to its own expiration rule.
+        org_user = self._get_org_user()
+        user = org_user.user
+        RegisteredUser.objects.update_or_create(
+            user=user,
+            organization=self._get_org(),
+            defaults={"method": "saml", "is_verified": True},
+        )
+        self._backdate_password(user, 60)
+        radius_token = RadiusToken.objects.create(
+            user=user,
+            organization=self._get_org(),
+            can_auth=True,
+            password_based=False,
+        )
+        self.assertEqual(user.has_password_expired(), True)
+
+        with self.subTest("expired local password is rejected"):
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, None)
+
+        with self.subTest("radius token issued after SSO login is accepted"):
+            response = self._authorize_user(
+                password=radius_token.key, auth_header=self.auth_header
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+
+    @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
+    def test_authorize_radius_token_after_password_login_expired(self):
+        # A radius token issued after a *local password* login must keep
+        # enforcing password expiration.
+        org_user = self._get_org_user()
+        user = org_user.user
+        self._backdate_password(user, 60)
+        radius_token = RadiusToken.objects.create(
+            user=user,
+            organization=self._get_org(),
+            can_auth=True,
+            password_based=True,
+        )
+        response = self._authorize_user(
+            password=radius_token.key, auth_header=self.auth_header
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
 
     def test_authorize_failed(self):

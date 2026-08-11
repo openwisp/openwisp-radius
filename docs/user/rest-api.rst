@@ -535,6 +535,14 @@ Param Description
 input string that can be an email, phone_number or username.
 ===== ======================================================
 
+.. note::
+
+    This endpoint always responds with **200** and a generic success
+    message, regardless of whether ``input`` matches an existing,
+    organization-member user. This is by design, to avoid leaking which
+    identifiers are registered. Integrators should not rely on a **404**
+    response to detect an unknown identifier.
+
 Confirm reset password
 ++++++++++++++++++++++
 
@@ -608,6 +616,10 @@ Returns:
   like confirming their mobile phone number
 - ``method`` registration/verification method used by the user to
   register, e.g.: ``mobile_phone``, ``social_login``, etc.
+- ``password_expired``: ``true`` if the user's local password has expired
+  **and** the current token was obtained with that password. It stays
+  ``false`` for tokens obtained via SSO, SAML or a magic link, even if the
+  user also has an expired local password.
 - ``username``
 - ``email``
 - ``phone_number``

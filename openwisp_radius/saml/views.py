@@ -19,7 +19,8 @@ from djangosaml2.views import (
 )
 from djangosaml2.views import LoginView as BaseLoginView
 from djangosaml2.views import LogoutInitView, LogoutView, MetadataView  # noqa
-from rest_framework.authtoken.models import Token
+
+from openwisp_users.auth import create_auth_token, record_password_based_login
 
 from .. import settings as app_settings
 from ..api.views import RadiusTokenMixin
@@ -61,6 +62,7 @@ class AssertionConsumerServiceView(
 ):
     def post_login_hook(self, request, user, session_info):
         """If desired, a hook to add logic after a user has successfully logged in."""
+        record_password_based_login(request, False)
         # In some cases, it possible that the organization cache for
         # the user is not updated before execution of the following
         # code. Hence, the cache is manually updated here.
@@ -149,8 +151,7 @@ class AssertionConsumerServiceView(
         For example, some sites may require user registration if the user has not
         yet been provisioned.
         """
-        Token.objects.filter(user=user).delete()
-        token, _ = Token.objects.get_or_create(user=user)
+        token = create_auth_token(self.request, user, renew=True)
         next = "{relay_state}?{params}".format(
             relay_state=relay_state,
             params=urlencode(

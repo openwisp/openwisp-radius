@@ -1,12 +1,9 @@
 import logging
 
 import swapper
-from allauth.account.forms import default_token_generator
-from allauth.account.utils import url_str_to_user_pk, user_pk_to_url_str
+from allauth.account.utils import user_pk_to_url_str
 from dj_rest_auth import app_settings as rest_auth_settings
 from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
-from dj_rest_auth.views import PasswordResetConfirmView as BasePasswordResetConfirmView
-from dj_rest_auth.views import PasswordResetView as BasePasswordResetView
 from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
@@ -26,7 +23,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
@@ -43,7 +40,11 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 from rest_framework.response import Response
-from rest_framework.throttling import BaseThrottle  # get_ident method
+from rest_framework.settings import api_settings as drf_api_settings
+from rest_framework.throttling import (  # get_ident method
+    BaseThrottle,
+    ScopedRateThrottle,
+)
 
 from openwisp_radius.api.serializers import RadiusUserSerializer
 from openwisp_users.api.authentication import BearerAuthentication, SesameAuthentication
@@ -55,6 +56,11 @@ from openwisp_users.api.mixins import (
 )
 from openwisp_users.api.permissions import IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
+from openwisp_users.api.views import (
+    PasswordResetConfirmView as BasePasswordResetConfirmView,
+)
+from openwisp_users.api.views import PasswordResetView as BasePasswordResetView
+from openwisp_users.auth import create_auth_token, is_password_based_user
 from openwisp_users.backends import UsersAuthenticationBackend
 from openwisp_utils.api.pagination import OpenWispPagination
 
@@ -89,6 +95,12 @@ accounting = freeradius_views.accounting
 _TOKEN_AUTH_FAILED = _("Token authentication failed")
 renew_required = app_settings.DISPOSABLE_RADIUS_USER_TOKEN
 logger = logging.getLogger(__name__)
+
+# Keep password-reset endpoints protected by the "others" scope without
+# dropping global DRF throttles.
+PASSWORD_RESET_THROTTLE_CLASSES = tuple(
+    dict.fromkeys((*drf_api_settings.DEFAULT_THROTTLE_CLASSES, ScopedRateThrottle))
+)
 
 User = get_user_model()
 Organization = swapper.load_model("openwisp_users", "Organization")
@@ -233,7 +245,7 @@ class RadiusTokenMixin(object):
             used_radtoken.delete()
 
     def get_or_create_radius_token(
-        self, user, organization, enable_auth=True, renew=True
+        self, user, organization, enable_auth=True, renew=True, password_based=None
     ):
         if renew:
             self._delete_used_token(user, organization)
@@ -246,6 +258,7 @@ class RadiusTokenMixin(object):
             self._radius_accounting_nas_stop(user, radius_token.organization)
             radius_token.organization = organization
         radius_token.can_auth = enable_auth
+        radius_token.password_based = password_based
         radius_token.full_clean()
         radius_token.save()
         # Create a cache for 24 hours so that next
@@ -313,8 +326,13 @@ class ObtainAuthTokenView(
             )
             serializer.is_valid(raise_exception=True)
             user = self.get_user(serializer, *args, **kwargs)
-        token, _ = UserToken.objects.get_or_create(user=user)
-        self.get_or_create_radius_token(user, self.organization, renew=renew_required)
+        token = create_auth_token(request, user)
+        self.get_or_create_radius_token(
+            user,
+            self.organization,
+            renew=renew_required,
+            password_based=is_password_based_user(user),
+        )
         self.update_user_details(user)
         context = {"view": self, "request": request}
         serializer = self.serializer_class(instance=token, context=context)
@@ -399,7 +417,10 @@ class ValidateAuthTokenView(
             else:
                 user = token.user
                 self.get_or_create_radius_token(
-                    user, self.organization, renew=renew_required
+                    user,
+                    self.organization,
+                    renew=renew_required,
+                    password_based=is_password_based_user(user),
                 )
                 # user may be in the process of changing the phone number
                 # in that case show the new phone number (which is not verified yet)
@@ -520,12 +541,13 @@ password_change = PasswordChangeView.as_view()
 
 class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetView):
     authentication_classes = tuple()
+    throttle_classes = PASSWORD_RESET_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={
             200: '`{"detail": "Password reset e-mail has been sent."}`',
-            400: '`{"detail": "The input field is required."}`',
-            404: '`{"detail": "Not found."}`',
+            400: '`{"input": ["This field is required."]}`',
+            404: '`{"detail": "No Organization matches the given query."}`',
         }
     )
     def post(self, request, *args, **kwargs):
@@ -535,45 +557,65 @@ class PasswordResetView(ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetVi
         The input field can be an email, an username or
         a phone number (if mobile phone verification is in use).
         """
-        request.user = self.get_user(request)
         return super().post(request, *args, **kwargs)
 
-    def get_serializer_context(self):
-        user = self.request.user
-        if not user.pk:
-            return
-        uid = user_pk_to_url_str(user)
-        token = default_token_generator.make_token(user)
-        password_reset_urls = app_settings.PASSWORD_RESET_URLS
-        password_reset_url = app_settings.DEFAULT_PASSWORD_RESET_URL
-        domain = get_current_site(self.request).domain
-        if getattr(self, "swagger_fake_view", False):
-            organization_pk, organization_slug = None, None  # pragma: no cover
-        else:
-            organization_pk = self.organization.pk
-            organization_slug = self.organization.slug
-            org_radius_settings = self.organization.radius_settings
-            if org_radius_settings.password_reset_url:
-                password_reset_url = org_radius_settings.password_reset_url
-            else:
-                password_reset_url = password_reset_urls.get(
-                    str(organization_pk), password_reset_url
-                )
-        password_reset_url = password_reset_url.format(
-            organization=organization_slug, uid=uid, token=token, site=domain
-        )
-        context = {"request": self.request, "password_reset_url": password_reset_url}
-        return context
+    def get_users(self, identifier):
+        """
+        Return active users matching ``identifier`` who belong to this organization.
 
-    def get_user(self, request):
-        if request.data.get("input", None):
-            input = request.data["input"]
-            user = auth_backend.get_users(input).first()
-            if user is None:
-                raise Http404("No user was found with given details.")
-            self.validate_membership(user)
-            return user
-        raise ParseError(_("The email field is required."))
+        Superusers are always included, regardless of organization membership,
+        consistent with ``DispatchOrgMixin.validate_membership()``. Always
+        returns a queryset and never reveals whether ``identifier`` exists
+        outside this organization. Both an unknown identifier and a user who is
+        not a member of this organization (and not a superuser) produce an
+        empty queryset, allowing the password reset endpoint to return the same
+        success response in all cases and preventing user enumeration.
+        """
+        app_label = User._meta.app_config.label
+        return (
+            auth_backend.get_users(identifier)
+            .filter(is_active=True)
+            .filter(
+                Q(is_superuser=True)
+                | Q(
+                    **{
+                        f"{app_label}_organizationuser__organization": (
+                            self.organization
+                        ),
+                        f"{app_label}_organizationuser__organization__is_active": (
+                            True
+                        ),
+                    }
+                )
+            )
+            .distinct()
+        )
+
+    def get_password_reset_url(self, user, token):
+        uid = user_pk_to_url_str(user)
+        password_reset_urls = app_settings.PASSWORD_RESET_URLS
+        password_reset_url_template = app_settings.DEFAULT_PASSWORD_RESET_URL
+        org_radius_settings = self.organization.radius_settings
+        # password_reset_url is a FallbackCharField, so it always resolves to
+        # DEFAULT_PASSWORD_RESET_URL. Only a value different from the default
+        # indicates an organization-specific override; otherwise fall back to
+        # OPENWISP_RADIUS_PASSWORD_RESET_URLS.
+        if (
+            org_radius_settings.password_reset_url
+            and org_radius_settings.password_reset_url
+            != app_settings.DEFAULT_PASSWORD_RESET_URL
+        ):
+            password_reset_url_template = org_radius_settings.password_reset_url
+        else:
+            password_reset_url_template = password_reset_urls.get(
+                str(self.organization.pk), password_reset_url_template
+            )
+        return password_reset_url_template.format(
+            organization=self.organization.slug,
+            uid=uid,
+            token=token,
+            site=get_current_site(self.request).domain,
+        )
 
 
 password_reset = PasswordResetView.as_view()
@@ -583,6 +625,7 @@ class PasswordResetConfirmView(
     ThrottledAPIMixin, DispatchOrgMixin, BasePasswordResetConfirmView
 ):
     authentication_classes = tuple()
+    throttle_classes = PASSWORD_RESET_THROTTLE_CLASSES
 
     @swagger_auto_schema(
         responses={
@@ -594,18 +637,10 @@ class PasswordResetConfirmView(
         Allows users to confirm their reset password after having
         it requested via the `Reset password` endpoint.
         """
-        self.validate_user()
         return super().post(request, *args, **kwargs)
 
-    def validate_user(self, *args, **kwargs):
-        if self.request.data.get("uid", None):
-            try:
-                uid = url_str_to_user_pk(self.request.data["uid"])
-                user = User.objects.get(pk=uid)
-            except (User.DoesNotExist, ValidationError):
-                raise Http404()
-            self.validate_membership(user)
-            return user
+    def validate_user(self, user):
+        self.validate_membership(user)
 
 
 password_reset_confirm = PasswordResetConfirmView.as_view()
