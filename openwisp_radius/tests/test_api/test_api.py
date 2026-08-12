@@ -21,6 +21,7 @@ from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import formats, timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -2266,9 +2267,11 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 organization=org1,
                 calling_station_id="11:22:33:44:55:66",
                 called_station_id="AA:BB:CC:DD:EE:FF",
+                start_time="2025-02-12T18:29:00+00:00",
+                stop_time="2025-02-12T18:39:00+00:00",
             )
         )
-        self._create_radius_accounting(**data1)
+        ra1 = self._create_radius_accounting(**data1)
         data2 = self.acct_post_data
         data2.update(
             dict(
@@ -2282,7 +2285,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 called_station_id="AA-BB-CC-DD-EE-FF",
             )
         )
-        self._create_radius_accounting(**data2)
+        ra2 = self._create_radius_accounting(**data2)
         data3 = self.acct_post_data
         data3.update(
             dict(
@@ -2316,6 +2319,19 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(len(response.data), 2)
             self.assertEqual(response.data[0]["unique_id"], data2["unique_id"])
             self.assertEqual(response.data[1]["unique_id"], data1["unique_id"])
+            self.assertEqual(
+                response.data[0]["start_time_display"],
+                formats.localize(timezone.template_localtime(ra2.start_time)),
+            )
+            self.assertIsNone(response.data[0]["stop_time_display"])
+            self.assertEqual(
+                response.data[1]["start_time_display"],
+                formats.localize(timezone.template_localtime(ra1.start_time)),
+            )
+            self.assertEqual(
+                response.data[1]["stop_time_display"],
+                formats.localize(timezone.template_localtime(ra1.stop_time)),
+            )
 
         with self.subTest("Test superuser can view all sessions"):
             admin = self._create_admin()
@@ -2352,7 +2368,6 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             self.assertEqual(
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
-
             response = self.client.get(
                 path, {"calling_station_id": "11:22:33:44:55:66"}
             )

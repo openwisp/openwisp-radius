@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import formats, timezone
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_serializer_method
 from phonenumber_field.serializerfields import PhoneNumberField
@@ -179,6 +179,8 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     update_time = serializers.DateTimeField(required=False)
     input_octets = serializers.IntegerField(required=False)
     output_octets = serializers.IntegerField(required=False)
+    start_time_display = serializers.SerializerMethodField(read_only=True)
+    stop_time_display = serializers.SerializerMethodField(read_only=True)
     # this is needed otherwise serializer will ignore status_type
     # from the accounting request because it's not a model field
     status_type = serializers.ChoiceField(
@@ -199,6 +201,17 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         else:
             radius_token.can_auth = False
             radius_token.save()
+
+    def _get_localized_datetime(self, value):
+        if value is None:
+            return None
+        return formats.localize(timezone.template_localtime(value))
+
+    def get_start_time_display(self, obj):
+        return self._get_localized_datetime(obj.start_time)
+
+    def get_stop_time_display(self, obj):
+        return self._get_localized_datetime(obj.stop_time)
 
     def is_valid(self, raise_exception=False):
         try:
