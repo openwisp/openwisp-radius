@@ -1130,8 +1130,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def get_or_create_user(self, row, users_list, password_length):
         User = get_user_model()
         username, password, email, first_name, last_name = row
-        if email and User.objects.filter(email=email).exists():
-            user = User.objects.get(email=email)
+        if email and User.objects.filter(email__iexact=email).exists():
+            user = User.objects.get(email__iexact=email)
             return user, None
         generated_password = None
         username, password, email, first_name, last_name = row

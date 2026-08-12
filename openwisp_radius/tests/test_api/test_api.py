@@ -260,14 +260,17 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         radius_settings = org2.radius_settings
         radius_settings.sms_verification = True
         radius_settings.save()
+        existing_user = User.objects.get(email=self._test_email)
+        EmailAddress.objects.filter(user=existing_user).update(verified=True)
 
         with self.subTest("Test existing email"):
             options = params.copy()
-            options["phone_number"] = "+393664255803"
+            options["email"] = self._test_email.upper()
+            options["phone_number"] = "+393664255804"
             options["username"] = "test2"
 
             response = self.client.post(url, data=options)
-            self.assertEqual(response.status_code, 409)
+            self.assertEqual(response.status_code, 409, response.data)
             expected_response_data = {
                 "details": "A user like the one being registered already exists.",
                 "organizations": [
