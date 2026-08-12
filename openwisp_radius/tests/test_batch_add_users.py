@@ -36,7 +36,7 @@ class TestCSVUpload(FileMixin, BaseTestCase):
             email="rohith@openwisp.com",
             expiration_date=original_expiration_date,
         )
-        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        reader = [["rohith", "cleartext$password", "ROHITH@OPENWISP.COM", "", ""]]
         batch = self._create_radius_batch(
             name="test-existing-user",
             strategy="csv",

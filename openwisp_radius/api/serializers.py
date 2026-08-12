@@ -640,7 +640,7 @@ class RegisterSerializer(
         if has_key("username"):
             user_lookup |= Q(username=data["username"])
         if has_key("email"):
-            user_lookup |= Q(email=data["email"])
+            user_lookup |= Q(email__iexact=data["email"])
         users = User.objects.filter(user_lookup).values_list("id", flat=True)
         if not users:
             # Error is not related to cross organization registration
