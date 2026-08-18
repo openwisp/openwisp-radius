@@ -8,6 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
+        migrations.swappable_dependency(settings.OPENWISP_RADIUS_RADIUSGROUP_MODEL),
         ("openwisp_radius", "0049_radiustoken_password_based"),
     ]
 

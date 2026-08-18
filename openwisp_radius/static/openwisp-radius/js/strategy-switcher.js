@@ -14,11 +14,13 @@
       csvField = $(".form-row.field-csvfile"),
       groupField = $("#id_group"),
       organizationField = $("#id_organization"),
-      strategyField = $(".form-row.field-strategy .readonly")["0"];
+      strategyField = $(".form-row.field-strategy .readonly")["0"],
+      defaultGroupRequest = 0;
 
     function select_default_group() {
       var organization = organizationField.val(),
-        defaultUrl = groupField.attr("data-default-url");
+        defaultUrl = groupField.attr("data-default-url"),
+        request = ++defaultGroupRequest;
 
       if (!organization || !groupField.length || !defaultUrl) {
         return;
@@ -26,6 +28,12 @@
       groupField.val(null).trigger("change");
       $.get(defaultUrl.replace("__organization__", organization)).done(
         function (group) {
+          if (
+            request !== defaultGroupRequest ||
+            organizationField.val() !== organization
+          ) {
+            return;
+          }
           groupField
             .append(new Option(group.text, group.id, true, true))
             .trigger("change");

@@ -911,6 +911,23 @@ class TestRadiusBatch(BaseTestCase):
             )
         self.assertIn("group", context_manager.exception.message_dict)
 
+    def test_save_user_uses_swappable_radius_user_group_model(self):
+        group = self._create_radius_group(name="guests")
+        user = self._get_user()
+        self._create_org_user(user=user)
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="test-prefix", group=group
+        )
+        with mock.patch.object(user, "save"):
+            with mock.patch.object(
+                get_user_model(), "radiususergroup_set", new_callable=mock.PropertyMock
+            ) as user_groups:
+                user_groups.side_effect = AssertionError("Reverse accessor used")
+                batch.save_user(user)
+        self.assertEqual(
+            RadiusUserGroup.objects.filter(user=user, group=group).count(), 1
+        )
+
     def test_clean_method_allows_unchanged_past_expiration_date(self):
         expiration_date = timezone.localdate() - timezone.timedelta(days=1)
         radiusbatch = RadiusBatch.objects.create(

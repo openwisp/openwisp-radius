@@ -888,8 +888,8 @@ name              Name of the operation
 strategy          csv
 csvfile           file with the users
 expiration_date   date of expiration of the users
-group             UUID of the RADIUS group assigned to users
-notes             internal notes for the batch
+group             Optional UUID of the RADIUS group assigned to users
+notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
 ================= ==========================================
 
@@ -903,8 +903,8 @@ strategy          prefix
 prefix            prefix for the generation of users
 number_of_users   number of users
 expiration_date   date of expiration of the users
-group             UUID of the RADIUS group assigned to users
-notes             internal notes for the batch
+group             Optional UUID of the RADIUS group assigned to users
+notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
 ================= ==========================================
 
@@ -916,6 +916,8 @@ credentials.
 
 Use the :ref:`RADIUS Groups endpoint <radius_groups>` to search for a
 group by organization before sending its UUID in the ``group`` parameter.
+The ``group`` and ``notes`` parameters are optional. When ``group`` is
+omitted, users retain the standard default-group behavior.
 
 Batch CSV Download
 ++++++++++++++++++

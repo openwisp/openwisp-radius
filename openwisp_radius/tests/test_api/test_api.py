@@ -30,6 +30,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
     PasswordResetSerializer,
+    RadiusBatchSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
@@ -87,6 +88,30 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             org = self.default_org
         return reverse(
             "radius:update_registered_user_registration_method", args=[org.slug]
+        )
+
+    def test_radius_batch_serializer_fields_order(self):
+        self.assertEqual(
+            list(RadiusBatchSerializer().fields),
+            [
+                "id",
+                "strategy",
+                "organization",
+                "organization_slug",
+                "status",
+                "name",
+                "csvfile",
+                "prefix",
+                "number_of_users",
+                "group",
+                "users",
+                "expiration_date",
+                "notes",
+                "user_credentials",
+                "pdf_link",
+                "created",
+                "modified",
+            ],
         )
 
     def _create_pending_verification_user(self, username_suffix=""):

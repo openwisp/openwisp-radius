@@ -1196,7 +1196,8 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             obj.full_clean()
             obj.save()
         if self.group:
-            user.radiususergroup_set.filter(
+            RadiusUserGroup.objects.filter(
+                user=user,
                 group__organization=self.organization
             ).delete()
             user_group = RadiusUserGroup(user=user, group=self.group)
