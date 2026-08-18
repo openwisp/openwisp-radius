@@ -15,6 +15,8 @@ many features included in it such as:
   generated randomly and their lengths can be customized.
 - Passwords are accepted in both clear-text and hash formats from the CSV.
 - Send mails to users whose passwords have been generated automatically.
+- Assign all users in a batch to a RADIUS group.
+- Store internal notes for a batch.
 
 This operation can be performed via the admin interface, with a management
 command or via the REST API.
@@ -29,6 +31,11 @@ The CSV shall be of the format:
 ::
 
     username,password,email,firstname,lastname
+
+The CSV supports only these five columns. Additional columns, including a
+RADIUS group column, are not supported and will cause the import to fail.
+To assign a group, select it in the batch creation form or use the
+``--group`` command option.
 
 Imported users with hashed passwords
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,7 +95,12 @@ Using the admin interface
 To generate users from the admin interface, go to ``Home > Batch user
 creation operations > Add`` (URL:
 ``/admin/openwisp_radius/radiusbatch/add``), set ``Strategy`` to ``Import
-from CSV``, choose the CSV file to upload and save.
+from CSV``, choose the CSV file to upload and save. The default RADIUS
+group of the selected organization is selected automatically. Select
+another group to assign it to every user in the batch, or leave the field
+empty to retain the standard default-group behavior for newly created
+users. The RADIUS group cannot be changed after creating a batch, while
+notes can be edited at any time.
 
 .. image:: ../images/add_users_csv.gif
     :alt: Demo: adding users from CSV
@@ -102,14 +114,17 @@ This command imports users from a csv file. Usage is as shown below.
 
     ./manage.py batch_add_users --name <name_of_batch> \
                                 --organization=<organization-slug> \
-                                --file <filepath> \
-                                --expiration <expiration_date> \
-                                --password-length <password_length>
+                                 --file <filepath> \
+                                 --expiration <expiration_date> \
+                                 --group <radius-group-uuid> \
+                                 --notes <internal-notes> \
+                                 --password-length <password_length>
 
 .. note::
 
-    The expiration and password-length are optional parameters which
-    default to never and 8 respectively.
+    The expiration, group, notes and password-length are optional
+    parameters. Expiration and password-length default to never and 8
+    respectively.
 
 REST API: Batch user creation
 -----------------------------

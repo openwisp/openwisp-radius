@@ -17,6 +17,9 @@ There are many features included in it such as:
 - **Set an expiration date**: an expiration date can be set for a batch
   after which the users would not able to authenticate to the RADIUS
   Server.
+- **Assign a RADIUS group**: users in a batch can be assigned to a
+  selected RADIUS group.
+- **Store internal notes**: notes can be stored for a batch.
 
 This operation can be performed via the admin interface, with a management
 command or via the REST API.
@@ -67,17 +70,20 @@ prefix. Usage is as shown below.
     ./manage.py prefix_add_users --name <name_of_batch> \
                                  --organization=<organization-slug> \
                                  --prefix <prefix> \
-                                 --n <number_of_users> \
-                                 --expiration <expiration_date> \
-                                 --password-length <password_length> \
+                                  --n <number_of_users> \
+                                  --expiration <expiration_date> \
+                                  --group <radius-group-uuid> \
+                                  --notes <internal-notes> \
+                                  --password-length <password_length> \
                                  --output <path_to_pdf_file>
 
 .. note::
 
-    The expiration, password-length and output are optional parameters.
-    The options expiration and password-length default to never and 8
-    respectively. If output parameter is not provided, PDF file is not
-    created on the server and can be accessed from the admin interface.
+    The expiration, group, notes, password-length and output are optional
+    parameters. The options expiration and password-length default to
+    never and 8 respectively. If output parameter is not provided, PDF
+    file is not created on the server and can be accessed from the admin
+    interface.
 
 REST API: Batch user creation
 -----------------------------

@@ -20,6 +20,7 @@ from .mixins import BaseTestCase
 User = get_user_model()
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
 RadiusPostAuth = load_model("RadiusPostAuth")
 RegisteredUser = load_model("RegisteredUser")
 
@@ -154,6 +155,30 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self._call_command("batch_add_users", **options)
 
+    @capture_any_output()
+    def test_batch_add_users_command_group_and_notes(self):
+        organization = self._get_org("test-organization")
+        group = self._create_radius_group(name="guests", organization=organization)
+        self._call_command(
+            "batch_add_users",
+            file=self._get_path("static/test_batch.csv"),
+            name="test",
+            organization=organization.slug,
+            group=str(group.pk),
+            notes="Internal note",
+        )
+        batch = RadiusBatch.objects.get()
+        self.assertEqual(batch.group, group)
+        self.assertEqual(batch.notes, "Internal note")
+        with self.assertRaises(CommandError):
+            self._call_command(
+                "batch_add_users",
+                file=self._get_path("static/test_batch.csv"),
+                name="invalid-group",
+                organization=organization.slug,
+                group="00000000-0000-0000-0000-000000000000",
+            )
+
     @freeze_time(_TEST_DATE)
     @capture_stdout()
     def test_delete_old_radiusbatch_users_command(self, subtest_id=None):
@@ -270,6 +295,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     def test_prefix_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         output_pdf = os.path.join(settings.MEDIA_ROOT, "test_prefix10.pdf")
+        group = self._create_radius_group(name="guests")
         options = dict(
             organization=self.default_org.slug,
             prefix="test-prefix7",
@@ -277,17 +303,22 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             name="test",
             expiration="28-01-2098",
             output=output_pdf,
+            group=str(group.pk),
+            notes="Internal note",
         )
         self._call_command("prefix_add_users", **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         self.assertTrue(os.path.isfile(output_pdf))
         os.remove(output_pdf)
         radiusbatch = RadiusBatch.objects.first()
+        self.assertEqual(radiusbatch.group, group)
+        self.assertEqual(radiusbatch.notes, "Internal note")
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 10)
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
             self.assertEqual(u.expiration_date.strftime("%d-%m-%y"), "28-01-98")
+            self.assertEqual(u.radiususergroup_set.get().group, group)
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-98")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"

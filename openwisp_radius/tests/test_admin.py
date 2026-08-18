@@ -352,6 +352,71 @@ class TestAdmin(
         error_message = "Ensure this value is greater than or equal to 1"
         self.assertTrue(error_message in str(response.content))
 
+    def test_radius_batch_group_and_notes(self):
+        group = self._create_radius_group(name="guests")
+        fields = admin.site._registry[RadiusBatch].fields
+        self.assertEqual(fields[fields.index("number_of_users") + 1], "group")
+        self.assertEqual(fields[fields.index("expiration_date") + 1], "notes")
+        add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")
+        response = self.client.get(add_url)
+        self.assertContains(response, 'name="group"')
+        self.assertContains(response, "data-default-url")
+        data = self._get_prefix_post_data()
+        data.update(group=str(group.pk), notes="Internal note")
+        response = self.client.post(add_url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        batch = RadiusBatch.objects.get()
+        self.assertEqual(batch.group, group)
+        self.assertEqual(batch.notes, "Internal note")
+        change_url = reverse(
+            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
+        )
+        response = self.client.get(change_url)
+        self.assertContains(response, "field-group")
+        self.assertContains(response, "field-notes")
+        self.assertNotContains(response, 'id="id_group"')
+        self.assertContains(response, 'id="id_notes"')
+        batch.status = RadiusBatch.PENDING
+        readonly_fields = admin.site._registry[RadiusBatch].get_readonly_fields(
+            RequestFactory().get(add_url), batch
+        )
+        self.assertIn("group", readonly_fields)
+
+    def test_radius_batch_group_autocomplete(self):
+        group = self._create_radius_group(name="guests")
+        other_organization = self._create_org(
+            name="other organization", slug="other-org"
+        )
+        other_group = self._create_radius_group(
+            name="other-guests", organization=other_organization
+        )
+        autocomplete_url = reverse("admin:autocomplete")
+        response = self.client.get(
+            autocomplete_url,
+            {
+                "term": "guests",
+                "app_label": self.app_label,
+                "model_name": "radiusbatch",
+                "field_name": "group",
+                "organization": self.default_org.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["results"], [{"id": str(group.pk), "text": str(group)}]
+        )
+        self.assertNotIn(str(other_group.pk), response.content.decode())
+
+    def test_radius_batch_default_group(self):
+        url = reverse(
+            f"admin:{self.app_label}_radiusbatch_default_group",
+            args=[self.default_org.pk],
+        )
+        response = self.client.get(url)
+        group = RadiusGroup.objects.get(organization=self.default_org, default=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
+
     def test_radiusbatch_no_of_users(self):
         r = self._create_radius_batch(
             name="test", strategy="prefix", prefix="test-prefix5"

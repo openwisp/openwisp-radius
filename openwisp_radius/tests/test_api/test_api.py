@@ -137,6 +137,28 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.count(), 1)
         self.assertEqual(User.objects.count(), 4)
 
+    def test_batch_prefix_group_and_notes_201(self):
+        group = self._create_radius_group(name="guests")
+        response = self._radius_batch_post_request(
+            self._radius_batch_prefix_data(group=str(group.pk), notes="Internal note")
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        batch = RadiusBatch.objects.get()
+        self.assertEqual(batch.group, group)
+        self.assertEqual(batch.notes, "Internal note")
+        for user in batch.users.all():
+            self.assertEqual(user.radiususergroup_set.get().group, group)
+
+    def test_batch_rejects_group_from_different_organization(self):
+        organization = self._create_org(name="other organization", slug="other-org")
+        group = self._create_radius_group(name="guests", organization=organization)
+        response = self._radius_batch_post_request(
+            self._radius_batch_prefix_data(group=str(group.pk))
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("group", response.data)
+        self.assertEqual(RadiusBatch.objects.count(), 0)
+
     def test_radius_batch_permissions(self):
         self._get_admin()
         self._create_org_user(user=self._get_operator())

@@ -18,6 +18,7 @@ from . import CreateRadiusObjectsMixin, FileMixin
 User = get_user_model()
 
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
+RadiusGroup = load_model("RadiusGroup")
 
 
 @tag("selenium_tests")
@@ -25,6 +26,49 @@ OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 class BasicTest(
     SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
 ):
+    def test_batch_default_group_selection(self):
+        organization = self._create_org()
+        OrganizationRadiusSettings.objects.create(organization=organization)
+        group = RadiusGroup.objects.get(organization=organization, default=True)
+        self.login()
+        self.open(reverse("admin:openwisp_radius_radiusbatch_add"))
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.invisibility_of_element_located(
+                (By.CSS_SELECTOR, ".form-row.field-group")
+            )
+        )
+        self.assertFalse(
+            self.web_driver.find_element(
+                By.CSS_SELECTOR, ".form-row.field-notes"
+            ).is_displayed()
+        )
+        Select(self.find_element(By.ID, "id_strategy", 10)).select_by_value("prefix")
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, ".form-row.field-group")
+            )
+        )
+        self.assertTrue(
+            self.find_element(
+                By.CSS_SELECTOR, ".form-row.field-notes", 10
+            ).is_displayed()
+        )
+        organization_field = self.find_element(
+            By.ID, "select2-id_organization-container", 10
+        )
+        organization_field.click()
+        option = self.find_element(
+            By.XPATH,
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
+            10,
+        )
+        option.click()
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
+            == str(group.pk)
+        )
+        self.assertEqual(self.get_browser_errors(), [])
+
     # Test case for batch user creation
     def test_batch_user_creation(self):
         """Test the batch user creation feature"""

@@ -12,9 +12,38 @@ from . import FileMixin
 from .mixins import BaseTestCase, BaseTransactionTestCase
 
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
 
 
 class TestCSVUpload(FileMixin, BaseTestCase):
+    def test_users_inherit_batch_group(self):
+        group = self._create_radius_group(name="guests")
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
+        )
+        batch.add(reader)
+        self.assertEqual(batch.users.first().radiususergroup_set.get().group, group)
+
+    def test_importing_existing_users_replaces_batch_organization_group(self):
+        existing_group = self._create_radius_group(name="existing")
+        group = self._create_radius_group(name="guests")
+        user = self._create_user(username="rohith", email="rohith@openwisp.com")
+        self._create_org_user(user=user)
+        self._create_radius_usergroup(user=user, group=existing_group)
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
+        )
+        batch.add(reader)
+        user_groups = RadiusUserGroup.objects.filter(
+            user=user, group__organization=batch.organization
+        )
+        self.assertEqual(
+            list(user_groups.values_list("group_id", flat=True)), [group.pk]
+        )
+
     def test_users_inherit_batch_expiration_date(self):
         expiration_date = localdate() + timedelta(days=7)
         reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
@@ -125,6 +154,15 @@ class TestCSVUpload(FileMixin, BaseTestCase):
 
 
 class TestPrefixUpload(FileMixin, BaseTestCase):
+    def test_users_inherit_batch_group(self):
+        group = self._create_radius_group(name="guests")
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="Test1", group=group
+        )
+        batch.prefix_add("test-prefix16", 2)
+        for user in batch.users.all():
+            self.assertEqual(user.radiususergroup_set.get().group, group)
+
     def test_users_inherit_batch_expiration_date(self):
         expiration_date = localdate() + timedelta(days=7)
         batch = self._create_radius_batch(
@@ -209,6 +247,17 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
         reg_user = user.registered_users.get(organization=organization)
         self.assertEqual(reg_user.is_verified, True)
         self.assertEqual(reg_user.method, "manual")
+
+
+class TestTransactionCSVUpload(FileMixin, BaseTransactionTestCase):
+    def test_users_without_batch_group_inherit_default_group(self):
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        batch.add(reader)
+        user_group = batch.users.first().radiususergroup_set.get()
+        self.assertTrue(user_group.group.default)
 
 
 class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):

@@ -898,6 +898,19 @@ class TestRadiusBatch(BaseTestCase):
             os.remove(dummy_file)
             self.fail("ValidationError not raised")
 
+    def test_clean_method_rejects_group_from_different_organization(self):
+        group = self._create_radius_group(name="guests")
+        organization = self._create_org(name="other organization", slug="other-org")
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_radius_batch(
+                organization=organization,
+                name="test",
+                strategy="prefix",
+                prefix="test-prefix",
+                group=group,
+            )
+        self.assertIn("group", context_manager.exception.message_dict)
+
     def test_clean_method_allows_unchanged_past_expiration_date(self):
         expiration_date = timezone.localdate() - timezone.timedelta(days=1)
         radiusbatch = RadiusBatch.objects.create(

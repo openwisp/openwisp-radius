@@ -1012,6 +1012,14 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         blank=True,
         help_text=_("If left blank users will never expire"),
     )
+    group = models.ForeignKey(
+        "RadiusGroup",
+        verbose_name=_("radius group"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True, help_text=_("internal notes"))
 
     class Meta:
         db_table = "radbatch"
@@ -1080,6 +1088,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             )
         if self.strategy == "csv":
             validate_csvfile(self.csvfile.file)
+        self._validate_org_relation("group", field_error="group")
         super().clean()
 
     def add(self, reader, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
@@ -1157,6 +1166,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def save_user(self, user):
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        RadiusUserGroup = swapper.load_model("openwisp_radius", "RadiusUserGroup")
         if self.expiration_date is not None:
             user.expiration_date = self.expiration_date
         user.save()
@@ -1177,15 +1187,21 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             registered_user.is_verified = True
             registered_user.save()
         self.users.add(user)
-        if OrganizationUser.objects.filter(
+        if not OrganizationUser.objects.filter(
             user=user, organization=self.organization
         ).exists():
-            return
-        obj = OrganizationUser(
-            user=user, organization=self.organization, is_admin=False
-        )
-        obj.full_clean()
-        obj.save()
+            obj = OrganizationUser(
+                user=user, organization=self.organization, is_admin=False
+            )
+            obj.full_clean()
+            obj.save()
+        if self.group:
+            user.radiususergroup_set.filter(
+                group__organization=self.organization
+            ).delete()
+            user_group = RadiusUserGroup(user=user, group=self.group)
+            user_group.full_clean()
+            user_group.save()
 
     def delete(self):
         self.users.all().delete()
