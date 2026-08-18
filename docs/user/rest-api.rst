@@ -881,9 +881,9 @@ different strategies: csv or prefix.
 
 The csv method needs the following parameters:
 
-================= ==========================================
+================= ===================================================
 Param             Description
-================= ==========================================
+================= ===================================================
 name              Name of the operation
 strategy          csv
 csvfile           file with the users
@@ -891,13 +891,13 @@ expiration_date   date of expiration of the users
 group             Optional UUID of the RADIUS group assigned to users
 notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
-================= ==========================================
+================= ===================================================
 
 These others are for the prefix method:
 
-================= ==========================================
+================= ===================================================
 Param             Description
-================= ==========================================
+================= ===================================================
 name              name of the operation
 strategy          prefix
 prefix            prefix for the generation of users
@@ -906,7 +906,7 @@ expiration_date   date of expiration of the users
 group             Optional UUID of the RADIUS group assigned to users
 notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
-================= ==========================================
+================= ===================================================
 
 When using this strategy, in the response you can find the field
 ``user_credentials`` containing the list of users created (example:

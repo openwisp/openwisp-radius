@@ -16,10 +16,16 @@ class BatchAddMixin(object):
             "--organization", action="store", help=_("Organization the users belong to")
         )
         parser.add_argument(
-            "--group", action="store", default=None, help=_("RADIUS group for the users")
+            "--group",
+            action="store",
+            default=None,
+            help=_("RADIUS group for the users"),
         )
         parser.add_argument(
-            "--notes", action="store", default="", help=_("Internal notes for the batch")
+            "--notes",
+            action="store",
+            default="",
+            help=_("Internal notes for the batch"),
         )
 
     def _create_batch(self, **options):

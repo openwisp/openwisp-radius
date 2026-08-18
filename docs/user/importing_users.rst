@@ -98,9 +98,9 @@ creation operations > Add`` (URL:
 from CSV``, choose the CSV file to upload and save. The default RADIUS
 group of the selected organization is selected automatically. Select
 another group to assign it to every user in the batch. To retain the
-standard default-group behavior for newly created users, click the
-``×`` icon to clear the selected group. The RADIUS group cannot be changed
-after creating a batch, while notes can be edited at any time.
+standard default-group behavior for newly created users, click the ``×``
+icon to clear the selected group. The RADIUS group cannot be changed after
+creating a batch, while notes can be edited at any time.
 
 .. image:: ../images/add_users_csv.gif
     :alt: Demo: adding users from CSV

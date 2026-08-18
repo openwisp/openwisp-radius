@@ -454,9 +454,7 @@ class TestAdmin(
         with self.subTest("managed organization"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(
-                response.json(), {"id": str(group.pk), "text": str(group)}
-            )
+            self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
         with self.subTest("unmanaged organization"):
             other_organization = self._create_org(
                 name="other organization", slug="other-org"
