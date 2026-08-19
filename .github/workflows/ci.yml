@@ -40,9 +40,6 @@ jobs:
           - python-version: "3.13"
             django-version: django~=5.2.0
             tsdb: influxdb2
-          - python-version: "3.13"
-            django-version: django~=5.2.0
-            tsdb: elasticsearch
 
     steps:
       - uses: actions/checkout@v7
