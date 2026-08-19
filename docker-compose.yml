@@ -4,7 +4,6 @@ x-timeseries:
   password: &timeseries_password ${TIMESERIES_PASSWORD:-openwisp}
   org: &timeseries_org ${INFLUXDB2_ORG:-openwisp}
   token: &influxdb2_token ${INFLUXDB2_TOKEN:-openwisp-token}
-  elasticsearch-port: &elasticsearch_port ${ELASTICSEARCH_PORT:-9200}
 
 services:
   influxdb:
@@ -32,20 +31,6 @@ services:
       DOCKER_INFLUXDB_INIT_BUCKET: *timeseries_database
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: *influxdb2_token
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-9.4.3}
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    ports:
-      - target: 9200
-        published: *elasticsearch_port
-        host_ip: 127.0.0.1
-        protocol: tcp
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-
   redis:
     image: redis:alpine
     ports:
@@ -55,4 +40,3 @@ services:
 volumes:
   influxdb-data: {}
   influxdb2-data: {}
-  elasticsearch-data: {}
