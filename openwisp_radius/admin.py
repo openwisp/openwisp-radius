@@ -9,9 +9,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.forms.models import BaseInlineFormSet
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.templatetags.static import static
-from django.urls import reverse
+from django.urls import path, reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
@@ -354,8 +354,10 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         "csvfile",
         "prefix",
         "number_of_users",
+        "group",
         "users",
         "expiration_date",
+        "notes",
         "created",
         "modified",
     ]
@@ -365,6 +367,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     ]
     search_fields = ["name"]
     actions = ["delete_selected_batches"]
+    autocomplete_fields = ["group"]
     form = RadiusBatchForm
     help_text = {
         "text": _(
@@ -404,6 +407,51 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             fields.remove("users")
             fields.remove("status")
         return fields
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if "group" in form.base_fields:
+            group_widget = form.base_fields["group"].widget
+            if hasattr(group_widget, "widget"):
+                group_widget = group_widget.widget
+            default_group_url = reverse(
+                f"admin:{self.opts.app_label}_{self.opts.model_name}_default_group",
+                args=["00000000-0000-0000-0000-000000000000"],
+            )
+            group_widget.attrs["data-default-url"] = default_group_url.replace(
+                "00000000-0000-0000-0000-000000000000", "__organization__"
+            )
+        return form
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "default-group/<uuid:organization_id>/",
+                self.admin_site.admin_view(self.default_group),
+                name=f"{self.opts.app_label}_{self.opts.model_name}_default_group",
+            ),
+        ]
+        return custom_urls + urls
+
+    def default_group(self, request, organization_id):
+        group_admin = self.admin_site._registry[RadiusGroup]
+        if not (
+            self.admin_site.has_permission(request)
+            and group_admin.has_view_permission(request)
+        ):
+            raise PermissionDenied
+        queryset = RadiusGroup.objects.filter(
+            organization_id=organization_id, default=True
+        )
+        if not request.user.is_superuser:
+            queryset = queryset.filter(
+                organization__in=request.user.organizations_managed
+            )
+        group = queryset.first()
+        if group is None:
+            raise Http404
+        return JsonResponse({"id": str(group.pk), "text": str(group)})
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -474,6 +522,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "prefix",
                 "csvfile",
                 "number_of_users",
+                "group",
                 "users",
                 "expiration_date",
                 "name",
@@ -481,7 +530,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "status",
             ) + readonly_fields
         elif obj:
-            return ("status",) + readonly_fields
+            return ("status", "group") + readonly_fields
         return ("status",) + readonly_fields
 
     def has_delete_permission(self, request, obj=None):

@@ -31,6 +31,12 @@ from openwisp_radius.tests.test_api.test_rest_token import (
 from openwisp_radius.tests.test_batch_add_users import (
     TestCSVUpload as BaseTestCSVUpload,
 )
+from openwisp_radius.tests.test_batch_add_users import (
+    TestPrefixUpload as BaseTestPrefixUpload,
+)
+from openwisp_radius.tests.test_batch_add_users import (
+    TestTransactionBatch as BaseTestTransactionBatch,
+)
 from openwisp_radius.tests.test_commands import TestCommands as BaseTestCommands
 from openwisp_radius.tests.test_models import TestNas as BaseTestNas
 from openwisp_radius.tests.test_models import (
@@ -103,6 +109,14 @@ class TestIsSmsVerificationEnabled(BaseTestIsSmsVerificationEnabled):
 
 
 class TestCSVUpload(BaseTestCSVUpload):
+    pass
+
+
+class TestPrefixUpload(BaseTestPrefixUpload):
+    pass
+
+
+class TestTransactionBatch(BaseTestTransactionBatch):
     pass
 
 
@@ -203,6 +217,8 @@ del BaseTestOgranizationRadiusSettings
 del BaseTestPhoneVerification
 del BaseTestIsSmsVerificationEnabled
 del BaseTestCSVUpload
+del BaseTestPrefixUpload
+del BaseTestTransactionBatch
 del BaseTestCommands
 del BaseTestNas
 del BaseTestRadiusAccounting

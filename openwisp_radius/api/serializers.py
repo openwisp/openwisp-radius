@@ -540,7 +540,25 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RadiusBatch
-        fields = "__all__"
+        fields = (
+            "id",
+            "strategy",
+            "organization",
+            "organization_slug",
+            "status",
+            "name",
+            "csvfile",
+            "prefix",
+            "number_of_users",
+            "group",
+            "users",
+            "expiration_date",
+            "notes",
+            "user_credentials",
+            "pdf_link",
+            "created",
+            "modified",
+        )
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
