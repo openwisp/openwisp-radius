@@ -27,6 +27,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="radiusbatch",
             name="notes",
-            field=models.TextField(blank=True, help_text="internal notes"),
+            field=models.TextField(
+                blank=True, help_text="internal notes", verbose_name="notes"
+            ),
         ),
     ]

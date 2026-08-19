@@ -21,6 +21,7 @@ User = get_user_model()
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
 RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusPostAuth = load_model("RadiusPostAuth")
 RegisteredUser = load_model("RegisteredUser")
 
@@ -172,6 +173,12 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             batch = RadiusBatch.objects.get()
             self.assertEqual(batch.group, group)
             self.assertEqual(batch.notes, "Internal note")
+            self.assertEqual(
+                RadiusUserGroup.objects.filter(
+                    user__in=batch.users.all(), group=group
+                ).count(),
+                batch.users.count(),
+            )
 
         with self.subTest("invalid group"):
             with self.assertRaises(CommandError):
@@ -322,7 +329,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
             self.assertEqual(u.expiration_date.strftime("%d-%m-%y"), "28-01-98")
-            self.assertEqual(u.radiususergroup_set.get().group, group)
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=u, group=group).exists()
+            )
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-98")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"

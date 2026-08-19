@@ -15,14 +15,18 @@
       groupField = $("#id_group"),
       organizationField = $("#id_organization"),
       strategyField = $(".form-row.field-strategy .readonly")["0"],
+      currentOrganization = organizationField.val(),
       defaultGroupRequest = 0;
 
-    function select_default_group() {
+    function select_default_group(force) {
       var organization = organizationField.val(),
         defaultUrl = groupField.attr("data-default-url"),
         request = ++defaultGroupRequest;
 
       if (!organization || !groupField.length || !defaultUrl) {
+        return;
+      }
+      if (!force && groupField.val()) {
         return;
       }
       groupField.val(null).trigger("change");
@@ -78,7 +82,13 @@
         csvField.hide();
       }
     });
-    organizationField.change(select_default_group);
+    organizationField.change(function () {
+      if (organizationField.val() === currentOrganization) {
+        return;
+      }
+      currentOrganization = organizationField.val();
+      select_default_group(true);
+    });
     strategy.trigger("change");
     $(window).on("load", function () {
       select_default_group();

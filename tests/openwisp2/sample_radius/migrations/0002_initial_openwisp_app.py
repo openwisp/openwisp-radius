@@ -715,7 +715,12 @@ class Migration(migrations.Migration):
                         verbose_name="radius group",
                     ),
                 ),
-                ("notes", models.TextField(blank=True, help_text="internal notes")),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="internal notes", verbose_name="notes"
+                    ),
+                ),
                 ("details", models.CharField(blank=True, max_length=64, null=True)),
                 (
                     "organization",

@@ -172,7 +172,9 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(batch.group, group)
         self.assertEqual(batch.notes, "Internal note")
         for user in batch.users.all():
-            self.assertEqual(user.radiususergroup_set.get().group, group)
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=user, group=group).exists()
+            )
 
     def test_batch_rejects_group_from_different_organization(self):
         organization = self._create_org(name="other organization", slug="other-org")

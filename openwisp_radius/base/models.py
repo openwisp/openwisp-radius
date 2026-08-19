@@ -1019,7 +1019,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         null=True,
         blank=True,
     )
-    notes = models.TextField(blank=True, help_text=_("internal notes"))
+    notes = models.TextField(_("notes"), blank=True, help_text=_("internal notes"))
 
     class Meta:
         db_table = "radbatch"
@@ -1164,6 +1164,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return user, generated_password
 
     def save_user(self, user):
+        self._validate_org_relation("group", field_error="group")
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
         RadiusUserGroup = swapper.load_model("openwisp_radius", "RadiusUserGroup")

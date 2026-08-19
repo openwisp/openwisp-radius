@@ -24,7 +24,11 @@ class TestCSVUpload(FileMixin, BaseTestCase):
             name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
         )
         batch.add(reader)
-        self.assertEqual(batch.users.first().radiususergroup_set.get().group, group)
+        self.assertTrue(
+            RadiusUserGroup.objects.filter(
+                user=batch.users.first(), group=group
+            ).exists()
+        )
 
     def test_importing_existing_users_replaces_batch_organization_group(self):
         existing_group = self._create_radius_group(name="existing")
@@ -32,6 +36,12 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         user = self._create_user(username="rohith", email="rohith@openwisp.com")
         self._create_org_user(user=user)
         self._create_radius_usergroup(user=user, group=existing_group)
+        organization = self._create_org(name="other organization", slug="other-org")
+        other_group = self._create_radius_group(
+            name="other-existing", organization=organization
+        )
+        self._create_org_user(user=user, organization=organization)
+        self._create_radius_usergroup(user=user, group=other_group)
         reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
         batch = self._create_radius_batch(
             name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
@@ -42,6 +52,9 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         )
         self.assertEqual(
             list(user_groups.values_list("group_id", flat=True)), [group.pk]
+        )
+        self.assertTrue(
+            RadiusUserGroup.objects.filter(user=user, group=other_group).exists()
         )
 
     def test_users_inherit_batch_expiration_date(self):
@@ -161,7 +174,9 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
         )
         batch.prefix_add("test-prefix16", 2)
         for user in batch.users.all():
-            self.assertEqual(user.radiususergroup_set.get().group, group)
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=user, group=group).exists()
+            )
 
     def test_users_inherit_batch_expiration_date(self):
         expiration_date = localdate() + timedelta(days=7)
@@ -256,7 +271,7 @@ class TestTransactionCSVUpload(FileMixin, BaseTransactionTestCase):
             name="test", strategy="csv", csvfile=self._get_csvfile(reader)
         )
         batch.add(reader)
-        user_group = batch.users.first().radiususergroup_set.get()
+        user_group = RadiusUserGroup.objects.get(user=batch.users.first())
         self.assertTrue(user_group.group.default)
 
 

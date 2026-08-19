@@ -69,6 +69,49 @@ class BasicTest(
         )
         self.assertEqual(self.get_browser_errors(), [])
 
+    def test_batch_group_preserved_after_validation_error(self):
+        organization = self._create_org()
+        OrganizationRadiusSettings.objects.create(organization=organization)
+        group = RadiusGroup.objects.create(name="guests", organization=organization)
+        self.login()
+        self.open(reverse("admin:openwisp_radius_radiusbatch_add"))
+        Select(self.find_element(By.ID, "id_strategy", 10)).select_by_value("prefix")
+        organization_field = self.find_element(
+            By.ID, "select2-id_organization-container", 10
+        )
+        organization_field.click()
+        self.find_element(
+            By.XPATH,
+            "//li[contains(@class, 'select2-results__option') and text()='test org']",
+            10,
+        ).click()
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
+        )
+        self.web_driver.execute_script(
+            "django.jQuery('#id_group')"
+            ".append(new Option(arguments[1], arguments[0], true, true))"
+            ".trigger('change');",
+            str(group.pk),
+            str(group),
+        )
+        self.find_element(By.ID, "id_name", 10).send_keys("Test batch")
+        self.find_element(By.ID, "id_prefix", 10).send_keys("test-prefix")
+        self.find_element(By.CSS_SELECTOR, "input[type=submit]", 10).click()
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.presence_of_element_located(
+                (By.CSS_SELECTOR, ".errorlist")
+            )
+        )
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.execute_script("return django.jQuery.active === 0")
+        )
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
+            == str(group.pk)
+        )
+        self.assertEqual(self.get_browser_errors(), [])
+
     # Test case for batch user creation
     def test_batch_user_creation(self):
         """Test the batch user creation feature"""
