@@ -352,77 +352,6 @@ class TestAdmin(
         error_message = "Ensure this value is greater than or equal to 1"
         self.assertTrue(error_message in str(response.content))
 
-    def test_radius_batch_group_and_notes(self):
-        group = self._create_radius_group(name="guests")
-        fields = admin.site._registry[RadiusBatch].fields
-        self.assertEqual(fields[fields.index("number_of_users") + 1], "group")
-        self.assertEqual(fields[fields.index("expiration_date") + 1], "notes")
-        add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")
-        response = self.client.get(add_url)
-        self.assertContains(response, 'name="group"')
-        self.assertContains(response, "data-default-url")
-        data = self._get_prefix_post_data()
-        data.update(group=str(group.pk), notes="Internal note")
-        response = self.client.post(add_url, data, follow=True)
-        self.assertEqual(response.status_code, 200)
-        batch = RadiusBatch.objects.get()
-        self.assertEqual(batch.group, group)
-        self.assertEqual(batch.notes, "Internal note")
-        change_url = reverse(
-            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
-        )
-        response = self.client.get(change_url)
-        self.assertContains(response, "field-group")
-        self.assertContains(response, "field-notes")
-        self.assertNotContains(response, 'id="id_group"')
-        self.assertContains(response, 'id="id_notes"')
-        batch.status = RadiusBatch.PENDING
-        readonly_fields = admin.site._registry[RadiusBatch].get_readonly_fields(
-            RequestFactory().get(add_url), batch
-        )
-        self.assertIn("group", readonly_fields)
-
-    def test_radius_batch_default_group(self):
-        url = reverse(
-            f"admin:{self.app_label}_radiusbatch_default_group",
-            args=[self.default_org.pk],
-        )
-        response = self.client.get(url)
-        group = RadiusGroup.objects.get(organization=self.default_org, default=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
-        staff_user = self._create_user(
-            username="batch-operator",
-            email="batch-operator@example.com",
-            is_staff=True,
-        )
-        self._create_org_user(user=staff_user, is_admin=True)
-        self.client.force_login(staff_user)
-
-        with self.subTest("without RadiusGroup view permission"):
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 403)
-
-        operator = self._get_operator()
-        self._create_org_user(user=operator, is_admin=True)
-        self.client.force_login(operator)
-
-        with self.subTest("managed organization"):
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
-
-        with self.subTest("unmanaged organization"):
-            other_organization = self._create_org(
-                name="other organization", slug="other-org"
-            )
-            other_url = reverse(
-                f"admin:{self.app_label}_radiusbatch_default_group",
-                args=[other_organization.pk],
-            )
-            response = self.client.get(other_url)
-            self.assertEqual(response.status_code, 404)
-
     def test_radiusbatch_no_of_users(self):
         r = self._create_radius_batch(
             name="test", strategy="prefix", prefix="test-prefix5"
@@ -1167,6 +1096,77 @@ class TestAdmin(
             ),
             html=True,
         )
+
+    def test_radius_batch_group_and_notes(self):
+        group = self._create_radius_group(name="guests")
+        fields = admin.site._registry[RadiusBatch].fields
+        self.assertEqual(fields[fields.index("number_of_users") + 1], "group")
+        self.assertEqual(fields[fields.index("expiration_date") + 1], "notes")
+        add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")
+        response = self.client.get(add_url)
+        self.assertContains(response, 'name="group"')
+        self.assertContains(response, "data-default-url")
+        data = self._get_prefix_post_data()
+        data.update(group=str(group.pk), notes="Internal note")
+        response = self.client.post(add_url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        batch = RadiusBatch.objects.get()
+        self.assertEqual(batch.group, group)
+        self.assertEqual(batch.notes, "Internal note")
+        change_url = reverse(
+            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
+        )
+        response = self.client.get(change_url)
+        self.assertContains(response, "field-group")
+        self.assertContains(response, "field-notes")
+        self.assertNotContains(response, 'id="id_group"')
+        self.assertContains(response, 'id="id_notes"')
+        batch.status = RadiusBatch.PENDING
+        readonly_fields = admin.site._registry[RadiusBatch].get_readonly_fields(
+            RequestFactory().get(add_url), batch
+        )
+        self.assertIn("group", readonly_fields)
+
+    def test_radius_batch_default_group(self):
+        url = reverse(
+            f"admin:{self.app_label}_radiusbatch_default_group",
+            args=[self.default_org.pk],
+        )
+        response = self.client.get(url)
+        group = RadiusGroup.objects.get(organization=self.default_org, default=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
+        staff_user = self._create_user(
+            username="batch-operator",
+            email="batch-operator@example.com",
+            is_staff=True,
+        )
+        self._create_org_user(user=staff_user, is_admin=True)
+        self.client.force_login(staff_user)
+
+        with self.subTest("without RadiusGroup view permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+        operator = self._get_operator()
+        self._create_org_user(user=operator, is_admin=True)
+        self.client.force_login(operator)
+
+        with self.subTest("managed organization"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
+
+        with self.subTest("unmanaged organization"):
+            other_organization = self._create_org(
+                name="other organization", slug="other-org"
+            )
+            other_url = reverse(
+                f"admin:{self.app_label}_radiusbatch_default_group",
+                args=[other_organization.pk],
+            )
+            response = self.client.get(other_url)
+            self.assertEqual(response.status_code, 404)
 
     def test_radius_usergroup_queryset(self):
         data = self._create_multitenancy_test_env(usergroup=True)
