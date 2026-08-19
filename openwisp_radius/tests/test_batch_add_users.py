@@ -17,6 +17,22 @@ RadiusUserGroup = load_model("RadiusUserGroup")
 
 
 class TestCSVUpload(FileMixin, BaseTestCase):
+    def test_import_rejects_ambiguous_case_insensitive_email(self):
+        self._create_user(username="rohith", email="rohith@openwisp.com")
+        user = self._create_user(username="rohith2", email="other@openwisp.com")
+        get_user_model().objects.filter(pk=user.pk).update(email="ROHITH@OPENWISP.COM")
+        reader = [["rohith", "cleartext$password", "Rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        with self.assertRaises(ValidationError) as context_manager:
+            batch.add(reader)
+        self.assertEqual(
+            context_manager.exception.message_dict["email"],
+            ["Multiple users match this email address."],
+        )
+        self.assertFalse(batch.users.exists())
+
     def test_users_inherit_batch_group(self):
         group = self._create_radius_group(name="guests")
         reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]

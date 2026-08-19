@@ -435,6 +435,12 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         return custom_urls + urls
 
     def default_group(self, request, organization_id):
+        group_admin = self.admin_site._registry[RadiusGroup]
+        if not (
+            self.admin_site.has_permission(request)
+            and group_admin.has_view_permission(request)
+        ):
+            raise PermissionDenied
         queryset = RadiusGroup.objects.filter(
             organization_id=organization_id, default=True
         )

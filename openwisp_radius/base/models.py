@@ -1139,9 +1139,14 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def get_or_create_user(self, row, users_list, password_length):
         User = get_user_model()
         username, password, email, first_name, last_name = row
-        if email and User.objects.filter(email__iexact=email).exists():
-            user = User.objects.get(email__iexact=email)
-            return user, None
+        if email:
+            users = list(User.objects.filter(email__iexact=email)[:2])
+            if len(users) > 1:
+                raise ValidationError(
+                    {"email": _("Multiple users match this email address.")}
+                )
+            if users:
+                return users[0], None
         generated_password = None
         username, password, email, first_name, last_name = row
         if not username and email:

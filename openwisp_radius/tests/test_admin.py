@@ -391,9 +391,23 @@ class TestAdmin(
         group = RadiusGroup.objects.get(organization=self.default_org, default=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
-        operator = self._get_operator()
+        operator = self._create_user(
+            username="batch-operator",
+            email="batch-operator@example.com",
+            is_staff=True,
+        )
         self._create_org_user(user=operator, is_admin=True)
         self.client.force_login(operator)
+
+        with self.subTest("without RadiusGroup view permission"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+        permission = Permission.objects.get(
+            content_type__app_label=self.app_label,
+            codename="view_radiusgroup",
+        )
+        operator.user_permissions.add(permission)
 
         with self.subTest("managed organization"):
             response = self.client.get(url)
