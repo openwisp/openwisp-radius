@@ -11,7 +11,9 @@ on:
 
 jobs:
   build:
-    name: Python==${{ matrix.python-version }} | ${{ matrix.django-version }}
+    name: >-
+      ${{ matrix.tsdb }} | Python==${{ matrix.python-version }} |
+      ${{ matrix.django-version }}
     runs-on: ubuntu-24.04
 
     strategy:
@@ -26,10 +28,21 @@ jobs:
           - django~=4.2.0
           - django~=5.1.0
           - django~=5.2.0
+        tsdb:
+          - influxdb
         exclude:
           # Python 3.13 supported only in Django >=5.1.3
           - python-version: "3.13"
             django-version: django~=4.2.0
+        # The other timeseries backends are tested only on the latest Python
+        # and Django versions, and only on the monitoring integration.
+        include:
+          - python-version: "3.13"
+            django-version: django~=5.2.0
+            tsdb: influxdb2
+          - python-version: "3.13"
+            django-version: django~=5.2.0
+            tsdb: elasticsearch
 
     steps:
       - uses: actions/checkout@v7
@@ -76,8 +89,31 @@ jobs:
           pip install -e .[saml,openvpn_status]
           pip install -U ${{ matrix.django-version }}
 
-      - name: Start InfluxDB and Redis container
-        run: docker compose up -d influxdb redis
+      - name: Start Timeseries DB and Redis container
+        run: |
+          docker compose up -d "${{ matrix.tsdb }}" redis
+
+          if [ "${{ matrix.tsdb }}" = "influxdb2" ]; then
+            url="http://localhost:8087/health"
+          elif [ "${{ matrix.tsdb }}" = "elasticsearch" ]; then
+            url="http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=2s&filter_path=status"
+          else
+            url="http://localhost:8086/query?q=SHOW%20DATABASES"
+          fi
+
+          for attempt in $(seq 1 30); do
+            if response=$(curl -fsS "$url" 2>/dev/null); then
+              if [ "${{ matrix.tsdb }}" != "elasticsearch" ] || \
+                printf "%s" "$response" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(yellow|green)"'; then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+
+          echo "Timeseries DB did not become ready at $url"
+          docker compose logs "${{ matrix.tsdb }}"
+          exit 1
 
       - name: QA checks
         run: |
@@ -88,6 +124,8 @@ jobs:
         run: |
           ./runtests
         env:
+          MONITORING_INTEGRATION: ${{ matrix.tsdb != 'influxdb' && '1' || '' }}
+          TIMESERIES_BACKEND: ${{ matrix.tsdb }}
           SELENIUM_HEADLESS: 1
           GECKO_LOG: 1
           COVERAGE_PROCESS_START: pyproject.toml
@@ -102,7 +140,7 @@ jobs:
         with:
           parallel: true
           format: cobertura
-          flag-name: python-${{ matrix.env.env }}
+          flag-name: ${{ matrix.tsdb }}-python-${{ matrix.python-version }}-${{ matrix.django-version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   coveralls:

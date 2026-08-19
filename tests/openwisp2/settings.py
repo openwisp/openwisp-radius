@@ -17,14 +17,47 @@ ALLOWED_HOSTS = []
 OPENWISP_RADIUS_FREERADIUS_ALLOWED_HOSTS = ["127.0.0.1"]
 OPENWISP_RADIUS_COA_ENABLED = True
 OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES = ["+44", "+39", "+237", "+595"]
-TIMESERIES_DATABASE = {
-    "BACKEND": "openwisp_monitoring.db.backends.influxdb",
-    "USER": "openwisp",
-    "PASSWORD": "openwisp",
-    "NAME": "openwisp2",
-    "HOST": os.getenv("INFLUXDB_HOST", "localhost"),
-    "PORT": "8086",
-}
+TIMESERIES_BACKEND = os.getenv("TIMESERIES_BACKEND", "influxdb")
+if TIMESERIES_BACKEND == "influxdb":
+    TIMESERIES_DATABASE = {
+        "BACKEND": "openwisp_monitoring.db.backends.influxdb",
+        "USER": "openwisp",
+        "PASSWORD": "openwisp",
+        "NAME": "openwisp2",
+        "HOST": os.getenv("INFLUXDB_HOST", "localhost"),
+        "PORT": "8086",
+    }
+elif TIMESERIES_BACKEND == "influxdb2":
+    TIMESERIES_DATABASE = {
+        "BACKEND": "openwisp_monitoring.db.backends.influxdb2",
+        "NAME": os.getenv("INFLUXDB2_BUCKET", "openwisp2"),
+        "URL": os.getenv(
+            "INFLUXDB2_URL",
+            "http://{host}:{port}".format(
+                host=os.getenv("INFLUXDB2_HOST", "localhost"),
+                port=os.getenv("INFLUXDB2_PORT", "8087"),
+            ),
+        ),
+        "USER": os.getenv("INFLUXDB2_ORG", "openwisp"),
+        "PASSWORD": os.getenv("INFLUXDB2_TOKEN", "openwisp-token"),
+    }
+elif TIMESERIES_BACKEND == "elasticsearch":
+    TIMESERIES_DATABASE = {
+        "BACKEND": "openwisp_monitoring.db.backends.elasticsearch",
+        "NAME": os.getenv("ELASTICSEARCH_NAME", "openwisp2"),
+        "URL": os.getenv(
+            "ELASTICSEARCH_URL",
+            "http://{host}:{port}".format(
+                host=os.getenv("ELASTICSEARCH_HOST", "localhost"),
+                port=os.getenv("ELASTICSEARCH_PORT", "9200"),
+            ),
+        ),
+    }
+    if os.getenv("ELASTICSEARCH_USER") or os.getenv("ELASTICSEARCH_PASSWORD"):
+        TIMESERIES_DATABASE["USER"] = os.getenv("ELASTICSEARCH_USER")
+        TIMESERIES_DATABASE["PASSWORD"] = os.getenv("ELASTICSEARCH_PASSWORD")
+else:
+    raise ValueError(f'Unsupported TIMESERIES_BACKEND "{TIMESERIES_BACKEND}"')
 
 INSTALLED_APPS = [
     "daphne",

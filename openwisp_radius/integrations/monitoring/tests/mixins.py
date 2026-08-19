@@ -13,11 +13,7 @@ class CreateDeviceMonitoringMixin(object):
 
     @classmethod
     def setUpClass(cls):
-        # By default timeseries_db.db shall connect to the database
-        # defined in settings when apps are loaded. We don't want that while testing
-        timeseries_db.db_name = cls.TEST_DB
-        del timeseries_db.db
-        del timeseries_db.dbs
+        timeseries_db.reset(db_name=cls.TEST_DB)
         timeseries_db.create_database()
         manage_short_retention_policy()
         super().setUpClass()

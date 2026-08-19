@@ -74,11 +74,11 @@ class TestRebuildRadiusAccountingMetrics(
 
     @patch(
         "openwisp_radius.integrations.monitoring.management.commands."
-        "rebuild_radius_accounting_metrics.timeseries_db.query"
+        "rebuild_radius_accounting_metrics.timeseries_db.delete_metric_data"
     )
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_commit(
-        self, mocked_warning, mocked_query
+        self, mocked_warning, mocked_delete
     ):
         user = self._create_user()
         reg_user = self._create_registered_user(user=user)
@@ -96,12 +96,19 @@ class TestRebuildRadiusAccountingMetrics(
         output = out.getvalue()
         self.assertIn("Starting to rebuild 1 accounting metrics.", output)
         self.assertIn("Processed 1 of 1 accounting metrics.", output)
-        delete_queries = [
-            call.args[0]
-            for call in mocked_query.call_args_list
-            if call.args[0].startswith("DELETE FROM radius_acc")
-        ]
-        self.assertEqual(len(delete_queries), 1)
+        self.assertEqual(mocked_delete.call_count, 1)
+        self.assertEqual(
+            mocked_delete.call_args.kwargs,
+            {
+                "key": "radius_acc",
+                "tags": {
+                    "organization_id": str(self.default_org.id),
+                    "calling_station_id": sha1_hash(session.calling_station_id),
+                    "called_station_id": session.called_station_id,
+                },
+                "timestamp": session.stop_time,
+            },
+        )
         self.assertEqual(
             self.metric_model.objects.filter(
                 configuration="radius_acc",
