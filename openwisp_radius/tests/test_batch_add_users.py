@@ -33,6 +33,23 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         )
         self.assertFalse(batch.users.exists())
 
+    def test_import_deduplicates_case_insensitive_email(self):
+        reader = [
+            ["rohith", "cleartext$password", "rohith@openwisp.com", "", ""],
+            ["rohith2", "cleartext$password", "ROHITH@OPENWISP.COM", "", ""],
+        ]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        batch.add(reader)
+        self.assertEqual(batch.users.count(), 1)
+        self.assertEqual(
+            get_user_model()
+            .objects.filter(email__iexact="rohith@openwisp.com")
+            .count(),
+            1,
+        )
+
     def test_users_inherit_batch_group(self):
         group = self._create_radius_group(name="guests")
         reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
@@ -292,7 +309,7 @@ class TestTransactionCSVUpload(FileMixin, BaseTransactionTestCase):
 
 
 class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
-    def test_csv_upload_total_rollback(self):
+    def test_csv_upload_deduplicates_case_insensitive_email(self):
         User = get_user_model()
         org = self._get_org()
         data = [
@@ -305,17 +322,18 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
             organization=org,
             csvfile=self._get_csvfile(data),
         )
-        with self.assertRaises(IntegrityError):
-            batch.csvfile_upload()
-        self.assertFalse(RadiusBatch.objects.filter(name="total-rollback").exists())
-        self.assertFalse(User.objects.filter(username="user_one").exists())
+        batch.csvfile_upload()
+        self.assertTrue(RadiusBatch.objects.filter(name="total-rollback").exists())
+        self.assertEqual(
+            User.objects.filter(email__iexact="total@example.com").count(), 1
+        )
 
     def test_add_method_internal_atomicity(self):
         User = get_user_model()
         org = self._get_org()
         data = [
-            ["user_one", "pass123", "duplicate@example.com", "John", "Doe"],
-            ["user_two", "pass123", "duplicate@example.com", "Jane", "Doe"],
+            ["user_one", "pass123", "one@example.com", "John", "Doe"],
+            ["user_two", "pass123", "two@example.com", "Jane", "Doe"],
         ]
         batch = self._create_radius_batch(
             name="atomic-integrity-test",
@@ -323,8 +341,16 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
             organization=org,
             csvfile=self._get_csvfile(data),
         )
-        with self.assertRaises(IntegrityError):
-            batch.add(data)
+        original_save_user = batch.save_user
+
+        def save_user(user):
+            if user.username == "user_two":
+                raise IntegrityError
+            original_save_user(user)
+
+        with patch.object(batch, "save_user", side_effect=save_user):
+            with self.assertRaises(IntegrityError):
+                batch.add(data)
         self.assertFalse(User.objects.filter(username="user_one").exists())
         self.assertTrue(
             RadiusBatch.objects.filter(name="atomic-integrity-test").exists()
