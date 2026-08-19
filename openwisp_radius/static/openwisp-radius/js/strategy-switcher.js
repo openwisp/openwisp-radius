@@ -41,35 +41,6 @@
       );
     }
 
-    function initialize_group_autocomplete() {
-      if (!groupField.length) {
-        return;
-      }
-      if (!groupField.hasClass("select2-hidden-accessible")) {
-        groupField.djangoAdminSelect2();
-      }
-      groupField.select2("destroy");
-      groupField.select2({
-        ajax: {
-          cache: true,
-          delay: 250,
-          data: function (params) {
-            return {
-              term: params.term,
-              page: params.page,
-              app_label: groupField.attr("data-app-label"),
-              model_name: groupField.attr("data-model-name"),
-              field_name: groupField.attr("data-field-name"),
-              organization: organizationField.val(),
-            };
-          },
-          type: "GET",
-          url: groupField.attr("data-ajax--url"),
-        },
-        theme: groupField.attr("data-theme"),
-      });
-    }
-
     function csv_strategy() {
       prefixRows.hide();
       prefixField.hide();
@@ -110,7 +81,6 @@
     organizationField.change(select_default_group);
     strategy.trigger("change");
     $(window).on("load", function () {
-      initialize_group_autocomplete();
       select_default_group();
     });
   });

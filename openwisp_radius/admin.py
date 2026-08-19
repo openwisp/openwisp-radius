@@ -1,5 +1,4 @@
 from urllib.parse import urljoin
-from uuid import UUID
 
 from django import forms
 from django.conf import settings
@@ -255,22 +254,6 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     def get_default_queryset(self, request, queryset):
         """overridable"""
         return queryset.filter(default=True)
-
-    def get_search_results(self, request, queryset, search_term):
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term
-        )
-        if (
-            request.GET.get("model_name") == RadiusBatch._meta.model_name
-            and request.GET.get("field_name") == "group"
-        ):
-            try:
-                organization_id = UUID(request.GET.get("organization", ""))
-            except ValueError:
-                queryset = queryset.none()
-            else:
-                queryset = queryset.filter(organization_id=organization_id)
-        return queryset, use_distinct
 
 
 if app_settings.USERGROUP_ADMIN:

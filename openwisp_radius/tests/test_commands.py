@@ -159,25 +159,29 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     def test_batch_add_users_command_group_and_notes(self):
         organization = self._get_org("test-organization")
         group = self._create_radius_group(name="guests", organization=organization)
-        self._call_command(
-            "batch_add_users",
-            file=self._get_path("static/test_batch.csv"),
-            name="test",
-            organization=organization.slug,
-            group=str(group.pk),
-            notes="Internal note",
-        )
-        batch = RadiusBatch.objects.get()
-        self.assertEqual(batch.group, group)
-        self.assertEqual(batch.notes, "Internal note")
-        with self.assertRaises(CommandError):
+
+        with self.subTest("valid group and notes"):
             self._call_command(
                 "batch_add_users",
                 file=self._get_path("static/test_batch.csv"),
-                name="invalid-group",
+                name="test",
                 organization=organization.slug,
-                group="00000000-0000-0000-0000-000000000000",
+                group=str(group.pk),
+                notes="Internal note",
             )
+            batch = RadiusBatch.objects.get()
+            self.assertEqual(batch.group, group)
+            self.assertEqual(batch.notes, "Internal note")
+
+        with self.subTest("invalid group"):
+            with self.assertRaises(CommandError):
+                self._call_command(
+                    "batch_add_users",
+                    file=self._get_path("static/test_batch.csv"),
+                    name="invalid-group",
+                    organization=organization.slug,
+                    group="00000000-0000-0000-0000-000000000000",
+                )
 
     @freeze_time(_TEST_DATE)
     @capture_stdout()

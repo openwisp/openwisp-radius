@@ -382,63 +382,6 @@ class TestAdmin(
         )
         self.assertIn("group", readonly_fields)
 
-    def test_radius_batch_group_autocomplete(self):
-        group = self._create_radius_group(name="guests")
-        other_organization = self._create_org(
-            name="other organization", slug="other-org"
-        )
-        other_group = self._create_radius_group(
-            name="other-guests", organization=other_organization
-        )
-        autocomplete_url = reverse("admin:autocomplete")
-        response = self.client.get(
-            autocomplete_url,
-            {
-                "term": "guests",
-                "app_label": self.app_label,
-                "model_name": "radiusbatch",
-                "field_name": "group",
-                "organization": self.default_org.pk,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json()["results"], [{"id": str(group.pk), "text": str(group)}]
-        )
-        self.assertNotIn(str(other_group.pk), response.content.decode())
-        operator = self._get_operator()
-        self._create_org_user(user=operator, is_admin=True)
-        self.client.force_login(operator)
-        with self.subTest("managed organization"):
-            response = self.client.get(
-                autocomplete_url,
-                {
-                    "term": "guests",
-                    "app_label": self.app_label,
-                    "model_name": "radiusbatch",
-                    "field_name": "group",
-                    "organization": self.default_org.pk,
-                },
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(
-                response.json()["results"],
-                [{"id": str(group.pk), "text": str(group)}],
-            )
-        with self.subTest("unmanaged organization"):
-            response = self.client.get(
-                autocomplete_url,
-                {
-                    "term": "guests",
-                    "app_label": self.app_label,
-                    "model_name": "radiusbatch",
-                    "field_name": "group",
-                    "organization": other_organization.pk,
-                },
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["results"], [])
-
     def test_radius_batch_default_group(self):
         url = reverse(
             f"admin:{self.app_label}_radiusbatch_default_group",
@@ -451,10 +394,12 @@ class TestAdmin(
         operator = self._get_operator()
         self._create_org_user(user=operator, is_admin=True)
         self.client.force_login(operator)
+
         with self.subTest("managed organization"):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), {"id": str(group.pk), "text": str(group)})
+
         with self.subTest("unmanaged organization"):
             other_organization = self._create_org(
                 name="other organization", slug="other-org"

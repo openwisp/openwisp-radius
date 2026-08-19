@@ -32,10 +32,8 @@ The CSV shall be of the format:
 
     username,password,email,firstname,lastname
 
-The CSV supports only these five columns. Additional columns, including a
-RADIUS group column, are not supported and will cause the import to fail.
-To assign a group, select it in the batch creation form or use the
-``--group`` command option.
+The CSV supports only these five columns. Additional columns will be
+rejected and will cause the import to fail.
 
 Imported users with hashed passwords
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,12 +93,14 @@ Using the admin interface
 To generate users from the admin interface, go to ``Home > Batch user
 creation operations > Add`` (URL:
 ``/admin/openwisp_radius/radiusbatch/add``), set ``Strategy`` to ``Import
-from CSV``, choose the CSV file to upload and save. The default RADIUS
-group of the selected organization is selected automatically. Select
-another group to assign it to every user in the batch. To retain the
-standard default-group behavior for newly created users, click the ``×``
-icon to clear the selected group. The RADIUS group cannot be changed after
-creating a batch, while notes can be edited at any time.
+from CSV``, choose the CSV file to upload and save.
+
+The default RADIUS group of the selected organization is selected
+automatically. Select a different group to assign it to every user in the
+batch.
+
+The RADIUS group cannot be changed after creating a batch, while notes can
+be edited at any time.
 
 .. image:: ../images/add_users_csv.gif
     :alt: Demo: adding users from CSV
