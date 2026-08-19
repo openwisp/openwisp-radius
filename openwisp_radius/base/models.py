@@ -1139,6 +1139,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def get_or_create_user(self, row, users_list, password_length):
         User = get_user_model()
         username, password, email, first_name, last_name = row
+        # Users created from earlier rows in the same CSV are saved only after
+        # every row is processed, so the database lookup cannot find them yet.
+        # Search users_list too, preventing another row in the same CSV with
+        # the same email in different casing from creating a second account.
+        # A saved user may be in both lists, so count it once rather than
+        # reporting two matches as an ambiguous email address.
         if email:
             matching_users = [
                 user

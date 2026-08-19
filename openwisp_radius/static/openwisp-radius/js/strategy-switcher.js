@@ -18,11 +18,10 @@
       currentOrganization = organizationField.val(),
       defaultGroupRequest = 0;
 
-    function select_default_group(force) {
+    function autoDefaultRadiusGroup(force) {
       var organization = organizationField.val(),
         defaultUrl = groupField.attr("data-default-url"),
         request = ++defaultGroupRequest;
-
       if (!organization || !groupField.length || !defaultUrl) {
         return;
       }
@@ -87,11 +86,11 @@
         return;
       }
       currentOrganization = organizationField.val();
-      select_default_group(true);
+      autoDefaultRadiusGroup(true);
     });
     strategy.trigger("change");
     $(window).on("load", function () {
-      select_default_group();
+      autoDefaultRadiusGroup();
     });
   });
 })(django.jQuery);
