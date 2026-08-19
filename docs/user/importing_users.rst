@@ -99,6 +99,9 @@ The default RADIUS group of the selected organization is selected
 automatically. Select a different group to assign it to every user in the
 batch.
 
+To preserve existing users' memberships and use the standard default-group
+behavior for new users, clear the selected group before saving.
+
 The RADIUS group cannot be changed after creating a batch, while notes can
 be edited at any time.
 
