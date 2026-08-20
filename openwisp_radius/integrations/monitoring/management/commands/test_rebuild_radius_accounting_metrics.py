@@ -7,6 +7,7 @@ from django.test import tag
 from django.utils import timezone
 from swapper import load_model
 
+from openwisp_radius.integrations.monitoring import tasks
 from openwisp_radius.integrations.monitoring.tests.mixins import (
     CreateDeviceMonitoringMixin,
 )
@@ -126,6 +127,44 @@ class TestRebuildRadiusAccountingMetrics(
             ).count(),
             1,
         )
+
+    @patch("logging.Logger.warning")
+    def test_rebuild_radius_accounting_metrics_deletes_only_session_point(self, *args):
+        user = self._create_user()
+        device = self._create_device()
+        self._create_registered_user(user=user)
+        called_station_id = device.mac_address.replace("-", ":").upper()
+        # this session was accounted correctly and must not be deleted
+        accounted_session = self._create_closed_accounting_without_metric(
+            unique_id="accounted-session",
+            username=user.username,
+            called_station_id=called_station_id,
+            terminate_cause="Session-Timeout",
+            stop_time=timezone.now() - timezone.timedelta(hours=1),
+            input_octets=1000000000,
+            output_octets=2000000000,
+        )
+        tasks.post_save_radiusaccounting(
+            username=accounted_session.username,
+            organization_id=str(accounted_session.organization_id),
+            input_octets=accounted_session.input_octets,
+            output_octets=accounted_session.output_octets,
+            calling_station_id=accounted_session.calling_station_id,
+            called_station_id=accounted_session.called_station_id,
+            time=accounted_session.stop_time,
+        )
+        self._create_closed_accounting_without_metric(
+            username=user.username,
+            called_station_id=called_station_id,
+        )
+        call_command(
+            "rebuild_radius_accounting_metrics", commit=True, stdout=StringIO()
+        )
+        metric = self.metric_model.objects.get(configuration="radius_acc")
+        points = metric.chart_set.get(configuration="radius_traffic").read()
+        # the point of the accounted session is still there:
+        # 8 + 1 GB of download and 9 + 2 GB of upload
+        self.assertEqual(points["summary"], {"upload": 11, "download": 9})
 
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_nas_reboot_filter(self, *args):

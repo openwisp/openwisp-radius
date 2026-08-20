@@ -53,7 +53,7 @@ Supported timeseries databases
 
 The charts above are defined for InfluxDB 1.8 and InfluxDB 2.x and are
 selected automatically according to the ``TIMESERIES_DATABASE`` setting of
-the project, no additional configuration is needed.
+the project: no chart specific configuration is needed.
 
 Enabling RADIUS metrics in Django project
 -----------------------------------------
