@@ -13,7 +13,7 @@ RadiusBatch = load_model("RadiusBatch")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
 
-class TestBatchListDetailDelete(ApiTokenMixin, BaseTestCase):
+class TestBatch(ApiTokenMixin, BaseTestCase):
     def _get_auth_header(self, username="admin", password="tester"):
         if username == "admin":
             self._get_admin()
