@@ -6,6 +6,11 @@ openwisp-radius uses `django-rest-auth
 of new users via REST API so you can implement registration and password
 reset directly from your captive page.
 
+.. important::
+
+    Disabled organizations reject registration and social or SAML login
+    with ``403 Forbidden`` response.
+
 The registration API endpoint is described in :ref:`API: User Registration
 <radius_user_registration>`.
 

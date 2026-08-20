@@ -23,6 +23,11 @@ password field.
 The internal REST API of OpenWISP RADIUS will recognize the token and
 authorize the user.
 
+.. important::
+
+    Disabled organizations cannot use social login. Social login requests
+    for a disabled organization return ``403 Forbidden`` response.
+
 This kind of implementation allows to implement the social login with any
 captive portal which already supports the RADIUS protocol because it's
 totally transparent for it, that is, the captive portal doesn't even know

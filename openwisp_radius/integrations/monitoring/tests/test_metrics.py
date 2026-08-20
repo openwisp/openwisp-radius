@@ -11,7 +11,6 @@ from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
 from ..migrations import create_general_metrics
-from ..tasks import write_user_registration_metrics
 from ..utils import sha1_hash
 from .mixins import CreateDeviceMonitoringMixin
 
@@ -699,6 +698,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     def test_write_user_registration_metrics(self):
+        from ..tasks import write_user_registration_metrics
+
         # The TransactionTestCase truncates all the data after each test.
         # The general metrics and charts which are created by migrations
         # get deleted after each test. Therefore, we create them again here.
@@ -817,6 +818,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
     def test_pending_verification_excluded_from_metrics(self):
+        from ..tasks import write_user_registration_metrics
 
         cache.clear()
         create_general_metrics(None, None)
@@ -859,6 +861,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         - Global metrics aggregate both methods.
         - Each organization only counts its own method.
         """
+        from ..tasks import write_user_registration_metrics
 
         def _get_metric_traces(metric_key, organization_id):
             chart = self.metric_model.objects.get(key=metric_key).chart_set.first()
@@ -924,6 +927,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         - ``tot_user_signups`` still counts org1 with its registration method.
         - org2 must not inherit org1's registration method.
         """
+        from ..tasks import write_user_registration_metrics
 
         cache.clear()
         create_general_metrics(None, None)
@@ -998,6 +1002,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     def test_write_user_registration_metrics_disabled_org(self):
+        from ..tasks import write_user_registration_metrics
+
         cache.clear()
         create_general_metrics(None, None)
         org = self._get_org()
