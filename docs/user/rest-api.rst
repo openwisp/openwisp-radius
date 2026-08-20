@@ -992,6 +992,7 @@ Deletes a batch user creation operation and its associated users. Returns
     Deletion is rejected while the batch ``status`` is ``processing``. The
     API returns a ``409 Conflict`` response with a clear error message in
     this case. Pending, completed, and failed batches can be deleted.
+
 Batch CSV Download
 ++++++++++++++++++
 
