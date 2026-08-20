@@ -52,7 +52,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         self._create_prefix_batch(name="batch-b")
         header = self._get_auth_header()
         with self.assertNumQueries(4):
-            response = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+            response = self.client.get(
+                reverse("radius:batch"), HTTP_AUTHORIZATION=header
+            )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["count"], 2)
 
