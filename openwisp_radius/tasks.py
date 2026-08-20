@@ -7,6 +7,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core import management
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.template import loader
 from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
@@ -18,6 +19,7 @@ from . import settings as app_settings
 from .utils import get_one_time_login_url, load_model
 
 logger = logging.getLogger(__name__)
+DISCONNECT_BATCH_SIZE = 1000
 
 
 @shared_task
@@ -127,9 +129,14 @@ def perform_change_of_authorization(user_id, old_group_id, new_group_id):
 def process_radius_batch(batch_id, number_of_users=None):
     RadiusBatch = load_model("RadiusBatch")
     try:
-        batch = RadiusBatch.objects.get(pk=batch_id)
+        batch = RadiusBatch.objects.select_related("organization").get(pk=batch_id)
     except ObjectDoesNotExist as e:
         logger.warning(f'process_radius_batch("{batch_id}") failed: {e}')
+        return
+    if not batch.organization.is_active:
+        logger.info(
+            f'process_radius_batch("{batch_id}") skipped: organization is disabled'
+        )
         return
     try:
         batch.process(number_of_users=number_of_users, is_async=True)
@@ -139,3 +146,53 @@ def process_radius_batch(batch_id, number_of_users=None):
             f"process for {batch} "
             f"(ID: {batch_id})"
         )
+
+
+@shared_task
+def disconnect_organization_sessions(organization_id):
+    from .coa import coa_manager
+
+    Organization = swapper.load_model("openwisp_users", "Organization")
+    RadiusAccounting = load_model("RadiusAccounting")
+    try:
+        organization = Organization.objects.select_related("radius_settings").get(
+            pk=organization_id
+        )
+    except Organization.DoesNotExist:
+        logger.warning(
+            f'Organization "{organization_id}" does not exist. Skipping disconnect.'
+        )
+        return
+    if organization.is_active or not organization.radius_settings.coa_enabled:
+        return
+    sessions = RadiusAccounting.objects.filter(
+        organization_id=organization_id, stop_time__isnull=True
+    ).iterator(chunk_size=DISCONNECT_BATCH_SIZE)
+    closed_sessions = []
+    for session in sessions:
+        if not coa_manager.disconnect_session(session):
+            continue
+        # Disabling an organization removes its devices' configuration, so
+        # the NAS may lose its connection before it can send its own
+        # Accounting-Stop, leaving the session stuck open. Update it here
+        # proactively instead of relying on that.
+        stop_time = timezone.now()
+        session.stop_time = stop_time
+        session.update_time = stop_time
+        session.terminate_cause = "Admin-Reset"
+        closed_sessions.append(session)
+        if len(closed_sessions) == DISCONNECT_BATCH_SIZE:
+            with transaction.atomic():
+                RadiusAccounting.objects.bulk_update(
+                    closed_sessions,
+                    fields=["stop_time", "update_time", "terminate_cause"],
+                )
+                RadiusAccounting.emit_radius_accounting_closed(closed_sessions)
+            closed_sessions = []
+    if closed_sessions:
+        with transaction.atomic():
+            RadiusAccounting.objects.bulk_update(
+                closed_sessions,
+                fields=["stop_time", "update_time", "terminate_cause"],
+            )
+            RadiusAccounting.emit_radius_accounting_closed(closed_sessions)

@@ -91,13 +91,14 @@ class FreeradiusApiAuthentication(BaseAuthentication):
             ip_list = cache.get(f"ip-{uuid}")
         elif uuid:
             try:
-                ip_list = OrganizationRadiusSettings.objects.get(
-                    organization__pk=uuid
-                ).freeradius_allowed_hosts_list
+                instance = OrganizationRadiusSettings.objects.select_related(
+                    "organization"
+                ).get(organization__pk=uuid)
+                ip_list = instance.freeradius_allowed_hosts_list
             except OrganizationRadiusSettings.DoesNotExist:
                 pass
             else:
-                cache.set(f"ip-{uuid}", ip_list)
+                instance.save_cache()
         return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
 
     def _check_client_ip_and_return(self, request, uuid):
@@ -129,7 +130,11 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         # Get the most recent open session for the roaming user
         open_session = (
             RadiusAccounting.objects.select_related("organization__radius_settings")
-            .filter(calling_station_id=calling_station_id, stop_time=None)
+            .filter(
+                calling_station_id=calling_station_id,
+                stop_time=None,
+                organization__is_active=True,
+            )
             .order_by("-start_time")
             .first()
         )
@@ -202,8 +207,10 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         if not cached_token:
             try:
                 opts = dict(organization_id=uuid, token=token)
-                instance = OrganizationRadiusSettings.objects.get(**opts)
-                cache.set(uuid, instance.token)
+                instance = OrganizationRadiusSettings.objects.select_related(
+                    "organization"
+                ).get(**opts)
+                instance.save_cache()
             except OrganizationRadiusSettings.DoesNotExist:
                 raise AuthenticationFailed(_TOKEN_AUTH_FAILED)
         elif cached_token != token:
@@ -289,6 +296,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         """
         return user or ``None``
         """
+        if not OrganizationRadiusSettings.is_organization_active(request.auth):
+            return None
         conditions = self._get_user_query_conditions(request)
         try:
             user = auth_backend.get_users(username).filter(conditions).distinct()[0]
@@ -504,7 +513,7 @@ class AccountingView(ListCreateAPIView):
         """
         return super().get(self, request, *args, **kwargs)
 
-    @swagger_auto_schema(responses={201: "", 200: ""})
+    @swagger_auto_schema(responses={201: "", 200: "", 403: ""})
     def post(self, request, *args, **kwargs):
         """
         **API Endpoint used by FreeRADIUS server.**
@@ -523,6 +532,8 @@ class AccountingView(ListCreateAPIView):
             return Response(status=status.HTTP_200_OK)
         # Create or Update
         organization = Organization.objects.get(pk=request.auth)
+        if status_type == "Start" and not organization.is_active:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         try:
             instance = self.get_queryset().get(unique_id=data.get("unique_id"))
         except RadiusAccounting.DoesNotExist:

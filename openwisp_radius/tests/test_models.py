@@ -7,6 +7,7 @@ import swapper
 from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
@@ -20,7 +21,7 @@ from .. import settings as app_settings
 from ..counters.exceptions import MaxQuotaReached
 from ..radclient.client import RadClient
 from ..signals import radius_accounting_closed
-from ..tasks import perform_change_of_authorization
+from ..tasks import perform_change_of_authorization, process_radius_batch
 from ..utils import (
     DEFAULT_SESSION_TIME_LIMIT,
     DEFAULT_SESSION_TRAFFIC_LIMIT,
@@ -41,6 +42,7 @@ RadiusGroupCheck = load_model("RadiusGroupCheck")
 RadiusGroupReply = load_model("RadiusGroupReply")
 RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusBatch = load_model("RadiusBatch")
+RadiusToken = load_model("RadiusToken")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 RegisteredUser = load_model("RegisteredUser")
@@ -946,6 +948,112 @@ class TestRadiusBatch(BaseTestCase):
         radiusbatch.name = "test-legacy-expiration-updated"
         radiusbatch.full_clean()
 
+    @mock.patch.object(RadiusBatch, "process")
+    def test_process_radius_batch_skipped_for_disabled_organization(
+        self, mocked_process
+    ):
+        org = self.default_org
+        radiusbatch = self._create_radius_batch(
+            strategy="prefix", prefix="test-prefix16", name="test", organization=org
+        )
+        org.is_active = False
+        org.save()
+        process_radius_batch(batch_id=radiusbatch.pk)
+        mocked_process.assert_not_called()
+        self.assertEqual(get_user_model().objects.count(), 0)
+
+
+class TestOrganizationRadiusSettingsCache(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
+    def test_is_organization_active_cache_hit(self):
+        org = self.default_org
+        org.radius_settings.save_cache()
+        with self.assertNumQueries(0):
+            self.assertEqual(
+                OrganizationRadiusSettings.is_organization_active(org.pk), True
+            )
+
+    def test_is_organization_active_cache_miss(self):
+        org = self.default_org
+        with self.assertNumQueries(1):
+            self.assertEqual(
+                OrganizationRadiusSettings.is_organization_active(org.pk), True
+            )
+        # the cache-miss path warms the cache via save_cache()
+        with self.assertNumQueries(0):
+            self.assertEqual(
+                OrganizationRadiusSettings.is_organization_active(org.pk), True
+            )
+
+    def test_is_organization_active_missing_organization_fails_closed(self):
+        self.assertEqual(
+            OrganizationRadiusSettings.is_organization_active(uuid4()), False
+        )
+
+    @mock.patch("openwisp_radius.tasks.disconnect_organization_sessions.delay")
+    def test_organization_disabled_handler(self, mocked_disconnect):
+        org1 = self.default_org
+        org2 = self._get_org("org2")
+        user = self._get_user_with_org()
+        radius_token, _ = RadiusToken.objects.get_or_create(
+            user=user, organization=org1
+        )
+        org2_user = self._create_user(
+            username="org2-user", email="org2-user@example.com"
+        )
+        self._create_org_user(user=org2_user, organization=org2)
+        org2_token, _ = RadiusToken.objects.get_or_create(
+            user=org2_user, organization=org2
+        )
+        cache.set(f"rt-{user.username}", str(org1.pk))
+        cache.set(f"rt-{org2_user.username}", str(org2.pk))
+        org1.radius_settings.save_cache()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            org1.is_active = False
+            org1.save()
+
+        self.assertEqual(
+            cache.get(OrganizationRadiusSettings.get_cache_key(org1.pk)), None
+        )
+        self.assertEqual(
+            cache.get(OrganizationRadiusSettings.get_cache_key(org1.pk, "ip-")), None
+        )
+        self.assertEqual(
+            cache.get(OrganizationRadiusSettings.get_cache_key(org1.pk, "org-active-")),
+            None,
+        )
+        self.assertEqual(RadiusToken.objects.filter(pk=radius_token.pk).exists(), False)
+        self.assertEqual(cache.get(f"rt-{user.username}"), None)
+        # org2's user and token are unaffected by org1 being disabled
+        self.assertEqual(RadiusToken.objects.filter(pk=org2_token.pk).exists(), True)
+        self.assertEqual(cache.get(f"rt-{org2_user.username}"), str(org2.pk))
+        mocked_disconnect.assert_called_once_with(organization_id=str(org1.pk))
+
+    def test_organization_enabled_handler(self):
+        org = self.default_org
+        org.is_active = False
+        org.save()
+        cache_keys = [
+            OrganizationRadiusSettings.get_cache_key(org.pk),
+            OrganizationRadiusSettings.get_cache_key(org.pk, "ip-"),
+            OrganizationRadiusSettings.get_cache_key(org.pk, "org-active-"),
+        ]
+        # these keys have no TTL, so a stale value would otherwise
+        # persist forever after re-enabling the organization
+        for key in cache_keys:
+            cache.set(key, "stale-value")
+
+        with self.captureOnCommitCallbacks(execute=True):
+            org.is_active = True
+            org.save()
+
+        for key in cache_keys:
+            self.assertEqual(cache.get(key), None)
+
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):
@@ -1337,6 +1445,45 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         user_radiususergroup.group = power_user_group
         user_radiususergroup.save()
         mocked_radclient.assert_not_called()
+
+    @mock.patch("openwisp_radius.coa.RadClient")
+    def test_change_of_authorization_organization_disabled(self, mocked_radclient):
+        org = self._get_org()
+        user = self._get_user_with_org()
+        nas_options = {
+            "organization": org,
+            "short_name": "test",
+            "type": "Virtual",
+            "secret": "testing123",
+        }
+        self._create_nas(name="10.8.0.0/24", **nas_options)
+        self._create_radius_accounting(
+            user, org, options={"nas_ip_address": "10.8.0.1"}
+        )
+        org.is_active = False
+        org.save()
+        # Disabling the org also triggers disconnect_organization_sessions
+        # for the open session created above, which is unrelated to what
+        # this test checks. Reset the mock so the assertion below only
+        # covers the RadiusUserGroup change.
+        mocked_radclient.reset_mock()
+        user_radiususergroup = user.radiususergroup_set.first()
+        power_user_group = RadiusGroup.objects.get(
+            organization=org, name=f"{org.slug}-power-users"
+        )
+        user_radiususergroup.group = power_user_group
+        user_radiususergroup.save()
+        mocked_radclient.assert_not_called()
+
+    def test_set_default_group_handler_skipped_for_disabled_organization(self):
+        org = self._get_org()
+        org.is_active = False
+        org.save()
+        user = self._create_user(
+            username="disabled-org-user", email="disabled-org-user@example.com"
+        )
+        self._create_org_user(user=user, organization=org)
+        self.assertEqual(user.radiususergroup_set.count(), 0)
 
     @mock.patch.object(RadClient, "perform_change_of_authorization", return_value=True)
     def test_sessions_with_multiple_orgs(self, mocked_radclient):

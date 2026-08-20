@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now
+from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
@@ -247,6 +247,29 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
         self.assertEqual(response.status_code, 200)
 
+    def test_authorize_disabled_org_token_path(self):
+        self._get_org_user()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.default_org.is_active = False
+            self.default_org.save()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
+
+    def test_authorize_disabled_org_radius_token_path(self):
+        self._get_org_user()
+        rad_token = self._login_and_obtain_auth_token()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.default_org.is_active = False
+            self.default_org.save()
+        # organization_disabled_handler deletes the RadiusToken row itself
+        # (not just the rt-{username} cache entry), so the credential no
+        # longer resolves at all: authentication fails with NotAuthenticated,
+        # which DRF demotes to 403 since FreeradiusApiAuthentication defines
+        # no WWW-Authenticate header.
+        response = self._authorize_user(password=rad_token)
+        self.assertEqual(response.status_code, 403)
+
     def test_authorize_unverified_user(self):
         self._get_org_user()
         org_settings = OrganizationRadiusSettings.objects.get(
@@ -409,6 +432,20 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusPostAuth.objects.filter(**params).count(), 1)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.data)
+
+    def test_postauth_disabled_org_still_creates_row(self):
+        # PostAuth rows are append-only audit facts and are deliberately
+        # not guarded, since they are the most useful diagnostic when an
+        # operator asks why logins are failing after a disable.
+        self.default_org.is_active = False
+        self.default_org.save()
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
+        params = self._get_postauth_params()
+        response = self.client.post(
+            reverse("radius:postauth"), params, HTTP_AUTHORIZATION=self.auth_header
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusPostAuth.objects.all().count(), 1)
 
     def test_postauth_radius_token_expired_201(self):
         self.assertEqual(RadiusPostAuth.objects.all().count(), 0)
@@ -1137,6 +1174,131 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, None)
+
+    @freeze_time(START_DATE)
+    def test_accounting_start_disabled_org_403(self):
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = self._prep_start_acct_data()
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+
+    @freeze_time(START_DATE)
+    def test_accounting_start_disabled_org_existing_session_403(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = self._prep_start_acct_data()
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 403)
+        ra.refresh_from_db()
+        self.assertEqual(ra.stop_time, None)
+        self.assertEqual(ra.input_octets, 0)
+
+    @freeze_time(START_DATE)
+    def test_accounting_interim_update_disabled_org_200(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        ra.refresh_from_db()
+        self.assertEqual(ra.input_octets, int(data["input_octets"]))
+
+    @freeze_time(START_DATE)
+    def test_accounting_interim_update_disabled_org_new_session_201(self):
+        # a session closed by OpenWISP when the user logs into another
+        # org must still be recorded even though it started before the
+        # organization was disabled.
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+    @freeze_time(START_DATE)
+    def test_accounting_stop_disabled_org_200(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = self.acct_post_data
+        data["status_type"] = "Stop"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        ra.refresh_from_db()
+        self.assertEqual(ra.stop_time.timetuple(), now().timetuple())
+
+    @freeze_time(START_DATE)
+    def test_accounting_interim_update_cross_org_disabled_org_200(self):
+        # the org whose credentials are used to authenticate the request
+        # is disabled; the interim-update-on-unseen-unique_id corner case
+        # for the *other* organization's session must still return 200,
+        # not 403, since only "Start" is blocked.
+        org2 = self._create_org(name="org2", slug="org2")
+        org2.radius_settings = OrganizationRadiusSettings.objects.create(
+            organization=org2
+        )
+        org2.save()
+        org2.is_active = False
+        org2.save()
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(data),
+            HTTP_AUTHORIZATION=f"Bearer {org2.pk} {org2.radius_settings.token}",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+
+    @freeze_time(START_DATE)
+    def test_accounting_on_disabled_org_200(self):
+        self.default_org.is_active = False
+        self.default_org.save()
+        data = {
+            "status_type": "Accounting-On",
+            "session_id": "",
+            "unique_id": "569533dad629d47d8b122826d3ed7f3d",
+            "username": "",
+            "realm": "",
+            "nas_ip_address": "192.168.182.1",
+            "nas_port_id": "",
+            "nas_port_type": "Wireless-802.11",
+            "session_time": "",
+            "authentication": "",
+            "input_octets": "",
+            "output_octets": "",
+            "called_station_id": "C0-4A-00-EE-D1-0D",
+            "calling_station_id": "00-00-00-00-00-00",
+            "terminate_cause": "",
+            "service_type": "",
+            "framed_protocol": "",
+            "framed_ip_address": "",
+            "framed_ipv6_address": "",
+            "framed_ipv6_prefix": "",
+            "framed_interface_id": "",
+            "delegated_ipv6_prefix": "",
+        }
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data)
 
     def test_accounting_list_200(self):
         data1 = self.acct_post_data
@@ -2305,6 +2467,64 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             1,
         )
 
+    def test_mac_addr_roaming_only_disabled_org_session_returns_none(self):
+        calling_station_id = "00-11-22-33-44-66"
+        org2 = self._create_org(name="org2", slug="org2")
+        OrganizationRadiusSettings.objects.create(
+            organization=org2, mac_addr_roaming_enabled=True
+        )
+        org2.is_active = False
+        org2.save()
+        disabled_org_session = self.acct_post_data
+        disabled_org_session.update(
+            username="tester",
+            calling_station_id=calling_station_id,
+            organization=org2,
+        )
+        self._create_radius_accounting(**disabled_org_session)
+        response = self._authorize_user(
+            username=calling_station_id, password=calling_station_id
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, None)
+
+    def test_mac_addr_roaming_uses_active_org_session(self):
+        calling_station_id = "00-11-22-33-44-77"
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        self.default_org.radius_settings.mac_addr_roaming_enabled = True
+        self.default_org.radius_settings.save()
+        active_session = self.acct_post_data
+        active_session.update(
+            username="tester",
+            calling_station_id=calling_station_id,
+            unique_id="active-org-session",
+            start_time=now() - timedelta(minutes=1),
+        )
+        self._create_radius_accounting(**active_session)
+        disabled_org = self._create_org(name="disabled-org", slug="disabled-org")
+        OrganizationRadiusSettings.objects.create(
+            organization=disabled_org, mac_addr_roaming_enabled=True
+        )
+        disabled_org.is_active = False
+        disabled_org.save()
+        disabled_session = self.acct_post_data
+        disabled_session.update(
+            username="disabled-user",
+            calling_station_id=calling_station_id,
+            organization=disabled_org,
+            unique_id="disabled-org-session",
+            start_time=now(),
+        )
+        self._create_radius_accounting(**disabled_session)
+
+        response = self._authorize_user(
+            username=calling_station_id, password=calling_station_id
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
 
 class TestApiReject(ApiTokenMixin, BaseTestCase):
     @classmethod
@@ -2329,6 +2549,19 @@ class TestApiReject(ApiTokenMixin, BaseTestCase):
         response = self.client.post(
             reverse("radius:authorize"),
             {"username": "baldo", "password": "ugo"},
+            HTTP_AUTHORIZATION=self.auth_header,
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data, _AUTH_TYPE_REJECT_RESPONSE)
+
+    def test_authorize_disabled_org_401(self):
+        self._get_org_user()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.default_org.is_active = False
+            self.default_org.save()
+        response = self.client.post(
+            reverse("radius:authorize"),
+            {"username": "tester", "password": "tester"},
             HTTP_AUTHORIZATION=self.auth_header,
         )
         self.assertEqual(response.status_code, 401)

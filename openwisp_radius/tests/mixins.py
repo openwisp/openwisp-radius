@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils.timezone import now, timedelta
 
+from openwisp_users.tests.utils import TestDisabledOrgMixin
 from openwisp_utils.tests import AssertNumQueriesSubTestMixin
 
 from ..utils import load_model
@@ -218,7 +219,7 @@ class ApiTokenMixin(BasePostParamsMixin):
         return login_response.json()["radius_user_token"]
 
 
-class BaseTestMixin:
+class BaseTestMixin(TestDisabledOrgMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

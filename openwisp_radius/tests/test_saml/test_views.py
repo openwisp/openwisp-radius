@@ -137,6 +137,28 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(RadiusToken.objects.get(user=user).password_based, False)
 
+    def test_acs_view_disabled_organization(self):
+        org_slug = "default"
+        relay_state = self._get_relay_state(
+            redirect_url="/radius/saml2/additional-info/", org_slug=org_slug
+        )
+        saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        # disable the organization after the SAML response was generated, so
+        # the ACS view (not LoginView) is what rejects the request
+        org = self._get_org(org_slug)
+        org.is_active = False
+        org.save()
+        response = self.client.post(
+            reverse("radius:saml2_acs"),
+            {
+                "SAMLResponse": self.b64_for_post(saml_response),
+                "RelayState": relay_state,
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(OrganizationUser.objects.count(), 0)
+        self.assertEqual(RadiusToken.objects.count(), 0)
+
     @capture_any_output()
     def test_invalid_email_raise_validation_error(self):
         invalid_email = "invalid_email@example"
@@ -678,3 +700,15 @@ class TestLoginView(TestSamlMixin, TestCase):
             self.assertEqual(response.status_code, 403)
             org.radius_settings.saml_registration_enabled = None
             org.radius_settings.save()
+
+    def test_saml_login_disabled_organization(self):
+        org = self._get_org("default")
+        org.is_active = False
+        org.save()
+        redirect_url = "https://captive-portal.example.com"
+        response = self.client.get(
+            self.login_url,
+            {"RelayState": f"{redirect_url}?org=default"},
+        )
+        # a disabled organization must never redirect to the IdP
+        self.assertEqual(response.status_code, 403)

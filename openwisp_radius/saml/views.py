@@ -54,7 +54,10 @@ class OrganizationSamlMixin(object):
 
     def get_organization_from_relay_state(self):
         org_slug = self.get_org_slug_from_relay_state()
-        return get_object_or_404(Organization, slug=org_slug)
+        organization = get_object_or_404(Organization, slug=org_slug)
+        if not organization.is_active:
+            raise PermissionDenied()
+        return organization
 
 
 class AssertionConsumerServiceView(
@@ -219,9 +222,9 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
         # Check correct organization slug is present in the request
         try:
             org_slug = self.get_org_slug_from_relay_state()
-            organization = Organization.objects.only("id", "radius_settings").get(
-                slug=org_slug
-            )
+            organization = Organization.objects.only(
+                "id", "radius_settings", "is_active"
+            ).get(slug=org_slug)
         except (ValueError, ObjectDoesNotExist) as error:
             if isinstance(error, ObjectDoesNotExist):
                 logger.error("Organization with the provided slug does not exist")
@@ -229,7 +232,7 @@ class LoginView(OrganizationSamlMixin, BaseLoginView):
                 logger.error(str(error))
             return render(request, "djangosaml2/login_error.html")
         else:
-            if not get_organization_radius_settings(
+            if not organization.is_active or not get_organization_radius_settings(
                 organization, "saml_registration_enabled"
             ):
                 raise PermissionDenied()

@@ -26,7 +26,10 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
-from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_users.api.mixins import (
+    DISABLED_ORGANIZATION_ERROR_MESSAGE,
+    FilterSerializerByOrgManaged,
+)
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as BasePasswordResetSerializer,
 )
@@ -447,8 +450,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RadiusOrganizationField(serializers.SlugRelatedField):
+    default_error_messages = {
+        "does_not_exist": DISABLED_ORGANIZATION_ERROR_MESSAGE.replace(
+            "{pk_value}", "{value}"
+        )
+    }
+
     def get_queryset(self):
-        queryset = Organization.objects.all()
+        queryset = Organization.objects.filter(is_active=True)
         request = self.context.get("request", None)
         if not request.user.is_superuser:
             queryset = queryset.filter(pk__in=request.user.organizations_dict.keys())

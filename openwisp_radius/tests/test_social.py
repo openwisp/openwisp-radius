@@ -88,6 +88,22 @@ class TestSocial(ApiTokenMixin, BaseTestCase):
             self.default_org.radius_settings.social_registration_enabled = None
             self.default_org.radius_settings.save()
 
+    def test_social_login_disabled_organization(self):
+        user = self._create_social_user()
+        self.client.force_login(user)
+        url = self.get_url()
+        self.default_org.is_active = False
+        self.default_org.save()
+        response = self.client.get(url, {"cp": "http://wifi.openwisp.org/cp"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(user.is_member(self.default_org), False)
+        self.assertEqual(
+            RegisteredUser.objects.filter(
+                user=user, organization=self.default_org
+            ).exists(),
+            False,
+        )
+
     def test_redirect_cp_301(self):
         user = self._create_social_user()
         self.client.force_login(user)
