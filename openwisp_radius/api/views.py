@@ -23,7 +23,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
@@ -153,7 +153,7 @@ class RadiusBatchFilter(OrganizationManagedFilter, filters.FilterSet):
 class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
+    queryset = RadiusBatch.objects.all().order_by("-created")
     serializer_class = RadiusBatchReadSerializer
     filterset_class = RadiusBatchFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -229,6 +229,12 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
 
 
+class Conflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = _("Conflict.")
+    default_code = "conflict"
+
+
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -237,16 +243,6 @@ download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
         """,
     ),
 )
-class BatchDetailView(ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveAPIView):
-    authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
-    serializer_class = RadiusBatchReadSerializer
-
-
-batch_detail = BatchDetailView.as_view()
-
-
 @method_decorator(
     name="delete",
     decorator=swagger_auto_schema(
@@ -257,7 +253,7 @@ batch_detail = BatchDetailView.as_view()
         responses={204: "No Content", 409: "Conflict"},
     ),
 )
-class BatchDeleteView(
+class BatchDetailView(
     ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveDestroyAPIView
 ):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
@@ -265,19 +261,20 @@ class BatchDeleteView(
     queryset = RadiusBatch.objects.all()
     serializer_class = RadiusBatchReadSerializer
 
-    def delete(self, request, *args, **kwargs):
-        with transaction.atomic():
-            batch = RadiusBatch.objects.select_for_update().get(pk=self.get_object().pk)
-            if batch.status == RadiusBatch.PROCESSING:
-                return Response(
-                    {"detail": _("Cannot delete a batch while it is being processed.")},
-                    status=status.HTTP_409_CONFLICT,
-                )
-            batch.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_object(self):
+        obj = super().get_object()
+        if self.request.method == "DELETE":
+            with transaction.atomic():
+                batch = RadiusBatch.objects.select_for_update().get(pk=obj.pk)
+                if batch.status == RadiusBatch.PROCESSING:
+                    raise Conflict(
+                        _("Cannot delete a batch while it is being processed.")
+                    )
+                return batch
+        return obj
 
 
-batch_delete = BatchDeleteView.as_view()
+batch_detail = BatchDetailView.as_view()
 
 
 class UserDetailsUpdaterMixin(object):

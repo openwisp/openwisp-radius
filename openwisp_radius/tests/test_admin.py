@@ -422,7 +422,7 @@ class TestAdmin(
             strategy="prefix",
             prefix="test-proc",
         )
-        processing.status = "processing"
+        processing.status = RadiusBatch.PROCESSING
         processing.save(update_fields=["status"])
         changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
         data = {

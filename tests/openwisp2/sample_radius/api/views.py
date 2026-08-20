@@ -1,7 +1,6 @@
 from openwisp_radius.api.freeradius_views import AccountingView as BaseAccountingView
 from openwisp_radius.api.freeradius_views import AuthorizeView as BaseAuthorizeView
 from openwisp_radius.api.freeradius_views import PostAuthView as BasePostAuthView
-from openwisp_radius.api.views import BatchDeleteView as BaseBatchDeleteView
 from openwisp_radius.api.views import BatchDetailView as BaseBatchDetailView
 from openwisp_radius.api.views import BatchView as BaseBatchView
 from openwisp_radius.api.views import ChangePhoneNumberView as BaseChangePhoneNumberView
@@ -54,10 +53,6 @@ class BatchView(BaseBatchView):
 
 
 class BatchDetailView(BaseBatchDetailView):
-    pass
-
-
-class BatchDeleteView(BaseBatchDeleteView):
     pass
 
 
@@ -126,7 +121,6 @@ postauth = PostAuthView.as_view()
 accounting = AccountingView.as_view()
 batch = BatchView.as_view()
 batch_detail = BatchDetailView.as_view()
-batch_delete = BatchDeleteView.as_view()
 register = RegisterView.as_view()
 obtain_auth_token = ObtainAuthTokenView.as_view()
 validate_auth_token = ValidateAuthTokenView.as_view()

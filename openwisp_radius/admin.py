@@ -509,7 +509,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         skipped = 0
         deleted = 0
         for obj in queryset:
-            if obj.status == "processing":
+            if obj.status == RadiusBatch.PROCESSING:
                 skipped += 1
                 continue
             obj.delete()

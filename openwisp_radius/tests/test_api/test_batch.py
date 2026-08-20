@@ -232,7 +232,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch = self._create_prefix_batch()
         batch_id = batch.pk
         header = self._get_auth_header()
-        url = reverse("radius:batch_delete", args=[batch_id])
+        url = reverse("radius:batch_detail", args=[batch_id])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RadiusBatch.objects.filter(pk=batch_id).exists())
@@ -244,14 +244,14 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         with self.subTest("w/o login"):
             batch = self._create_prefix_batch(name="batch-noauth")
             response = self.client.delete(
-                reverse("radius:batch_delete", args=[batch.pk])
+                reverse("radius:batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 401)
         with self.subTest("superuser"):
             batch = self._create_prefix_batch(name="batch-super")
             header = self._get_auth_header()
             response = self.client.delete(
-                reverse("radius:batch_delete", args=[batch.pk]),
+                reverse("radius:batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
@@ -259,7 +259,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             batch = self._create_prefix_batch(name="batch-noperm")
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.delete(
-                reverse("radius:batch_delete", args=[batch.pk]),
+                reverse("radius:batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 403)
@@ -268,7 +268,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             staff.user_permissions.add(delete_perm)
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.delete(
-                reverse("radius:batch_delete", args=[batch.pk]),
+                reverse("radius:batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
@@ -278,7 +278,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch.status = RadiusBatch.PROCESSING
         batch.save(update_fields=["status"])
         header = self._get_auth_header()
-        url = reverse("radius:batch_delete", args=[batch.pk])
+        url = reverse("radius:batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
@@ -290,7 +290,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         delete_perm = Permission.objects.get(codename="delete_radiusbatch")
         staff.user_permissions.add(delete_perm)
         header = self._get_auth_header(staff.username, "tester")
-        url = reverse("radius:batch_delete", args=[batch.pk])
+        url = reverse("radius:batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, 404)
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
@@ -302,7 +302,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 batch.status = batch_status
                 batch.save(update_fields=["status"])
                 header = self._get_auth_header()
-                url = reverse("radius:batch_delete", args=[batch.pk])
+                url = reverse("radius:batch_detail", args=[batch.pk])
                 response = self.client.delete(url, HTTP_AUTHORIZATION=header)
                 self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
                 self.assertFalse(RadiusBatch.objects.filter(pk=batch.pk).exists())
