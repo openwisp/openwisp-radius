@@ -266,13 +266,14 @@ class BatchDeleteView(
     serializer_class = RadiusBatchReadSerializer
 
     def delete(self, request, *args, **kwargs):
-        batch = self.get_object()
-        if batch.status == RadiusBatch.PROCESSING:
-            return Response(
-                {"detail": _("Cannot delete a batch while it is being processed.")},
-                status=status.HTTP_409_CONFLICT,
-            )
-        batch.delete()
+        with transaction.atomic():
+            batch = RadiusBatch.objects.select_for_update().get(pk=self.get_object().pk)
+            if batch.status == RadiusBatch.PROCESSING:
+                return Response(
+                    {"detail": _("Cannot delete a batch while it is being processed.")},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            batch.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

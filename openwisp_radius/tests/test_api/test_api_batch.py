@@ -1,6 +1,7 @@
 import swapper
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
 
@@ -137,6 +138,33 @@ class TestBatchListDetailDelete(ApiTokenMixin, BaseTestCase):
         self.assertIsNotNone(batch_data["pdf_link"])
         self.assertIn(str(batch.pk), batch_data["pdf_link"])
         self.assertIsNone(batch_data["csv_link"])
+
+    def test_batch_csv_link_in_list_and_detail(self):
+        csv_content = b"user,cleartext$abcd,email@gmail.com,firstname,lastname"
+        csv_file = SimpleUploadedFile("test_csv_link.csv", csv_content)
+        batch = RadiusBatch(
+            name="csv-link-test",
+            strategy="csv",
+            csvfile=csv_file,
+            organization=self.default_org,
+            status=RadiusBatch.COMPLETED,
+        )
+        batch.save()
+        header = self._get_auth_header()
+        with self.subTest("list"):
+            resp = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+            batch_data = resp.json()["results"][0]
+            self.assertIsNotNone(batch_data["csv_link"])
+            self.assertIn(str(batch.pk), batch_data["csv_link"])
+            self.assertIsNone(batch_data["pdf_link"])
+        with self.subTest("detail"):
+            resp = self.client.get(
+                reverse("radius:batch_detail", args=[batch.pk]),
+                HTTP_AUTHORIZATION=header,
+            )
+            data = resp.json()
+            self.assertIsNotNone(data["csv_link"])
+            self.assertIn(str(batch.pk), data["csv_link"])
 
     def test_batch_detail_200(self):
         batch = self._create_prefix_batch()

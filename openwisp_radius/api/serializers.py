@@ -562,9 +562,22 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
+class BatchUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        )
+        read_only_fields = fields
+
+
 class RadiusBatchReadSerializer(serializers.ModelSerializer):
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
-    users = UserSerializer(many=True, read_only=True)
+    users = BatchUserSerializer(many=True, read_only=True)
     pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
     csv_link = serializers.SerializerMethodField(required=False, read_only=True)
     status = serializers.CharField(read_only=True)
