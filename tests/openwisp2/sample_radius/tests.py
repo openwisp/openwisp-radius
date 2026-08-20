@@ -1,6 +1,7 @@
 from openwisp_radius.tests import test_migrations as base_migration_tests
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
 from openwisp_radius.tests.test_api.test_api import TestApi as BaseTestApi
+from openwisp_radius.tests.test_api.test_batch import TestBatch as BaseTestBatch
 from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestApiReject as BaseTestApiReject,
 )
@@ -77,6 +78,10 @@ class TestAdmin(BaseTestAdmin):
 
 
 class TestApi(BaseTestApi):
+    pass
+
+
+class TestBatch(BaseTestBatch):
     pass
 
 
@@ -207,6 +212,7 @@ class TestPhoneTokenOrganizationPopulateResolution(
 
 del BaseTestAdmin
 del BaseTestApi
+del BaseTestBatch
 del BaseTestFreeradiusApi
 del BaseTestApiReject
 del BaseTestAutoGroupname

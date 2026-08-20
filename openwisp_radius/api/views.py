@@ -153,7 +153,11 @@ class RadiusBatchFilter(OrganizationManagedFilter, filters.FilterSet):
 class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all().order_by("-created")
+    queryset = (
+        RadiusBatch.objects.select_related("organization")
+        .prefetch_related("users")
+        .order_by("-created")
+    )
     serializer_class = RadiusBatchReadSerializer
     filterset_class = RadiusBatchFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -258,7 +262,9 @@ class BatchDetailView(
 ):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
+    queryset = RadiusBatch.objects.select_related("organization").prefetch_related(
+        "users"
+    )
     serializer_class = RadiusBatchReadSerializer
 
     def get_object(self):
