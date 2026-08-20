@@ -31,6 +31,7 @@ from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveDestroyAPIView,
     RetrieveUpdateDestroyAPIView,
     get_object_or_404,
 )
@@ -78,6 +79,7 @@ from .serializers import (
     AuthTokenSerializer,
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
+    RadiusBatchReadSerializer,
     RadiusBatchSerializer,
     RadiusGroupSerializer,
     RadiusUserGroupSerializer,
@@ -120,20 +122,49 @@ class ThrottledAPIMixin(object):
     throttle_scope = "others"
 
 
-class BatchView(ThrottledAPIMixin, CreateAPIView):
-    authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
-    serializer_class = RadiusBatchSerializer
+class RadiusBatchFilter(OrganizationManagedFilter, filters.FilterSet):
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusBatch
+        fields = [*OrganizationManagedFilter.Meta.fields, "strategy"]
 
-    def post(self, request, *args, **kwargs):
-        """
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of batch user creation operations for the
+        organizations managed by the user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
         **Requires the user auth token (Bearer Token).**
         Allows organization administrators to create
         a batch of users using a csv file or generate users
         with a given prefix.
-        """
-        serializer = self.get_serializer(data=request.data)
+        """,
+        request_body=RadiusBatchSerializer,
+        responses={201: RadiusBatchSerializer, 202: RadiusBatchSerializer},
+    ),
+)
+class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+    serializer_class = RadiusBatchReadSerializer
+    filterset_class = RadiusBatchFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name"]
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
+
+    def post(self, request, *args, **kwargs):
+        serializer = RadiusBatchSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
             num_of_users = valid_data.get("number_of_users", 0)
@@ -142,7 +173,9 @@ class BatchView(ThrottledAPIMixin, CreateAPIView):
             batch = serializer.save(organization=organization)
             is_async = batch.schedule_processing(number_of_users=num_of_users)
             batch.refresh_from_db()
-            response_serializer = self.get_serializer(batch)
+            response_serializer = RadiusBatchSerializer(
+                batch, context={"request": request}
+            )
             status_code = (
                 status.HTTP_202_ACCEPTED if is_async else status.HTTP_201_CREATED
             )
@@ -194,6 +227,56 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
 
 
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a batch user creation operation by its UUID.
+        """,
+    ),
+)
+class BatchDetailView(ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+    serializer_class = RadiusBatchReadSerializer
+
+
+batch_detail = BatchDetailView.as_view()
+
+
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a batch user creation operation and its associated users.
+        Cannot delete a batch while it is being processed.
+        """,
+        responses={204: "No Content", 409: "Conflict"},
+    ),
+)
+class BatchDeleteView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveDestroyAPIView
+):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.all()
+    serializer_class = RadiusBatchReadSerializer
+
+    def delete(self, request, *args, **kwargs):
+        batch = self.get_object()
+        if batch.status == RadiusBatch.PROCESSING:
+            return Response(
+                {"detail": _("Cannot delete a batch while it is being processed.")},
+                status=status.HTTP_409_CONFLICT,
+            )
+        batch.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+batch_delete = BatchDeleteView.as_view()
 
 
 class UserDetailsUpdaterMixin(object):
