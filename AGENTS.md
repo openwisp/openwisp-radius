@@ -77,6 +77,8 @@ If instructions conflict, repository config and CI workflows win first, official
 
 - Watch for cross-tenant data leaks, permission bypasses, insecure credentials, unsafe redirects, unsafe file paths, token/session issues, and secrets.
 - Preserve validation around RADIUS credentials, accounting data, CSV imports, private storage, SAML/social login payloads, notification payloads, and URLs.
+- Objects belonging to a disabled organization must be readable and deletable; creation and updates must be blocked across all relevant write paths. This applies to objects with either a direct or chained/nested relationship to the organization. No other operations should be permitted, except for ordinary cleanup operations.
+- Operations on deactivated devices must be blocked, except for read-only access and cleanup operations required to maintain consistency. Creation, updates, provisioning, configuration, and other mutating operations must not be performed for deactivated devices.
 
 ## Troubleshooting
 
