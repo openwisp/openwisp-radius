@@ -537,10 +537,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
     @patch("openwisp_radius.tasks.convert_called_station_id")
     def test_convert_called_station_id_closes_telnet(self, *args):
-        # regression for #727: Exscript's telnetlib.Telnet has no context
-        # manager protocol, so `with Telnet(...)` raised a TypeError that was
-        # swallowed upstream and the id was never converted. The command must
-        # open the connection and close it explicitly (not via `with`).
         org = self._create_org(
             id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
             name="telnet close test",
@@ -557,7 +553,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         closed = []
 
         class FakeTelnet:
-            # mimics Exscript's Telnet: no __enter__/__exit__
             def __init__(self, *args, **kwargs):
                 pass
 
@@ -570,11 +565,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             def close(self):
                 closed.append(True)
 
-        with patch(
-            "openwisp_radius.management.commands.base."
-            "convert_called_station_id.telnetlib.Telnet",
-            FakeTelnet,
-        ):
+        with patch("telnetlib3.telnetlib.Telnet", FakeTelnet):
             call_command("convert_called_station_id")
 
         radius_acc.refresh_from_db()

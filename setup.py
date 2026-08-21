@@ -56,9 +56,8 @@ setup(
         "django-private-storage~=3.1.0",
         "django-ipware>=5.0,<7.1",
         "pyrad~=2.4",
-        # Python 3.13 removed built-in telnetlib module,
-        # thus we use Exscript for telnet.
-        "Exscript~=2.6.28",
+        # Python 3.13 removed the built-in telnetlib module.
+        "telnetlib3>=5,<6",
     ],
     extras_require={
         "saml": ["djangosaml2>=1.12.0,<1.13.0"],
