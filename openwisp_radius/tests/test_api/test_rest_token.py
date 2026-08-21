@@ -397,6 +397,7 @@ class TestApiUserTokenTransactions(ApiTokenMixin, BaseTransactionTestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(RadiusToken.objects.count(), 0)
+        self.assertEqual(Token.objects.count(), 0)
 
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):

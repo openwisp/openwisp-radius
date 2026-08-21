@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from datetime import timedelta
 from unittest import mock
 
 import swapper
@@ -12,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from freezegun import freeze_time
 
 from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signal
@@ -257,7 +258,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(response.data)
 
     def test_authorize_disabled_org_radius_token_path(self):
-        self._get_org_user()
+        org_user = self._get_org_user()
         rad_token = self._login_and_obtain_auth_token()
         with self.captureOnCommitCallbacks(execute=True):
             self.default_org.is_active = False
@@ -269,6 +270,12 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         # no WWW-Authenticate header.
         response = self._authorize_user(password=rad_token)
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            RadiusToken.objects.filter(
+                user=org_user.user, organization=self.default_org
+            ).exists(),
+            False,
+        )
 
     def test_authorize_unverified_user(self):
         self._get_org_user()
@@ -1212,9 +1219,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     def test_accounting_interim_update_disabled_org_new_session_201(self):
-        # a session closed by OpenWISP when the user logs into another
-        # org must still be recorded even though it started before the
-        # organization was disabled.
+        # An Interim-Update for an unknown unique ID must still create an
+        # accounting record for a disabled organization. Only Start is blocked.
         self.default_org.is_active = False
         self.default_org.save()
         data = self.acct_post_data

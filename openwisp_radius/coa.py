@@ -131,9 +131,9 @@ class ChangeOfAuthorizationManager:
                 " Skipping CoA operation."
             )
             return
-        org_radius_settings = new_rad_group.organization.radius_settings
         if not new_rad_group.organization.is_active:
             return
+        org_radius_settings = new_rad_group.organization.radius_settings
         # The coa_enabled value is provided by a FallbackBooleanChoiceField on the
         # model instance and cannot be reliably evaluated inside queryset filters.
         # Evaluate it here on the resolved model instance instead of trying to

@@ -379,11 +379,17 @@ class ObtainAuthTokenView(
                                 user=user, organization=self.organization
                             )
                         except OrganizationUser.DoesNotExist:
-                            org_user = OrganizationUser(
-                                user=user, organization=self.organization
-                            )
-                            org_user.full_clean()
-                            org_user.save()
+                            try:
+                                with transaction.atomic():
+                                    org_user = OrganizationUser(
+                                        user=user, organization=self.organization
+                                    )
+                                    org_user.full_clean()
+                                    org_user.save()
+                            except IntegrityError:
+                                OrganizationUser.objects.get(
+                                    user=user, organization=self.organization
+                                )
                         RegisteredUser.get_or_create_for_user_and_org(
                             user=user,
                             organization=self.organization,

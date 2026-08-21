@@ -1637,12 +1637,14 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
             )
         except cls.DoesNotExist:
             Organization = swapper.load_model("openwisp_users", "Organization")
-            return (
+            is_active = (
                 Organization.objects.filter(pk=organization_pk)
                 .values_list("is_active", flat=True)
                 .first()
                 is True
             )
+            cache.set(cache_key, is_active)
+            return is_active
         settings.save_cache()
         return settings.organization.is_active
 

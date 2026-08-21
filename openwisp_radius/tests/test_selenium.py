@@ -311,7 +311,7 @@ class BasicTest(
         org.save()
         self.login()
         self.open(reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk]))
-        
+
         with self.subTest("Changes to active fields should be allowed"):
             notes_field = self.find_element(By.ID, "id_notes", 10)
             notes_field.clear()
@@ -322,9 +322,7 @@ class BasicTest(
             user.refresh_from_db()
             self.assertEqual(user.notes, "Updated via selenium test")
 
-        with self.subTest(
-            "Deleting disabled org's radiususergroup should be allowed"
-        ):
+        with self.subTest("Deleting disabled org's radiususergroup should be allowed"):
             delete_checkbox = self.find_element(
                 By.ID, "id_radiususergroup_set-0-DELETE", 10
             )
@@ -333,8 +331,8 @@ class BasicTest(
             self.find_elements(By.NAME, "_continue", 10)[-1].click()
             success_message = self.wait_for_visibility(By.CLASS_NAME, "success", 10)
             self.assertIn("was changed successfully", success_message.text)
-            self.assertFalse(
-                RadiusUserGroup.objects.filter(pk=user_group.pk).exists()
+            self.assertEqual(
+                RadiusUserGroup.objects.filter(pk=user_group.pk).exists(), False
             )
 
 

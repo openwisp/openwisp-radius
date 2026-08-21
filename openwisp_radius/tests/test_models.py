@@ -958,7 +958,12 @@ class TestRadiusBatch(BaseTestCase):
         )
         org.is_active = False
         org.save()
-        process_radius_batch(batch_id=radiusbatch.pk)
+        with self.assertLogs("openwisp_radius.tasks", level="INFO") as logs:
+            process_radius_batch(batch_id=radiusbatch.pk)
+        self.assertIn(
+            f'process_radius_batch("{radiusbatch.pk}") skipped: organization is disabled',
+            logs.output[0],
+        )
         mocked_process.assert_not_called()
         self.assertEqual(get_user_model().objects.count(), 0)
 
@@ -992,6 +997,18 @@ class TestOrganizationRadiusSettingsCache(BaseTestCase):
         self.assertEqual(
             OrganizationRadiusSettings.is_organization_active(uuid4()), False
         )
+
+    def test_is_organization_active_without_radius_settings_caches_result(self):
+        org = self._create_org(name="No RADIUS settings", slug="no-radius-settings")
+        OrganizationRadiusSettings.objects.filter(organization=org).delete()
+        with self.assertNumQueries(2):
+            self.assertEqual(
+                OrganizationRadiusSettings.is_organization_active(org.pk), True
+            )
+        with self.assertNumQueries(0):
+            self.assertEqual(
+                OrganizationRadiusSettings.is_organization_active(org.pk), True
+            )
 
     @mock.patch("openwisp_radius.tasks.disconnect_organization_sessions.delay")
     def test_organization_disabled_handler(self, mocked_disconnect):

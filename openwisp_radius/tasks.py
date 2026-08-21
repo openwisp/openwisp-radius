@@ -163,14 +163,32 @@ def disconnect_organization_sessions(organization_id):
             f'Organization "{organization_id}" does not exist. Skipping disconnect.'
         )
         return
-    if organization.is_active or not organization.radius_settings.coa_enabled:
+    if organization.is_active:
+        return
+
+    try:
+        radius_settings = organization.radius_settings
+    except ObjectDoesNotExist:
+        logger.warning(
+            f'Organization "{organization_id}" does not have any OpenWISP RADIUS '
+            "settings configured. Skipping disconnect."
+        )
+        return
+    if not radius_settings.coa_enabled:
         return
     sessions = RadiusAccounting.objects.filter(
         organization_id=organization_id, stop_time__isnull=True
     ).iterator(chunk_size=DISCONNECT_BATCH_SIZE)
     closed_sessions = []
     for session in sessions:
-        if not coa_manager.disconnect_session(session):
+        try:
+            disconnected = coa_manager.disconnect_session(session)
+        except Exception:
+            logger.exception(
+                f'Unexpected error while disconnecting "{session.unique_id}".'
+            )
+            continue
+        if not disconnected:
             continue
         # Disabling an organization removes its devices' configuration, so
         # the NAS may lose its connection before it can send its own

@@ -143,6 +143,8 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
             redirect_url="/radius/saml2/additional-info/", org_slug=org_slug
         )
         saml_response, relay_state = self._get_saml_response_for_acs_view(relay_state)
+        user_count = User.objects.count()
+        registered_user_count = RegisteredUser.objects.count()
         # disable the organization after the SAML response was generated, so
         # the ACS view (not LoginView) is what rejects the request
         org = self._get_org(org_slug)
@@ -156,7 +158,9 @@ class TestAssertionConsumerServiceView(TestSamlMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(User.objects.count(), user_count)
         self.assertEqual(OrganizationUser.objects.count(), 0)
+        self.assertEqual(RegisteredUser.objects.count(), registered_user_count)
         self.assertEqual(RadiusToken.objects.count(), 0)
 
     @capture_any_output()

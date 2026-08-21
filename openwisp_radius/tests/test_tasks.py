@@ -476,6 +476,43 @@ class TestTasks(FileMixin, BaseTestCase):
         self.assertEqual(session.stop_time, None)
         mocked_disconnect.assert_not_called()
 
+    def test_disconnect_organization_sessions_missing_radius_settings(self):
+        org = self._get_org()
+        org.radius_settings.delete()
+        with self.assertLogs("openwisp_radius.tasks", level="WARNING") as logs:
+            org.is_active = False
+            org.save()
+            tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("does not have any OpenWISP RADIUS settings", logs.output[0])
+
+    @mock.patch.object(
+        ChangeOfAuthorizationManager,
+        "disconnect_session",
+        side_effect=[RuntimeError, True],
+    )
+    def test_disconnect_organization_sessions_continues_after_error(
+        self, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        org.is_active = False
+        org.save()
+        failed_session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-error"
+        )
+        closed_session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-success"
+        )
+        with self.assertLogs("openwisp_radius.tasks", level="ERROR"):
+            tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        failed_session.refresh_from_db()
+        closed_session.refresh_from_db()
+        self.assertEqual(failed_session.stop_time, None)
+        self.assertNotEqual(closed_session.stop_time, None)
+        self.assertEqual(mocked_disconnect.call_count, 2)
+
     @mock.patch.object(RadClient, "perform_disconnect", return_value=True)
     @mock.patch.object(ChangeOfAuthorizationManager, "get_radsecret_from_radacct")
     def test_disconnect_organization_sessions_partial_failure(
@@ -484,6 +521,7 @@ class TestTasks(FileMixin, BaseTestCase):
         org = self._get_org()
         org.radius_settings.coa_enabled = True
         org.radius_settings.save()
+
         working_session = self._create_radius_accounting_session(
             org, "10.8.0.1", "disconnect-4"
         )

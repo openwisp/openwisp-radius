@@ -63,6 +63,10 @@ class OrganizationSamlMixin(object):
 class AssertionConsumerServiceView(
     OrganizationSamlMixin, RadiusTokenMixin, BaseAssertionConsumerServiceView
 ):
+    def post(self, request, *args, **kwargs):
+        self.get_organization_from_relay_state()
+        return super().post(request, *args, **kwargs)
+
     def post_login_hook(self, request, user, session_info):
         """If desired, a hook to add logic after a user has successfully logged in."""
         record_password_based_login(request, False)
