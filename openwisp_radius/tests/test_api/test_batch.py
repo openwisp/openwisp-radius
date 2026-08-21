@@ -165,7 +165,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertIsNone(batch_data["pdf_link"])
         with self.subTest("detail"):
             resp = self.client.get(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             data = resp.json()
@@ -175,7 +175,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
     def test_batch_detail_200(self):
         batch = self._create_prefix_batch()
         header = self._get_auth_header()
-        url = reverse("radius:batch_detail", args=[batch.pk])
+        url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.get(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
@@ -191,19 +191,21 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         staff = self._create_staff_user("detailstaff", org=self.default_org)
         batch = self._create_prefix_batch()
         with self.subTest("w/o login"):
-            response = self.client.get(reverse("radius:batch_detail", args=[batch.pk]))
+            response = self.client.get(
+                reverse("radius:radius_batch_detail", args=[batch.pk])
+            )
             self.assertEqual(response.status_code, 401)
         with self.subTest("superuser"):
             header = self._get_auth_header()
             response = self.client.get(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 200)
         with self.subTest("staff w/ managed org"):
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.get(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 200)
@@ -211,7 +213,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             no_org_staff = self._create_staff_user("noorgstaff")
             header = self._get_auth_header(no_org_staff.username, "tester")
             response = self.client.get(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 404)
@@ -221,14 +223,14 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch = self._create_prefix_batch(organization=org2)
         staff = self._create_staff_user("crossorgstaff", org=self.default_org)
         header = self._get_auth_header(staff.username, "tester")
-        url = reverse("radius:batch_detail", args=[batch.pk])
+        url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.get(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, 404)
 
     def test_batch_detail_404(self):
         header = self._get_auth_header()
         url = reverse(
-            "radius:batch_detail",
+            "radius:radius_batch_detail",
             args=["00000000-0000-0000-0000-000000000000"],
         )
         response = self.client.get(url, HTTP_AUTHORIZATION=header)
@@ -238,7 +240,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch = self._create_prefix_batch()
         batch_id = batch.pk
         header = self._get_auth_header()
-        url = reverse("radius:batch_detail", args=[batch_id])
+        url = reverse("radius:radius_batch_detail", args=[batch_id])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RadiusBatch.objects.filter(pk=batch_id).exists())
@@ -250,7 +252,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         with self.subTest("w/o login"):
             batch = self._create_prefix_batch(name="batch-noauth")
             response = self.client.delete(
-                reverse("radius:batch_detail", args=[batch.pk])
+                reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 401)
 
@@ -258,7 +260,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             batch = self._create_prefix_batch(name="batch-super")
             header = self._get_auth_header()
             response = self.client.delete(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
@@ -267,7 +269,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             batch = self._create_prefix_batch(name="batch-noperm")
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.delete(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 403)
@@ -277,7 +279,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             staff.user_permissions.add(delete_perm)
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.delete(
-                reverse("radius:batch_detail", args=[batch.pk]),
+                reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
@@ -287,7 +289,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch.status = RadiusBatch.PROCESSING
         batch.save(update_fields=["status"])
         header = self._get_auth_header()
-        url = reverse("radius:batch_detail", args=[batch.pk])
+        url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn(
@@ -303,7 +305,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         delete_perm = Permission.objects.get(codename="delete_radiusbatch")
         staff.user_permissions.add(delete_perm)
         header = self._get_auth_header(staff.username, "tester")
-        url = reverse("radius:batch_detail", args=[batch.pk])
+        url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, 404)
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
@@ -315,7 +317,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 batch.status = batch_status
                 batch.save(update_fields=["status"])
                 header = self._get_auth_header()
-                url = reverse("radius:batch_detail", args=[batch.pk])
+                url = reverse("radius:radius_batch_detail", args=[batch.pk])
                 response = self.client.delete(url, HTTP_AUTHORIZATION=header)
                 self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
                 self.assertFalse(RadiusBatch.objects.filter(pk=batch.pk).exists())
