@@ -271,7 +271,12 @@ class BatchDetailView(
         with transaction.atomic():
             batch = RadiusBatch.objects.select_for_update().get(pk=instance.pk)
             if batch.status == RadiusBatch.PROCESSING:
-                raise Conflict(_("Cannot delete a batch while it is being processed."))
+                raise Conflict(
+                    _(
+                        "The radius batch object is currently being processed"
+                        " and cannot be deleted."
+                    )
+                )
             batch.delete()
 
 

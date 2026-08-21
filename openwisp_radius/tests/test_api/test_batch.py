@@ -65,12 +65,14 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         with self.subTest("w/o login"):
             response = self.client.get(reverse("radius:batch"))
             self.assertEqual(response.status_code, 401)
+
         with self.subTest("superuser"):
             header = self._get_auth_header()
             response = self.client.get(
                 reverse("radius:batch"), HTTP_AUTHORIZATION=header
             )
             self.assertEqual(response.status_code, 200)
+
         with self.subTest("staff w/ managed org"):
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.get(
@@ -78,6 +80,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["count"], 1)
+
         with self.subTest("non-staff user"):
             regular = User.objects.create_user(
                 username="regular", email="regular@test.com", password="tester"
@@ -250,6 +253,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 reverse("radius:batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 401)
+
         with self.subTest("superuser"):
             batch = self._create_prefix_batch(name="batch-super")
             header = self._get_auth_header()
@@ -258,6 +262,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
+
         with self.subTest("staff w/o delete permission"):
             batch = self._create_prefix_batch(name="batch-noperm")
             header = self._get_auth_header(staff.username, "tester")
@@ -266,6 +271,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 403)
+
         with self.subTest("staff w/ delete permission"):
             batch = self._create_prefix_batch(name="batch-withperm")
             staff.user_permissions.add(delete_perm)
@@ -284,6 +290,10 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         url = reverse("radius:batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn(
+            "currently being processed and cannot be deleted",
+            response.json()["detail"],
+        )
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 
     def test_batch_delete_cross_org_404(self):
