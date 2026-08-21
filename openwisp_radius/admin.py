@@ -778,27 +778,21 @@ if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
         extra = 0
 
         def get_exclude(self, request, obj=None):
-            fields = super().get_exclude(request, obj) or []
+            fields = list(super().get_exclude(request, obj) or [])
             if "password_based" not in fields:
                 fields.append("password_based")
-            if not hasattr(obj, "radius_token"):
-                return fields + ["key"]
+            if not (obj and hasattr(obj, "radius_token")) and "key" not in fields:
+                fields.append("key")
             return fields
 
         def get_formset(self, request, obj=None, **kwargs):
-            kwargs["widgets"] = kwargs.get("widgets", {})
-            if hasattr(obj, "radius_token"):
-                kwargs["widgets"].update(
-                    {
-                        "key": forms.widgets.TextInput(
-                            attrs={
-                                "class": "readonly vTextField",
-                                "readonly": True,
-                                "maxlength": RadiusToken._meta.get_field(
-                                    "key"
-                                ).max_length,
-                            }
-                        )
+            if obj and hasattr(obj, "radius_token"):
+                kwargs["widgets"] = kwargs.get("widgets", {})
+                kwargs["widgets"]["key"] = forms.widgets.TextInput(
+                    attrs={
+                        "class": "readonly vTextField",
+                        "readonly": True,
+                        "maxlength": RadiusToken._meta.get_field("key").max_length,
                     }
                 )
             return super().get_formset(request, obj, **kwargs)

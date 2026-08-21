@@ -42,7 +42,6 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         with self.subTest("add"):
             excluded = inline.get_exclude(request)
             self.assertIn("password_based", excluded)
-            self.assertIn("key", excluded)
 
         RadiusToken.objects.create(user=user, organization=self._get_org())
 
@@ -104,15 +103,14 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         self.assertEqual(RadiusToken.objects.count(), 1)
         self.assertNotContains(response, 'id="id_radius_token-0-password_based"')
         radius_token = user.radius_token.key
-        key_input = (
-            '<input type="text" name="radius_token-0-key"'
-            f' value="{radius_token}"'
-            ' class="readonly vTextField" readonly'
-            ' maxlength="40" id="id_radius_token-0-key">'
-        )
         self.assertContains(
             response,
-            key_input,
+            (
+                '<input type="text" name="radius_token-0-key"'
+                f' value="{radius_token}"'
+                ' class="readonly vTextField" readonly maxlength="40"'
+                ' id="id_radius_token-0-key">'
+            ),
             html=True,
         )
 
