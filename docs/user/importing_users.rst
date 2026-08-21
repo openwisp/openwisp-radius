@@ -105,6 +105,12 @@ behavior for new users, clear the selected group before saving.
 The RADIUS group cannot be changed after creating a batch, while notes can
 be edited at any time.
 
+.. important::
+
+    Users cannot be imported for disabled organizations. If the
+    organization is disabled before a queued batch is processed, OpenWISP
+    will skip the batch and will not import users.
+
 .. image:: ../images/add_users_csv.gif
     :alt: Demo: adding users from CSV
 

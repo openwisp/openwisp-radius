@@ -25,8 +25,8 @@ authorize the user.
 
 .. important::
 
-    Disabled organizations cannot use social login. Social login requests
-    for a disabled organization return ``403 Forbidden`` response.
+    Social login is unavailable for disabled organizations. Requests
+    return ``403 Forbidden``.
 
 This kind of implementation allows to implement the social login with any
 captive portal which already supports the RADIUS protocol because it's

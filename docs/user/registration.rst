@@ -8,8 +8,9 @@ reset directly from your captive page.
 
 .. important::
 
-    Disabled organizations reject registration and social or SAML login
-    with ``403 Forbidden`` response.
+    Registration, social login, and SAML login are unavailable for
+    disabled organizations. Such requests are rejected with ``403
+    Forbidden``.
 
 The registration API endpoint is described in :ref:`API: User Registration
 <radius_user_registration>`.
