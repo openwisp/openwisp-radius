@@ -961,7 +961,8 @@ class TestRadiusBatch(BaseTestCase):
         with self.assertLogs("openwisp_radius.tasks", level="INFO") as logs:
             process_radius_batch(batch_id=radiusbatch.pk)
         self.assertIn(
-            f'process_radius_batch("{radiusbatch.pk}") skipped: organization is disabled',
+            f'process_radius_batch("{radiusbatch.pk}")'
+            " skipped: organization is disabled",
             logs.output[0],
         )
         mocked_process.assert_not_called()
