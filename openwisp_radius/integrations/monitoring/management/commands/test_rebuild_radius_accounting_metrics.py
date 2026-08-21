@@ -7,7 +7,6 @@ from django.test import tag
 from django.utils import timezone
 from swapper import load_model
 
-from openwisp_radius.integrations.monitoring import tasks
 from openwisp_radius.integrations.monitoring.tests.mixins import (
     CreateDeviceMonitoringMixin,
 )
@@ -130,6 +129,8 @@ class TestRebuildRadiusAccountingMetrics(
 
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_deletes_only_session_point(self, *args):
+        from ...tasks import post_save_radiusaccounting
+
         user = self._create_user()
         device = self._create_device()
         self._create_registered_user(user=user)
@@ -144,7 +145,7 @@ class TestRebuildRadiusAccountingMetrics(
             input_octets=1000000000,
             output_octets=2000000000,
         )
-        tasks.post_save_radiusaccounting(
+        post_save_radiusaccounting(
             username=accounted_session.username,
             organization_id=str(accounted_session.organization_id),
             input_octets=accounted_session.input_octets,
