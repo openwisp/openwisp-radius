@@ -8,15 +8,19 @@ from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
-from django.forms.models import BaseInlineFormSet
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from openwisp_users.admin import OrganizationAdmin, UserAdmin
+from openwisp_users.admin import (
+    MultitenantReadOnlyInlineFormSet,
+    OrganizationAdmin,
+    UserAdmin,
+)
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
+from openwisp_users.widgets import OrganizationAutocompleteSelect
 from openwisp_utils.admin import (
     AlwaysHasChangedMixin,
     ReadOnlyAdmin,
@@ -211,6 +215,7 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
     inlines = [RadiusGroupCheckInline, RadiusGroupReplyInline]
     select_related = ("organization",)
     actions = ["delete_selected_groups"]
+    disabled_organization_action_exclusions = ("delete_selected_groups",)
 
     def get_group_name(self, obj):
         return obj.name.replace(f"{obj.organization.slug}-", "")
@@ -368,6 +373,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     search_fields = ["name"]
     actions = ["delete_selected_batches"]
     autocomplete_fields = ["group"]
+    disabled_organization_action_exclusions = ("delete_selected_batches",)
     form = RadiusBatchForm
     help_text = {
         "text": _(
@@ -560,14 +566,21 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
 
 # Inlines for UserAdmin & OrganizationAdmin
-class RadiusUserGroupInline(StackedInline):
+class RadiusUserGroupFormSet(MultitenantReadOnlyInlineFormSet):
+    organization_fk_field = "group"
+    organization_lookup = "group__organization"
+
+
+class RadiusUserGroupInline(MultitenantAdminMixin, StackedInline):
     model = RadiusUserGroup
+    formset = RadiusUserGroupFormSet
     exclude = ["username", "groupname", "created", "modified"]
     ordering = ("priority",)
     autocomplete_fields = ("group",)
     verbose_name = _("radius user group")
     verbose_name_plural = _("radius user groups")
     extra = 0
+    multitenant_shared_relations = ["group"]
 
 
 class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
@@ -585,7 +598,7 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-class RegisteredUserFormset(BaseInlineFormSet):
+class RegisteredUserFormset(MultitenantReadOnlyInlineFormSet):
     def get_unique_error_message(self, unique_check):
         # Django inline formsets perform their own uniqueness validation
         # (BaseModelFormSet.validate_unique) *before* model-level validation runs.
@@ -613,6 +626,31 @@ class RegisteredUserInline(StackedInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def has_add_permission(self, request, obj=None):
+        if not request.user.is_superuser and not request.user.organizations_managed:
+            return False
+        return super().has_add_permission(request, obj)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("organization")
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj=obj, **kwargs)
+        organization_field = formset.form.base_fields["organization"]
+        organization_field.queryset = organization_field.queryset.filter(is_active=True)
+        if not request.user.is_superuser:
+            organization_field.queryset = organization_field.queryset.filter(
+                pk__in=request.user.organizations_managed
+            )
+        return formset
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "organization":
+            kwargs["widget"] = OrganizationAutocompleteSelect(
+                db_field, self.admin_site, using=kwargs.get("using")
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 UserAdmin.inlines.insert(0, RegisteredUserInline)
@@ -666,9 +704,21 @@ UserAdmin.get_is_verified.short_description = _("Verified")
 UserAdmin.list_display.insert(3, "get_is_verified")
 
 
-class OrganizationRadiusSettingsInline(admin.StackedInline):
+class OrganizationRadiusSettingsInline(MultitenantAdminMixin, admin.StackedInline):
     model = OrganizationRadiusSettings
     form = AlwaysHasChangedForm
+
+    def get_object_organization(self, obj):
+        # Django passes the parent Organization instance as `obj` for
+        # inline permission checks, not an OrganizationRadiusSettings
+        # instance, so it is already the organization to check.
+        return obj
+
+    def has_add_permission(self, request, obj=None):
+        if obj is not None and not obj.is_active:
+            return False
+        return super().has_add_permission(request, obj)
+
     fieldsets = (
         (
             None,
@@ -721,26 +771,28 @@ OrganizationAdmin.inlines.append(OrganizationRadiusSettingsInline)
 
 if app_settings.USER_ADMIN_RADIUSTOKEN_INLINE:
 
-    class RadiusTokenInline(TimeReadonlyAdminMixin, admin.StackedInline):
+    class RadiusTokenInline(
+        MultitenantAdminMixin, TimeReadonlyAdminMixin, admin.StackedInline
+    ):
         model = RadiusToken
         extra = 0
 
         def get_exclude(self, request, obj=None):
-            fields = super().get_exclude(request, obj) or []
+            fields = list(super().get_exclude(request, obj) or [])
             if "password_based" not in fields:
                 fields.append("password_based")
-            if not hasattr(obj, "radius_token"):
-                return fields + ["key"]
+            if not (obj and hasattr(obj, "radius_token")) and "key" not in fields:
+                fields.append("key")
             return fields
 
         def get_formset(self, request, obj=None, **kwargs):
-            kwargs["widgets"] = kwargs.get("widgets", {})
-            if hasattr(obj, "radius_token"):
-                kwargs["widgets"].update(
-                    {
-                        "key": forms.widgets.TextInput(
-                            attrs={"class": "readonly vTextField", "readonly": True}
-                        )
+            if obj and hasattr(obj, "radius_token"):
+                kwargs["widgets"] = kwargs.get("widgets", {})
+                kwargs["widgets"]["key"] = forms.widgets.TextInput(
+                    attrs={
+                        "class": "readonly vTextField",
+                        "readonly": True,
+                        "maxlength": RadiusToken._meta.get_field("key").max_length,
                     }
                 )
             return super().get_formset(request, obj, **kwargs)

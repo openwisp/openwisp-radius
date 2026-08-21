@@ -11,7 +11,10 @@ from django.test import RequestFactory
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from openwisp_users.tests.utils import TestMultitenantAdminMixin
+from openwisp_users.tests.utils import (
+    TestDisabledOrgAdminMixin,
+    TestMultitenantAdminMixin,
+)
 from openwisp_utils.tests import AdminActionPermTestMixin, capture_any_output
 
 from .. import settings as app_settings
@@ -30,6 +33,7 @@ RadiusToken = load_model("RadiusToken")
 RadiusGroup = load_model("RadiusGroup")
 RadiusReply = load_model("RadiusReply")
 RegisteredUser = load_model("RegisteredUser")
+RadiusUserGroup = load_model("RadiusUserGroup")
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 Organization = swapper.load_model("openwisp_users", "Organization")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -406,6 +410,24 @@ class TestAdmin(
             required_perms=["delete"],
             extra_payload={"_selected_action": [batch.id]},
         )
+
+    def test_delete_selected_batches_disabled_organization(self):
+        org = self._create_org(name="disabled-batch-org", is_active=False)
+        batch = self._create_radius_batch(
+            organization=org,
+            name="test",
+            strategy="prefix",
+            prefix="test-prefix-disabled",
+            expiration_date="2098-01-28",
+        )
+        changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
+        data = {
+            "action": "delete_selected_batches",
+            "_selected_action": [batch.pk],
+        }
+        response = self.client.post(changelist_path, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusBatch.objects.filter(pk=batch.pk).exists(), False)
 
     def test_radius_batch_csv_help_text(self):
         add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")
@@ -1801,8 +1823,173 @@ class TestAdmin(
             html = '<div class="mg-dropdown-label">RADIUS </div>'
             self.assertContains(response, html, html=True)
 
+    def test_radiuscheckadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-radiuscheck-org")
+        obj = self._create_radius_check(
+            organization=org,
+            username="crud-check",
+            attribute="NT-Password",
+            op=":=",
+            value="secret",
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"organization": str(org.pk), "value": "changed"},
+            create_data={
+                "mode": "custom",
+                "organization": str(org.pk),
+                "username": "new-check",
+                "op": ":=",
+                "attribute": "NT-Password",
+                "value": "newsecret",
+            },
+            unchanged_field="value",
+        )
 
-class TestRadiusGroupAdmin(BaseTestCase):
+    def test_radiusreplyadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-radiusreply-org")
+        obj = self._create_radius_reply(
+            organization=org,
+            username="crud-reply",
+            attribute="Session-Timeout",
+            op="=",
+            value="3600",
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"organization": str(org.pk), "value": "1800"},
+            create_data={
+                "mode": "custom",
+                "organization": str(org.pk),
+                "username": "new-reply",
+                "attribute": "Session-Timeout",
+                "op": "=",
+                "value": "900",
+            },
+            unchanged_field="value",
+        )
+
+    def test_nasadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-nas-org")
+        obj = self._create_nas(
+            organization=org,
+            name="crud-nas",
+            short_name="cn",
+            type="cisco",
+            secret="s3cr3t",
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"organization": str(org.pk), "name": "renamed-nas"},
+            create_data={
+                "organization": str(org.pk),
+                "name": "new-nas",
+                "short_name": "nn",
+                "type": "cisco",
+                "secret": "n3ws3cr3t",
+            },
+            unchanged_field="name",
+        )
+
+    def test_radiusbatchadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-radiusbatch-org")
+        obj = self._create_radius_batch(
+            organization=org,
+            name="crud-batch",
+            strategy="prefix",
+            prefix="crud-batch-prefix",
+            expiration_date="2098-01-28",
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"organization": str(org.pk), "name": "renamed-batch"},
+            create_data={
+                "strategy": "prefix",
+                "organization": str(org.pk),
+                "name": "new-batch",
+                "prefix": "new-batch-prefix",
+                "number_of_users": "1",
+                "expiration_date": "2098-01-28",
+            },
+            unchanged_field="name",
+        )
+
+    def test_radiususergroupadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-usergroup-org")
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        user = self._create_user(
+            username="crud-usergroup-user", email="crud-usergroup@test.org"
+        )
+        obj = self._create_radius_usergroup(user=user, group=group)
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"priority": "5"},
+            create_data={
+                "mode": "custom",
+                "user": str(user.pk),
+                "group": str(group.pk),
+                "priority": "1",
+            },
+            organization=org,
+            unchanged_field="priority",
+        )
+
+    def test_radiusgroupcheckadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-groupcheck-org")
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        obj = self._create_radius_groupcheck(
+            group=group, attribute="Simultaneous-Use", op=":=", value="1"
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"value": "1800"},
+            create_data={
+                "mode": "custom",
+                "group": str(group.pk),
+                "attribute": "Max-Daily-Session",
+                "op": ":=",
+                "value": "3600",
+            },
+            organization=org,
+            unchanged_field="value",
+        )
+
+    def test_radiusgroupreplyadmin_disabled_org_crud(self):
+        org = self._create_org(name="disabled-groupreply-org")
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        obj = self._create_radius_groupreply(
+            group=group, attribute="Session-Timeout", op="=", value="3600"
+        )
+        org.is_active = False
+        org.save()
+        self._test_disabled_org_admin_crud(
+            obj,
+            change_data={"value": "1800"},
+            create_data={
+                "mode": "custom",
+                "group": str(group.pk),
+                "attribute": "Session-Timeout",
+                "op": "=",
+                "value": "900",
+            },
+            organization=org,
+            unchanged_field="value",
+        )
+
+
+class TestRadiusGroupAdmin(TestDisabledOrgAdminMixin, BaseTestCase):
     def setUp(self):
         self.organization = self._create_org()
         self.admin = self._create_admin()
@@ -1854,3 +2041,44 @@ class TestRadiusGroupAdmin(BaseTestCase):
         self.assertEqual(reply.attribute, "Session-Timeout")
         self.assertEqual(reply.value, "1800")
         self.assertEqual(reply.groupname, group.name)
+
+    def test_delete_selected_groups_disabled_organization(self):
+        group = RadiusGroup.objects.create(
+            organization=self.organization, name="disabled-org-group", default=False
+        )
+        self.organization.is_active = False
+        self.organization.save()
+        changelist_path = reverse("admin:openwisp_radius_radiusgroup_changelist")
+        data = {
+            "action": "delete_selected_groups",
+            "_selected_action": [group.pk],
+            "select_across": "0",
+            "index": "0",
+            "post": "yes",
+        }
+        response = self.client.post(changelist_path, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RadiusGroup.objects.filter(pk=group.pk).exists(), False)
+
+    def test_radiusgroupadmin_disabled_org_crud(self):
+        group = RadiusGroup.objects.create(
+            organization=self.organization, name="disabled-crud-group", default=False
+        )
+        self.organization.is_active = False
+        self.organization.save()
+        self._test_disabled_org_admin_crud(
+            group,
+            change_data={
+                "name": "renamed-crud-group",
+                "organization": str(self.organization.pk),
+            },
+            create_data={
+                "organization": str(self.organization.pk),
+                "name": "new-crud-group",
+                "radiusgroupcheck_set-TOTAL_FORMS": "0",
+                "radiusgroupcheck_set-INITIAL_FORMS": "0",
+                "radiusgroupreply_set-TOTAL_FORMS": "0",
+                "radiusgroupreply_set-INITIAL_FORMS": "0",
+            },
+            unchanged_field="name",
+        )

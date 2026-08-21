@@ -43,6 +43,7 @@ from openwisp_users.api.serializers import (
     PasswordResetSerializer as UsersPasswordResetSerializer,
 )
 from openwisp_users.base.forms import PasswordResetForm as UsersPasswordResetForm
+from openwisp_users.tests.test_api import TestDisabledOrgApiMixin
 from openwisp_utils.tests import capture_any_output, capture_stderr
 
 from ...utils import load_model
@@ -63,7 +64,7 @@ Group = swapper.load_model("openwisp_users", "Group")
 START_DATE = "2019-04-20T22:14:09+01:00"
 
 
-class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
+class TestApi(TestDisabledOrgApiMixin, AcctMixin, ApiTokenMixin, BaseTestCase):
     def setUp(self):
         cache.clear()
         super().setUp()
@@ -112,6 +113,22 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         data = self._radius_batch_prefix_data(number_of_users=-1)
         response = self._radius_batch_post_request(data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(RadiusBatch.objects.count(), 0)
+
+    def test_batch_disabled_organization_400(self):
+        disabled_org = self._create_org(
+            name="disabled-batch-org", slug="disabled-batch-org"
+        )
+        disabled_org.is_active = False
+        disabled_org.save()
+        data = self._radius_batch_prefix_data()
+        data["organization_slug"] = disabled_org.slug
+        response = self._radius_batch_post_request(data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("organization_slug", response.data)
+        self.assertIn(
+            "does not exist or is disabled", str(response.data["organization_slug"])
+        )
         self.assertEqual(RadiusBatch.objects.count(), 0)
 
     def test_batch_csv_201(self):
@@ -1922,6 +1939,53 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             org2_rug.refresh_from_db()
             self.assertEqual(org2_rug.priority, 7)
+
+    def test_radius_group_api_disabled_org_crud(self):
+        org = self._create_org(name="disabled-api-group-org")
+        group = self._create_radius_group(organization=org, name="crud-api-group")
+        org.is_active = False
+        org.save()
+        list_url = reverse("radius:radius_group_list")
+        detail_url = reverse("radius:radius_group_detail", args=[group.pk])
+        self._test_disabled_org_api_crud(
+            group,
+            detail_url=detail_url,
+            list_url=list_url,
+            create_payload={"name": "new-api-group", "organization": str(org.pk)},
+            update_payload={"description": "changed"},
+            auth_mechanism="session",
+            unchanged_field="description",
+        )
+
+    def test_radius_user_group_api_disabled_org_crud(self):
+        org = self._create_org(name="disabled-api-usergroup-org")
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        user = self._create_user(
+            username="crud-api-usergroup-user", email="crud-api-usergroup@test.org"
+        )
+        self._create_org_user(user=user, organization=org)
+        rug = self._create_radius_usergroup(user=user, group=group)
+        org.is_active = False
+        org.save()
+        list_url = reverse("radius:radius_user_group_list", args=[user.pk])
+        detail_url = reverse("radius:radius_user_group_detail", args=[user.pk, rug.pk])
+        self._test_disabled_org_api_crud(
+            rug,
+            detail_url=detail_url,
+            list_url=list_url,
+            create_payload={"group": str(group.pk), "priority": 2},
+            update_payload={"priority": 3},
+            auth_mechanism="session",
+            unchanged_field="priority",
+            organization=org,
+            superuser_expected={
+                "create": {
+                    "status": 400,
+                    "error_field": "group",
+                    "error_contains": "does not exist",
+                }
+            },
+        )
 
     def test_radius_user_group_serializer_without_view_context(self):
         serializer = RadiusUserGroupSerializer(context={})

@@ -184,6 +184,19 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 401)
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_create_phone_token_disabled_org_403(self, send_messages_mock):
+        self._register_user()
+        token = Token.objects.last()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.default_org.is_active = False
+            self.default_org.save()
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        r = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(PhoneToken.objects.count(), 0)
+        send_messages_mock.assert_not_called()
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
     def test_create_phone_token_201(self, send_messages_mock):
         self._register_user()
         token = Token.objects.last()

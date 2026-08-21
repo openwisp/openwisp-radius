@@ -27,6 +27,8 @@ class RedirectCaptivePageView(RadiusTokenMixin, View):
         if not request.GET.get("cp"):
             return HttpResponse(_("missing cp GET param"), status=400)
         org = get_object_or_404(Organization, slug=kwargs.get("slug"))
+        if not org.is_active:
+            raise PermissionDenied
         self.authorize(request, org, *args, **kwargs)
         return HttpResponseRedirect(self.get_redirect_url(request, org))
 

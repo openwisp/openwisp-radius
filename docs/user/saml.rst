@@ -42,6 +42,11 @@ is signing-in with a SSO.
     :doc:`OpenWISP WiFi Login Pages </wifi-login-pages/index>`, which is
     built to work with openwisp-radius.
 
+.. important::
+
+    SAML login is unavailable for disabled organizations. SAML login and
+    assertion-consumer-service requests return ``403 Forbidden``.
+
 .. _radius_setup_saml:
 
 Setup

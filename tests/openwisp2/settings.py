@@ -448,6 +448,7 @@ if os.environ.get("SAMPLE_APP", False):
     # Rename sample_app database
     DATABASES["default"]["NAME"] = os.path.join(BASE_DIR, "sample_radius.db")
     CELERY_IMPORTS = ("openwisp_radius.tasks",)
+    OPENWISP_AUTOCOMPLETE_FILTER_VIEW = "openwisp_users.views.AutocompleteJsonView"
 
 if os.environ.get("SAMPLE_APP", False) and TESTING:
     # Required for openwisp-users tests
