@@ -21,6 +21,7 @@ from .mixins import GetEditFormInlineMixin
 
 RadiusToken = load_model("RadiusToken")
 RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
 RegisteredUser = load_model("RegisteredUser")
 
 
@@ -246,10 +247,14 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
     def test_registered_user_inline_change_form_readonly_for_disabled_org(self):
         admin_user = self._create_admin()
         user = self._create_user()
+        active_org = self._get_org()
         disabled_org = self._create_org(
             name="disabled-registered-user-change-org", is_active=False
         )
-        registered_user = RegisteredUser.objects.create(
+        active_registered_user = RegisteredUser.objects.create(
+            user=user, organization=active_org, method="email"
+        )
+        disabled_registered_user = RegisteredUser.objects.create(
             user=user, organization=disabled_org, method="email"
         )
         request = RequestFactory().get(
@@ -257,10 +262,19 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         )
         request.user = admin_user
         inline = RegisteredUserInline(user.__class__, admin.site)
-        formset = inline.get_formset(request, user)
-        form = formset.form(instance=registered_user)
-        for field_name in ("organization", "method", "is_verified"):
-            self.assertEqual(form.fields[field_name].disabled, True)
+        formset_class = inline.get_formset(request, user)
+        formset = formset_class(instance=user, prefix="registered_users")
+        forms_by_pk = {form.instance.pk: form for form in formset.forms}
+
+        with self.subTest("organization is active"):
+            form = forms_by_pk[active_registered_user.pk]
+            for field_name in ("organization", "method", "is_verified"):
+                self.assertEqual(form.fields[field_name].disabled, False)
+
+        with self.subTest("organization is disabled"):
+            form = forms_by_pk[disabled_registered_user.pk]
+            for field_name in ("organization", "method", "is_verified"):
+                self.assertEqual(form.fields[field_name].disabled, True)
 
     def test_radiususergroup_inline_group_field_excludes_disabled_org(self):
         admin_user = self._create_admin()
@@ -280,6 +294,42 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         queryset = formset.form.base_fields["group"].queryset
         self.assertEqual(queryset.filter(pk=active_group.pk).exists(), True)
         self.assertEqual(queryset.filter(pk=disabled_group.pk).exists(), False)
+
+    def test_radiususergroup_inline_change_form_readonly_for_disabled_org(self):
+        admin_user = self._create_admin()
+        user = self._create_user()
+        active_org = self._get_org()
+        disabled_org = self._create_org(
+            name="disabled-usergroup-change-org", is_active=False
+        )
+        active_group = RadiusGroup.objects.get(organization=active_org, default=True)
+        disabled_group = RadiusGroup.objects.get(
+            organization=disabled_org, default=True
+        )
+        active_user_group = RadiusUserGroup.objects.create(
+            user=user, group=active_group
+        )
+        disabled_user_group = RadiusUserGroup.objects.create(
+            user=user, group=disabled_group
+        )
+        request = RequestFactory().get(
+            reverse(f"admin:{self.app_label}_user_change", args=[user.pk])
+        )
+        request.user = admin_user
+        inline = RadiusUserGroupInline(user.__class__, admin.site)
+        formset_class = inline.get_formset(request, user)
+        formset = formset_class(instance=user, prefix="radiususergroup_set")
+        forms_by_pk = {form.instance.pk: form for form in formset.forms}
+
+        with self.subTest("organization is active"):
+            form = forms_by_pk[active_user_group.pk]
+            for field_name in ("group", "priority"):
+                self.assertEqual(form.fields[field_name].disabled, False)
+
+        with self.subTest("organization is disabled"):
+            form = forms_by_pk[disabled_user_group.pk]
+            for field_name in ("group", "priority"):
+                self.assertEqual(form.fields[field_name].disabled, True)
 
     def test_registered_user_inline_disallows_add_without_active_org(self):
         user = self._create_user()
@@ -367,6 +417,53 @@ class TestUsersIntegration(GetEditFormInlineMixin, TestBasicUsersIntegration):
         self.assertEqual(user.first_name, "Changed")
         registered_user.refresh_from_db()
         self.assertEqual(registered_user.organization_id, org.pk)
+
+    def test_user_admin_no_op_save_with_disabled_org_inline_memberships(self):
+        admin_user = self._create_admin()
+        self.client.force_login(admin_user)
+        org = self._create_org(name="disabled-user-admin-inlines-org")
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        user = self._create_user(
+            username="disabled-org-inlines-user",
+            email="disabled-org-inlines-user@example.com",
+        )
+        registered_user = RegisteredUser.objects.create(
+            user=user, organization=org, method="mobile_phone", is_verified=True
+        )
+        user_group = RadiusUserGroup.objects.create(user=user, group=group)
+        org.is_active = False
+        org.save()
+
+        params = user.__dict__.copy()
+        params["groups"] = []
+        params.pop("phone_number", None)
+        params.pop("password", None)
+        params.pop("_password", None)
+        params.pop("password_based_token", None)
+        params.pop("bio", None)
+        params.pop("last_login", None)
+        params.pop("password_updated", None)
+        params.pop("birth_date", None)
+        params.pop("expiration_date", None)
+        params = self._additional_params_pop(params)
+        params.update(self._get_user_edit_form_inline_params(user, org))
+        params.update(
+            {
+                f"{self.app_label}_organizationuser-TOTAL_FORMS": 0,
+                f"{self.app_label}_organizationuser-INITIAL_FORMS": 0,
+                f"{self.app_label}_organizationuser-MIN_NUM_FORMS": 0,
+                f"{self.app_label}_organizationuser-MAX_NUM_FORMS": 1000,
+            }
+        )
+
+        url = reverse(f"admin:{self.app_label}_user_change", args=[user.pk])
+        response = self.client.post(url, params, follow=True)
+        self.assertNotContains(response, "Please correct the error")
+        self.assertNotContains(response, "Select a valid choice")
+        registered_user.refresh_from_db()
+        user_group.refresh_from_db()
+        self.assertEqual(registered_user.organization_id, org.pk)
+        self.assertEqual(user_group.group_id, group.pk)
 
 
 del TestBasicUsersIntegration

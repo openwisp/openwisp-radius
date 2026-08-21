@@ -19,6 +19,8 @@ User = get_user_model()
 
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
+RegisteredUser = load_model("RegisteredUser")
 
 
 @tag("selenium_tests")
@@ -289,6 +291,51 @@ class BasicTest(
             == str(group.pk)
         )
         self.assertEqual(self.get_browser_errors(), [])
+
+    def test_user_change_form_save_with_disabled_org_inline_memberships(self):
+        org = self._create_org(name="disabled-selenium-org")
+        OrganizationRadiusSettings.objects.create(organization=org)
+        group = RadiusGroup.objects.get(organization=org, default=True)
+        user = self._create_user(
+            username="disabled-org-selenium-user",
+            email="disabled-org-selenium-user@example.com",
+        )
+        self._create_org_user(organization=org, user=user)
+        RegisteredUser.objects.create(
+            user=user, organization=org, method="mobile_phone", is_verified=True
+        )
+        user_group, _ = RadiusUserGroup.objects.get_or_create(user=user, group=group)
+        # disable the organization after creating its inline memberships,
+        # so the change form is rendered with rows that must stay readonly
+        org.is_active = False
+        org.save()
+        self.login()
+        self.open(reverse(f"admin:{User._meta.app_label}_user_change", args=[user.pk]))
+        
+        with self.subTest("Changes to active fields should be allowed"):
+            notes_field = self.find_element(By.ID, "id_notes", 10)
+            notes_field.clear()
+            notes_field.send_keys("Updated via selenium test")
+            self.find_elements(By.NAME, "_continue", 10)[-1].click()
+            success_message = self.wait_for_visibility(By.CLASS_NAME, "success", 10)
+            self.assertIn("was changed successfully", success_message.text)
+            user.refresh_from_db()
+            self.assertEqual(user.notes, "Updated via selenium test")
+
+        with self.subTest(
+            "Deleting disabled org's radiususergroup should be allowed"
+        ):
+            delete_checkbox = self.find_element(
+                By.ID, "id_radiususergroup_set-0-DELETE", 10
+            )
+            self.assertTrue(delete_checkbox.is_enabled())
+            delete_checkbox.click()
+            self.find_elements(By.NAME, "_continue", 10)[-1].click()
+            success_message = self.wait_for_visibility(By.CLASS_NAME, "success", 10)
+            self.assertIn("was changed successfully", success_message.text)
+            self.assertFalse(
+                RadiusUserGroup.objects.filter(pk=user_group.pk).exists()
+            )
 
 
 @pytest.mark.asyncio

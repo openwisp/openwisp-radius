@@ -8,7 +8,6 @@ from django.contrib.admin.utils import model_ngettext
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
-from django.forms.models import BaseInlineFormSet
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.templatetags.static import static
 from django.urls import path, reverse
@@ -16,8 +15,8 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from openwisp_users.admin import (
+    MultitenantReadOnlyInlineFormSet,
     OrganizationAdmin,
-    OrganizationUserInlineFormSet,
     UserAdmin,
 )
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
@@ -567,8 +566,14 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
 
 # Inlines for UserAdmin & OrganizationAdmin
+class RadiusUserGroupFormSet(MultitenantReadOnlyInlineFormSet):
+    organization_fk_field = "group"
+    organization_lookup = "group__organization"
+
+
 class RadiusUserGroupInline(MultitenantAdminMixin, StackedInline):
     model = RadiusUserGroup
+    formset = RadiusUserGroupFormSet
     exclude = ["username", "groupname", "created", "modified"]
     ordering = ("priority",)
     autocomplete_fields = ("group",)
@@ -593,7 +598,7 @@ class PhoneTokenInline(TimeReadonlyAdminMixin, StackedInline):
         return False
 
 
-class RegisteredUserFormset(OrganizationUserInlineFormSet, BaseInlineFormSet):
+class RegisteredUserFormset(MultitenantReadOnlyInlineFormSet):
     def get_unique_error_message(self, unique_check):
         # Django inline formsets perform their own uniqueness validation
         # (BaseModelFormSet.validate_unique) *before* model-level validation runs.
@@ -610,17 +615,9 @@ class RegisteredUserFormset(OrganizationUserInlineFormSet, BaseInlineFormSet):
             )
 
 
-class RegisteredUserForm(AlwaysHasChangedForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not self.instance._state.adding and not self.instance.organization.is_active:
-            for field in self.fields.values():
-                field.disabled = True
-
-
 class RegisteredUserInline(StackedInline):
     model = RegisteredUser
-    form = RegisteredUserForm
+    form = AlwaysHasChangedForm
     formset = RegisteredUserFormset
     extra = 0
     readonly_fields = ("modified",)
