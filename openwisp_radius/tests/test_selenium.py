@@ -1,6 +1,8 @@
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
 from django.urls import reverse
@@ -9,7 +11,6 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from openwisp_radius import tasks
-from openwisp_users.tests.utils import TestOrganizationMixin
 from openwisp_utils.tests.selenium import SeleniumTestMixin
 
 from ..utils import load_model
@@ -24,7 +25,7 @@ RadiusGroup = load_model("RadiusGroup")
 @tag("selenium_tests")
 @tag("no_parallel")
 class BasicTest(
-    SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
+    SeleniumTestMixin, FileMixin, CreateRadiusObjectsMixin, StaticLiveServerTestCase
 ):
     # Test case for batch user creation
     def test_batch_user_creation(self):
@@ -242,8 +243,10 @@ class BasicTest(
         )
         option.click()
         WebDriverWait(self.web_driver, 10).until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
-            == str(group.pk)
+            lambda driver: (
+                driver.find_element(By.ID, "id_group").get_attribute("value")
+                == str(group.pk)
+            )
         )
         self.assertEqual(self.get_browser_errors(), [])
 
@@ -285,10 +288,55 @@ class BasicTest(
             lambda driver: driver.execute_script("return django.jQuery.active === 0")
         )
         WebDriverWait(self.web_driver, 10).until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
-            == str(group.pk)
+            lambda driver: (
+                driver.find_element(By.ID, "id_group").get_attribute("value")
+                == str(group.pk)
+            )
         )
         self.assertEqual(self.get_browser_errors(), [])
+
+    def test_view_only_change_page_shows_readonly_fields(self):
+        org = self._get_org()
+        check = self._create_radius_check(
+            username="tester", attribute="NT-Password", value="Cam0_liX"
+        )
+        reply = self._create_radius_reply(
+            username="tester", attribute="Reply-Message", value="hi"
+        )
+        user = self._create_user(
+            username="viewonly", email="viewonly@example.com", is_staff=True
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type=ContentType.objects.get_for_model(check),
+                codename="view_radiuscheck",
+            ),
+            Permission.objects.get(
+                content_type=ContentType.objects.get_for_model(reply),
+                codename="view_radiusreply",
+            ),
+        )
+        self._create_org_user(organization=org, user=user, is_admin=True)
+        self.web_driver.delete_all_cookies()
+        self.login(username="viewonly", password="tester")
+        for url in (
+            reverse(
+                f"admin:{check._meta.app_label}_{check._meta.model_name}_change",
+                args=[check.pk],
+            ),
+            reverse(
+                f"admin:{reply._meta.app_label}_{reply._meta.model_name}_change",
+                args=[reply.pk],
+            ),
+        ):
+            with self.subTest(url=url):
+                self.open(url)
+                self.wait_for_visibility(By.CSS_SELECTOR, ".form-row.field-value", 10)
+                self.assertFalse(
+                    self.find_element(
+                        By.CSS_SELECTOR, ".form-row.field-mode", 10, wait_for="presence"
+                    ).is_displayed()
+                )
 
 
 @pytest.mark.asyncio
