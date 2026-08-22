@@ -47,12 +47,19 @@ Navigate into the cloned repository:
 
     cd openwisp-radius/
 
-Launch Redis (and InfluxDB for the :doc:`integration with OpenWISP
-Monitoring </radius/user/radius_monitoring>`):
+Launch Redis (and a timeseries database for the :doc:`integration with
+OpenWISP Monitoring </radius/user/radius_monitoring>`):
 
 .. code-block:: shell
 
     docker compose up -d redis influxdb
+
+To run the monitoring integration tests on InfluxDB 2 instead:
+
+.. code-block:: shell
+
+    docker compose up -d redis influxdb2
+    export TIMESERIES_BACKEND=influxdb2
 
 Setup and activate a virtual-environment (we'll be using `virtualenv
 <https://pypi.org/project/virtualenv/>`_):
