@@ -548,7 +548,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         options["unique_id"] = "727"
         options["organization"] = org
         radius_acc = self._create_radius_accounting(**options)
-
         status = self._get_openvpn_status().encode()
 
         class FakeTelnet:
@@ -574,7 +573,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
 
         with patch("telnetlib3.telnetlib.Telnet", FakeTelnet):
             call_command("convert_called_station_id")
-
         radius_acc.refresh_from_db()
         telnet = FakeTelnet.instances[0]
         self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
