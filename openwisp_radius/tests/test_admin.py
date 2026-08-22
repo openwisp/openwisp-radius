@@ -402,10 +402,39 @@ class TestAdmin(
             action="delete_selected_batches",
             user=user,
             obj=batch,
-            message="Successfully deleted selected batches.",
+            message="Successfully deleted 1 batch(es).",
             required_perms=["delete"],
             extra_payload={"_selected_action": [batch.id]},
         )
+
+    def test_delete_selected_batches_skips_processing(self):
+        org = self._get_org()
+        self._get_admin()
+        deletable = self._create_radius_batch(
+            organization=org,
+            name="deletable",
+            strategy="prefix",
+            prefix="test-del",
+        )
+        processing = self._create_radius_batch(
+            organization=org,
+            name="processing",
+            strategy="prefix",
+            prefix="test-proc",
+        )
+        processing.status = RadiusBatch.PROCESSING
+        processing.save(update_fields=["status"])
+        changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
+        data = {
+            "action": "delete_selected_batches",
+            "_selected_action": [deletable.pk, processing.pk],
+        }
+        response = self.client.post(changelist_path, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RadiusBatch.objects.filter(pk=deletable.pk).exists())
+        self.assertTrue(RadiusBatch.objects.filter(pk=processing.pk).exists())
+        self.assertContains(response, "Skipped 1 batch")
+        self.assertContains(response, "Successfully deleted 1 batch(es).")
 
     def test_radius_batch_csv_help_text(self):
         add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")

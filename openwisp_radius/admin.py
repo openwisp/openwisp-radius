@@ -506,11 +506,28 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
     @admin.action(description=_("Delete selected batches"), permissions=["delete"])
     def delete_selected_batches(self, request, queryset):
+        skipped = 0
+        deleted = 0
         for obj in queryset:
+            if obj.status == RadiusBatch.PROCESSING:
+                skipped += 1
+                continue
             obj.delete()
-        self.message_user(
-            request, "Successfully deleted selected batches.", level=messages.SUCCESS
-        )
+            deleted += 1
+        if skipped:
+            self.message_user(
+                request,
+                _(
+                    "Skipped {count} batch(es) that are currently being processed."
+                ).format(count=skipped),
+                level=messages.WARNING,
+            )
+        if deleted:
+            self.message_user(
+                request,
+                _("Successfully deleted {count} batch(es).").format(count=deleted),
+                level=messages.SUCCESS,
+            )
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(

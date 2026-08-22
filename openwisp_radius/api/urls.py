@@ -84,6 +84,11 @@ def get_api_urls(api_views=None):
             ),
             path("radius/batch/", api_views.batch, name="batch"),
             path(
+                "radius/batch/<uuid:pk>/",
+                api_views.batch_detail,
+                name="radius_batch_detail",
+            ),
+            path(
                 "radius/organization/<slug:slug>/batch/<uuid:pk>/pdf/",
                 api_views.download_rad_batch_pdf,
                 name="download_rad_batch_pdf",

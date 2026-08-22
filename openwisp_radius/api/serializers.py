@@ -562,6 +562,66 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "user_credentials", "created", "modified")
 
 
+class BatchUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        )
+        read_only_fields = fields
+
+
+class RadiusBatchReadSerializer(serializers.ModelSerializer):
+    organization = serializers.PrimaryKeyRelatedField(read_only=True)
+    users = BatchUserSerializer(many=True, read_only=True)
+    pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
+    csv_link = serializers.SerializerMethodField(required=False, read_only=True)
+    status = serializers.CharField(read_only=True)
+
+    def get_pdf_link(self, obj):
+        if obj.strategy == "prefix" and obj.status == RadiusBatch.COMPLETED:
+            request = self.context.get("request")
+            return request.build_absolute_uri(
+                reverse(
+                    "radius:download_rad_batch_pdf",
+                    args=[obj.organization.slug, obj.pk],
+                )
+            )
+        return None
+
+    def get_csv_link(self, obj):
+        if obj.csvfile:
+            request = self.context.get("request")
+            csv_url = reverse(
+                "radius:radius_organization_batch_csv_read",
+                args=[obj.organization.slug, obj.pk],
+            )
+            return request.build_absolute_uri(csv_url)
+        return None
+
+    class Meta:
+        model = RadiusBatch
+        fields = (
+            "id",
+            "organization",
+            "name",
+            "strategy",
+            "status",
+            "expiration_date",
+            "prefix",
+            "users",
+            "pdf_link",
+            "csv_link",
+            "created",
+            "modified",
+        )
+        read_only_fields = fields
+
+
 class RegisterSerializer(
     ErrorDictMixin,
     AllowedMobilePrefixMixin,
