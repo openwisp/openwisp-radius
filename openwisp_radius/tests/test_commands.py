@@ -550,27 +550,50 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         radius_acc = self._create_radius_accounting(**options)
 
         status = self._get_openvpn_status().encode()
-        closed = []
 
         class FakeTelnet:
+            instances = []
+
             def __init__(self, *args, **kwargs):
-                pass
+                self.args = args
+                self.kwargs = kwargs
+                self.read_until_calls = []
+                self.writes = []
+                self.closed = False
+                self.instances.append(self)
 
             def read_until(self, *args, **kwargs):
+                self.read_until_calls.append((args, kwargs))
                 return status
 
-            def write(self, *args, **kwargs):
-                pass
+            def write(self, data):
+                self.writes.append(data)
 
             def close(self):
-                closed.append(True)
+                self.closed = True
 
         with patch("telnetlib3.telnetlib.Telnet", FakeTelnet):
             call_command("convert_called_station_id")
 
         radius_acc.refresh_from_db()
+        telnet = FakeTelnet.instances[0]
         self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
-        self.assertTrue(closed, "the telnet connection should be closed")
+        self.assertEqual(telnet.args, ("127.0.0.1", 7505))
+        self.assertEqual(telnet.kwargs, {"timeout": 30})
+        self.assertEqual(
+            [call[0][0] for call in telnet.read_until_calls],
+            [
+                b"ENTER PASSWORD:",
+                b">INFO:OpenVPN Management Interface Version 3 -- type "
+                b"'help' for more info",
+                b"END",
+            ],
+        )
+        self.assertTrue(
+            all(call[1] == {"timeout": 30} for call in telnet.read_until_calls)
+        )
+        self.assertEqual(telnet.writes, [b"somepassword\n", b"status\n"])
+        self.assertTrue(telnet.closed, "the telnet connection should be closed")
 
     @capture_any_output()
     @patch.object(
