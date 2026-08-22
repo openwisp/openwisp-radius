@@ -319,19 +319,28 @@ class BasicTest(
         self._create_org_user(organization=org, user=user, is_admin=True)
         self.web_driver.delete_all_cookies()
         self.login(username="viewonly", password="tester")
-        for url in (
-            reverse(
-                f"admin:{check._meta.app_label}_{check._meta.model_name}_change",
-                args=[check.pk],
+        for url, expected_value in (
+            (
+                reverse(
+                    f"admin:{check._meta.app_label}_{check._meta.model_name}_change",
+                    args=[check.pk],
+                ),
+                "Cam0_liX",
             ),
-            reverse(
-                f"admin:{reply._meta.app_label}_{reply._meta.model_name}_change",
-                args=[reply.pk],
+            (
+                reverse(
+                    f"admin:{reply._meta.app_label}_{reply._meta.model_name}_change",
+                    args=[reply.pk],
+                ),
+                "hi",
             ),
         ):
             with self.subTest(url=url):
                 self.open(url)
-                self.wait_for_visibility(By.CSS_SELECTOR, ".form-row.field-value", 10)
+                value_row = self.wait_for_visibility(
+                    By.CSS_SELECTOR, ".form-row.field-value", 10
+                )
+                self.assertIn(expected_value, value_row.text)
                 self.assertFalse(
                     self.find_element(
                         By.CSS_SELECTOR, ".form-row.field-mode", 10, wait_for="presence"
