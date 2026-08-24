@@ -505,10 +505,9 @@ API views.
 Create a view file as done in `API views.py
 <https://github.com/openwisp/openwisp-radius/blob/master/tests/openwisp2/sample_radius/api/views.py>`_.
 
-The custom views module does not need to define every callback: any
-callback missing from it falls back to the corresponding view of
-*openwisp-radius*. This allows extending only the API views you want to
-customize.
+The custom views module does not need to define every view: re-define only
+the views you need to customize, anything else will fall back on the
+default views of *openwisp-radius*.
 
 Remember to use these views in root URL configurations in point 14. If you
 want only extend the API views and not social views, you can use
