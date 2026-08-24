@@ -1,8 +1,6 @@
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
 from django.urls import reverse
@@ -303,20 +301,7 @@ class BasicTest(
         reply = self._create_radius_reply(
             username="tester", attribute="Reply-Message", value="hi"
         )
-        user = self._create_user(
-            username="viewonly", email="viewonly@example.com", is_staff=True
-        )
-        user.user_permissions.add(
-            Permission.objects.get(
-                content_type=ContentType.objects.get_for_model(check),
-                codename="view_radiuscheck",
-            ),
-            Permission.objects.get(
-                content_type=ContentType.objects.get_for_model(reply),
-                codename="view_radiusreply",
-            ),
-        )
-        self._create_org_user(organization=org, user=user, is_admin=True)
+        self._create_operator([org], username="viewonly")
         self.web_driver.delete_all_cookies()
         self.login(username="viewonly", password="tester")
         for url, expected_value in (
