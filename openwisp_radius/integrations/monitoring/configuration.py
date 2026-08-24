@@ -51,7 +51,7 @@ def _flux_signups(function, summary=False):
         return query + _flux_summary_time
     query += _flux_method_group + (
         " |> aggregateWindow(every: {window}, fn: " + function + ', timeSrc: "_start"'
-        "{window_timezone})"
+        ", createEmpty: true{window_timezone})"
     )
     if function == "last":
         # Flux does not provide the linear fill of InfluxDB 1

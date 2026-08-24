@@ -9,6 +9,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: >-
@@ -90,18 +93,13 @@ jobs:
 
           if [ "${{ matrix.tsdb }}" = "influxdb2" ]; then
             url="http://localhost:8087/health"
-          elif [ "${{ matrix.tsdb }}" = "elasticsearch" ]; then
-            url="http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=2s&filter_path=status"
           else
             url="http://localhost:8086/query?q=SHOW%20DATABASES"
           fi
 
           for attempt in $(seq 1 30); do
-            if response=$(curl -fsS "$url" 2>/dev/null); then
-              if [ "${{ matrix.tsdb }}" != "elasticsearch" ] || \
-                printf "%s" "$response" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(yellow|green)"'; then
-                exit 0
-              fi
+            if curl -fsS "$url" > /dev/null 2>&1; then
+              exit 0
             fi
             sleep 2
           done
