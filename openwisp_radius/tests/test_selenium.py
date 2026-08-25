@@ -1,7 +1,7 @@
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
+from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
 from django.urls import reverse
@@ -10,6 +10,8 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from openwisp_radius import tasks
+from openwisp_radius.migrations import assign_permissions_to_groups
+from openwisp_users.migrations import create_default_groups
 from openwisp_utils.tests.selenium import SeleniumTestMixin
 
 from ..utils import load_model
@@ -304,18 +306,14 @@ class BasicTest(
         )
         # TransactionTestCase subclasses flush the database between
         # tests, deleting the "Operator" group created by data
-        # migrations; _create_operator() would then assign no
-        # permissions at all and the change pages would return
-        # 403 Forbidden
-        user = self._create_user(
-            username="viewonly", email="viewonly@example.com", is_staff=True
-        )
-        user.user_permissions.add(
-            *Permission.objects.filter(
-                codename__in=("view_radiuscheck", "view_radiusreply")
-            )
-        )
-        self._create_org_user(organization=org, user=user, is_admin=True)
+        # migrations; recreate the default groups and their
+        # permissions so that _create_operator() grants the
+        # view-only permissions expected here
+        create_default_groups(django_apps, None)
+        assign_permissions_to_groups(django_apps, None)
+        user = self._create_operator([org], username="viewonly")
+        self.assertFalse(user.has_perm(f"{check._meta.app_label}.change_radiuscheck"))
+        self.assertFalse(user.has_perm(f"{reply._meta.app_label}.change_radiusreply"))
         self.web_driver.delete_all_cookies()
         self.login(username=user.username, password="tester")
         for url, expected_value in (
