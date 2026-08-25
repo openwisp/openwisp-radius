@@ -1,6 +1,4 @@
-import swapper
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -10,7 +8,6 @@ from ..mixins import ApiTokenMixin, BaseTestCase
 
 User = get_user_model()
 RadiusBatch = load_model("RadiusBatch")
-OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
 
 class TestBatch(ApiTokenMixin, BaseTestCase):
@@ -23,29 +20,15 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         return f"Bearer {login_response.json()['key']}"
 
     def _create_prefix_batch(self, name="test-prefix-batch", organization=None):
-        if organization is None:
-            organization = self.default_org
-        batch = RadiusBatch(
-            name=name,
-            strategy="prefix",
-            prefix="test",
-            organization=organization,
-            status=RadiusBatch.COMPLETED,
-        )
-        batch.save()
-        return batch
-
-    def _create_staff_user(self, username="staffuser", org=None):
-        user = User.objects.create_user(
-            username=username,
-            email=f"{username}@test.com",
-            password="tester",
-            is_staff=True,
-            is_superuser=False,
-        )
-        if org:
-            OrganizationUser.objects.create(user=user, organization=org, is_admin=True)
-        return user
+        kwargs = {
+            "name": name,
+            "strategy": "prefix",
+            "prefix": "test",
+            "status": RadiusBatch.COMPLETED,
+        }
+        if organization is not None:
+            kwargs["organization"] = organization
+        return self._create_radius_batch(**kwargs)
 
     def test_batch_list_200(self):
         self._create_prefix_batch(name="batch-a")
@@ -60,7 +43,6 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
 
     def test_batch_list_permissions(self):
         self._get_admin()
-        staff = self._create_staff_user("liststaff", org=self.default_org)
         self._create_prefix_batch()
         with self.subTest("w/o login"):
             response = self.client.get(reverse("radius:batch"))
@@ -74,6 +56,11 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
 
         with self.subTest("staff w/ managed org"):
+            staff = self._create_operator(
+                organizations=[self.default_org],
+                username="liststaff",
+                email="liststaff@test.com",
+            )
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.get(
                 reverse("radius:batch"), HTTP_AUTHORIZATION=header
@@ -93,9 +80,12 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
 
     def test_batch_list_filter_strategy(self):
         self._create_prefix_batch(name="prefix-batch")
+        csv_content = b"user,cleartext$abcd,email@gmail.com,firstname,lastname"
+        csv_file = SimpleUploadedFile("filter_test.csv", csv_content)
         RadiusBatch.objects.create(
             name="csv-batch",
             strategy="csv",
+            csvfile=csv_file,
             organization=self.default_org,
             status=RadiusBatch.COMPLETED,
         )
@@ -108,6 +98,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             names = [b["name"] for b in response.json()["results"]]
             self.assertIn("prefix-batch", names)
             self.assertNotIn("csv-batch", names)
+
         with self.subTest("filter csv"):
             response = self.client.get(
                 url, {"strategy": "csv"}, HTTP_AUTHORIZATION=header
@@ -115,6 +106,16 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             names = [b["name"] for b in response.json()["results"]]
             self.assertIn("csv-batch", names)
             self.assertNotIn("prefix-batch", names)
+
+    def test_batch_list_filter_organization(self):
+        org2 = self._create_org(**{"name": "other", "slug": "other"})
+        self._create_prefix_batch(name="org1-batch")
+        self._create_prefix_batch(name="org2-batch", organization=org2)
+        header = self._get_auth_header()
+        response = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+        names = [b["name"] for b in response.json()["results"]]
+        self.assertIn("org1-batch", names)
+        self.assertNotIn("org2-batch", names)
 
     def test_batch_list_search_name(self):
         self._create_prefix_batch(name="alpha-batch")
@@ -163,6 +164,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertIsNotNone(batch_data["csv_link"])
             self.assertIn(str(batch.pk), batch_data["csv_link"])
             self.assertIsNone(batch_data["pdf_link"])
+
         with self.subTest("detail"):
             resp = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
@@ -188,13 +190,13 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
 
     def test_batch_detail_permissions(self):
         self._get_admin()
-        staff = self._create_staff_user("detailstaff", org=self.default_org)
         batch = self._create_prefix_batch()
         with self.subTest("w/o login"):
             response = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 401)
+
         with self.subTest("superuser"):
             header = self._get_auth_header()
             response = self.client.get(
@@ -202,15 +204,27 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 200)
+
         with self.subTest("staff w/ managed org"):
+            staff = self._create_operator(
+                organizations=[self.default_org],
+                username="detailstaff",
+                email="detailstaff@test.com",
+            )
             header = self._get_auth_header(staff.username, "tester")
             response = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 200)
+
         with self.subTest("staff w/o managed org"):
-            no_org_staff = self._create_staff_user("noorgstaff")
+            org2 = self._create_org(**{"name": "other", "slug": "other"})
+            no_org_staff = self._create_operator(
+                organizations=[org2],
+                username="noorgstaff",
+                email="noorgstaff@test.com",
+            )
             header = self._get_auth_header(no_org_staff.username, "tester")
             response = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
@@ -221,7 +235,11 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
     def test_batch_detail_cross_org_404(self):
         org2 = self._create_org(**{"name": "other", "slug": "other"})
         batch = self._create_prefix_batch(organization=org2)
-        staff = self._create_staff_user("crossorgstaff", org=self.default_org)
+        staff = self._create_operator(
+            organizations=[self.default_org],
+            username="crossorgstaff",
+            email="crossorgstaff@test.com",
+        )
         header = self._get_auth_header(staff.username, "tester")
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.get(url, HTTP_AUTHORIZATION=header)
@@ -247,8 +265,16 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
 
     def test_batch_delete_permissions(self):
         self._get_admin()
-        staff = self._create_staff_user("deletestaff", org=self.default_org)
-        delete_perm = Permission.objects.get(codename="delete_radiusbatch")
+        operator = self._create_operator(
+            organizations=[self.default_org],
+            username="deletestaff",
+            email="deletestaff@test.com",
+        )
+        administrator = self._create_administrator(
+            organizations=[self.default_org],
+            username="deletadmin",
+            email="deletadmin@test.com",
+        )
         with self.subTest("w/o login"):
             batch = self._create_prefix_batch(name="batch-noauth")
             response = self.client.delete(
@@ -265,19 +291,18 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             )
             self.assertEqual(response.status_code, 204)
 
-        with self.subTest("staff w/o delete permission"):
+        with self.subTest("operator w/o delete permission"):
             batch = self._create_prefix_batch(name="batch-noperm")
-            header = self._get_auth_header(staff.username, "tester")
+            header = self._get_auth_header(operator.username, "tester")
             response = self.client.delete(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 403)
 
-        with self.subTest("staff w/ delete permission"):
+        with self.subTest("administrator w/ delete permission"):
             batch = self._create_prefix_batch(name="batch-withperm")
-            staff.user_permissions.add(delete_perm)
-            header = self._get_auth_header(staff.username, "tester")
+            header = self._get_auth_header(administrator.username, "tester")
             response = self.client.delete(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
                 HTTP_AUTHORIZATION=header,
@@ -301,10 +326,12 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
     def test_batch_delete_cross_org_404(self):
         org2 = self._create_org(**{"name": "other", "slug": "other"})
         batch = self._create_prefix_batch(organization=org2)
-        staff = self._create_staff_user("delcrossorg", org=self.default_org)
-        delete_perm = Permission.objects.get(codename="delete_radiusbatch")
-        staff.user_permissions.add(delete_perm)
-        header = self._get_auth_header(staff.username, "tester")
+        administrator = self._create_administrator(
+            organizations=[self.default_org],
+            username="delcrossorg",
+            email="delcrossorg@test.com",
+        )
+        header = self._get_auth_header(administrator.username, "tester")
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.delete(url, HTTP_AUTHORIZATION=header)
         self.assertEqual(response.status_code, 404)
