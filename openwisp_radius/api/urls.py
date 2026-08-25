@@ -7,110 +7,115 @@ from . import views
 def get_api_urls(api_views=None):
     if not api_views:
         api_views = views
+
+    def get_view(name):
+        """Fall back to the standard view when a custom view is unavailable."""
+        return getattr(api_views, name, getattr(views, name))
+
     if app_settings.RADIUS_API:
         return [
-            path("freeradius/authorize/", api_views.authorize, name="authorize"),
-            path("freeradius/postauth/", api_views.postauth, name="postauth"),
-            path("freeradius/accounting/", api_views.accounting, name="accounting"),
+            path("freeradius/authorize/", get_view("authorize"), name="authorize"),
+            path("freeradius/postauth/", get_view("postauth"), name="postauth"),
+            path("freeradius/accounting/", get_view("accounting"), name="accounting"),
             # registration differentiated by organization
             path(
                 "radius/organization/<slug:slug>/account/",
-                api_views.register,
+                get_view("register"),
                 name="rest_register",
             ),
             # password reset
             path(
                 "radius/organization/<slug:slug>/account/password/reset/confirm/",
-                api_views.password_reset_confirm,
+                get_view("password_reset_confirm"),
                 name="rest_password_reset_confirm",
             ),
             path(
                 "radius/organization/<slug:slug>/account/password/reset/",
-                api_views.password_reset,
+                get_view("password_reset"),
                 name="rest_password_reset",
             ),
             path(
                 "radius/organization/<slug:slug>/account/password/change/",
-                api_views.password_change,
+                get_view("password_change"),
                 name="rest_password_change",
             ),
             # obtaining the user token is also different for every org
             path(
                 "radius/organization/<slug:slug>/account/token/",
-                api_views.obtain_auth_token,
+                get_view("obtain_auth_token"),
                 name="user_auth_token",
             ),
             path(
                 "radius/organization/<slug:slug>/account/token/validate/",
-                api_views.validate_auth_token,
+                get_view("validate_auth_token"),
                 name="validate_auth_token",
             ),
             path(
                 "radius/organization/<slug:slug>/account/session/",
-                api_views.user_accounting,
+                get_view("user_accounting"),
                 name="user_accounting",
             ),
             path(
                 "radius/organization/<slug:slug>/account/usage/",
-                api_views.user_radius_usage,
+                get_view("user_radius_usage"),
                 name="user_radius_usage",
             ),
             # generate new sms phone token
             path(
                 "radius/organization/<slug:slug>/account/phone/token/",
-                api_views.create_phone_token,
+                get_view("create_phone_token"),
                 name="phone_token_create",
             ),
             path(
                 "radius/organization/<slug:slug>/account/phone/token/active/",
-                api_views.get_phone_token_status,
+                get_view("get_phone_token_status"),
                 name="phone_token_status",
             ),
             path(
                 "radius/organization/<slug:slug>/account/phone/verify/",
-                api_views.validate_phone_token,
+                get_view("validate_phone_token"),
                 name="phone_token_validate",
             ),
             # allow changing phone number
             path(
                 "radius/organization/<slug:slug>/account/phone/change/",
-                api_views.change_phone_number,
+                get_view("change_phone_number"),
                 name="phone_number_change",
             ),
             path(
                 "radius/organization/<slug:slug>/account/registration-method/",
-                api_views.update_registered_user_registration_method,
+                get_view("update_registered_user_registration_method"),
                 name="update_registered_user_registration_method",
             ),
-            path("radius/batch/", api_views.batch, name="batch"),
+            path("radius/batch/", get_view("batch"), name="batch"),
             path(
                 "radius/organization/<slug:slug>/batch/<uuid:pk>/pdf/",
-                api_views.download_rad_batch_pdf,
+                get_view("download_rad_batch_pdf"),
                 name="download_rad_batch_pdf",
             ),
             path(
                 "radius/sessions/",
-                api_views.radius_accounting,
+                get_view("radius_accounting"),
                 name="radius_accounting_list",
             ),
             path(
                 "radius/group/",
-                api_views.radius_group_list,
+                get_view("radius_group_list"),
                 name="radius_group_list",
             ),
             path(
                 "radius/group/<uuid:pk>/",
-                api_views.radius_group_detail,
+                get_view("radius_group_detail"),
                 name="radius_group_detail",
             ),
             path(
                 "users/user/<str:user_pk>/radius-group/",
-                api_views.radius_user_group_list,
+                get_view("radius_user_group_list"),
                 name="radius_user_group_list",
             ),
             path(
                 "users/user/<str:user_pk>/radius-group/<uuid:pk>/",
-                api_views.radius_user_group_detail,
+                get_view("radius_user_group_detail"),
                 name="radius_user_group_detail",
             ),
         ]
