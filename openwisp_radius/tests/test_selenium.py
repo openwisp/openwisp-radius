@@ -1,7 +1,9 @@
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
+from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.db.migrations.state import ProjectState
 from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.by import By
@@ -9,7 +11,8 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from openwisp_radius import tasks
-from openwisp_users.tests.utils import TestOrganizationMixin
+from openwisp_radius.migrations import assign_permissions_to_groups
+from openwisp_users.migrations import create_default_groups
 from openwisp_utils.tests.selenium import SeleniumTestMixin
 
 from ..utils import load_model
@@ -24,8 +27,14 @@ RadiusGroup = load_model("RadiusGroup")
 @tag("selenium_tests")
 @tag("no_parallel")
 class BasicTest(
-    SeleniumTestMixin, FileMixin, StaticLiveServerTestCase, TestOrganizationMixin
+    SeleniumTestMixin, FileMixin, CreateRadiusObjectsMixin, StaticLiveServerTestCase
 ):
+    def _restore_default_permission_groups(self):
+        """Recreate default role permissions removed by TransactionTestCase flushes."""
+        test_apps = ProjectState.from_apps(django_apps).apps
+        create_default_groups(test_apps, None)
+        assign_permissions_to_groups(test_apps, None)
+
     # Test case for batch user creation
     def test_batch_user_creation(self):
         """Test the batch user creation feature"""
@@ -242,8 +251,10 @@ class BasicTest(
         )
         option.click()
         WebDriverWait(self.web_driver, 10).until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
-            == str(group.pk)
+            lambda driver: (
+                driver.find_element(By.ID, "id_group").get_attribute("value")
+                == str(group.pk)
+            )
         )
         self.assertEqual(self.get_browser_errors(), [])
 
@@ -285,10 +296,54 @@ class BasicTest(
             lambda driver: driver.execute_script("return django.jQuery.active === 0")
         )
         WebDriverWait(self.web_driver, 10).until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
-            == str(group.pk)
+            lambda driver: (
+                driver.find_element(By.ID, "id_group").get_attribute("value")
+                == str(group.pk)
+            )
         )
         self.assertEqual(self.get_browser_errors(), [])
+
+    def test_view_only_change_page_shows_readonly_fields(self):
+        org = self._get_org()
+        check = self._create_radius_check(
+            username="tester", attribute="NT-Password", value="Cam0_liX"
+        )
+        reply = self._create_radius_reply(
+            username="tester", attribute="Reply-Message", value="hi"
+        )
+        self._restore_default_permission_groups()
+        user = self._create_operator([org], username="viewonly")
+        self.assertFalse(user.has_perm(f"{check._meta.app_label}.change_radiuscheck"))
+        self.assertFalse(user.has_perm(f"{reply._meta.app_label}.change_radiusreply"))
+        self.web_driver.delete_all_cookies()
+        self.login(username=user.username, password="tester")
+        for url, expected_value in (
+            (
+                reverse(
+                    f"admin:{check._meta.app_label}_{check._meta.model_name}_change",
+                    args=[check.pk],
+                ),
+                "Cam0_liX",
+            ),
+            (
+                reverse(
+                    f"admin:{reply._meta.app_label}_{reply._meta.model_name}_change",
+                    args=[reply.pk],
+                ),
+                "hi",
+            ),
+        ):
+            with self.subTest(url=url):
+                self.open(url)
+                value_row = self.wait_for_visibility(
+                    By.CSS_SELECTOR, ".form-row.field-value", 10
+                )
+                self.assertIn(expected_value, value_row.text)
+                self.assertFalse(
+                    self.find_element(
+                        By.CSS_SELECTOR, ".form-row.field-mode", 10, wait_for="presence"
+                    ).is_displayed()
+                )
 
 
 @pytest.mark.asyncio
