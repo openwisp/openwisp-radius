@@ -1,3 +1,5 @@
+from io import StringIO
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import override_settings
@@ -46,6 +48,12 @@ class TestUtils(FileMixin, BaseTestCase):
         with self.assertRaises(ValidationError) as error:
             validate_csvfile(open(improper_csv_path, "rt"))
         self.assertTrue("Improper CSV format" in error.exception.message)
+
+    def test_validate_csvfile_rejects_radius_group_column(self):
+        csvfile = StringIO("user,password,user@example.com,First,Last,radius-group")
+        with self.assertRaises(ValidationError) as error:
+            validate_csvfile(csvfile)
+        self.assertIn("Improper CSV format", error.exception.message)
 
     @override_settings(AUTHENTICATION_BACKENDS=[])
     def test_get_one_time_login_url(self):

@@ -12,6 +12,8 @@ from . import FileMixin
 from .mixins import BaseTestCase, BaseTransactionTestCase
 
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
 
 
 class TestCSVUpload(FileMixin, BaseTestCase):
@@ -123,6 +125,79 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         user = batch.users.first()
         self.assertEqual(hashed_password, user.password)
 
+    def test_users_inherit_batch_group(self):
+        group = self._create_radius_group(name="guests")
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
+        )
+        batch.add(reader)
+        self.assertTrue(
+            RadiusUserGroup.objects.filter(
+                user=batch.users.first(), group=group
+            ).exists()
+        )
+
+    def test_importing_existing_users_replaces_batch_organization_group(self):
+        existing_group = self._create_radius_group(name="existing")
+        group = self._create_radius_group(name="guests")
+        user = self._create_user(username="rohith", email="rohith@openwisp.com")
+        self._create_org_user(user=user)
+        self._create_radius_usergroup(user=user, group=existing_group)
+        organization = self._create_org(name="other organization", slug="other-org")
+        other_group = self._create_radius_group(
+            name="other-existing", organization=organization
+        )
+        self._create_org_user(user=user, organization=organization)
+        self._create_radius_usergroup(user=user, group=other_group)
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
+        )
+        batch.add(reader)
+        user_groups = RadiusUserGroup.objects.filter(
+            user=user, group__organization=batch.organization
+        )
+        self.assertEqual(
+            list(user_groups.values_list("group_id", flat=True)), [group.pk]
+        )
+        self.assertTrue(
+            RadiusUserGroup.objects.filter(user=user, group=other_group).exists()
+        )
+
+    def test_import_rejects_ambiguous_case_insensitive_email(self):
+        self._create_user(username="rohith", email="rohith@openwisp.com")
+        user = self._create_user(username="rohith2", email="other@openwisp.com")
+        get_user_model().objects.filter(pk=user.pk).update(email="ROHITH@OPENWISP.COM")
+        reader = [["rohith", "cleartext$password", "Rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        with self.assertRaises(ValidationError) as context_manager:
+            batch.add(reader)
+        self.assertEqual(
+            context_manager.exception.message_dict["email"],
+            ["Multiple users match this email address."],
+        )
+        self.assertFalse(batch.users.exists())
+
+    def test_import_deduplicates_case_insensitive_email(self):
+        reader = [
+            ["rohith", "cleartext$password", "rohith@openwisp.com", "", ""],
+            ["rohith2", "cleartext$password", "ROHITH@OPENWISP.COM", "", ""],
+        ]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        batch.add(reader)
+        self.assertEqual(batch.users.count(), 1)
+        self.assertEqual(
+            get_user_model()
+            .objects.filter(email__iexact="rohith@openwisp.com")
+            .count(),
+            1,
+        )
+
 
 class TestPrefixUpload(FileMixin, BaseTestCase):
     def test_users_inherit_batch_expiration_date(self):
@@ -177,6 +252,17 @@ class TestPrefixUpload(FileMixin, BaseTestCase):
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         self.assertEqual(batch.users.all().count(), 5)
 
+    def test_users_inherit_batch_group(self):
+        group = self._create_radius_group(name="guests")
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="Test1", group=group
+        )
+        batch.prefix_add("test-prefix16", 2)
+        for user in batch.users.all():
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=user, group=group).exists()
+            )
+
 
 class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
     @patch("openwisp_radius.settings.API_AUTHORIZE_REJECT", True)
@@ -211,8 +297,17 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
         self.assertEqual(reg_user.method, "manual")
 
 
-class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
-    def test_csv_upload_total_rollback(self):
+class TestTransactionBatch(FileMixin, BaseTransactionTestCase):
+    def test_users_without_batch_group_inherit_default_group(self):
+        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
+        batch = self._create_radius_batch(
+            name="test", strategy="csv", csvfile=self._get_csvfile(reader)
+        )
+        batch.add(reader)
+        user_group = RadiusUserGroup.objects.get(user=batch.users.first())
+        self.assertTrue(user_group.group.default)
+
+    def test_csv_upload_deduplicates_case_insensitive_email(self):
         User = get_user_model()
         org = self._get_org()
         data = [
@@ -225,17 +320,18 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
             organization=org,
             csvfile=self._get_csvfile(data),
         )
-        with self.assertRaises(IntegrityError):
-            batch.csvfile_upload()
-        self.assertFalse(RadiusBatch.objects.filter(name="total-rollback").exists())
-        self.assertFalse(User.objects.filter(username="user_one").exists())
+        batch.csvfile_upload()
+        self.assertTrue(RadiusBatch.objects.filter(name="total-rollback").exists())
+        self.assertEqual(
+            User.objects.filter(email__iexact="total@example.com").count(), 1
+        )
 
     def test_add_method_internal_atomicity(self):
         User = get_user_model()
         org = self._get_org()
         data = [
-            ["user_one", "pass123", "duplicate@example.com", "John", "Doe"],
-            ["user_two", "pass123", "duplicate@example.com", "Jane", "Doe"],
+            ["user_one", "pass123", "one@example.com", "John", "Doe"],
+            ["user_two", "pass123", "two@example.com", "Jane", "Doe"],
         ]
         batch = self._create_radius_batch(
             name="atomic-integrity-test",
@@ -243,8 +339,16 @@ class TestBatchAtomicity(FileMixin, BaseTransactionTestCase):
             organization=org,
             csvfile=self._get_csvfile(data),
         )
-        with self.assertRaises(IntegrityError):
-            batch.add(data)
+        original_save_user = batch.save_user
+
+        def save_user(user):
+            if user.username == "user_two":
+                raise IntegrityError
+            original_save_user(user)
+
+        with patch.object(batch, "save_user", side_effect=save_user):
+            with self.assertRaises(IntegrityError):
+                batch.add(data)
         self.assertFalse(User.objects.filter(username="user_one").exists())
         self.assertTrue(
             RadiusBatch.objects.filter(name="atomic-integrity-test").exists()

@@ -4,8 +4,8 @@ from uuid import UUID
 
 import openvpn_status
 from django.core.management import BaseCommand
-from Exscript.protocols import telnetlib
 from netaddr import EUI, mac_unix
+from telnetlib3 import telnetlib
 
 from .... import settings as app_settings
 from ....utils import load_model
@@ -23,10 +23,6 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
     help = "Correct Called Station IDs of Radius Sessions"
 
     def _get_raw_management_info(self, host, port, password):
-        # Exscript's telnetlib.Telnet is a re-implementation that does not
-        # support the context manager protocol, so a `with` statement raised
-        # a TypeError that was silently swallowed upstream. Open the
-        # connection explicitly and always close it in a finally block.
         tn = telnetlib.Telnet(host, port, timeout=TELNET_CONNECTION_TIMEOUT)
         try:
             if password:

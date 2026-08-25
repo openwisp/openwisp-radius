@@ -705,6 +705,22 @@ class Migration(migrations.Migration):
                         verbose_name="expiration date",
                     ),
                 ),
+                (
+                    "group",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=swapper.get_model_name("openwisp_radius", "RadiusGroup"),
+                        verbose_name="radius group",
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="internal notes", verbose_name="notes"
+                    ),
+                ),
                 ("details", models.CharField(blank=True, max_length=64, null=True)),
                 (
                     "organization",

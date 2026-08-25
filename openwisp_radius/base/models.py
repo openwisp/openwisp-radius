@@ -1012,6 +1012,14 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         blank=True,
         help_text=_("If left blank users will never expire"),
     )
+    group = models.ForeignKey(
+        "RadiusGroup",
+        verbose_name=_("radius group"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(_("notes"), blank=True, help_text=_("internal notes"))
 
     class Meta:
         db_table = "radbatch"
@@ -1080,6 +1088,7 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             )
         if self.strategy == "csv":
             validate_csvfile(self.csvfile.file)
+        self._validate_org_relation("group", field_error="group")
         super().clean()
 
     def add(self, reader, password_length=BATCH_DEFAULT_PASSWORD_LENGTH):
@@ -1130,9 +1139,29 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
     def get_or_create_user(self, row, users_list, password_length):
         User = get_user_model()
         username, password, email, first_name, last_name = row
-        if email and User.objects.filter(email__iexact=email).exists():
-            user = User.objects.get(email__iexact=email)
-            return user, None
+        # Users created from earlier rows in the same CSV are saved only after
+        # every row is processed, so the database lookup cannot find them yet.
+        # Search users_list too, preventing another row in the same CSV with
+        # the same email in different casing from creating a second account.
+        # A saved user may be in both lists, so count it once rather than
+        # reporting two matches as an ambiguous email address.
+        if email:
+            matching_users = [
+                user
+                for user in users_list
+                if user.email and user.email.casefold() == email.casefold()
+            ]
+            matching_users.extend(User.objects.filter(email__iexact=email)[:2])
+            users = {
+                user.pk if user.pk is not None else id(user): user
+                for user in matching_users
+            }
+            if len(users) > 1:
+                raise ValidationError(
+                    {"email": _("Multiple users match this email address.")}
+                )
+            if users:
+                return next(iter(users.values())), None
         generated_password = None
         username, password, email, first_name, last_name = row
         if not username and email:
@@ -1155,8 +1184,10 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return user, generated_password
 
     def save_user(self, user):
+        self._validate_org_relation("group", field_error="group")
         OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
         RegisteredUser = swapper.load_model("openwisp_radius", "RegisteredUser")
+        RadiusUserGroup = swapper.load_model("openwisp_radius", "RadiusUserGroup")
         if self.expiration_date is not None:
             user.expiration_date = self.expiration_date
         user.save()
@@ -1177,15 +1208,21 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
             registered_user.is_verified = True
             registered_user.save()
         self.users.add(user)
-        if OrganizationUser.objects.filter(
+        if not OrganizationUser.objects.filter(
             user=user, organization=self.organization
         ).exists():
-            return
-        obj = OrganizationUser(
-            user=user, organization=self.organization, is_admin=False
-        )
-        obj.full_clean()
-        obj.save()
+            obj = OrganizationUser(
+                user=user, organization=self.organization, is_admin=False
+            )
+            obj.full_clean()
+            obj.save()
+        if self.group:
+            RadiusUserGroup.objects.filter(
+                user=user, group__organization=self.organization
+            ).delete()
+            user_group = RadiusUserGroup(user=user, group=self.group)
+            user_group.full_clean()
+            user_group.save()
 
     def delete(self):
         self.users.all().delete()

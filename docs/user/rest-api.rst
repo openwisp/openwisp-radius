@@ -881,34 +881,43 @@ different strategies: csv or prefix.
 
 The csv method needs the following parameters:
 
-================= =================================
+================= ===================================================
 Param             Description
-================= =================================
+================= ===================================================
 name              Name of the operation
 strategy          csv
 csvfile           file with the users
 expiration_date   date of expiration of the users
+group             Optional UUID of the RADIUS group assigned to users
+notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
-================= =================================
+================= ===================================================
 
 These others are for the prefix method:
 
-================= ==================================
+================= ===================================================
 Param             Description
-================= ==================================
+================= ===================================================
 name              name of the operation
 strategy          prefix
 prefix            prefix for the generation of users
 number_of_users   number of users
 expiration_date   date of expiration of the users
+group             Optional UUID of the RADIUS group assigned to users
+notes             Optional internal notes for the batch
 organization_slug slug of organization of the users
-================= ==================================
+================= ===================================================
 
 When using this strategy, in the response you can find the field
 ``user_credentials`` containing the list of users created (example:
 ``[['username', 'password'], ['sample_user', 'BBuOb5sN']]``) and the field
 ``pdf_link`` which can be used to download a PDF file containing the user
 credentials.
+
+Use the :ref:`RADIUS Groups endpoint <radius_groups>` to search for a
+group by organization before sending its UUID in the ``group`` parameter.
+The ``group`` and ``notes`` parameters are optional. When ``group`` is
+omitted, users retain the standard default-group behavior.
 
 Batch CSV Download
 ++++++++++++++++++
@@ -925,6 +934,8 @@ users for a specific batch user creation operation. Example:
     curl -X GET \
         'http://127.0.0.1:8000/api/v1/radius/organization/default/batch/f4943c8a-462e-40ba-89b6-91a2541c9cf4/csv/' \
         -H 'Authorization: Bearer your-token-here'
+
+.. _radius_groups:
 
 RADIUS Groups
 +++++++++++++

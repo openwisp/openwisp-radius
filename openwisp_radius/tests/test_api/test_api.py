@@ -30,6 +30,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from openwisp_radius import settings as app_settings
 from openwisp_radius.api.serializers import (
     PasswordResetSerializer,
+    RadiusBatchSerializer,
     RadiusUserGroupSerializer,
     RadiusUserSerializer,
     RegisterSerializer,
@@ -788,6 +789,54 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.client.force_login(self._get_operator())
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_radius_batch_serializer_fields_order(self):
+        self.assertEqual(
+            list(RadiusBatchSerializer().fields),
+            [
+                "id",
+                "strategy",
+                "organization",
+                "organization_slug",
+                "status",
+                "name",
+                "csvfile",
+                "prefix",
+                "number_of_users",
+                "group",
+                "users",
+                "expiration_date",
+                "notes",
+                "user_credentials",
+                "pdf_link",
+                "created",
+                "modified",
+            ],
+        )
+
+    def test_batch_prefix_group_and_notes_201(self):
+        group = self._create_radius_group(name="guests")
+        response = self._radius_batch_post_request(
+            self._radius_batch_prefix_data(group=str(group.pk), notes="Internal note")
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        batch = RadiusBatch.objects.get()
+        self.assertEqual(batch.group, group)
+        self.assertEqual(batch.notes, "Internal note")
+        for user in batch.users.all():
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=user, group=group).exists()
+            )
+
+    def test_batch_rejects_group_from_different_organization(self):
+        organization = self._create_org(name="other organization", slug="other-org")
+        group = self._create_radius_group(name="guests", organization=organization)
+        response = self._radius_batch_post_request(
+            self._radius_batch_prefix_data(group=str(group.pk))
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("group", response.data)
+        self.assertEqual(RadiusBatch.objects.count(), 0)
 
     @capture_any_output()
     def test_api_password_change(self):

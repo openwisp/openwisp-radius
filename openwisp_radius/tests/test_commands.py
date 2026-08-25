@@ -20,6 +20,8 @@ from .mixins import BaseTestCase
 User = get_user_model()
 RadiusAccounting = load_model("RadiusAccounting")
 RadiusBatch = load_model("RadiusBatch")
+RadiusGroup = load_model("RadiusGroup")
+RadiusUserGroup = load_model("RadiusUserGroup")
 RadiusPostAuth = load_model("RadiusPostAuth")
 RegisteredUser = load_model("RegisteredUser")
 
@@ -154,6 +156,40 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
             self._call_command("batch_add_users", **options)
 
+    @capture_any_output()
+    def test_batch_add_users_command_group_and_notes(self):
+        organization = self._get_org("test-organization")
+        group = self._create_radius_group(name="guests", organization=organization)
+
+        with self.subTest("valid group and notes"):
+            self._call_command(
+                "batch_add_users",
+                file=self._get_path("static/test_batch.csv"),
+                name="test",
+                organization=organization.slug,
+                group=str(group.pk),
+                notes="Internal note",
+            )
+            batch = RadiusBatch.objects.get()
+            self.assertEqual(batch.group, group)
+            self.assertEqual(batch.notes, "Internal note")
+            self.assertEqual(
+                RadiusUserGroup.objects.filter(
+                    user__in=batch.users.all(), group=group
+                ).count(),
+                batch.users.count(),
+            )
+
+        with self.subTest("invalid group"):
+            with self.assertRaises(CommandError):
+                self._call_command(
+                    "batch_add_users",
+                    file=self._get_path("static/test_batch.csv"),
+                    name="invalid-group",
+                    organization=organization.slug,
+                    group="00000000-0000-0000-0000-000000000000",
+                )
+
     @freeze_time(_TEST_DATE)
     @capture_stdout()
     def test_delete_old_radiusbatch_users_command(self, subtest_id=None):
@@ -270,6 +306,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     def test_prefix_add_users_command(self):
         self.assertEqual(RadiusBatch.objects.all().count(), 0)
         output_pdf = os.path.join(settings.MEDIA_ROOT, "test_prefix10.pdf")
+        group = self._create_radius_group(name="guests")
         options = dict(
             organization=self.default_org.slug,
             prefix="test-prefix7",
@@ -277,17 +314,24 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             name="test",
             expiration="28-01-2098",
             output=output_pdf,
+            group=str(group.pk),
+            notes="Internal note",
         )
         self._call_command("prefix_add_users", **options)
         self.assertEqual(RadiusBatch.objects.all().count(), 1)
         self.assertTrue(os.path.isfile(output_pdf))
         os.remove(output_pdf)
         radiusbatch = RadiusBatch.objects.first()
+        self.assertEqual(radiusbatch.group, group)
+        self.assertEqual(radiusbatch.notes, "Internal note")
         users = get_user_model().objects.all()
         self.assertEqual(users.count(), 10)
         for u in users:
             self.assertTrue("test-prefix7" in u.username)
             self.assertEqual(u.expiration_date.strftime("%d-%m-%y"), "28-01-98")
+            self.assertTrue(
+                RadiusUserGroup.objects.filter(user=u, group=group).exists()
+            )
         self.assertEqual(radiusbatch.expiration_date.strftime("%d-%m-%y"), "28-01-98")
         options = dict(
             organization=self.default_org.slug, prefix="test-prefix8", n=5, name="test1"
@@ -493,10 +537,6 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
     @patch("openwisp_radius.tasks.convert_called_station_id")
     def test_convert_called_station_id_closes_telnet(self, *args):
-        # regression for #727: Exscript's telnetlib.Telnet has no context
-        # manager protocol, so `with Telnet(...)` raised a TypeError that was
-        # swallowed upstream and the id was never converted. The command must
-        # open the connection and close it explicitly (not via `with`).
         org = self._create_org(
             id="1e4a8240-cfc8-4af0-88dd-7d487e3f7aa1",
             name="telnet close test",
@@ -508,34 +548,50 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         options["unique_id"] = "727"
         options["organization"] = org
         radius_acc = self._create_radius_accounting(**options)
-
         status = self._get_openvpn_status().encode()
-        closed = []
 
         class FakeTelnet:
-            # mimics Exscript's Telnet: no __enter__/__exit__
+            instances = []
+
             def __init__(self, *args, **kwargs):
-                pass
+                self.args = args
+                self.kwargs = kwargs
+                self.read_until_calls = []
+                self.writes = []
+                self.closed = False
+                self.instances.append(self)
 
             def read_until(self, *args, **kwargs):
+                self.read_until_calls.append((args, kwargs))
                 return status
 
-            def write(self, *args, **kwargs):
-                pass
+            def write(self, data):
+                self.writes.append(data)
 
             def close(self):
-                closed.append(True)
+                self.closed = True
 
-        with patch(
-            "openwisp_radius.management.commands.base."
-            "convert_called_station_id.telnetlib.Telnet",
-            FakeTelnet,
-        ):
+        with patch("telnetlib3.telnetlib.Telnet", FakeTelnet):
             call_command("convert_called_station_id")
-
         radius_acc.refresh_from_db()
+        telnet = FakeTelnet.instances[0]
         self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
-        self.assertTrue(closed, "the telnet connection should be closed")
+        self.assertEqual(telnet.args, ("127.0.0.1", 7505))
+        self.assertEqual(telnet.kwargs, {"timeout": 30})
+        self.assertEqual(
+            [call[0][0] for call in telnet.read_until_calls],
+            [
+                b"ENTER PASSWORD:",
+                b">INFO:OpenVPN Management Interface Version 3 -- type "
+                b"'help' for more info",
+                b"END",
+            ],
+        )
+        self.assertTrue(
+            all(call[1] == {"timeout": 30} for call in telnet.read_until_calls)
+        )
+        self.assertEqual(telnet.writes, [b"somepassword\n", b"status\n"])
+        self.assertTrue(telnet.closed, "the telnet connection should be closed")
 
     @capture_any_output()
     @patch.object(

@@ -3,15 +3,46 @@
   $(document).ready(function () {
     var strategy = $("#id_strategy"),
       prefixRows = $(
-        "#id_prefix, #id_name, " + "#id_expiration_date, #id_number_of_users",
+        "#id_prefix, #id_name, #id_expiration_date, " +
+          "#id_number_of_users, #id_group, #id_notes",
       ).parents(".form-row"),
-      csvRows = $("#id_csvfile, #id_name, " + "#id_expiration_date").parents(
-        ".form-row",
-      ),
+      csvRows = $(
+        "#id_csvfile, #id_name, #id_expiration_date, #id_group, #id_notes",
+      ).parents(".form-row"),
       prefixField = $(".form-row.field-prefix"),
       pdfField = $(".form-row.field-pdf"),
       csvField = $(".form-row.field-csvfile"),
-      strategyField = $(".form-row.field-strategy .readonly")["0"];
+      groupField = $("#id_group"),
+      organizationField = $("#id_organization"),
+      strategyField = $(".form-row.field-strategy .readonly")["0"],
+      currentOrganization = organizationField.val(),
+      defaultGroupRequest = 0;
+
+    function autoDefaultRadiusGroup(force) {
+      var organization = organizationField.val(),
+        defaultUrl = groupField.attr("data-default-url"),
+        request = ++defaultGroupRequest;
+      if (!organization || !groupField.length || !defaultUrl) {
+        return;
+      }
+      if (!force && groupField.val()) {
+        return;
+      }
+      groupField.val(null).trigger("change");
+      $.get(defaultUrl.replace("__organization__", organization)).done(
+        function (group) {
+          if (
+            request !== defaultGroupRequest ||
+            organizationField.val() !== organization
+          ) {
+            return;
+          }
+          groupField
+            .append(new Option(group.text, group.id, true, true))
+            .trigger("change");
+        },
+      );
+    }
 
     function csv_strategy() {
       prefixRows.hide();
@@ -50,6 +81,16 @@
         csvField.hide();
       }
     });
+    organizationField.change(function () {
+      if (organizationField.val() === currentOrganization) {
+        return;
+      }
+      currentOrganization = organizationField.val();
+      autoDefaultRadiusGroup(true);
+    });
     strategy.trigger("change");
+    $(window).on("load", function () {
+      autoDefaultRadiusGroup();
+    });
   });
 })(django.jQuery);
