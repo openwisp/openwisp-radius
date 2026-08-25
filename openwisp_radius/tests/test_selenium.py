@@ -1,6 +1,7 @@
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
 from django.urls import reverse
@@ -301,9 +302,22 @@ class BasicTest(
         reply = self._create_radius_reply(
             username="tester", attribute="Reply-Message", value="hi"
         )
-        self._create_operator([org], username="viewonly")
+        # TransactionTestCase subclasses flush the database between
+        # tests, deleting the "Operator" group created by data
+        # migrations; _create_operator() would then assign no
+        # permissions at all and the change pages would return
+        # 403 Forbidden
+        user = self._create_user(
+            username="viewonly", email="viewonly@example.com", is_staff=True
+        )
+        user.user_permissions.add(
+            *Permission.objects.filter(
+                codename__in=("view_radiuscheck", "view_radiusreply")
+            )
+        )
+        self._create_org_user(organization=org, user=user, is_admin=True)
         self.web_driver.delete_all_cookies()
-        self.login(username="viewonly", password="tester")
+        self.login(username=user.username, password="tester")
         for url, expected_value in (
             (
                 reverse(
