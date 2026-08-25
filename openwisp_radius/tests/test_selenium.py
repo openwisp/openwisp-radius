@@ -29,6 +29,12 @@ RadiusGroup = load_model("RadiusGroup")
 class BasicTest(
     SeleniumTestMixin, FileMixin, CreateRadiusObjectsMixin, StaticLiveServerTestCase
 ):
+    def _restore_default_permission_groups(self):
+        """Recreate default role permissions removed by TransactionTestCase flushes."""
+        test_apps = ProjectState.from_apps(django_apps).apps
+        create_default_groups(test_apps, None)
+        assign_permissions_to_groups(test_apps, None)
+
     # Test case for batch user creation
     def test_batch_user_creation(self):
         """Test the batch user creation feature"""
@@ -305,15 +311,7 @@ class BasicTest(
         reply = self._create_radius_reply(
             username="tester", attribute="Reply-Message", value="hi"
         )
-
-        # TransactionTestCase subclasses flush the database between
-        # tests, deleting the "Operator" group created by data
-        # migrations; recreate the default groups and their
-        # permissions so that _create_operator() grants the
-        # view-only permissions expected here.
-        test_apps = ProjectState.from_apps(django_apps).apps
-        create_default_groups(test_apps, None)
-        assign_permissions_to_groups(test_apps, None)
+        self._restore_default_permission_groups()
         user = self._create_operator([org], username="viewonly")
         self.assertFalse(user.has_perm(f"{check._meta.app_label}.change_radiuscheck"))
         self.assertFalse(user.has_perm(f"{reply._meta.app_label}.change_radiusreply"))
