@@ -37,6 +37,7 @@ from openwisp_utils.api.serializers import ValidatedModelSerializer
 from .. import settings as app_settings
 from ..counters.exceptions import SkipCheck
 from ..utils import (
+    find_available_username,
     get_group_checks,
     get_organization_radius_settings,
     get_user_group,
@@ -592,6 +593,19 @@ class RegisterSerializer(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["method"].choices = app_settings.USER_SETTABLE_REGISTRATION_METHODS
+
+    def validate_username(self, username):
+        email = self.initial_data.get("email", "")
+        local_part = email.rsplit("@", 1)[0] if "@" in email else ""
+
+        if (
+            username == local_part
+            and User.objects.filter(username=username).exists()
+            and not User.objects.filter(username=username, email__iexact=email).exists()
+        ):
+            username = find_available_username(username, [])
+
+        return super().validate_username(username)
 
     def validate_phone_number(self, phone_number):
         org = self.context["view"].organization

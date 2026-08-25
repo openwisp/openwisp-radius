@@ -207,6 +207,54 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             False,
         )
 
+
+    def test_register_same_username_different_email(self):
+        self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "johndae@gmail.com",
+            }
+        )
+
+        self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "johndae@yahoo.com",
+            },
+            expect_users=2,
+        )
+
+        self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "johndae@outlook.com",
+            },
+            expect_users=3,
+        )
+
+        users = User.objects.filter(
+            email__in=[
+                "johndae@gmail.com",
+                "johndae@yahoo.com",
+                "johndae@outlook.com",
+            ]
+        )
+
+        self.assertEqual(users.count(), 3)
+
+        self.assertEqual(
+            users.get(email="johndae@gmail.com").username,
+            "johndae",
+        )
+        self.assertEqual(
+            users.get(email="johndae@yahoo.com").username,
+            "johndae1",
+        )
+        self.assertEqual(
+            users.get(email="johndae@outlook.com").username,
+            "johndae2",
+        )
+
     def test_register_400_password(self):
         response = self._register_user(
             extra_params={"password1": "password1", "password2": "password2"},
