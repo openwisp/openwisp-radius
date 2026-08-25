@@ -541,8 +541,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             " The metric will be written without a related object!"
         )
 
-    @patch("logging.Logger.info")
-    def test_post_save_radius_accounting_registereduser_not_found(self, mocked_logger):
+    def test_post_save_radius_accounting_registereduser_not_found(self):
         """
         This test checks that radius accounting metric is created
         even if the RegisteredUser object could not be found for the user.
@@ -568,7 +567,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         options["stop_time"] = timezone.now()
 
-        self._create_radius_accounting(**options)
+        with self.assertLogs(TASK_PATH, level="INFO") as captured:
+            self._create_radius_accounting(**options)
         self.assertEqual(
             self.metric_model.objects.filter(
                 configuration="radius_acc",
@@ -600,9 +600,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points["traces"][0][0], "unspecified")
         self.assertEqual(points["traces"][0][1][-1], 1)
         self.assertEqual(points["summary"], {"unspecified": 1})
-        mocked_logger.assert_called_once_with(
-            f'RegisteredUser object not found for "{user.username}".'
-            ' The metric will be written with "unspecified" registration method!'
+        self.assertEqual(
+            captured.output,
+            [
+                f"INFO:{TASK_PATH}:RegisteredUser object not found for"
+                f' "{user.username}". The metric will be written with'
+                ' "unspecified" registration method!'
+            ],
         )
 
     def test_post_save_radiusaccounting_pending_verification(self):
@@ -850,7 +854,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(days[first_day], 5)
         self.assertEqual(days[last_day], 7)
         self.assertIsNotNone(days[missing_day])
-        if timeseries_db.backend_name == "influxdb2":
+        if timeseries_db.backend_name in ("influxdb2", "elasticsearch"):
             self.assertEqual(days[missing_day], 5)
 
     def test_total_user_signups_chart_includes_the_end_date(self):

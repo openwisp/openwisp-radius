@@ -31,6 +31,17 @@ services:
       DOCKER_INFLUXDB_INIT_BUCKET: *timeseries_database
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: *influxdb2_token
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-9.4.3}
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+
   redis:
     image: redis:alpine
     ports:
@@ -40,3 +51,4 @@ services:
 volumes:
   influxdb-data: {}
   influxdb2-data: {}
+  elasticsearch-data: {}

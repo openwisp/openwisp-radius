@@ -99,6 +99,30 @@ def _flux_sessions(filters, summary=False):
     )
 
 
+_es_gb = 1 / 1000000000
+_es_signups = {
+    "__openwisp_query_type": "grouped_chart",
+    "group_by": "method",
+    "metric": {"name": "count", "field": "count", "agg": "sum"},
+}
+_es_total_signups = {
+    **_es_signups,
+    "metric": {"name": "count", "field": "count", "agg": "last"},
+    "fill": "previous",
+}
+_es_traffic = {
+    "__openwisp_query_type": "chart",
+    "metrics": [
+        {"name": "upload", "field": "output_octets", "agg": "sum", "scale": _es_gb},
+        {"name": "download", "field": "input_octets", "agg": "sum", "scale": _es_gb},
+    ],
+}
+_es_sessions = {
+    "__openwisp_query_type": "grouped_chart",
+    "group_by": "method",
+    "metric": {"name": "sessions", "field": "username", "agg": "cardinality"},
+}
+
 user_signups_chart_traces = {"total": "lines"}
 user_signups_chart_order = ["total"]
 user_signups_chart_trace_labels = {
@@ -137,6 +161,7 @@ user_singups_chart_config = {
             " GROUP BY time(1d), method"
         ),
         "influxdb2": _flux_signups("sum"),
+        "elasticsearch": _es_signups,
     },
     "summary_query": {"influxdb2": _flux_signups("sum", summary=True)},
     "query_default_param": {
@@ -162,6 +187,7 @@ total_user_singups_chart_config["query"]["influxdb"] = (
     " GROUP BY time(1d), method FILL(linear)"
 )
 total_user_singups_chart_config["query"]["influxdb2"] = _flux_signups("last")
+total_user_singups_chart_config["query"]["elasticsearch"] = _es_total_signups
 total_user_singups_chart_config["summary_query"] = {
     "influxdb2": _flux_signups("last", summary=True)
 }
@@ -228,6 +254,7 @@ RADIUS_METRICS = {
                         "GROUP BY time(1d)"
                     ),
                     "influxdb2": _flux_traffic(_flux_object_filters),
+                    "elasticsearch": _es_traffic,
                 },
                 "summary_query": {
                     "influxdb2": _flux_traffic(_flux_object_filters, summary=True)
@@ -262,6 +289,7 @@ RADIUS_METRICS = {
                         "GROUP by time(1d), method"
                     ),
                     "influxdb2": _flux_sessions(_flux_object_filters),
+                    "elasticsearch": _es_sessions,
                 },
                 "summary_query": {
                     "influxdb2": _flux_sessions(_flux_object_filters, summary=True)
@@ -311,6 +339,7 @@ RADIUS_METRICS = {
                         "{location_id} GROUP BY time(1d)"
                     ),
                     "influxdb2": _flux_traffic(_flux_organization_filters),
+                    "elasticsearch": _es_traffic,
                 },
                 "summary_query": {
                     "influxdb2": _flux_traffic(_flux_organization_filters, summary=True)
@@ -347,6 +376,7 @@ RADIUS_METRICS = {
                         "{location_id} GROUP by time(1d), method"
                     ),
                     "influxdb2": _flux_sessions(_flux_organization_filters),
+                    "elasticsearch": _es_sessions,
                 },
                 "summary_query": {
                     "influxdb2": _flux_sessions(

@@ -54,7 +54,8 @@ OpenWISP Monitoring </radius/user/radius_monitoring>`):
 
     docker compose up -d redis influxdb
 
-To run the monitoring integration tests on InfluxDB 2 instead:
+To run the monitoring integration tests on InfluxDB 2 or Elasticsearch
+instead, start the relevant container and export the backend:
 
 .. code-block:: shell
 
