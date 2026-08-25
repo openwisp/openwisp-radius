@@ -90,7 +90,7 @@ def get_api_urls(api_views=None):
             path("radius/batch/", get_view("batch"), name="batch"),
             path(
                 "radius/batch/<uuid:pk>/",
-                api_views.batch_detail,
+                get_view("batch_detail"),
                 name="radius_batch_detail",
             ),
             path(
