@@ -3,6 +3,7 @@ from channels.testing import ChannelsLiveServerTestCase
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.db.migrations.state import ProjectState
 from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.by import By
@@ -304,13 +305,15 @@ class BasicTest(
         reply = self._create_radius_reply(
             username="tester", attribute="Reply-Message", value="hi"
         )
+
         # TransactionTestCase subclasses flush the database between
         # tests, deleting the "Operator" group created by data
         # migrations; recreate the default groups and their
         # permissions so that _create_operator() grants the
-        # view-only permissions expected here
-        create_default_groups(django_apps, None)
-        assign_permissions_to_groups(django_apps, None)
+        # view-only permissions expected here.
+        test_apps = ProjectState.from_apps(django_apps).apps
+        create_default_groups(test_apps, None)
+        assign_permissions_to_groups(test_apps, None)
         user = self._create_operator([org], username="viewonly")
         self.assertFalse(user.has_perm(f"{check._meta.app_label}.change_radiuscheck"))
         self.assertFalse(user.has_perm(f"{reply._meta.app_label}.change_radiusreply"))
