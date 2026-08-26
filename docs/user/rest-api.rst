@@ -489,20 +489,22 @@ is disabled for a particular org, an empty string will be acceptable.
 
 .. note::
 
-    When the submitted ``username`` matches the local-part of the submitted
-    ``email`` address and that username is already used by another email
-    address in the same organization, the registration API automatically
-    selects the next available username by appending a numeric suffix.
+    When the submitted ``username`` matches the local-part of the
+    submitted ``email`` address and that username is already used by
+    another email address in the same organization, the registration API
+    automatically selects the next available username by appending a
+    numeric suffix.
 
-    For example, registrations using the same email local-part can result in:
+    For example, registrations using the same email local-part can result
+    in:
 
-    * ``johndae@gmail.com`` → ``johndae``
-    * ``johndae@yahoo.com`` → ``johndae1``
-    * ``johndae@outlook.com`` → ``johndae2``
+    - ``johndae@gmail.com`` → ``johndae``
+    - ``johndae@yahoo.com`` → ``johndae1``
+    - ``johndae@outlook.com`` → ``johndae2``
 
     This does not change the behavior of cross-organization registration,
-    where an existing account is handled as described in
-    :ref:`Registering to Multiple Organizations
+    where an existing account is handled as described in :ref:`Registering
+    to Multiple Organizations
     <radius_registering_to_multiple_organizations>`.
 
 .. _radius_registering_to_multiple_organizations:
