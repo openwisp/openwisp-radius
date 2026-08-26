@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils.timezone import now, timedelta
 
+from openwisp_users.tests.utils import TestDisabledOrgMixin
 from openwisp_utils.tests import AssertNumQueriesSubTestMixin
 
 from ..utils import load_model
@@ -85,6 +86,34 @@ class GetEditFormInlineMixin(object):
                     "radiususergroup_set-MAX_NUM_FORMS": 0,
                 }
             )
+        registered_user = user.registered_users.first()
+        if registered_user is not None:
+            params.update(
+                {
+                    # registered user inline
+                    "registered_users-TOTAL_FORMS": 1,
+                    "registered_users-INITIAL_FORMS": 1,
+                    "registered_users-MIN_NUM_FORMS": 0,
+                    "registered_users-MAX_NUM_FORMS": 1000,
+                    "registered_users-0-id": str(registered_user.pk),
+                    "registered_users-0-user": str(registered_user.user_id),
+                    "registered_users-0-organization": str(
+                        registered_user.organization_id
+                    ),
+                    "registered_users-0-method": registered_user.method,
+                    "registered_users-0-is_verified": registered_user.is_verified,
+                }
+            )
+        else:
+            params.update(
+                {
+                    # registered user inline
+                    "registered_users-TOTAL_FORMS": 0,
+                    "registered_users-INITIAL_FORMS": 0,
+                    "registered_users-MIN_NUM_FORMS": 0,
+                    "registered_users-MAX_NUM_FORMS": 0,
+                }
+            )
         params.update(
             {
                 # social account inline
@@ -97,11 +126,6 @@ class GetEditFormInlineMixin(object):
                 "phonetoken_set-INITIAL_FORMS": 0,
                 "phonetoken_set-MIN_NUM_FORMS": 0,
                 "phonetoken_set-MAX_NUM_FORMS": 0,
-                # registered user inline
-                "registered_users-TOTAL_FORMS": 0,
-                "registered_users-INITIAL_FORMS": 0,
-                "registered_users-MIN_NUM_FORMS": 0,
-                "registered_users-MAX_NUM_FORMS": 0,
                 # radius token inline
                 "radius_token-TOTAL_FORMS": "0",
                 "radius_token-INITIAL_FORMS": "0",
@@ -218,7 +242,7 @@ class ApiTokenMixin(BasePostParamsMixin):
         return login_response.json()["radius_user_token"]
 
 
-class BaseTestMixin:
+class BaseTestMixin(TestDisabledOrgMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

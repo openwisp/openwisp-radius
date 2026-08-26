@@ -1600,13 +1600,53 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
                 }
             )
 
+    @classmethod
+    def get_cache_key(cls, organization_pk, prefix=""):
+        return f"{prefix}{organization_pk}"
+
     def save_cache(self, *args, **kwargs):
-        cache.set(self.organization.pk, self.token)
-        cache.set(f"ip-{self.organization.pk}", self.freeradius_allowed_hosts_list)
+        cache.set(self.get_cache_key(self.organization.pk), self.token)
+        cache.set(
+            self.get_cache_key(self.organization.pk, "ip-"),
+            self.freeradius_allowed_hosts_list,
+        )
+        cache.set(
+            self.get_cache_key(self.organization.pk, "org-active-"),
+            self.organization.is_active,
+        )
 
     def delete_cache(self, *args, **kwargs):
-        cache.delete(self.organization.pk)
-        cache.delete(f"ip-{self.organization.pk}")
+        for prefix in ("", "ip-", "org-active-"):
+            cache.delete(self.get_cache_key(self.organization.pk, prefix))
+
+    @classmethod
+    def is_organization_active(cls, organization_pk):
+        """
+        Cache-backed check for whether an organization is active, given
+        only its primary key. Falls back to querying Organization directly
+        when no OrganizationRadiusSettings row exists yet for it,
+        returning False for a non-existent organization.
+        """
+        cache_key = cls.get_cache_key(organization_pk, "org-active-")
+        is_active = cache.get(cache_key, None)
+        if is_active is not None:
+            return is_active
+        try:
+            settings = cls.objects.select_related("organization").get(
+                organization_id=organization_pk
+            )
+        except cls.DoesNotExist:
+            Organization = swapper.load_model("openwisp_users", "Organization")
+            is_active = (
+                Organization.objects.filter(pk=organization_pk)
+                .values_list("is_active", flat=True)
+                .first()
+                is True
+            )
+            cache.set(cache_key, is_active)
+            return is_active
+        settings.save_cache()
+        return settings.organization.is_active
 
 
 class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):

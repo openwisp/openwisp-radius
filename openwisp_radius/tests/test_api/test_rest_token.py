@@ -383,6 +383,22 @@ class TestApiUserTokenTransactions(ApiTokenMixin, BaseTransactionTestCase):
             1,
         )
 
+    def test_user_auth_token_disabled_org_403(self):
+        # DispatchOrgMixin.get_permissions() rejects the request before
+        # post() ever runs get_or_create_radius_token(), so no
+        # token/membership side effects happen for a disabled
+        # organization's slug.
+        self._get_org_user()
+        self.default_org.is_active = False
+        self.default_org.save()
+        response = self.client.post(
+            reverse("radius:user_auth_token", args=[self.default_org.slug]),
+            {"username": "tester", "password": "tester"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(RadiusToken.objects.count(), 0)
+        self.assertEqual(Token.objects.count(), 0)
+
 
 class TestApiValidateToken(ApiTokenMixin, BaseTestCase):
     def _get_url(self):

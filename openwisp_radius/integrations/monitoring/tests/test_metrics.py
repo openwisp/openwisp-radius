@@ -960,3 +960,61 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(org2_user_signups.get("unspecified", 0), 1)
         self.assertEqual(org1_total_signups.get("mobile_phone", 0), 1)
         self.assertEqual(org2_total_signups.get("unspecified", 0), 1)
+
+    def test_post_save_radiusaccounting_disabled_org_active_device(self):
+        # Stop packets are still accepted for disabled organizations, so a
+        # session opened before the org was disabled must still be able to
+        # close and write its metric normally.
+        user = self._create_user()
+        reg_user = self._create_registered_user(user=user)
+        device = self._create_device()
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "117",
+                "username": user.username,
+                "called_station_id": device.mac_address.replace("-", ":").upper(),
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        session = self._create_radius_accounting(**options)
+        self.default_org.is_active = False
+        self.default_org.save()
+        session.stop_time = timezone.now()
+        session.save(update_fields=["stop_time"])
+        self.assertEqual(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                name="RADIUS Accounting",
+                key="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+                extra_tags={
+                    "called_station_id": device.mac_address,
+                    "calling_station_id": sha1_hash("00:00:00:00:00:00"),
+                    "method": reg_user.method,
+                    "organization_id": str(self.default_org.id),
+                },
+            ).count(),
+            1,
+        )
+
+    def test_write_user_registration_metrics_disabled_org(self):
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        create_general_metrics(None, None)
+        org = self._get_org()
+        user = self._create_org_user(organization=org).user
+        self._create_registered_user(user=user, organization=org)
+        org.is_active = False
+        org.save()
+        write_user_registration_metrics.delay()
+
+        for metric_key in ["user_signups", "tot_user_signups"]:
+            org_points = self._get_metric_traces(metric_key, org.pk)
+            self.assertEqual(org_points, {})
+            all_points = self._get_metric_traces(metric_key, "__all__")
+            self.assertEqual(all_points.get("mobile_phone", 0), 1)
