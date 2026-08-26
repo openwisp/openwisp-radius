@@ -597,9 +597,7 @@ class RegisterSerializer(
     def validate_username(self, username):
         email = self.initial_data.get("email")
         local_part = (
-            email.rsplit("@", 1)[0]
-            if isinstance(email, str) and "@" in email
-            else ""
+            email.rsplit("@", 1)[0] if isinstance(email, str) and "@" in email else ""
         )
 
         organization = self.context["view"].organization
