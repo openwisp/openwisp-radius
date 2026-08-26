@@ -129,31 +129,25 @@ class TestRebuildRadiusAccountingMetrics(
 
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_deletes_only_session_point(self, *args):
-        from ...tasks import post_save_radiusaccounting
-
         user = self._create_user()
         device = self._create_device()
         self._create_registered_user(user=user)
         called_station_id = device.mac_address.replace("-", ":").upper()
         # this session was accounted correctly and must not be deleted
-        accounted_session = self._create_closed_accounting_without_metric(
-            unique_id="accounted-session",
-            username=user.username,
-            called_station_id=called_station_id,
-            terminate_cause="Session-Timeout",
-            stop_time=timezone.now() - timezone.timedelta(hours=1),
-            input_octets=1000000000,
-            output_octets=2000000000,
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "accounted-session",
+                "username": user.username,
+                "called_station_id": called_station_id,
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": 1000000000,
+                "output_octets": 2000000000,
+                "terminate_cause": "Session-Timeout",
+                "stop_time": timezone.now() - timezone.timedelta(hours=1),
+            }
         )
-        post_save_radiusaccounting(
-            username=accounted_session.username,
-            organization_id=str(accounted_session.organization_id),
-            input_octets=accounted_session.input_octets,
-            output_octets=accounted_session.output_octets,
-            calling_station_id=accounted_session.calling_station_id,
-            called_station_id=accounted_session.called_station_id,
-            time=accounted_session.stop_time,
-        )
+        self._create_radius_accounting(**options)
         self._create_closed_accounting_without_metric(
             username=user.username,
             called_station_id=called_station_id,
