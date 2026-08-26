@@ -11,13 +11,11 @@ RadiusBatch = load_model("RadiusBatch")
 
 
 class TestBatch(ApiTokenMixin, BaseTestCase):
-    def _get_auth_header(self, username="admin", password="tester"):
-        if username == "admin":
-            self._get_admin()
+    def _get_auth_header(self, username="tester", password="tester"):
         login_payload = {"username": username, "password": password}
         login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
-        login_response = self.client.post(login_url, data=login_payload)
-        return f"Bearer {login_response.json()['key']}"
+        response = self.client.post(login_url, data=login_payload)
+        return f"Bearer {response.json()['key']}"
 
     def test_batch_list_200(self):
         self._create_radius_batch(
@@ -32,16 +30,13 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             prefix="test",
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
+        self._superuser_login()
         with self.assertNumQueries(4):
-            response = self.client.get(
-                reverse("radius:batch"), HTTP_AUTHORIZATION=header
-            )
+            response = self.client.get(reverse("radius:batch"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["count"], 2)
 
     def test_batch_list_permissions(self):
-        self._get_admin()
         self._create_radius_batch(
             name="test-prefix-batch",
             strategy="prefix",
@@ -53,10 +48,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 401)
 
         with self.subTest("superuser"):
-            header = self._get_auth_header()
-            response = self.client.get(
-                reverse("radius:batch"), HTTP_AUTHORIZATION=header
-            )
+            self._superuser_login()
+            response = self.client.get(reverse("radius:batch"))
             self.assertEqual(response.status_code, 200)
 
         with self.subTest("staff w/ managed org"):
@@ -97,20 +90,16 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             csvfile=csv_file,
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
+        self._superuser_login()
         url = reverse("radius:batch")
         with self.subTest("filter prefix"):
-            response = self.client.get(
-                url, {"strategy": "prefix"}, HTTP_AUTHORIZATION=header
-            )
+            response = self.client.get(url, {"strategy": "prefix"})
             names = [b["name"] for b in response.json()["results"]]
             self.assertIn("prefix-batch", names)
             self.assertNotIn("csv-batch", names)
 
         with self.subTest("filter csv"):
-            response = self.client.get(
-                url, {"strategy": "csv"}, HTTP_AUTHORIZATION=header
-            )
+            response = self.client.get(url, {"strategy": "csv"})
             names = [b["name"] for b in response.json()["results"]]
             self.assertIn("csv-batch", names)
             self.assertNotIn("prefix-batch", names)
@@ -154,11 +143,10 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             prefix="test",
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
+        self._superuser_login()
         response = self.client.get(
             reverse("radius:batch"),
             {"search": "alpha"},
-            HTTP_AUTHORIZATION=header,
         )
         names = [b["name"] for b in response.json()["results"]]
         self.assertIn("alpha-batch", names)
@@ -171,8 +159,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             prefix="test",
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
-        response = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+        self._superuser_login()
+        response = self.client.get(reverse("radius:batch"))
         batch_data = response.json()["results"][0]
         self.assertNotIn("user_credentials", batch_data)
 
@@ -183,8 +171,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             prefix="test",
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
-        response = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+        self._superuser_login()
+        response = self.client.get(reverse("radius:batch"))
         batch_data = response.json()["results"][0]
         self.assertIsNotNone(batch_data["pdf_link"])
         self.assertIn(str(batch.pk), batch_data["pdf_link"])
@@ -199,9 +187,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             csvfile=csv_file,
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
+        self._superuser_login()
         with self.subTest("list"):
-            resp = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+            resp = self.client.get(reverse("radius:batch"))
             batch_data = resp.json()["results"][0]
             self.assertIsNotNone(batch_data["csv_link"])
             self.assertIn(str(batch.pk), batch_data["csv_link"])
@@ -210,7 +198,6 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         with self.subTest("detail"):
             resp = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
             )
             data = resp.json()
             self.assertIsNotNone(data["csv_link"])
@@ -223,9 +210,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             prefix="test",
             status=RadiusBatch.COMPLETED,
         )
-        header = self._get_auth_header()
+        self._superuser_login()
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
-        response = self.client.get(url, HTTP_AUTHORIZATION=header)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
         self.assertEqual(data["id"], str(batch.pk))
@@ -236,7 +223,6 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         self.assertIsNotNone(data["pdf_link"])
 
     def test_batch_detail_permissions(self):
-        self._get_admin()
         batch = self._create_radius_batch(
             name="test-prefix-batch",
             strategy="prefix",
@@ -250,10 +236,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 401)
 
         with self.subTest("superuser"):
-            header = self._get_auth_header()
+            self._superuser_login()
             response = self.client.get(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 200)
 
@@ -304,12 +289,12 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_batch_detail_404(self):
-        header = self._get_auth_header()
+        self._superuser_login()
         url = reverse(
             "radius:radius_batch_detail",
             args=["00000000-0000-0000-0000-000000000000"],
         )
-        response = self.client.get(url, HTTP_AUTHORIZATION=header)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
     def test_batch_delete_204(self):
@@ -320,14 +305,13 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             status=RadiusBatch.COMPLETED,
         )
         batch_id = batch.pk
-        header = self._get_auth_header()
+        self._superuser_login()
         url = reverse("radius:radius_batch_detail", args=[batch_id])
-        response = self.client.delete(url, HTTP_AUTHORIZATION=header)
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RadiusBatch.objects.filter(pk=batch_id).exists())
 
     def test_batch_delete_permissions(self):
-        self._get_admin()
         operator = self._create_operator(
             organizations=[self.default_org],
             username="deletestaff",
@@ -357,10 +341,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 prefix="test",
                 status=RadiusBatch.COMPLETED,
             )
-            header = self._get_auth_header()
+            self._superuser_login()
             response = self.client.delete(
                 reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
             )
             self.assertEqual(response.status_code, 204)
 
@@ -401,9 +384,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         )
         batch.status = RadiusBatch.PROCESSING
         batch.save(update_fields=["status"])
-        header = self._get_auth_header()
+        self._superuser_login()
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
-        response = self.client.delete(url, HTTP_AUTHORIZATION=header)
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn(
             "currently being processed and cannot be deleted",
@@ -440,8 +423,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                     prefix="test",
                     status=batch_status,
                 )
-                header = self._get_auth_header()
+                self._superuser_login()
                 url = reverse("radius:radius_batch_detail", args=[batch.pk])
-                response = self.client.delete(url, HTTP_AUTHORIZATION=header)
+                response = self.client.delete(url)
                 self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
                 self.assertFalse(RadiusBatch.objects.filter(pk=batch.pk).exists())
