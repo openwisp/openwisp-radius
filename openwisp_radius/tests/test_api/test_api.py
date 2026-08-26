@@ -207,19 +207,15 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             False,
         )
 
-
     def test_register_same_username_different_email(self):
+        User.objects.create(
+            username="johndae1",
+            email="occupied@example.com",
+        )
         self._register_user(
             extra_params={
                 "username": "johndae",
                 "email": "johndae@gmail.com",
-            }
-        )
-
-        self._register_user(
-            extra_params={
-                "username": "johndae",
-                "email": "johndae@yahoo.com",
             },
             expect_users=2,
         )
@@ -227,9 +223,17 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self._register_user(
             extra_params={
                 "username": "johndae",
-                "email": "johndae@outlook.com",
+                "email": "johndae@yahoo.com",
             },
             expect_users=3,
+        )
+
+        self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "johndae@outlook.com",
+            },
+            expect_users=4,
         )
 
         users = User.objects.filter(
@@ -248,11 +252,11 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         )
         self.assertEqual(
             users.get(email="johndae@yahoo.com").username,
-            "johndae1",
+            "johndae2",
         )
         self.assertEqual(
             users.get(email="johndae@outlook.com").username,
-            "johndae2",
+            "johndae3",
         )
 
     def test_register_400_password(self):
@@ -412,6 +416,87 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
         self.default_org.radius_settings.sms_verification = False
         self.default_org.radius_settings.save()
+
+    def test_register_same_username_different_email_different_org(self):
+        org1 = self.default_org
+        org2 = self._get_org(org_name="org2")
+
+        existing_user = self._create_user(
+            username="johndae",
+            email="johndae@gmail.com",
+        )
+        OrganizationUser.objects.create(
+            user=existing_user,
+            organization=org1,
+        )
+
+        url = reverse("radius:rest_register", args=[org2.slug])
+        response = self.client.post(
+            url,
+            data={
+                "username": "johndae",
+                "email": "johndae@yahoo.com",
+                "password1": "password",
+                "password2": "password",
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            response.data,
+            {
+                "details": "A user like the one being registered already exists.",
+                "organizations": [
+                    {"slug": org1.slug, "name": org1.name},
+                ],
+            },
+        )
+        self.assertEqual(
+            User.objects.filter(username="johndae").count(),
+            1,
+        )
+
+    def test_register_same_username_different_email_case_insensitive(self):
+        self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "johndae@gmail.com",
+            }
+        )
+
+        response = self._register_user(
+            extra_params={
+                "username": "johndae",
+                "email": "JohnDae@yahoo.com",
+            },
+            expect_users=2,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            User.objects.get(email__iexact="JohnDae@yahoo.com").username,
+            "johndae1",
+        )
+
+    def test_register_invalid_email_type(self):
+        self._superuser_login()
+
+        url = reverse("radius:rest_register", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "username": "invalid-email-user",
+                    "email": None,
+                    "password1": "password",
+                    "password2": "password",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.data)
 
     def test_radius_user_serializer(self):
         self._register_user()

@@ -595,13 +595,24 @@ class RegisterSerializer(
         self.fields["method"].choices = app_settings.USER_SETTABLE_REGISTRATION_METHODS
 
     def validate_username(self, username):
-        email = self.initial_data.get("email", "")
-        local_part = email.rsplit("@", 1)[0] if "@" in email else ""
+        email = self.initial_data.get("email")
+        local_part = (
+            email.rsplit("@", 1)[0]
+            if isinstance(email, str) and "@" in email
+            else ""
+        )
+
+        organization = self.context["view"].organization
+        existing_username = User.objects.filter(username=username)
 
         if (
-            username == local_part
-            and User.objects.filter(username=username).exists()
-            and not User.objects.filter(username=username, email__iexact=email).exists()
+            username.casefold() == local_part.casefold()
+            and existing_username.exists()
+            and not existing_username.filter(email__iexact=email).exists()
+            and OrganizationUser.objects.filter(
+                organization=organization,
+                user__username=username,
+            ).exists()
         ):
             username = find_available_username(username, [])
 
