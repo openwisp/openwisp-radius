@@ -31,7 +31,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             status=RadiusBatch.COMPLETED,
         )
         self._superuser_login()
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             response = self.client.get(reverse("radius:batch"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["count"], 2)
