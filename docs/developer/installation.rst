@@ -3,6 +3,23 @@ Developer Installation Instructions
 
 .. include:: ../partials/developer-docs.rst
 
+The following diagram illustrates the role of the RADIUS module within the
+OpenWISP architecture.
+
+.. figure:: /images/architecture/v2/architecture-v2-openwisp-radius.png
+    :target: ../../_images/architecture-v2-openwisp-radius.png
+    :align: center
+    :alt: OpenWISP Architecture: Radius module
+
+    **OpenWISP Architecture: highlighted radius module**
+
+.. important::
+
+    For an enhanced viewing experience, open the image above in a new
+    browser tab.
+
+    Refer to :doc:`/general/architecture` for more information.
+
 .. contents:: **Table of Contents**:
     :depth: 2
     :local:
