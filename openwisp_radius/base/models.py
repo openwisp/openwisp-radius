@@ -1229,6 +1229,40 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         super().delete()
         self._remove_files()
 
+    def _get_locked(self):
+        return self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+    def _get_deletable(self):
+        batch = self._get_locked()
+        if batch.status == self.PROCESSING:
+            raise exceptions.BatchProcessingError
+        return batch
+
+    def can_delete(self):
+        try:
+            with transaction.atomic():
+                self._get_deletable()
+        except (exceptions.BatchProcessingError, self._meta.model.DoesNotExist):
+            return False
+        return True
+
+    def delete_if_not_processing(self):
+        with transaction.atomic():
+            self._get_deletable().delete()
+
+    def start_processing(self):
+        with transaction.atomic():
+            try:
+                batch = self._get_locked()
+            except self._meta.model.DoesNotExist:
+                return False
+            if batch.status != self.PENDING:
+                return False
+            batch.status = self.PROCESSING
+            batch.save(update_fields=["status"])
+        self.status = self.PROCESSING
+        return True
+
     def _remove_files(self):
         if self.csvfile:
             self.csvfile.storage.delete(self.csvfile.name)
@@ -1254,11 +1288,11 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return is_async
 
     def process(self, number_of_users=0, is_async=False):
+        if not self.start_processing():
+            return
         channel_layer = get_channel_layer()
         group_name = f"radius_batch_{self.pk}"
         try:
-            self.status = self.PROCESSING
-            self.save(update_fields=["status"])
             if self.strategy == "prefix":
                 self.prefix_add(self.prefix, number_of_users)
             elif self.strategy == "csv":

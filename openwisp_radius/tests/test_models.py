@@ -18,6 +18,7 @@ from openwisp_utils.tests import capture_any_output, capture_stderr, catch_signa
 
 from .. import settings as app_settings
 from ..counters.exceptions import MaxQuotaReached
+from ..exceptions import BatchProcessingError
 from ..radclient.client import RadClient
 from ..signals import radius_accounting_closed
 from ..tasks import perform_change_of_authorization
@@ -945,6 +946,26 @@ class TestRadiusBatch(BaseTestCase):
 
         radiusbatch.name = "test-legacy-expiration-updated"
         radiusbatch.full_clean()
+
+    def test_start_processing_claims_pending_batch(self):
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="test-prefix"
+        )
+        self.assertTrue(batch.start_processing())
+        batch.refresh_from_db()
+        self.assertEqual(batch.status, RadiusBatch.PROCESSING)
+        self.assertFalse(batch.start_processing())
+
+    def test_delete_if_not_processing_rechecks_status(self):
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="test-prefix"
+        )
+        stale_batch = RadiusBatch.objects.get(pk=batch.pk)
+        batch.status = RadiusBatch.PROCESSING
+        batch.save(update_fields=["status"])
+        with self.assertRaises(BatchProcessingError):
+            stale_batch.delete_if_not_processing()
+        self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):

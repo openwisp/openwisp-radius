@@ -63,6 +63,7 @@ from openwisp_utils.api.pagination import OpenWispPagination
 
 from .. import settings as app_settings
 from ..exceptions import (
+    BatchProcessingError,
     PhoneTokenException,
     SmsAttemptCooldownException,
     UserAlreadyVerified,
@@ -274,14 +275,15 @@ class BatchDetailView(
         return Response(data)
 
     def perform_destroy(self, instance):
-        if instance.status == RadiusBatch.PROCESSING:
+        try:
+            instance.delete_if_not_processing()
+        except BatchProcessingError:
             raise Conflict(
                 _(
                     "The radius batch object is currently being processed"
                     " and cannot be deleted."
                 )
             )
-        instance.delete()
 
 
 batch_detail = BatchDetailView.as_view()

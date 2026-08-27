@@ -26,6 +26,7 @@ from openwisp_utils.admin import (
 from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm
+from .exceptions import BatchProcessingError
 from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
@@ -463,8 +464,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         obj.schedule_processing(number_of_users=num_users)
 
     def delete_model(self, request, obj):
-        obj.users.all().delete()
-        super(RadiusBatchAdmin, self).delete_model(request, obj)
+        obj.delete_if_not_processing()
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
@@ -509,10 +509,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         skipped = 0
         deleted = 0
         for obj in queryset:
-            if obj.status == RadiusBatch.PROCESSING:
+            try:
+                obj.delete_if_not_processing()
+            except BatchProcessingError:
                 skipped += 1
                 continue
-            obj.delete()
             deleted += 1
         if skipped:
             self.message_user(
@@ -551,8 +552,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         return ("status",) + readonly_fields
 
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.status == "processing":
-            return False
+        if obj:
+            if request.method == "POST" and not obj.can_delete():
+                return False
+            if request.method != "POST" and obj.status == RadiusBatch.PROCESSING:
+                return False
         return super().has_delete_permission(request, obj)
 
     def response_add(self, request, obj, post_url_continue=None):
