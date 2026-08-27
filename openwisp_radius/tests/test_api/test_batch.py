@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -6,17 +5,10 @@ from rest_framework import status
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase
 
-User = get_user_model()
 RadiusBatch = load_model("RadiusBatch")
 
 
 class TestBatch(ApiTokenMixin, BaseTestCase):
-    def _get_auth_header(self, username="tester", password="tester"):
-        login_payload = {"username": username, "password": password}
-        login_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
-        response = self.client.post(login_url, data=login_payload)
-        return f"Bearer {response.json()['key']}"
-
     def test_batch_list_200(self):
         self._create_radius_batch(
             name="batch-a",
@@ -58,21 +50,17 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 username="liststaff",
                 email="liststaff@test.com",
             )
-            header = self._get_auth_header(staff.username, "tester")
-            response = self.client.get(
-                reverse("radius:batch"), HTTP_AUTHORIZATION=header
-            )
+            self.client.force_login(staff)
+            response = self.client.get(reverse("radius:batch"))
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["count"], 1)
 
         with self.subTest("non-staff user"):
-            regular = User.objects.create_user(
+            regular = self._create_user(
                 username="regular", email="regular@test.com", password="tester"
             )
-            header = self._get_auth_header(regular.username, "tester")
-            response = self.client.get(
-                reverse("radius:batch"), HTTP_AUTHORIZATION=header
-            )
+            self.client.force_login(regular)
+            response = self.client.get(reverse("radius:batch"))
             self.assertEqual(response.status_code, 403)
 
     def test_batch_list_filter_strategy(self):
@@ -124,8 +112,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             username="orgfilterstaff",
             email="orgfilterstaff@test.com",
         )
-        header = self._get_auth_header(operator.username, "tester")
-        response = self.client.get(reverse("radius:batch"), HTTP_AUTHORIZATION=header)
+        self.client.force_login(operator)
+        response = self.client.get(reverse("radius:batch"))
         names = [b["name"] for b in response.json()["results"]]
         self.assertIn("org1-batch", names)
         self.assertNotIn("org2-batch", names)
@@ -248,10 +236,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 username="detailstaff",
                 email="detailstaff@test.com",
             )
-            header = self._get_auth_header(staff.username, "tester")
+            self.client.force_login(staff)
             response = self.client.get(
-                reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
+                reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 200)
 
@@ -262,10 +249,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 username="noorgstaff",
                 email="noorgstaff@test.com",
             )
-            header = self._get_auth_header(no_org_staff.username, "tester")
+            self.client.force_login(no_org_staff)
             response = self.client.get(
-                reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
+                reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 404)
 
@@ -283,9 +269,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             username="crossorgstaff",
             email="crossorgstaff@test.com",
         )
-        header = self._get_auth_header(staff.username, "tester")
+        self.client.force_login(staff)
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
-        response = self.client.get(url, HTTP_AUTHORIZATION=header)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
     def test_batch_detail_404(self):
@@ -354,10 +340,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 prefix="test",
                 status=RadiusBatch.COMPLETED,
             )
-            header = self._get_auth_header(operator.username, "tester")
+            self.client.force_login(operator)
             response = self.client.delete(
-                reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
+                reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 403)
 
@@ -368,10 +353,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 prefix="test",
                 status=RadiusBatch.COMPLETED,
             )
-            header = self._get_auth_header(administrator.username, "tester")
+            self.client.force_login(administrator)
             response = self.client.delete(
-                reverse("radius:radius_batch_detail", args=[batch.pk]),
-                HTTP_AUTHORIZATION=header,
+                reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 204)
 
@@ -408,9 +392,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             username="delcrossorg",
             email="delcrossorg@test.com",
         )
-        header = self._get_auth_header(administrator.username, "tester")
+        self.client.force_login(administrator)
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
-        response = self.client.delete(url, HTTP_AUTHORIZATION=header)
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, 404)
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 
