@@ -613,6 +613,8 @@ class RadiusBatchReadSerializer(serializers.ModelSerializer):
             "status",
             "expiration_date",
             "prefix",
+            "group",
+            "notes",
             "users",
             "pdf_link",
             "csv_link",
