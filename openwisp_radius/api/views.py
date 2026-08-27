@@ -35,11 +35,7 @@ from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
     get_object_or_404,
 )
-from rest_framework.permissions import (
-    DjangoModelPermissions,
-    IsAdminUser,
-    IsAuthenticated,
-)
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings as drf_api_settings
 from rest_framework.throttling import (  # get_ident method
@@ -55,7 +51,7 @@ from openwisp_users.api.mixins import (
     FilterByParentManaged,
     ProtectedAPIMixin,
 )
-from openwisp_users.api.permissions import IsOrganizationManager
+from openwisp_users.api.permissions import DjangoModelPermissions, IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.api.views import (
     PasswordResetConfirmView as BasePasswordResetConfirmView,
@@ -211,7 +207,11 @@ class DispatchOrgMixin(object):
 
 class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
+    permission_classes = (
+        IsOrganizationManager,
+        IsAdminUser,
+        DjangoModelPermissions,
+    )
     queryset = RadiusBatch.objects.all()
 
     @swagger_auto_schema(responses={200: "(File Byte Stream)"})

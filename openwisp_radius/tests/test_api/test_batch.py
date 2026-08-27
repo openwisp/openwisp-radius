@@ -55,6 +55,15 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["count"], 1)
 
+        with self.subTest("staff w/o view permission"):
+            staff = self._create_user(
+                username="no-view-list", email="no-view-list@test.com", is_staff=True
+            )
+            self._create_org_user(user=staff, is_admin=True)
+            self.client.force_login(staff)
+            response = self.client.get(reverse("radius:batch"))
+            self.assertEqual(response.status_code, 403)
+
         with self.subTest("non-staff user"):
             regular = self._create_user(
                 username="regular", email="regular@test.com", password="tester"
@@ -241,6 +250,19 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 reverse("radius:radius_batch_detail", args=[batch.pk])
             )
             self.assertEqual(response.status_code, 200)
+
+        with self.subTest("staff w/o view permission"):
+            staff = self._create_user(
+                username="no-view-detail",
+                email="no-view-detail@test.com",
+                is_staff=True,
+            )
+            self._create_org_user(user=staff, is_admin=True)
+            self.client.force_login(staff)
+            response = self.client.get(
+                reverse("radius:radius_batch_detail", args=[batch.pk])
+            )
+            self.assertEqual(response.status_code, 403)
 
         with self.subTest("staff w/o managed org"):
             org2 = self._create_org(**{"name": "other", "slug": "other"})
