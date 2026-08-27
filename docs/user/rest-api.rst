@@ -874,6 +874,7 @@ GET
 
 Returns a list of batch user creation operations for the organizations
 managed by the requesting user. Results are paginated and can be filtered.
+The list does not include associated users.
 
 .. code-block:: text
 
@@ -980,6 +981,10 @@ For completed prefix batches, the response includes a ``pdf_link`` field
 pointing to the protected PDF download endpoint. For CSV batches with an
 uploaded file, the response includes a ``csv_link`` field pointing to the
 protected CSV download endpoint.
+
+Associated users are returned in the ``users`` field as a paginated
+response. The default page size is 100 and can be changed with the
+``page`` and ``page_size`` query parameters.
 
 DELETE
 ^^^^^^

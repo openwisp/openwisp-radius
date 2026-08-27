@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -23,7 +24,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             status=RadiusBatch.COMPLETED,
         )
         self._superuser_login()
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(4):
             response = self.client.get(reverse("radius:batch"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["count"], 2)
@@ -160,6 +161,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         response = self.client.get(reverse("radius:batch"))
         batch_data = response.json()["results"][0]
         self.assertNotIn("user_credentials", batch_data)
+        self.assertNotIn("users", batch_data)
 
     def test_batch_list_exposes_download_links(self):
         batch = self._create_radius_batch(
@@ -434,3 +436,75 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
                 response = self.client.delete(url)
                 self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
                 self.assertFalse(RadiusBatch.objects.filter(pk=batch.pk).exists())
+
+    def test_batch_read_metadata(self):
+        group = self._create_radius_group(
+            name="test-group", organization=self.default_org
+        )
+        batch = self._create_radius_batch(
+            name="test-prefix-batch",
+            strategy="prefix",
+            prefix="test",
+            status=RadiusBatch.COMPLETED,
+            group=group,
+            notes="Internal notes",
+        )
+        self._superuser_login()
+
+        with self.subTest("list"):
+            response = self.client.get(reverse("radius:batch"))
+            data = response.json()["results"][0]
+            self.assertEqual(data["group"], str(group.pk))
+            self.assertEqual(data["notes"], batch.notes)
+
+        with self.subTest("detail"):
+            response = self.client.get(
+                reverse("radius:radius_batch_detail", args=[batch.pk])
+            )
+            data = response.json()
+            self.assertEqual(data["group"], str(group.pk))
+            self.assertEqual(data["notes"], batch.notes)
+
+    def test_batch_detail_paginates_users(self):
+        batch = self._create_radius_batch(
+            name="test-prefix-batch",
+            strategy="prefix",
+            prefix="test",
+            status=RadiusBatch.COMPLETED,
+        )
+        User = get_user_model()
+        # The response only serializes these fields, so save hooks are unnecessary.
+        users = User.objects.bulk_create(
+            [
+                User(
+                    username=f"batch-user-{number}",
+                    email=f"batch-user-{number}@test.com",
+                )
+                for number in range(101)
+            ]
+        )
+        batch.users.add(*users)
+        self._superuser_login()
+        url = reverse("radius:radius_batch_detail", args=[batch.pk])
+
+        with self.subTest("first page"):
+            response = self.client.get(url)
+            users = response.json()["users"]
+            self.assertEqual(users["count"], 101)
+            self.assertEqual(len(users["results"]), 100)
+            self.assertIn("page=2", users["next"])
+            self.assertIsNone(users["previous"])
+
+        with self.subTest("second page"):
+            response = self.client.get(url, {"page": 2})
+            users = response.json()["users"]
+            self.assertEqual(len(users["results"]), 1)
+            self.assertIsNone(users["next"])
+            self.assertIsNotNone(users["previous"])
+
+        with self.subTest("custom page size"):
+            response = self.client.get(url, {"page_size": 1, "page": 2})
+            users = response.json()["users"]
+            self.assertEqual(len(users["results"]), 1)
+            self.assertIn("page=3", users["next"])
+            self.assertIn("page_size=1", users["next"])

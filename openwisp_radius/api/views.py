@@ -73,6 +73,7 @@ from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
 from .serializers import (
     AuthTokenSerializer,
+    BatchUserSerializer,
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
     RadiusBatchReadSerializer,
@@ -149,11 +150,7 @@ class RadiusBatchFilter(OrganizationManagedFilter, filters.FilterSet):
 class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = (
-        RadiusBatch.objects.select_related("organization")
-        .prefetch_related("users")
-        .order_by("-created")
-    )
+    queryset = RadiusBatch.objects.select_related("organization").order_by("-created")
     serializer_class = RadiusBatchReadSerializer
     filterset_class = RadiusBatchFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -262,10 +259,19 @@ class BatchDetailView(
 ):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.select_related("organization").prefetch_related(
-        "users"
-    )
+    queryset = RadiusBatch.objects.select_related("organization")
     serializer_class = RadiusBatchReadSerializer
+    pagination_class = OpenWispPagination
+    pagination_page_size = 100
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = self.get_serializer(instance).data
+        page = self.paginate_queryset(instance.users.order_by("pk"))
+        data["users"] = self.get_paginated_response(
+            BatchUserSerializer(page, many=True).data
+        ).data
+        return Response(data)
 
     def perform_destroy(self, instance):
         if instance.status == RadiusBatch.PROCESSING:

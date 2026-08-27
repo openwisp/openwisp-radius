@@ -577,7 +577,6 @@ class BatchUserSerializer(serializers.ModelSerializer):
 
 class RadiusBatchReadSerializer(serializers.ModelSerializer):
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
-    users = BatchUserSerializer(many=True, read_only=True)
     pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
     csv_link = serializers.SerializerMethodField(required=False, read_only=True)
     status = serializers.CharField(read_only=True)
@@ -615,7 +614,6 @@ class RadiusBatchReadSerializer(serializers.ModelSerializer):
             "prefix",
             "group",
             "notes",
-            "users",
             "pdf_link",
             "csv_link",
             "created",
