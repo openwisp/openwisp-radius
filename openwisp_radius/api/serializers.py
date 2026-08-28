@@ -456,6 +456,8 @@ class RadiusOrganizationField(serializers.SlugRelatedField):
 
 
 class RadiusBatchSerializer(serializers.ModelSerializer):
+    """Validate batch creation requests and return their credentials."""
+
     organization = serializers.PrimaryKeyRelatedField(
         help_text=("UUID of the organization in which the radius batch is created."),
         read_only=True,
@@ -576,6 +578,8 @@ class BatchUserSerializer(serializers.ModelSerializer):
 
 
 class RadiusBatchReadSerializer(serializers.ModelSerializer):
+    """Return read-only batch data without creation credentials."""
+
     organization = serializers.PrimaryKeyRelatedField(read_only=True)
     pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
     csv_link = serializers.SerializerMethodField(required=False, read_only=True)

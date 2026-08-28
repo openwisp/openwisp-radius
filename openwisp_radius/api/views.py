@@ -269,9 +269,14 @@ class BatchDetailView(
         instance = self.get_object()
         data = self.get_serializer(instance).data
         page = self.paginate_queryset(instance.users.order_by("pk"))
-        data["users"] = self.get_paginated_response(
+        users = self.get_paginated_response(
             BatchUserSerializer(page, many=True).data
         ).data
+        created = data.pop("created")
+        modified = data.pop("modified")
+        data["users"] = users
+        data["created"] = created
+        data["modified"] = modified
         return Response(data)
 
     def perform_destroy(self, instance):

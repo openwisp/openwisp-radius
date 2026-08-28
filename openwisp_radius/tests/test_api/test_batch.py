@@ -247,6 +247,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         self.assertEqual(data["status"], RadiusBatch.COMPLETED)
         self.assertNotIn("user_credentials", data)
         self.assertIsNotNone(data["pdf_link"])
+        self.assertEqual(list(data)[-3:], ["users", "created", "modified"])
 
     def test_batch_detail_permissions(self):
         batch = self._create_radius_batch(
