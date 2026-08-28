@@ -878,9 +878,9 @@ The list does not include associated users.
 
 .. code-block:: text
 
-    /api/v1/radius/batch?search=<batch_name>
-    /api/v1/radius/batch?organization=<org_id>
-    /api/v1/radius/batch?strategy=prefix
+    /api/v1/radius/batch/?search=<batch_name>
+    /api/v1/radius/batch/?organization=<org_id>
+    /api/v1/radius/batch/?strategy=prefix
 
 Filters
 """""""
