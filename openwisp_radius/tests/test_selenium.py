@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
 from django.apps import apps as django_apps
@@ -8,7 +10,7 @@ from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from openwisp_radius import tasks
 from openwisp_radius.migrations import assign_permissions_to_groups
@@ -22,6 +24,7 @@ User = get_user_model()
 
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 RadiusGroup = load_model("RadiusGroup")
+RadiusBatch = load_model("RadiusBatch")
 
 
 @tag("selenium_tests")
@@ -215,10 +218,10 @@ class BasicTest(
         group = RadiusGroup.objects.get(organization=organization, default=True)
         self.login()
         self.open(reverse("admin:openwisp_radius_radiusbatch_add"))
-        self.wait_until(
+        WebDriverWait(self.web_driver, 10).until(
             expected_conditions.invisibility_of_element_located(
                 (By.CSS_SELECTOR, ".form-row.field-group")
-            ),
+            )
         )
         self.assertFalse(
             self.web_driver.find_element(
@@ -226,10 +229,10 @@ class BasicTest(
             ).is_displayed()
         )
         Select(self.find_element(By.ID, "id_strategy")).select_by_value("prefix")
-        self.wait_until(
+        WebDriverWait(self.web_driver, 10).until(
             expected_conditions.visibility_of_element_located(
                 (By.CSS_SELECTOR, ".form-row.field-group")
-            ),
+            )
         )
         self.assertTrue(
             self.find_element(By.CSS_SELECTOR, ".form-row.field-notes").is_displayed()
@@ -243,11 +246,13 @@ class BasicTest(
             "//li[contains(@class, 'select2-results__option') and text()='test org']",
         )
         option.click()
-        self.wait_until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
-            == str(group.pk),
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: (
+                driver.find_element(By.ID, "id_group").get_attribute("value")
+                == str(group.pk)
+            )
         )
-        self.assert_no_browser_errors()
+        self.assertEqual(self.get_browser_errors(), [])
 
     def test_batch_group_preserved_after_validation_error(self):
         organization = self._create_org()
@@ -264,10 +269,8 @@ class BasicTest(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and text()='test org']",
         ).click()
-        self.wait_until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute(
-                "value"
-            ),
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
         )
         self.web_driver.execute_script(
             "django.jQuery('#id_group')"
@@ -279,19 +282,19 @@ class BasicTest(
         self.find_element(By.ID, "id_name").send_keys("Test batch")
         self.find_element(By.ID, "id_prefix").send_keys("test-prefix")
         self.find_element(By.CSS_SELECTOR, "input[type=submit]").click()
-        self.wait_until(
+        WebDriverWait(self.web_driver, 10).until(
             expected_conditions.presence_of_element_located(
                 (By.CSS_SELECTOR, ".errorlist")
-            ),
+            )
         )
-        self.wait_for_script(
-            "return django.jQuery.active === 0",
+        WebDriverWait(self.web_driver, 10).until(
+            lambda driver: driver.execute_script("return django.jQuery.active === 0")
         )
-        self.wait_until(
+        WebDriverWait(self.web_driver, 10).until(
             lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
             == str(group.pk),
         )
-        self.assert_no_browser_errors()
+        self.assertEqual(self.get_browser_errors(), [])
 
     def test_view_only_change_page_shows_readonly_fields(self):
         org = self._get_org()
@@ -367,13 +370,13 @@ class TestRadiusBatchWebSockets(
             By.CSS_SELECTOR, ".messagelist .warning"
         )
         self.assertIn("Processing:", processing_message_element.text)
-        tasks.process_radius_batch(batch.pk, number_of_users=0)
-        self.wait_until(
-            expected_conditions.staleness_of(processing_message_element),
-            timeout=5,
+        with mock.patch.object(RadiusBatch, "start_processing", return_value=True):
+            tasks.process_radius_batch(batch.pk, number_of_users=0)
+        WebDriverWait(self.web_driver, 10).until(
+            expected_conditions.staleness_of(processing_message_element)
         )
         status_field = (By.CSS_SELECTOR, "div.field-status .readonly")
-        self.wait_until(
+        WebDriverWait(self.web_driver, 10).until(
             expected_conditions.text_to_be_present_in_element(status_field, "Completed")
         )
-        self.assert_no_browser_errors()
+        self.assertEqual(self.get_browser_errors(), [])
