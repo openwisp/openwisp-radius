@@ -124,6 +124,7 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         )
         self.client.force_login(operator)
         url = reverse("radius:batch")
+
         with self.subTest("filter managed organization"):
             response = self.client.get(url, {"organization": self.default_org.pk})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -216,6 +217,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertIsNotNone(batch_data["csv_link"])
             self.assertIn(str(batch.pk), batch_data["csv_link"])
             self.assertIsNone(batch_data["pdf_link"])
+            response = self.client.get(batch_data["csv_link"])
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         with self.subTest("detail"):
             resp = self.client.get(
@@ -234,7 +237,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         )
         self._superuser_login()
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
-        response = self.client.get(url)
+        with self.assertNumQueries(4):
+            response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
         self.assertEqual(data["id"], str(batch.pk))
@@ -340,7 +344,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch_id = batch.pk
         self._superuser_login()
         url = reverse("radius:radius_batch_detail", args=[batch_id])
-        response = self.client.delete(url)
+        with self.assertNumQueries(9):
+            response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(RadiusBatch.objects.filter(pk=batch_id).exists())
 
@@ -419,9 +424,9 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn(
-            "currently being processed and cannot be deleted",
+        self.assertEqual(
             response.json()["detail"],
+            "The radius batch object is currently being processed and cannot be deleted.",
         )
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 
@@ -511,7 +516,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         url = reverse("radius:radius_batch_detail", args=[batch.pk])
 
         with self.subTest("first page"):
-            response = self.client.get(url)
+            with self.assertNumQueries(5):
+                response = self.client.get(url)
             users = response.json()["users"]
             self.assertEqual(users["count"], 101)
             self.assertEqual(len(users["results"]), 100)
@@ -526,7 +532,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             self.assertIsNotNone(users["previous"])
 
         with self.subTest("custom page size"):
-            response = self.client.get(url, {"page_size": 1, "page": 2})
+            with self.assertNumQueries(5):
+                response = self.client.get(url, {"page_size": 1, "page": 2})
             users = response.json()["users"]
             self.assertEqual(len(users["results"]), 1)
             self.assertIn("page=3", users["next"])

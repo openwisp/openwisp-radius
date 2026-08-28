@@ -14,6 +14,7 @@ from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
@@ -464,7 +465,18 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         obj.schedule_processing(number_of_users=num_users)
 
     def delete_model(self, request, obj):
-        obj.delete_if_not_processing()
+        try:
+            obj.delete_if_not_processing()
+        except BatchProcessingError:
+            self.message_user(
+                request,
+                _(
+                    "The radius batch object is currently being processed "
+                    "and cannot be deleted."
+                ),
+                level=messages.ERROR,
+            )
+            raise PermissionDenied
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
@@ -518,15 +530,23 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         if skipped:
             self.message_user(
                 request,
-                _(
-                    "Skipped {count} batch(es) that are currently being processed."
-                ).format(count=skipped),
+                ngettext(
+                    "Skipped %(count)d batch that is currently being processed.",
+                    "Skipped %(count)d batches that are currently being processed.",
+                    skipped,
+                )
+                % {"count": skipped},
                 level=messages.WARNING,
             )
         if deleted:
             self.message_user(
                 request,
-                _("Successfully deleted {count} batch(es).").format(count=deleted),
+                ngettext(
+                    "Successfully deleted %(count)d batch.",
+                    "Successfully deleted %(count)d batches.",
+                    deleted,
+                )
+                % {"count": deleted},
                 level=messages.SUCCESS,
             )
 

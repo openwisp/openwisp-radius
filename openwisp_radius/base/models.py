@@ -1230,15 +1230,18 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         self._remove_files()
 
     def _get_locked(self):
+        """Reload and lock the current row before changing its lifecycle state."""
         return self._meta.model.objects.select_for_update().get(pk=self.pk)
 
     def _get_deletable(self):
+        """Lock the batch and reject deletion once processing has been claimed."""
         batch = self._get_locked()
         if batch.status == self.PROCESSING:
             raise exceptions.BatchProcessingError
         return batch
 
     def can_delete(self):
+        """Return whether the locked current batch is safe to delete."""
         try:
             with transaction.atomic():
                 self._get_deletable()
@@ -1247,10 +1250,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return True
 
     def delete_if_not_processing(self):
+        """Delete the locked current batch unless a worker is processing it."""
         with transaction.atomic():
             self._get_deletable().delete()
 
     def start_processing(self):
+        """Atomically claim this pending batch for a single processing worker."""
         with transaction.atomic():
             try:
                 batch = self._get_locked()
