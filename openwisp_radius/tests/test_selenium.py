@@ -50,21 +50,22 @@ class BasicTest(
         self.open(reverse("admin:openwisp_radius_radiusbatch_add"))
 
         # Set user strategy for batch creation to 'prefix'
-        dropdown = self.wait_for_visibility(By.ID, "id_strategy")
+        dropdown = self.wait_for_visibility(By.ID, "id_strategy", 10)
         select = Select(dropdown)
         select.select_by_value("prefix")
 
         # Fill in the batch details
-        self.find_element(By.ID, "id_name").send_keys("Test Batch")
+        self.find_element(By.ID, "id_name", 10).send_keys("Test Batch")
         prefix_field = self.find_element(By.ID, "id_prefix")
         prefix_field.send_keys("test-user-")  # Set a prefix for users to be generated
-        organization = self.find_element(By.ID, "select2-id_organization-container")
+        organization = self.find_element(By.ID, "select2-id_organization-container", 10)
         organization.click()
 
         # Select the previously created organization
         option = self.find_element(
             By.XPATH,
             "//li[contains(@class, 'select2-results__option') and text()='test org']",
+            10,
         )
         option.click()
 
@@ -72,10 +73,10 @@ class BasicTest(
         self.find_element(By.ID, "id_number_of_users").send_keys("5")
 
         # Submit the form to create the users
-        self.find_element(By.CSS_SELECTOR, "input[type=submit]").click()
+        self.find_element(By.CSS_SELECTOR, "input[type=submit]", 10).click()
 
         # Verify success message
-        success_message = self.wait_for_visibility(By.CLASS_NAME, "success")
+        success_message = self.wait_for_visibility(By.CLASS_NAME, "success", 10)
         self.assertIn("was added successfully", success_message.text)
 
         # Check if the generated users are listed
