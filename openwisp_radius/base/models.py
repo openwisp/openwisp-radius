@@ -1293,9 +1293,9 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         return is_async
 
     def process(self, number_of_users=0, is_async=False):
+        channel_layer = get_channel_layer()
         if not self.start_processing():
             return
-        channel_layer = get_channel_layer()
         group_name = f"radius_batch_{self.pk}"
         try:
             if self.strategy == "prefix":

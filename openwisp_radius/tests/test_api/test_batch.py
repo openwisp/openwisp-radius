@@ -426,7 +426,8 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(
             response.json()["detail"],
-            "The radius batch object is currently being processed and cannot be deleted.",
+            "The radius batch object is currently being processed and cannot be "
+            "deleted.",
         )
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 

@@ -526,6 +526,8 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
             except BatchProcessingError:
                 skipped += 1
                 continue
+            except RadiusBatch.DoesNotExist:
+                continue
             deleted += 1
         if skipped:
             self.message_user(

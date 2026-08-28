@@ -956,6 +956,21 @@ class TestRadiusBatch(BaseTestCase):
         self.assertEqual(batch.status, RadiusBatch.PROCESSING)
         self.assertFalse(batch.start_processing())
 
+    @mock.patch(
+        "openwisp_radius.base.models.get_channel_layer",
+        side_effect=RuntimeError("channel layer is unavailable"),
+    )
+    def test_process_does_not_claim_batch_if_channel_layer_initialization_fails(
+        self, _get_channel_layer
+    ):
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="test-prefix"
+        )
+        with self.assertRaisesRegex(RuntimeError, "channel layer is unavailable"):
+            batch.process()
+        batch.refresh_from_db()
+        self.assertEqual(batch.status, RadiusBatch.PENDING)
+
     def test_delete_if_not_processing_rechecks_status(self):
         batch = self._create_radius_batch(
             name="test", strategy="prefix", prefix="test-prefix"

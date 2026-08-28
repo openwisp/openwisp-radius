@@ -422,7 +422,8 @@ class TestAdmin(
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
             str(list(get_messages(response.wsgi_request))[0]),
-            "The radius batch object is currently being processed and cannot be deleted.",
+            "The radius batch object is currently being processed and cannot be "
+            "deleted.",
         )
 
     def test_delete_selected_batches_action_perms(self):
@@ -473,6 +474,44 @@ class TestAdmin(
         self.assertFalse(RadiusBatch.objects.filter(pk=deletable.pk).exists())
         self.assertTrue(RadiusBatch.objects.filter(pk=processing.pk).exists())
         self.assertContains(response, "Skipped 1 batch")
+        self.assertContains(response, "Successfully deleted 1 batch.")
+
+    @mock.patch.object(RadiusBatch, "delete_if_not_processing", autospec=True)
+    def test_delete_selected_batches_ignores_disappeared_batch(self, delete_batch):
+        org = self._get_org()
+        self._get_admin()
+        disappeared = self._create_radius_batch(
+            organization=org,
+            name="disappeared",
+            strategy="prefix",
+            prefix="test-dis",
+        )
+        deletable = self._create_radius_batch(
+            organization=org,
+            name="deletable",
+            strategy="prefix",
+            prefix="test-del",
+        )
+
+        def delete_or_disappear(batch):
+            if batch.pk == disappeared.pk:
+                RadiusBatch.objects.filter(pk=batch.pk).delete()
+                raise RadiusBatch.DoesNotExist
+            batch.delete()
+
+        delete_batch.side_effect = delete_or_disappear
+        changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
+        response = self.client.post(
+            changelist_path,
+            {
+                "action": "delete_selected_batches",
+                "_selected_action": [disappeared.pk, deletable.pk],
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RadiusBatch.objects.filter(pk=disappeared.pk).exists())
+        self.assertFalse(RadiusBatch.objects.filter(pk=deletable.pk).exists())
         self.assertContains(response, "Successfully deleted 1 batch.")
 
     def test_radius_batch_csv_help_text(self):
