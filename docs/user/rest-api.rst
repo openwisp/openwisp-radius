@@ -906,7 +906,8 @@ default).
 
     The list response does not include ``user_credentials`` to avoid
     repeatedly exposing plaintext credentials. Use the batch creation
-    response or the protected PDF download endpoint for credentials.
+    response or the protected PDF or CSV download endpoints for
+    credentials.
 
 POST
 ^^^^

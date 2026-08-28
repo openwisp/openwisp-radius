@@ -123,10 +123,33 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             email="orgfilterstaff@test.com",
         )
         self.client.force_login(operator)
-        response = self.client.get(reverse("radius:batch"))
-        names = [b["name"] for b in response.json()["results"]]
-        self.assertIn("org1-batch", names)
-        self.assertNotIn("org2-batch", names)
+        url = reverse("radius:batch")
+        with self.subTest("filter managed organization"):
+            response = self.client.get(url, {"organization": self.default_org.pk})
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                [batch["name"] for batch in response.json()["results"]],
+                ["org1-batch"],
+            )
+
+        with self.subTest("filter managed organization slug"):
+            response = self.client.get(
+                url, {"organization_slug": self.default_org.slug}
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                [batch["name"] for batch in response.json()["results"]],
+                ["org1-batch"],
+            )
+
+        with self.subTest("filter unmanaged organization"):
+            response = self.client.get(url, {"organization": org2.pk})
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("filter unmanaged organization slug"):
+            response = self.client.get(url, {"organization_slug": org2.slug})
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.json()["results"], [])
 
     def test_batch_list_search_name(self):
         self._create_radius_batch(
