@@ -455,7 +455,7 @@ class RadiusOrganizationField(serializers.SlugRelatedField):
         return queryset
 
 
-class RadiusBatchSerializer(serializers.ModelSerializer):
+class RadiusBatchSerializer(ValidatedModelSerializer):
     """Validate batch creation requests and return their credentials."""
 
     organization = serializers.PrimaryKeyRelatedField(
@@ -507,7 +507,6 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
 
     def create(self, validated_data):
-        validated_data.pop("organization_slug", None)
         validated_data.pop("number_of_users", None)
         return super().create(validated_data)
 
@@ -531,14 +530,8 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"number_of_users": _("The field number_of_users cannot be empty")}
             )
-        validated_data = super().validate(data)
-        # Additional Model Validation
-        batch_data = validated_data.copy()
-        batch_data.pop("number_of_users", None)
-        batch_data["organization"] = batch_data.pop("organization_slug", None)
-        instance = self.instance or self.Meta.model(**batch_data)
-        instance.full_clean()
-        return validated_data
+        data["organization"] = data.pop("organization_slug")
+        return super().validate(data)
 
     class Meta:
         model = RadiusBatch

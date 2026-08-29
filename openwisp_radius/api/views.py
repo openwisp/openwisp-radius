@@ -166,9 +166,7 @@ class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIVie
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
             num_of_users = valid_data.get("number_of_users", 0)
-            organization = valid_data.pop("organization_slug", None)
-            valid_data.pop("number_of_users", None)
-            batch = serializer.save(organization=organization)
+            batch = serializer.save()
             is_async = batch.schedule_processing(number_of_users=num_of_users)
             batch.refresh_from_db()
             response_serializer = RadiusBatchSerializer(
