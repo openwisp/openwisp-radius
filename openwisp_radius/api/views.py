@@ -23,7 +23,7 @@ from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.authtoken.models import Token as UserToken
 from rest_framework.authtoken.views import ObtainAuthToken as BaseObtainAuthToken
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
     CreateAPIView,
@@ -31,14 +31,11 @@ from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
     RetrieveAPIView,
+    RetrieveDestroyAPIView,
     RetrieveUpdateDestroyAPIView,
     get_object_or_404,
 )
-from rest_framework.permissions import (
-    DjangoModelPermissions,
-    IsAdminUser,
-    IsAuthenticated,
-)
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings as drf_api_settings
 from rest_framework.throttling import (  # get_ident method
@@ -54,7 +51,7 @@ from openwisp_users.api.mixins import (
     FilterByParentManaged,
     ProtectedAPIMixin,
 )
-from openwisp_users.api.permissions import IsOrganizationManager
+from openwisp_users.api.permissions import DjangoModelPermissions, IsOrganizationManager
 from openwisp_users.api.views import ChangePasswordView as BasePasswordChangeView
 from openwisp_users.api.views import (
     PasswordResetConfirmView as BasePasswordResetConfirmView,
@@ -66,6 +63,7 @@ from openwisp_utils.api.pagination import OpenWispPagination
 
 from .. import settings as app_settings
 from ..exceptions import (
+    BatchProcessingError,
     PhoneTokenException,
     SmsAttemptCooldownException,
     UserAlreadyVerified,
@@ -76,8 +74,10 @@ from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
 from .serializers import (
     AuthTokenSerializer,
+    BatchUserSerializer,
     ChangePhoneNumberSerializer,
     RadiusAccountingSerializer,
+    RadiusBatchReadSerializer,
     RadiusBatchSerializer,
     RadiusGroupSerializer,
     RadiusUserGroupSerializer,
@@ -85,7 +85,12 @@ from .serializers import (
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
-from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
+from .swagger import (
+    BatchDetailResponse,
+    ObtainTokenRequest,
+    ObtainTokenResponse,
+    RegisterResponse,
+)
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 authorize = freeradius_views.authorize
@@ -120,26 +125,57 @@ class ThrottledAPIMixin(object):
     throttle_scope = "others"
 
 
-class BatchView(ThrottledAPIMixin, CreateAPIView):
-    authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsAdminUser, DjangoModelPermissions)
-    queryset = RadiusBatch.objects.all()
-    serializer_class = RadiusBatchSerializer
+class RadiusBatchFilter(OrganizationManagedFilter, filters.FilterSet):
+    class Meta(OrganizationManagedFilter.Meta):
+        model = RadiusBatch
+        fields = [*OrganizationManagedFilter.Meta.fields, "strategy"]
 
-    def post(self, request, *args, **kwargs):
-        """
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a list of batch user creation operations for the
+        organizations managed by the user.
+        """,
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_description="""
         **Requires the user auth token (Bearer Token).**
         Allows organization administrators to create
         a batch of users using a csv file or generate users
         with a given prefix.
-        """
+        """,
+        request_body=RadiusBatchSerializer,
+        responses={201: RadiusBatchSerializer, 202: RadiusBatchSerializer},
+    ),
+)
+class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIView):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.select_related("organization").order_by("-created")
+    serializer_class = RadiusBatchSerializer
+    read_serializer_class = RadiusBatchReadSerializer
+    filterset_class = RadiusBatchFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name"]
+    pagination_class = OpenWispPagination
+    pagination_page_size = 20
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return self.read_serializer_class
+        return super().get_serializer_class()
+
+    def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
             num_of_users = valid_data.get("number_of_users", 0)
-            organization = valid_data.pop("organization_slug", None)
-            valid_data.pop("number_of_users", None)
-            batch = serializer.save(organization=organization)
+            batch = serializer.save()
             is_async = batch.schedule_processing(number_of_users=num_of_users)
             batch.refresh_from_db()
             response_serializer = self.get_serializer(batch)
@@ -174,7 +210,11 @@ class DispatchOrgMixin(object):
 
 class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAPIView):
     authentication_classes = (BearerAuthentication, SessionAuthentication)
-    permission_classes = (IsOrganizationManager, IsAdminUser, DjangoModelPermissions)
+    permission_classes = (
+        IsOrganizationManager,
+        IsAdminUser,
+        DjangoModelPermissions,
+    )
     queryset = RadiusBatch.objects.all()
 
     @swagger_auto_schema(responses={200: "(File Byte Stream)"})
@@ -194,6 +234,72 @@ class DownloadRadiusBatchPdfView(ThrottledAPIMixin, DispatchOrgMixin, RetrieveAP
 
 
 download_rad_batch_pdf = DownloadRadiusBatchPdfView.as_view()
+
+
+class Conflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = _("Conflict.")
+    default_code = "conflict"
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Returns a batch user creation operation by its UUID.
+        """,
+        responses={200: BatchDetailResponse},
+    ),
+)
+@method_decorator(
+    name="delete",
+    decorator=swagger_auto_schema(
+        operation_description="""
+        Deletes a batch user creation operation and its associated users.
+        Cannot delete a batch while it is being processed.
+        """,
+        responses={204: "No Content", 409: "Conflict"},
+    ),
+)
+class BatchDetailView(
+    ProtectedAPIMixin, FilterByOrganizationManaged, RetrieveDestroyAPIView
+):
+    authentication_classes = (BearerAuthentication, SessionAuthentication)
+    permission_classes = (IsAdminUser, DjangoModelPermissions)
+    queryset = RadiusBatch.objects.select_related("organization")
+    serializer_class = RadiusBatchReadSerializer
+    pagination_class = OpenWispPagination
+    pagination_page_size = 100
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = self.get_serializer(instance).data
+        page = self.paginate_queryset(instance.users.order_by("pk"))
+        users = self.get_paginated_response(
+            BatchUserSerializer(page, many=True).data
+        ).data
+        created = data.pop("created")
+        modified = data.pop("modified")
+        data["users"] = users
+        data["created"] = created
+        data["modified"] = modified
+        return Response(data)
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete_if_not_processing()
+        except BatchProcessingError:
+            raise Conflict(
+                _(
+                    "The radius batch object is currently being processed"
+                    " and cannot be deleted."
+                )
+            )
+        except RadiusBatch.DoesNotExist:
+            raise NotFound()
+
+
+batch_detail = BatchDetailView.as_view()
 
 
 class UserDetailsUpdaterMixin(object):

@@ -710,6 +710,22 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             pdf_response = self.client.get(pdf_link)
             self.assertEqual(pdf_response.status_code, 200)
+
+        with self.subTest("Login: staff manager without batch permission"):
+            staff = self._create_user(
+                username="pdf-no-permission",
+                email="pdf-no-permission@test.com",
+                is_staff=True,
+            )
+            self._create_org_user(
+                organization=self.default_org,
+                user=staff,
+                is_admin=True,
+            )
+            self.client.force_login(staff)
+            pdf_response = self.client.get(pdf_link)
+            self.assertEqual(pdf_response.status_code, 403)
+
         with self.subTest("Login: superuser allowed"):
             self.client.force_login(self._get_admin())
             pdf_response = self.client.get(pdf_link)

@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from channels.testing import ChannelsLiveServerTestCase
 from django.apps import apps as django_apps
@@ -22,6 +24,7 @@ User = get_user_model()
 
 OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 RadiusGroup = load_model("RadiusGroup")
+RadiusBatch = load_model("RadiusBatch")
 
 
 @tag("selenium_tests")
@@ -265,9 +268,7 @@ class BasicTest(
             "//li[contains(@class, 'select2-results__option') and text()='test org']",
         ).click()
         self.wait_until(
-            lambda driver: driver.find_element(By.ID, "id_group").get_attribute(
-                "value"
-            ),
+            lambda driver: driver.find_element(By.ID, "id_group").get_attribute("value")
         )
         self.web_driver.execute_script(
             "django.jQuery('#id_group')"
@@ -367,7 +368,8 @@ class TestRadiusBatchWebSockets(
             By.CSS_SELECTOR, ".messagelist .warning"
         )
         self.assertIn("Processing:", processing_message_element.text)
-        tasks.process_radius_batch(batch.pk, number_of_users=0)
+        with mock.patch.object(RadiusBatch, "start_processing", return_value=True):
+            tasks.process_radius_batch(batch.pk, number_of_users=0)
         self.wait_until(
             expected_conditions.staleness_of(processing_message_element),
             timeout=5,

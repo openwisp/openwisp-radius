@@ -6,6 +6,8 @@ the API.
 
 from rest_framework import serializers
 
+from .serializers import BatchUserSerializer, RadiusBatchReadSerializer
+
 
 class ObtainTokenBase(serializers.Serializer):
     class Meta:
@@ -60,3 +62,18 @@ class RegisterResponse(serializers.Serializer):
         read_only=True,
         help_text=("Only send when `REST_USE_JWT` is `True`."),
     )
+
+
+class BatchUserPaginationResponse(serializers.Serializer):
+    count = serializers.IntegerField(read_only=True)
+    next = serializers.URLField(read_only=True, allow_null=True)
+    previous = serializers.URLField(read_only=True, allow_null=True)
+    results = BatchUserSerializer(many=True, read_only=True)
+
+
+class BatchDetailResponse(RadiusBatchReadSerializer):
+    users = BatchUserPaginationResponse(read_only=True)
+
+    class Meta(RadiusBatchReadSerializer.Meta):
+        fields = (*RadiusBatchReadSerializer.Meta.fields, "users")
+        ref_name = "RadiusBatchDetailResponse"

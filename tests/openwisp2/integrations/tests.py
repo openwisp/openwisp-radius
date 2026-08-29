@@ -29,6 +29,19 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
         self.client.force_login(admin)
         response = self.client.get(reverse("schema-swagger-ui"), {"format": "openapi"})
         self.assertEqual(response.status_code, 200)
+        schema = response.json()
+        response_schema = schema["paths"]["/radius/batch/{id}/"]["get"]["responses"][
+            "200"
+        ]["schema"]
+        self.assertEqual(
+            response_schema["$ref"], "#/definitions/RadiusBatchDetailResponse"
+        )
+        users_schema = schema["definitions"]["RadiusBatchDetailResponse"]["properties"][
+            "users"
+        ]
+        self.assertEqual(
+            users_schema["$ref"], "#/definitions/BatchUserPaginationResponse"
+        )
 
     def _create_rad_token(self):
         user = self._get_user()
