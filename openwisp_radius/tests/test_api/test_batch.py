@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
 
+from ...api.serializers import RadiusBatchSerializer
 from ...utils import load_model
 from ..mixins import ApiTokenMixin, BaseTestCase
 
@@ -186,6 +188,34 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
         batch_data = response.json()["results"][0]
         self.assertNotIn("user_credentials", batch_data)
         self.assertNotIn("users", batch_data)
+
+    def test_batch_browsable_api_form_scopes_relation_options(self):
+        other_org = self._create_org(name="other organization", slug="other-org")
+        group = self._create_radius_group(name="managed")
+        other_group = self._create_radius_group(
+            name="unmanaged", organization=other_org
+        )
+        operator = self._create_operator(
+            organizations=[self.default_org],
+            username="batch-form-operator",
+            email="batch-form-operator@test.com",
+        )
+        operator.user_permissions.add(
+            Permission.objects.get(codename="add_radiusbatch")
+        )
+        self.client.force_login(operator)
+        response = self.client.get(reverse("radius:batch"), HTTP_ACCEPT="text/html")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        content = response.content.decode()
+        self.assertIn('name="organization_slug"', content)
+        self.assertIn("Radius group", content)
+        self.assertIn(f'value="{self.default_org.slug}"', content)
+        self.assertNotIn(f'value="{other_org.slug}"', content)
+        self.assertIn(f'value="{group.pk}"', content)
+        self.assertNotIn(f'value="{other_group.pk}"', content)
+        serializer = RadiusBatchSerializer(context={"request": response.wsgi_request})
+        self.assertEqual(serializer.fields["organization_slug"].html_cutoff, 100)
+        self.assertEqual(serializer.fields["group"].html_cutoff, 100)
 
     def test_batch_list_exposes_download_links(self):
         batch = self._create_radius_batch(

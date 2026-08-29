@@ -159,19 +159,20 @@ class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIVie
     pagination_class = OpenWispPagination
     pagination_page_size = 20
 
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return RadiusBatchSerializer
+        return RadiusBatchReadSerializer
+
     def post(self, request, *args, **kwargs):
-        serializer = RadiusBatchSerializer(
-            data=request.data, context={"request": request}
-        )
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             valid_data = serializer.validated_data.copy()
             num_of_users = valid_data.get("number_of_users", 0)
             batch = serializer.save()
             is_async = batch.schedule_processing(number_of_users=num_of_users)
             batch.refresh_from_db()
-            response_serializer = RadiusBatchSerializer(
-                batch, context={"request": request}
-            )
+            response_serializer = self.get_serializer(batch)
             status_code = (
                 status.HTTP_202_ACCEPTED if is_async else status.HTTP_201_CREATED
             )

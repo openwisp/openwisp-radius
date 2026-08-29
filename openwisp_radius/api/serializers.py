@@ -26,7 +26,10 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
-from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_users.api.mixins import (
+    FilterSerializerByOrgManaged,
+    FilterSerializerByOrgMembership,
+)
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as BasePasswordResetSerializer,
 )
@@ -45,6 +48,7 @@ from ..utils import (
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 logger = logging.getLogger(__name__)
+BROWSABLE_API_SELECT_CUTOFF = 100
 
 RadiusPostAuth = load_model("RadiusPostAuth")
 RadiusAccounting = load_model("RadiusAccounting")
@@ -455,7 +459,7 @@ class RadiusOrganizationField(serializers.SlugRelatedField):
         return queryset
 
 
-class RadiusBatchSerializer(ValidatedModelSerializer):
+class RadiusBatchSerializer(FilterSerializerByOrgMembership, ValidatedModelSerializer):
     """Validate batch creation requests and return their credentials."""
 
     organization = serializers.PrimaryKeyRelatedField(
@@ -468,6 +472,14 @@ class RadiusBatchSerializer(ValidatedModelSerializer):
         label="organization",
         slug_field="slug",
         write_only=True,
+        html_cutoff=BROWSABLE_API_SELECT_CUTOFF,
+    )
+    group = serializers.PrimaryKeyRelatedField(
+        queryset=RadiusGroup.objects.all(),
+        required=False,
+        allow_null=True,
+        label=_("Radius group"),
+        html_cutoff=BROWSABLE_API_SELECT_CUTOFF,
     )
     users = UserSerializer(
         many=True,
