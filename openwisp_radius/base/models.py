@@ -1231,7 +1231,9 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def _get_locked(self):
         """Reload and lock the current row before changing its lifecycle state."""
-        return self._meta.model.objects.select_for_update().get(pk=self.pk)
+        return self._meta.model.objects.select_for_update().get(
+            pk=self.pk, organization_id=self.organization_id
+        )
 
     def _get_deletable(self):
         """Lock the batch and reject deletion once processing has been claimed."""

@@ -85,7 +85,12 @@ from .serializers import (
     UserRadiusUsageSerializer,
     ValidatePhoneTokenSerializer,
 )
-from .swagger import ObtainTokenRequest, ObtainTokenResponse, RegisterResponse
+from .swagger import (
+    BatchDetailResponse,
+    ObtainTokenRequest,
+    ObtainTokenResponse,
+    RegisterResponse,
+)
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 authorize = freeradius_views.authorize
@@ -152,7 +157,8 @@ class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIVie
     authentication_classes = (BearerAuthentication, SessionAuthentication)
     permission_classes = (IsAdminUser, DjangoModelPermissions)
     queryset = RadiusBatch.objects.select_related("organization").order_by("-created")
-    serializer_class = RadiusBatchReadSerializer
+    serializer_class = RadiusBatchSerializer
+    read_serializer_class = RadiusBatchReadSerializer
     filterset_class = RadiusBatchFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["name"]
@@ -160,9 +166,9 @@ class BatchView(ThrottledAPIMixin, FilterByOrganizationManaged, ListCreateAPIVie
     pagination_page_size = 20
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
-            return RadiusBatchSerializer
-        return RadiusBatchReadSerializer
+        if self.request.method == "GET":
+            return self.read_serializer_class
+        return super().get_serializer_class()
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -242,6 +248,7 @@ class Conflict(APIException):
         operation_description="""
         Returns a batch user creation operation by its UUID.
         """,
+        responses={200: BatchDetailResponse},
     ),
 )
 @method_decorator(
@@ -288,6 +295,8 @@ class BatchDetailView(
                     " and cannot be deleted."
                 )
             )
+        except RadiusBatch.DoesNotExist:
+            raise NotFound()
 
 
 batch_detail = BatchDetailView.as_view()

@@ -982,6 +982,17 @@ class TestRadiusBatch(BaseTestCase):
             stale_batch.delete_if_not_processing()
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
 
+    def test_delete_if_not_processing_rechecks_organization(self):
+        batch = self._create_radius_batch(
+            name="test", strategy="prefix", prefix="test-prefix"
+        )
+        stale_batch = RadiusBatch.objects.get(pk=batch.pk)
+        batch.organization = self._create_org(name="other", slug="other")
+        batch.save(update_fields=["organization"])
+        with self.assertRaises(RadiusBatch.DoesNotExist):
+            stale_batch.delete_if_not_processing()
+        self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
+
 
 class TestPrivateCsvFile(FileMixin, TestMultitenantAdminMixin, BaseTestCase):
     def setUp(self):

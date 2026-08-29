@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -461,6 +463,24 @@ class TestBatch(ApiTokenMixin, BaseTestCase):
             "deleted.",
         )
         self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
+
+    @mock.patch.object(
+        RadiusBatch,
+        "delete_if_not_processing",
+        side_effect=RadiusBatch.DoesNotExist,
+    )
+    def test_batch_delete_disappeared_404(self, _delete_if_not_processing):
+        batch = self._create_radius_batch(
+            name="test-prefix-batch",
+            strategy="prefix",
+            prefix="test",
+            status=RadiusBatch.COMPLETED,
+        )
+        self._superuser_login()
+        response = self.client.delete(
+            reverse("radius:radius_batch_detail", args=[batch.pk])
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_batch_delete_cross_org_404(self):
         org2 = self._create_org(**{"name": "other", "slug": "other"})
