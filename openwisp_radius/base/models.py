@@ -7,7 +7,6 @@ from datetime import timedelta
 from io import StringIO
 from typing import Iterable
 
-import django
 import phonenumbers
 import swapper
 from asgiref.sync import async_to_sync
@@ -29,10 +28,7 @@ from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 
-from openwisp_radius.registration import (
-    REGISTRATION_METHOD_CHOICES,
-    get_registration_choices,
-)
+from openwisp_radius.registration import get_registration_choices
 from openwisp_radius.tasks import process_radius_batch
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
@@ -1820,16 +1816,7 @@ class AbstractRegisteredUser(UUIDModel, OrgMixin):
         max_length=64,
         blank=True,
         default="",
-        choices=(
-            REGISTRATION_METHOD_CHOICES
-            if django.VERSION < (5, 0)
-            # TODO: Remove when dropping support for Django 4.2
-            # In Django 5.0+, choices are normalized at model definition,
-            # creating a static list of tuples that doesn't update when registration
-            # methods are dynamically registered or unregistered. Using a callable
-            # ensures we always get the current choices from the registry.
-            else get_registration_choices
-        ),
+        choices=get_registration_choices,
     )
     is_verified = models.BooleanField(
         _("verified"),
