@@ -28,18 +28,19 @@ if TIMESERIES_BACKEND == "influxdb":
         "PORT": "8086",
     }
 elif TIMESERIES_BACKEND == "influxdb2":
+    influxdb2_host = os.getenv("INFLUXDB2_HOST", "localhost")
+    influxdb2_port = os.getenv("INFLUXDB2_PORT", "8087")
     TIMESERIES_DATABASE = {
         "BACKEND": "openwisp_monitoring.db.backends.influxdb2",
         "NAME": os.getenv("INFLUXDB2_BUCKET", "openwisp2"),
         "URL": os.getenv(
             "INFLUXDB2_URL",
-            "http://{host}:{port}".format(
-                host=os.getenv("INFLUXDB2_HOST", "localhost"),
-                port=os.getenv("INFLUXDB2_PORT", "8087"),
-            ),
+            "http://{host}:{port}".format(host=influxdb2_host, port=influxdb2_port),
         ),
         "USER": os.getenv("INFLUXDB2_ORG", "openwisp"),
         "PASSWORD": os.getenv("INFLUXDB2_TOKEN", "openwisp-token"),
+        "HOST": influxdb2_host,
+        "PORT": influxdb2_port,
     }
 else:
     raise ValueError(f'Unsupported TIMESERIES_BACKEND "{TIMESERIES_BACKEND}"')
