@@ -7,7 +7,6 @@ from datetime import timedelta
 from io import StringIO
 from typing import Iterable
 
-import django
 import phonenumbers
 import swapper
 from asgiref.sync import async_to_sync
@@ -29,10 +28,7 @@ from openwisp_notifications.signals import notify
 from phonenumber_field.modelfields import PhoneNumberField
 from private_storage.fields import PrivateFileField
 
-from openwisp_radius.registration import (
-    REGISTRATION_METHOD_CHOICES,
-    get_registration_choices,
-)
+from openwisp_radius.registration import get_registration_choices
 from openwisp_radius.tasks import process_radius_batch
 from openwisp_users.mixins import OrgMixin
 from openwisp_utils.base import KeyField, TimeStampedEditableModel, UUIDModel
@@ -1229,6 +1225,47 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
         super().delete()
         self._remove_files()
 
+    def _get_locked(self):
+        """Reload and lock the current row before changing its lifecycle state."""
+        return self._meta.model.objects.select_for_update().get(
+            pk=self.pk, organization_id=self.organization_id
+        )
+
+    def _get_deletable(self):
+        """Lock the batch and reject deletion once processing has been claimed."""
+        batch = self._get_locked()
+        if batch.status == self.PROCESSING:
+            raise exceptions.BatchProcessingError
+        return batch
+
+    def can_delete(self):
+        """Return whether the locked current batch is safe to delete."""
+        try:
+            with transaction.atomic():
+                self._get_deletable()
+        except (exceptions.BatchProcessingError, self._meta.model.DoesNotExist):
+            return False
+        return True
+
+    def delete_if_not_processing(self):
+        """Delete the locked current batch unless a worker is processing it."""
+        with transaction.atomic():
+            self._get_deletable().delete()
+
+    def start_processing(self):
+        """Atomically claim this pending batch for a single processing worker."""
+        with transaction.atomic():
+            try:
+                batch = self._get_locked()
+            except self._meta.model.DoesNotExist:
+                return False
+            if batch.status != self.PENDING:
+                return False
+            batch.status = self.PROCESSING
+            batch.save(update_fields=["status"])
+        self.status = self.PROCESSING
+        return True
+
     def _remove_files(self):
         if self.csvfile:
             self.csvfile.storage.delete(self.csvfile.name)
@@ -1255,10 +1292,10 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
 
     def process(self, number_of_users=0, is_async=False):
         channel_layer = get_channel_layer()
+        if not self.start_processing():
+            return
         group_name = f"radius_batch_{self.pk}"
         try:
-            self.status = self.PROCESSING
-            self.save(update_fields=["status"])
             if self.strategy == "prefix":
                 self.prefix_add(self.prefix, number_of_users)
             elif self.strategy == "csv":
@@ -1779,16 +1816,7 @@ class AbstractRegisteredUser(UUIDModel, OrgMixin):
         max_length=64,
         blank=True,
         default="",
-        choices=(
-            REGISTRATION_METHOD_CHOICES
-            if django.VERSION < (5, 0)
-            # TODO: Remove when dropping support for Django 4.2
-            # In Django 5.0+, choices are normalized at model definition,
-            # creating a static list of tuples that doesn't update when registration
-            # methods are dynamically registered or unregistered. Using a callable
-            # ensures we always get the current choices from the registry.
-            else get_registration_choices
-        ),
+        choices=get_registration_choices,
     )
     is_verified = models.BooleanField(
         _("verified"),

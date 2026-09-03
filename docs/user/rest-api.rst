@@ -869,12 +869,51 @@ This API endpoint allows to use the features described in
 
     /api/v1/radius/batch/
 
+GET
+^^^
+
+Returns a list of batch user creation operations for the organizations
+managed by the requesting user. Results are paginated and can be filtered.
+The list does not include associated users.
+
+.. code-block:: text
+
+    /api/v1/radius/batch/?search=<batch_name>
+    /api/v1/radius/batch/?organization=<org_id>
+    /api/v1/radius/batch/?strategy=prefix
+
+Filters
+"""""""
+
+================= ===============================
+Filter Parameter  Description
+================= ===============================
+search            Search batches by name
+organization      Filter by organization id
+organization_slug Filter by organization slug
+strategy          Filter by strategy (prefix/csv)
+================= ===============================
+
+Pagination
+""""""""""
+
+Pagination is provided using page number pagination, the default page size
+is 20, which can be overridden using the ``page_size`` parameter, up to
+:ref:`OPENWISP_API_MAX_PAGE_SIZE <openwisp_api_max_page_size>` (100 by
+default).
+
 .. note::
 
-    This API endpoint allows to use the features described in
-    :doc:`importing_users` and :doc:`generating_users`.
+    The list response does not include ``user_credentials`` to avoid
+    repeatedly exposing plaintext credentials. Use the batch creation
+    response or the protected PDF or CSV download endpoints for
+    credentials.
 
-Responds only to **POST**, used to save a ``RadiusBatch`` instance.
+POST
+^^^^
+
+Creates a batch of users using a csv file or generates users with a given
+prefix.
 
 It is possible to generate the users of the ``RadiusBatch`` with two
 different strategies: csv or prefix.
@@ -918,6 +957,47 @@ Use the :ref:`RADIUS Groups endpoint <radius_groups>` to search for a
 group by organization before sending its UUID in the ``group`` parameter.
 The ``group`` and ``notes`` parameters are optional. When ``group`` is
 omitted, users retain the standard default-group behavior.
+
+.. note::
+
+    The synchronous ``201 Created`` response for prefix-generated batches
+    includes ``user_credentials``. The asynchronous ``202 Accepted``
+    response does not include credentials; use the ``pdf_link`` after
+    completion.
+
+Batch Detail
+++++++++++++
+
+.. code-block:: text
+
+    /api/v1/radius/batch/<uuid>/
+
+GET
+^^^
+
+Returns a single batch user creation operation by its UUID. The response
+does not include ``user_credentials``.
+
+For completed prefix batches, the response includes a ``pdf_link`` field
+pointing to the protected PDF download endpoint. For CSV batches with an
+uploaded file, the response includes a ``csv_link`` field pointing to the
+protected CSV download endpoint.
+
+Associated users are returned in the ``users`` field as a paginated
+response. The default page size is 100 and can be changed with the
+``page`` and ``page_size`` query parameters.
+
+DELETE
+^^^^^^
+
+Deletes a batch user creation operation and its associated users. Returns
+``204 No Content`` on success.
+
+.. note::
+
+    Deletion is rejected while the batch ``status`` is ``processing``. The
+    API returns a ``409 Conflict`` response with a clear error message in
+    this case. Pending, completed, and failed batches can be deleted.
 
 Batch CSV Download
 ++++++++++++++++++

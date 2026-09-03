@@ -26,7 +26,10 @@ from rest_framework.authtoken.serializers import (
 from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
-from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_users.api.mixins import (
+    FilterSerializerByOrgManaged,
+    FilterSerializerByOrgMembership,
+)
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as BasePasswordResetSerializer,
 )
@@ -45,6 +48,7 @@ from ..utils import (
 from .utils import ErrorDictMixin, IDVerificationHelper
 
 logger = logging.getLogger(__name__)
+BROWSABLE_API_SELECT_CUTOFF = 100
 
 RadiusPostAuth = load_model("RadiusPostAuth")
 RadiusAccounting = load_model("RadiusAccounting")
@@ -455,7 +459,9 @@ class RadiusOrganizationField(serializers.SlugRelatedField):
         return queryset
 
 
-class RadiusBatchSerializer(serializers.ModelSerializer):
+class RadiusBatchSerializer(FilterSerializerByOrgMembership, ValidatedModelSerializer):
+    """Validate batch creation requests and return their credentials."""
+
     organization = serializers.PrimaryKeyRelatedField(
         help_text=("UUID of the organization in which the radius batch is created."),
         read_only=True,
@@ -466,6 +472,14 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
         label="organization",
         slug_field="slug",
         write_only=True,
+        html_cutoff=BROWSABLE_API_SELECT_CUTOFF,
+    )
+    group = serializers.PrimaryKeyRelatedField(
+        queryset=RadiusGroup.objects.all(),
+        required=False,
+        allow_null=True,
+        label=_("Radius group"),
+        html_cutoff=BROWSABLE_API_SELECT_CUTOFF,
     )
     users = UserSerializer(
         many=True,
@@ -505,7 +519,6 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
 
     def create(self, validated_data):
-        validated_data.pop("organization_slug", None)
         validated_data.pop("number_of_users", None)
         return super().create(validated_data)
 
@@ -529,14 +542,8 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"number_of_users": _("The field number_of_users cannot be empty")}
             )
-        validated_data = super().validate(data)
-        # Additional Model Validation
-        batch_data = validated_data.copy()
-        batch_data.pop("number_of_users", None)
-        batch_data["organization"] = batch_data.pop("organization_slug", None)
-        instance = self.instance or self.Meta.model(**batch_data)
-        instance.full_clean()
-        return validated_data
+        data["organization"] = data.pop("organization_slug")
+        return super().validate(data)
 
     class Meta:
         model = RadiusBatch
@@ -560,6 +567,68 @@ class RadiusBatchSerializer(serializers.ModelSerializer):
             "modified",
         )
         read_only_fields = ("status", "user_credentials", "created", "modified")
+
+
+class BatchUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        )
+        read_only_fields = fields
+
+
+class RadiusBatchReadSerializer(serializers.ModelSerializer):
+    """Return read-only batch data without creation credentials."""
+
+    organization = serializers.PrimaryKeyRelatedField(read_only=True)
+    pdf_link = serializers.SerializerMethodField(required=False, read_only=True)
+    csv_link = serializers.SerializerMethodField(required=False, read_only=True)
+    status = serializers.CharField(read_only=True)
+
+    def get_pdf_link(self, obj):
+        if obj.strategy == "prefix" and obj.status == RadiusBatch.COMPLETED:
+            request = self.context.get("request")
+            return request.build_absolute_uri(
+                reverse(
+                    "radius:download_rad_batch_pdf",
+                    args=[obj.organization.slug, obj.pk],
+                )
+            )
+        return None
+
+    def get_csv_link(self, obj):
+        if obj.csvfile:
+            request = self.context.get("request")
+            csv_url = reverse(
+                "radius:radius_organization_batch_csv_read",
+                args=[obj.organization.slug, obj.pk],
+            )
+            return request.build_absolute_uri(csv_url)
+        return None
+
+    class Meta:
+        model = RadiusBatch
+        fields = (
+            "id",
+            "organization",
+            "name",
+            "strategy",
+            "status",
+            "expiration_date",
+            "prefix",
+            "group",
+            "notes",
+            "pdf_link",
+            "csv_link",
+            "created",
+            "modified",
+        )
+        read_only_fields = fields
 
 
 class RegisterSerializer(

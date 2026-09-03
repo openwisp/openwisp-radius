@@ -40,7 +40,7 @@ class RadiusBatchCsvDownloadAPIView(APIView):
         },
         tags=["radius"],
     )
-    def get(self, request, _slug, pk, *args, **kwargs):
+    def get(self, request, slug, pk, *args, **kwargs):
         return rad_batch_csv_download_view(request, pk=pk, **kwargs)
 
 

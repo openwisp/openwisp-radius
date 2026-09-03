@@ -26,21 +26,8 @@ jobs:
           - "3.12"
           - "3.13"
         django-version:
-          - django~=4.2.0
           - django~=5.1.0
           - django~=5.2.0
-        tsdb:
-          - influxdb
-        exclude:
-          # Python 3.13 supported only in Django >=5.1.3
-          - python-version: "3.13"
-            django-version: django~=4.2.0
-        # The other timeseries backends are tested only on the latest Python
-        # and Django versions, and only on the monitoring integration.
-        include:
-          - python-version: "3.13"
-            django-version: django~=5.2.0
-            tsdb: influxdb2
 
     steps:
       - uses: actions/checkout@v7
@@ -61,7 +48,7 @@ jobs:
           sudo dpkg-reconfigure man-db
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"

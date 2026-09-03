@@ -3,8 +3,10 @@ from unittest import mock
 import lxml.html as lxml_html
 import swapper
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory
@@ -386,6 +388,44 @@ class TestAdmin(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(User.objects.count() - n, 0)
 
+    def test_radiusbatch_delete_view_skips_processing(self):
+        batch = self._create_radius_batch(
+            name="processing",
+            strategy="prefix",
+            prefix="test-proc",
+            status=RadiusBatch.PROCESSING,
+        )
+        delete_path = reverse(
+            f"admin:{self.app_label}_radiusbatch_delete", args=[batch.pk]
+        )
+        # The permission check must reject a processing batch before Django logs it.
+        log_entries = LogEntry.objects.count()
+        response = self.client.post(delete_path, {"post": "yes"}, follow=True)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(RadiusBatch.objects.filter(pk=batch.pk).exists())
+        self.assertEqual(LogEntry.objects.count(), log_entries)
+
+    @mock.patch.object(RadiusBatch, "can_delete", return_value=True)
+    def test_radiusbatch_delete_model_processing_error_message(
+        self, _mocked_can_delete
+    ):
+        batch = self._create_radius_batch(
+            name="processing",
+            strategy="prefix",
+            prefix="test-proc",
+            status=RadiusBatch.PROCESSING,
+        )
+        delete_path = reverse(
+            f"admin:{self.app_label}_radiusbatch_delete", args=[batch.pk]
+        )
+        response = self.client.post(delete_path, {"post": "yes"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            str(list(get_messages(response.wsgi_request))[0]),
+            "The radius batch object is currently being processed and cannot be "
+            "deleted.",
+        )
+
     def test_delete_selected_batches_action_perms(self):
         org = self._get_org()
         user = self._create_user(is_staff=True)
@@ -402,10 +442,77 @@ class TestAdmin(
             action="delete_selected_batches",
             user=user,
             obj=batch,
-            message="Successfully deleted selected batches.",
+            message="Successfully deleted 1 batch.",
             required_perms=["delete"],
             extra_payload={"_selected_action": [batch.id]},
         )
+
+    def test_delete_selected_batches_skips_processing(self):
+        org = self._get_org()
+        self._get_admin()
+        deletable = self._create_radius_batch(
+            organization=org,
+            name="deletable",
+            strategy="prefix",
+            prefix="test-del",
+        )
+        processing = self._create_radius_batch(
+            organization=org,
+            name="processing",
+            strategy="prefix",
+            prefix="test-proc",
+        )
+        processing.status = RadiusBatch.PROCESSING
+        processing.save(update_fields=["status"])
+        changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
+        data = {
+            "action": "delete_selected_batches",
+            "_selected_action": [deletable.pk, processing.pk],
+        }
+        response = self.client.post(changelist_path, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RadiusBatch.objects.filter(pk=deletable.pk).exists())
+        self.assertTrue(RadiusBatch.objects.filter(pk=processing.pk).exists())
+        self.assertContains(response, "Skipped 1 batch")
+        self.assertContains(response, "Successfully deleted 1 batch.")
+
+    @mock.patch.object(RadiusBatch, "delete_if_not_processing", autospec=True)
+    def test_delete_selected_batches_ignores_disappeared_batch(self, delete_batch):
+        org = self._get_org()
+        self._get_admin()
+        disappeared = self._create_radius_batch(
+            organization=org,
+            name="disappeared",
+            strategy="prefix",
+            prefix="test-dis",
+        )
+        deletable = self._create_radius_batch(
+            organization=org,
+            name="deletable",
+            strategy="prefix",
+            prefix="test-del",
+        )
+
+        def delete_or_disappear(batch):
+            if batch.pk == disappeared.pk:
+                RadiusBatch.objects.filter(pk=batch.pk).delete()
+                raise RadiusBatch.DoesNotExist
+            batch.delete()
+
+        delete_batch.side_effect = delete_or_disappear
+        changelist_path = reverse(f"admin:{self.app_label}_radiusbatch_changelist")
+        response = self.client.post(
+            changelist_path,
+            {
+                "action": "delete_selected_batches",
+                "_selected_action": [disappeared.pk, deletable.pk],
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RadiusBatch.objects.filter(pk=disappeared.pk).exists())
+        self.assertFalse(RadiusBatch.objects.filter(pk=deletable.pk).exists())
+        self.assertContains(response, "Successfully deleted 1 batch.")
 
     def test_radius_batch_csv_help_text(self):
         add_url = reverse(f"admin:{self.app_label}_radiusbatch_add")

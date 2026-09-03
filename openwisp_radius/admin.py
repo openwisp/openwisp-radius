@@ -14,6 +14,7 @@ from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 from openwisp_users.admin import OrganizationAdmin, UserAdmin
 from openwisp_users.multitenancy import MultitenantAdminMixin, MultitenantOrgFilter
@@ -26,6 +27,7 @@ from openwisp_utils.admin import (
 from . import settings as app_settings
 from .base.admin_filters import RegisteredUserFilter
 from .base.forms import ModeSwitcherForm, RadiusBatchForm
+from .exceptions import BatchProcessingError
 from .settings import RADIUS_API_BASEURL, RADIUS_API_URLCONF
 from .utils import load_model
 
@@ -463,8 +465,18 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         obj.schedule_processing(number_of_users=num_users)
 
     def delete_model(self, request, obj):
-        obj.users.all().delete()
-        super(RadiusBatchAdmin, self).delete_model(request, obj)
+        try:
+            obj.delete_if_not_processing()
+        except BatchProcessingError:
+            self.message_user(
+                request,
+                _(
+                    "The radius batch object is currently being processed "
+                    "and cannot be deleted."
+                ),
+                level=messages.ERROR,
+            )
+            raise PermissionDenied
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
@@ -506,11 +518,39 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
 
     @admin.action(description=_("Delete selected batches"), permissions=["delete"])
     def delete_selected_batches(self, request, queryset):
+        skipped = 0
+        deleted = 0
         for obj in queryset:
-            obj.delete()
-        self.message_user(
-            request, "Successfully deleted selected batches.", level=messages.SUCCESS
-        )
+            try:
+                obj.delete_if_not_processing()
+            except BatchProcessingError:
+                skipped += 1
+                continue
+            except RadiusBatch.DoesNotExist:
+                continue
+            deleted += 1
+        if skipped:
+            self.message_user(
+                request,
+                ngettext(
+                    "Skipped %(count)d batch that is currently being processed.",
+                    "Skipped %(count)d batches that are currently being processed.",
+                    skipped,
+                )
+                % {"count": skipped},
+                level=messages.WARNING,
+            )
+        if deleted:
+            self.message_user(
+                request,
+                ngettext(
+                    "Successfully deleted %(count)d batch.",
+                    "Successfully deleted %(count)d batches.",
+                    deleted,
+                )
+                % {"count": deleted},
+                level=messages.SUCCESS,
+            )
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super(RadiusBatchAdmin, self).get_readonly_fields(
@@ -534,8 +574,11 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         return ("status",) + readonly_fields
 
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.status == "processing":
-            return False
+        if obj:
+            if request.method == "POST" and not obj.can_delete():
+                return False
+            if request.method != "POST" and obj.status == RadiusBatch.PROCESSING:
+                return False
         return super().has_delete_permission(request, obj)
 
     def response_add(self, request, obj, post_url_continue=None):
