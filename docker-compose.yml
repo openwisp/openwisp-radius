@@ -8,6 +8,7 @@ x-timeseries:
 services:
   influxdb:
     image: influxdb:1.8-alpine
+    platform: linux/amd64
     volumes:
       - influxdb-data:/var/lib/influxdb
     ports:

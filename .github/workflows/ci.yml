@@ -92,11 +92,14 @@ jobs:
 
       - name: Start Timeseries DB and Redis container
         run: |
-          docker compose up -d "${{ matrix.tsdb }}" redis
+          tsdb="${{ matrix.tsdb }}"
+          tsdb="${tsdb:-influxdb}"
 
-          if [ "${{ matrix.tsdb }}" = "influxdb2" ]; then
+          docker compose up -d "$tsdb" redis
+
+          if [ "$tsdb" = "influxdb2" ]; then
             url="http://localhost:8087/health"
-          elif [ "${{ matrix.tsdb }}" = "elasticsearch" ]; then
+          elif [ "$tsdb" = "elasticsearch" ]; then
             url="http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=2s"
           else
             url="http://localhost:8086/query?q=SHOW%20DATABASES"
@@ -110,7 +113,7 @@ jobs:
           done
 
           echo "Timeseries DB did not become ready at $url"
-          docker compose logs "${{ matrix.tsdb }}"
+          docker compose logs "$tsdb" redis
           exit 1
 
       - name: QA checks
@@ -122,8 +125,8 @@ jobs:
         run: |
           ./runtests
         env:
-          MONITORING_INTEGRATION: ${{ matrix.tsdb != 'influxdb' && '1' || '' }}
-          TIMESERIES_BACKEND: ${{ matrix.tsdb }}
+          MONITORING_INTEGRATION: ${{ matrix.tsdb && matrix.tsdb != 'influxdb' && '1' || '' }}
+          TIMESERIES_BACKEND: ${{ matrix.tsdb || 'influxdb' }}
           SELENIUM_HEADLESS: 1
           GECKO_LOG: 1
           COVERAGE_PROCESS_START: pyproject.toml
