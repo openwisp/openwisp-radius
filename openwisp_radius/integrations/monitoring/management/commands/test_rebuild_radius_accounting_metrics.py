@@ -74,11 +74,11 @@ class TestRebuildRadiusAccountingMetrics(
 
     @patch(
         "openwisp_radius.integrations.monitoring.management.commands."
-        "rebuild_radius_accounting_metrics.timeseries_db.query"
+        "rebuild_radius_accounting_metrics.timeseries_db.delete_metric_data"
     )
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_commit(
-        self, mocked_warning, mocked_query
+        self, mocked_warning, mocked_delete
     ):
         user = self._create_user()
         reg_user = self._create_registered_user(user=user)
@@ -96,12 +96,19 @@ class TestRebuildRadiusAccountingMetrics(
         output = out.getvalue()
         self.assertIn("Starting to rebuild 1 accounting metrics.", output)
         self.assertIn("Processed 1 of 1 accounting metrics.", output)
-        delete_queries = [
-            call.args[0]
-            for call in mocked_query.call_args_list
-            if call.args[0].startswith("DELETE FROM radius_acc")
-        ]
-        self.assertEqual(len(delete_queries), 1)
+        self.assertEqual(mocked_delete.call_count, 1)
+        self.assertEqual(
+            mocked_delete.call_args.kwargs,
+            {
+                "key": "radius_acc",
+                "tags": {
+                    "organization_id": str(self.default_org.id),
+                    "calling_station_id": sha1_hash(session.calling_station_id),
+                    "called_station_id": session.called_station_id,
+                },
+                "timestamp": session.stop_time,
+            },
+        )
         self.assertEqual(
             self.metric_model.objects.filter(
                 configuration="radius_acc",
@@ -119,6 +126,46 @@ class TestRebuildRadiusAccountingMetrics(
             ).count(),
             1,
         )
+
+    @patch("logging.Logger.warning")
+    def test_rebuild_radius_accounting_metrics_deletes_only_session_point(self, *args):
+        from ...tasks import post_save_radiusaccounting
+
+        user = self._create_user()
+        device = self._create_device()
+        self._create_registered_user(user=user)
+        called_station_id = device.mac_address.replace("-", ":").upper()
+        # this session was accounted correctly and must not be deleted
+        accounted_session = self._create_closed_accounting_without_metric(
+            unique_id="accounted-session",
+            username=user.username,
+            called_station_id=called_station_id,
+            terminate_cause="Session-Timeout",
+            stop_time=timezone.now() - timezone.timedelta(hours=1),
+            input_octets=1000000000,
+            output_octets=2000000000,
+        )
+        post_save_radiusaccounting(
+            username=accounted_session.username,
+            organization_id=str(accounted_session.organization_id),
+            input_octets=accounted_session.input_octets,
+            output_octets=accounted_session.output_octets,
+            calling_station_id=accounted_session.calling_station_id,
+            called_station_id=accounted_session.called_station_id,
+            time=accounted_session.stop_time,
+        )
+        self._create_closed_accounting_without_metric(
+            username=user.username,
+            called_station_id=called_station_id,
+        )
+        call_command(
+            "rebuild_radius_accounting_metrics", commit=True, stdout=StringIO()
+        )
+        metric = self.metric_model.objects.get(configuration="radius_acc")
+        points = metric.chart_set.get(configuration="radius_traffic").read()
+        # the point of the accounted session is still there:
+        # 8 + 1 GB of download and 9 + 2 GB of upload
+        self.assertEqual(points["summary"], {"upload": 11, "download": 9})
 
     @patch("logging.Logger.warning")
     def test_rebuild_radius_accounting_metrics_nas_reboot_filter(self, *args):

@@ -5,6 +5,100 @@ from openwisp_monitoring.monitoring.configuration import DEFAULT_COLORS
 
 from openwisp_radius.registration import REGISTRATION_METHOD_CHOICES
 
+_flux_range = (
+    'import "date"\n{timezone_import}from(bucket: "{bucket}")'
+    " |> range(start: {time_start}{end_range})"
+    ' |> filter(fn: (r) => r._measurement == "{key}")'
+)
+_flux_object_filters = "{content_type_filter}{object_id_filter}"
+_flux_organization_filters = "{organization_id_filter}{location_id_filter}"
+_flux_field_group = ' |> group(columns: ["_field"])'
+_flux_method_group = ' |> group(columns: ["method"])'
+_flux_method_summary_group = ' |> group(columns: ["method", "_start", "_stop"])'
+_flux_summary_time = " |> map(fn: (r) => ({{r with _time: r._start}}))"
+_flux_truncate_time = (
+    " |> map(fn: (r) => ({{r with _time: date.truncate(t: r._time, "
+    "unit: {window}{window_timezone})}}))"
+)
+# selectors keep the other tags of the point, which would end up in the trace
+# name, hence these records are rebuilt explicitly
+_flux_method_projection = (
+    " |> map(fn: (r) => ({{_time: date.truncate(t: r._time, "
+    "unit: {window}{window_timezone}), _value: r._value, method: r.method}}))"
+)
+_flux_method_summary_projection = (
+    " |> map(fn: (r) => ({{_time: r._start, _value: r._value, method: r.method}}))"
+)
+
+
+def _flux_window(function):
+    return (
+        " |> aggregateWindow(every: {window}, fn: " + function + ', timeSrc: "_start"'
+        "{window_timezone})" + _flux_truncate_time
+    )
+
+
+def _flux_signups(function, summary=False):
+    query = (
+        _flux_range
+        + "{organization_id_filter}"
+        + ' |> filter(fn: (r) => r._field == "count")'
+    )
+    if summary:
+        query += _flux_method_summary_group + " |> {}()".format(function)
+        if function == "last":
+            return query + _flux_method_summary_projection
+        return query + _flux_summary_time
+    query += _flux_method_group + (
+        " |> aggregateWindow(every: {window}, fn: " + function + ', timeSrc: "_start"'
+        ", createEmpty: true{window_timezone})"
+    )
+    if function == "last":
+        # Flux does not provide the linear fill of InfluxDB 1
+        return (
+            query
+            + ' |> fill(column: "_value", usePrevious: true)'
+            + _flux_method_projection
+        )
+    return query + _flux_truncate_time
+
+
+def _flux_traffic(filters, summary=False):
+    query = (
+        _flux_range
+        + filters
+        + " |> filter(fn: (r) => r._field =~ /^(input_octets|output_octets)$/)"
+        + _flux_field_group
+    )
+    query += " |> sum()" if summary else _flux_window("sum")
+    return query + (
+        " |> map(fn: (r) => ({{r with "
+        '_field: if r._field == "output_octets" then "upload" else "download", '
+        "_value: float(v: r._value) / 1000000000.0}}))"
+    )
+
+
+def _flux_sessions(filters, summary=False):
+    query = _flux_range + filters + ' |> filter(fn: (r) => r._field == "username")'
+    if summary:
+        return (
+            query
+            + _flux_method_summary_group
+            + ' |> unique(column: "_value")'
+            + " |> count()"
+            + _flux_summary_time
+        )
+    return (
+        query
+        + _flux_method_group
+        + " |> window(every: {window}, createEmpty: true{window_timezone})"
+        + ' |> unique(column: "_value")'
+        + " |> count()"
+        + " |> map(fn: (r) => ({{r with _time: date.truncate(t: r._start, "
+        "unit: {window}{window_timezone})}}))"
+    )
+
+
 user_signups_chart_traces = {"total": "lines"}
 user_signups_chart_order = ["total"]
 user_signups_chart_trace_labels = {
@@ -41,8 +135,10 @@ user_singups_chart_config = {
             "SELECT SUM(count) FROM "
             " {key} WHERE time >= '{time}' {end_date} {organization_id}"
             " GROUP BY time(1d), method"
-        )
+        ),
+        "influxdb2": _flux_signups("sum"),
     },
+    "summary_query": {"influxdb2": _flux_signups("sum", summary=True)},
     "query_default_param": {
         "organization_id": "",
     },
@@ -65,6 +161,10 @@ total_user_singups_chart_config["query"]["influxdb"] = (
     " {key} WHERE time >= '{time}' {end_date} {organization_id}"
     " GROUP BY time(1d), method FILL(linear)"
 )
+total_user_singups_chart_config["query"]["influxdb2"] = _flux_signups("last")
+total_user_singups_chart_config["summary_query"] = {
+    "influxdb2": _flux_signups("last", summary=True)
+}
 total_user_singups_chart_config["title"] = _("Total Registered Users")
 total_user_singups_chart_config["label"] = _("Total Registered Users")
 total_user_singups_chart_config["filter__all__"] = True
@@ -126,7 +226,11 @@ RADIUS_METRICS = {
                         "AND content_type = '{content_type}' "
                         "AND object_id = '{object_id}' "
                         "GROUP BY time(1d)"
-                    )
+                    ),
+                    "influxdb2": _flux_traffic(_flux_object_filters),
+                },
+                "summary_query": {
+                    "influxdb2": _flux_traffic(_flux_object_filters, summary=True)
                 },
                 "colors": [
                     DEFAULT_COLORS[7],
@@ -156,7 +260,11 @@ RADIUS_METRICS = {
                         "AND content_type = '{content_type}' "
                         "AND object_id = '{object_id}' "
                         "GROUP by time(1d), method"
-                    )
+                    ),
+                    "influxdb2": _flux_sessions(_flux_object_filters),
+                },
+                "summary_query": {
+                    "influxdb2": _flux_sessions(_flux_object_filters, summary=True)
                 },
                 "query_default_param": {
                     "organization_id": "",
@@ -201,7 +309,11 @@ RADIUS_METRICS = {
                         "SUM(input_octets) / 1000000000 AS download FROM {key} "
                         "WHERE time >= '{time}' {end_date} {organization_id} "
                         "{location_id} GROUP BY time(1d)"
-                    )
+                    ),
+                    "influxdb2": _flux_traffic(_flux_organization_filters),
+                },
+                "summary_query": {
+                    "influxdb2": _flux_traffic(_flux_organization_filters, summary=True)
                 },
                 "query_default_param": {
                     "organization_id": "",
@@ -233,6 +345,12 @@ RADIUS_METRICS = {
                         "SELECT COUNT(DISTINCT(username)) FROM {key} "
                         "WHERE time >= '{time}' {end_date} {organization_id} "
                         "{location_id} GROUP by time(1d), method"
+                    ),
+                    "influxdb2": _flux_sessions(_flux_organization_filters),
+                },
+                "summary_query": {
+                    "influxdb2": _flux_sessions(
+                        _flux_organization_filters, summary=True
                     )
                 },
                 "query_default_param": {
