@@ -1,10 +1,94 @@
 Change log
 ==========
 
-Version 1.3.0 [unreleased]
+Version 1.3.0 [2026-09-04]
 --------------------------
 
-Work in progress.
+Features
+~~~~~~~~
+
+- Added `multi-tenancy support for registered users
+  <https://github.com/openwisp/openwisp-radius/issues/692>`_. Registered
+  users can now join multiple organizations independently, using different
+  identity verification methods and verification status for each
+  organization. The ``registered_users`` CSV export now contains
+  organization-specific registration data in a nested structure.
+- Added the ``radius_accounting_closed`` signal for integrations which
+  need to react when a RADIUS accounting session closes. OpenWISP
+  Monitoring now uses this signal to reliably record traffic for all
+  closed sessions, including `sessions closed in bulk
+  <https://github.com/openwisp/openwisp-radius/issues/734>`_.
+- Added `REST API endpoints for reviewing RADIUS batch operations
+  <https://github.com/openwisp/openwisp-radius/issues/771>`_, including
+  filtering, pagination, detail views, and deletion of completed batches.
+- Added an `API endpoint for managing the RADIUS groups assigned to users
+  <https://github.com/openwisp/openwisp-radius/issues/676>`_.
+- Added `REST API endpoints for managing RADIUS groups
+  <https://github.com/openwisp/openwisp-radius/issues/553>`_.
+- Allowed `partial custom REST API view modules
+  <https://github.com/openwisp/openwisp-radius/issues/765>`_, with
+  automatic fallback to the default views when individual custom views are
+  not provided.
+- Added `RADIUS group and notes fields to batch user creation
+  <https://github.com/openwisp/openwisp-radius/issues/396>`_.
+
+Changes
+~~~~~~~
+
+Backward-incompatible changes
++++++++++++++++++++++++++++++
+
+- Moved `password reset functionality to openwisp-users
+  <https://github.com/openwisp/openwisp-radius/issues/754>`_. The local
+  ``PasswordResetSerializer`` is deprecated and password reset requests
+  now always return HTTP 200 regardless of whether the supplied identifier
+  belongs to an existing user.
+- Moved `user account expiration handling to openwisp-users
+  <https://github.com/openwisp/openwisp-radius/issues/706>`_ and removed
+  the corresponding OpenWISP RADIUS management command.
+
+Other changes
++++++++++++++
+
+- Improved `RADIUS session date and time display
+  <https://github.com/openwisp/openwisp-radius/issues/662>`_ by using the
+  server timezone consistently with the Django admin.
+- Removed the `obsolete upgrade_from_django_freeradius management command
+  <https://github.com/openwisp/openwisp-radius/issues/740>`_.
+- Replaced the third-party ``jsonfield`` package with Django's built-in
+  ``JSONField`` for RADIUS batch credentials and SMS metadata.
+
+Dependencies
+++++++++++++
+
+- Bumped ``dj-rest-auth`` from ``>=6.0,<7.2`` to `>=6.0,<7.3
+  <https://github.com/iMerica/dj-rest-auth/releases#release-7.2.0>`_.
+- Bumped ``django-redis`` from ``~=6.0.0`` to `~=7.0.0
+  <https://github.com/jazzband/django-redis/blob/master/CHANGELOG.rst>`_.
+- Bumped ``weasyprint`` from ``>=65,<68`` to `>=65,<70
+  <https://doc.courtbouillon.org/weasyprint/stable/changelog.html>`_.
+- Bumped ``openwisp-notifications`` to `~=1.3.0
+  <https://github.com/openwisp/openwisp-notifications/blob/master/CHANGES.rst>`__.
+- Bumped ``openwisp-users`` to `~=1.3.0
+  <https://github.com/openwisp/openwisp-users/blob/master/CHANGES.rst>`__.
+- Bumped ``openwisp-utils[rest,celery]`` to `~=1.3.0
+  <https://github.com/openwisp/openwisp-utils/blob/master/CHANGES.rst>`__.
+- Replaced `Exscript` with `telnetlib3
+  <https://github.com/openwisp/openwisp-radius/issues/776>`_.
+- Dropped support for Django ``4.2``.
+- Dropped support for Python ``3.9``.
+
+Bugfixes
+~~~~~~~~
+
+- Fixed `blank RADIUS check and reply admin pages for view-only users
+  <https://github.com/openwisp/openwisp-radius/issues/775>`_.
+- Fixed email lookups and SAML email synchronization being case-sensitive.
+- Fixed the `convert_called_station_id command failing to convert
+  Called-Station-ID values
+  <https://github.com/openwisp/openwisp-radius/issues/727>`_.
+- Fixed WebSocket authorization for RADIUS batch status updates so staff
+  users can only receive updates for organizations they manage.
 
 Version 1.2.2 [2026-04-25]
 --------------------------
