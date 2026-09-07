@@ -905,7 +905,7 @@ default).
 .. note::
 
     The list response does not include ``user_credentials`` to avoid
-    repeatedly exposing plaintext credentials. Use the batch creation
+    repeatedly exposing plain-text credentials. Use the batch creation
     response or the protected PDF or CSV download endpoints for
     credentials.
 
