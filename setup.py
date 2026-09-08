@@ -26,7 +26,7 @@ setup(
     author="OpenWISP",
     author_email="support@openwisp.io",
     description="OpenWISP Radius",
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     long_description=open("README.rst").read(),
     url="https://openwisp.org",
     download_url="https://github.com/openwisp/openwisp-radius/releases",
@@ -36,19 +36,9 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        (
-            "openwisp-notifications @"
-            "https://github.com/openwisp/openwisp-notifications/"
-            "archive/refs/heads/1.3.tar.gz"
-        ),
-        (
-            "openwisp-users @"
-            "https://github.com/openwisp/openwisp-users/archive/refs/heads/1.3.tar.gz"
-        ),
-        (
-            "openwisp-utils[rest,celery] @"
-            "https://github.com/openwisp/openwisp-utils/archive/refs/heads/1.3.tar.gz"
-        ),
+        "openwisp-notifications~=1.3.0",
+        "openwisp-users~=1.3.0",
+        "openwisp-utils[rest,celery]~=1.3.0",
         "passlib~=1.7.1",
         "djangorestframework-link-header-pagination~=0.1.1",
         "weasyprint>=65,<70",
