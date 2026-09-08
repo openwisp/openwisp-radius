@@ -6,6 +6,6 @@ django-extensions
 openwisp-utils[qa,selenium,channels-test]~=1.3.0
 lxml~=6.1.2
 cssselect~=1.5.0
-openwisp-monitoring~=1.3.0
+openwisp-monitoring @ https://github.com/openwisp/openwisp-monitoring/archive/refs/heads/feature/elasticsearch.tar.gz
 django-redis~=7.0.0
 mock-ssh-server~=0.9.1

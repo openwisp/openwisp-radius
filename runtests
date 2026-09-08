@@ -3,6 +3,21 @@ set -e
 
 coverage erase
 
+run_monitoring_integration() {
+  MONITORING_INTEGRATION=1 coverage run runtests.py \
+    --exclude-tag=no_parallel \
+    --exclude-tag=selenium_tests
+}
+
+# The monitoring integration is the only part of the suite which uses the
+# timeseries database, the other backends are tested only on this part.
+if [ -n "${MONITORING_INTEGRATION}" ]; then
+  run_monitoring_integration
+  coverage combine
+  coverage xml
+  exit 0
+fi
+
 # Standard tests
 coverage run runtests.py --parallel \
   --exclude-tag=no_parallel 2>&1 \
@@ -17,9 +32,7 @@ SAMPLE_APP=1 coverage run ./runtests.py --parallel \
   --exclude-tag=selenium_tests
 
 # Test integration with monitoring module
-MONITORING_INTEGRATION=1 coverage run runtests.py \
-  --exclude-tag=no_parallel \
-  --exclude-tag=selenium_tests
+run_monitoring_integration
 
 # Tests which cannot be run in parallel mode (eg: selenium tests)
 coverage run runtests.py --tag=no_parallel
