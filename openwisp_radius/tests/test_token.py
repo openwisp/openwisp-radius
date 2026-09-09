@@ -218,12 +218,75 @@ class TestPhoneToken(BaseTestCase):
         else:
             self.fail("ValidationError not raised")
 
+    def test_phone_token_rejects_disallowed_prefix(self):
+        self.default_org.radius_settings.allowed_mobile_prefixes = "+39"
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        token = PhoneToken(
+            user=self._get_user_with_org(),
+            organization=self.default_org,
+            ip="127.0.0.1",
+            phone_number="+44 7795 106991",
+        )
+        with self.assertRaisesMessage(
+            ValidationError, "This international mobile prefix is not allowed."
+        ):
+            token.full_clean()
+
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
     def test_send_token_called_once(self, send_messages_mock):
         token = self._create_token()
         token.valid_until += timedelta(hours=1)  # change anything to save
         token.save()
         send_messages_mock.assert_called_once()
+
+    @mock.patch("openwisp_radius.base.models.logger")
+    @mock.patch("openwisp_radius.utils.SmsMessage.send", return_value=1)
+    def test_send_token_logs_submission(self, send_messages_mock, logger_mock):
+        token = self._create_token()
+        logger_mock.info.assert_called_once_with(
+            "SMS token %s was submitted to the SMS backend for phone number %s, "
+            "user %s, organization %s, IP address %s.",
+            token.pk,
+            str(token.phone_number),
+            token.user.pk,
+            token.organization.pk,
+            token.ip,
+        )
+
+    @mock.patch("openwisp_radius.base.models.logger")
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_send_token_logs_failure(self, send_messages_mock, logger_mock):
+        token = self._create_token()
+        logger_mock.reset_mock()
+        send_messages_mock.side_effect = RuntimeError("SMS backend unavailable")
+        with self.assertRaisesMessage(RuntimeError, "SMS backend unavailable"):
+            token.send_token()
+        logger_mock.exception.assert_called_once_with(
+            "Failed to submit SMS token %s to the SMS backend for phone number %s, "
+            "user %s, organization %s, IP address %s.",
+            token.pk,
+            str(token.phone_number),
+            token.user.pk,
+            token.organization.pk,
+            token.ip,
+        )
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_send_token_rechecks_allowed_prefix(self, send_messages_mock):
+        self.default_org.radius_settings.allowed_mobile_prefixes = "+44"
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        token = self._create_token(phone_number="+44 7795 106991")
+        send_messages_mock.reset_mock()
+        self.default_org.radius_settings.allowed_mobile_prefixes = "+39"
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        with self.assertRaisesMessage(
+            ValidationError, "This international mobile prefix is not allowed."
+        ):
+            token.send_token()
+        send_messages_mock.assert_not_called()
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
     @mock.patch("openwisp_radius.utils.SmsMessage.__init__", return_value=None)

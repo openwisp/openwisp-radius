@@ -214,6 +214,11 @@ The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
 ``second``, ``minute``, ``hour`` or ``day`` as the throttle period,
 setting it to ``None`` will result in no throttling.
 
+SMS token requests use the connection address in ``REMOTE_ADDR`` for their
+daily IP limit. When deploying behind a reverse proxy, configure it to
+replace ``REMOTE_ADDR`` with the client address and discard
+client-supplied forwarding headers.
+
 List of Endpoints
 ~~~~~~~~~~~~~~~~~
 

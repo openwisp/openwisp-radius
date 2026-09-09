@@ -762,6 +762,14 @@ class CreatePhoneTokenView(
         IsAuthenticated,
     )
 
+    def get_ident(self, request):
+        """Override DRF's client-ID lookup for the SMS token IP quota.
+
+        X-Forwarded-For is caller-controlled and could bypass the quota.
+        Reverse proxies must replace REMOTE_ADDR with the client address.
+        """
+        return request.META["REMOTE_ADDR"]
+
     @swagger_auto_schema(
         operation_description=("""
             **Requires the user auth token (Bearer Token).**
