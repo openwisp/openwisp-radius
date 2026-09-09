@@ -60,7 +60,12 @@ from ..utils import (
     prefix_generate_users,
     validate_csvfile,
 )
-from .validators import ipv6_network_validator, password_reset_url_validator
+from .validators import (
+    ipv6_network_validator,
+    is_mobile_phone_number,
+    is_mobile_prefix_allowed,
+    password_reset_url_validator,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1674,8 +1679,26 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     def clean(self):
         if not hasattr(self, "user"):
             return
+        self._validate_phone_number_prefix()
+        self._validate_phone_number_type()
         self._validate_phone_number_uniqueness()
         self._validate_max_attempts()
+
+    def _validate_phone_number_prefix(self):
+        mobile_prefixes = self.organization.radius_settings.allowed_mobile_prefixes_list
+        if not is_mobile_prefix_allowed(self.phone_number, mobile_prefixes):
+            raise ValidationError(
+                {"phone_number": _("This international mobile prefix is not allowed.")}
+            )
+
+    def _validate_phone_number_type(self):
+        if not is_mobile_phone_number(
+            self.phone_number,
+            allow_fixed_line_or_mobile=app_settings.ALLOW_FIXED_LINE_OR_MOBILE,
+        ):
+            raise ValidationError(
+                {"phone_number": _("Only mobile phone numbers are allowed.")}
+            )
 
     def _validate_phone_number_uniqueness(self):
         """
@@ -1741,6 +1764,8 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
                     user=self.user
                 )
             )
+        self._validate_phone_number_prefix()
+        self._validate_phone_number_type()
         org_radius_settings = self.organization.radius_settings
         message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
@@ -1750,7 +1775,29 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
             from_phone=str(org_radius_settings.sms_sender),
             to=[str(self.phone_number)],
         )
-        sms_message.send(meta_data=org_radius_settings.sms_meta_data)
+        try:
+            sms_message.send(meta_data=org_radius_settings.sms_meta_data)
+        except Exception:
+            logger.exception(
+                "Failed to submit SMS token %s to the SMS backend for phone number "
+                "%s, user %s, organization %s, IP address %s.",
+                self.pk,
+                str(self.phone_number),
+                self.user.pk,
+                self.organization.pk,
+                self.ip,
+            )
+            raise
+        else:
+            logger.info(
+                "SMS token %s was submitted to the SMS backend for phone number %s, "
+                "user %s, organization %s, IP address %s.",
+                self.pk,
+                str(self.phone_number),
+                self.user.pk,
+                self.organization.pk,
+                self.ip,
+            )
 
     def is_valid(self, token, organization=None):
         self.attempts += 1
