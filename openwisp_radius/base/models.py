@@ -1779,24 +1779,20 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
             sms_message.send(meta_data=org_radius_settings.sms_meta_data)
         except Exception:
             logger.exception(
-                "Failed to submit SMS token %s to the SMS backend for phone number "
-                "%s, user %s, organization %s, IP address %s.",
+                "Failed to submit SMS token %s to the SMS backend for user %s, "
+                "organization %s.",
                 self.pk,
-                str(self.phone_number),
                 self.user.pk,
                 self.organization.pk,
-                self.ip,
             )
             raise
         else:
             logger.info(
-                "SMS token %s was submitted to the SMS backend for phone number %s, "
-                "user %s, organization %s, IP address %s.",
+                "SMS token %s was submitted to the SMS backend for user %s, "
+                "organization %s.",
                 self.pk,
-                str(self.phone_number),
                 self.user.pk,
                 self.organization.pk,
-                self.ip,
             )
 
     def is_valid(self, token, organization=None):

@@ -245,13 +245,11 @@ class TestPhoneToken(BaseTestCase):
     def test_send_token_logs_submission(self, send_messages_mock, logger_mock):
         token = self._create_token()
         logger_mock.info.assert_called_once_with(
-            "SMS token %s was submitted to the SMS backend for phone number %s, "
-            "user %s, organization %s, IP address %s.",
+            "SMS token %s was submitted to the SMS backend for user %s, "
+            "organization %s.",
             token.pk,
-            str(token.phone_number),
             token.user.pk,
             token.organization.pk,
-            token.ip,
         )
 
     @mock.patch("openwisp_radius.base.models.logger")
@@ -263,13 +261,11 @@ class TestPhoneToken(BaseTestCase):
         with self.assertRaisesMessage(RuntimeError, "SMS backend unavailable"):
             token.send_token()
         logger_mock.exception.assert_called_once_with(
-            "Failed to submit SMS token %s to the SMS backend for phone number %s, "
-            "user %s, organization %s, IP address %s.",
+            "Failed to submit SMS token %s to the SMS backend for user %s, "
+            "organization %s.",
             token.pk,
-            str(token.phone_number),
             token.user.pk,
             token.organization.pk,
-            token.ip,
         )
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
@@ -286,6 +282,21 @@ class TestPhoneToken(BaseTestCase):
             ValidationError, "This international mobile prefix is not allowed."
         ):
             token.send_token()
+        send_messages_mock.assert_not_called()
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_send_token_rechecks_phone_number_type(self, send_messages_mock):
+        self.default_org.radius_settings.allowed_mobile_prefixes = "+1"
+        self.default_org.radius_settings.full_clean()
+        self.default_org.radius_settings.save()
+        with mock.patch.object(app_settings, "ALLOW_FIXED_LINE_OR_MOBILE", True):
+            token = self._create_token(phone_number="+1 7795 106991")
+        send_messages_mock.reset_mock()
+        with mock.patch.object(app_settings, "ALLOW_FIXED_LINE_OR_MOBILE", False):
+            with self.assertRaisesMessage(
+                ValidationError, "Only mobile phone numbers are allowed."
+            ):
+                token.send_token()
         send_messages_mock.assert_not_called()
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
