@@ -263,6 +263,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
 
     @capture_any_output()
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    @freeze_time(_TEST_DATE)
     def test_create_phone_token_uses_client_ip_for_daily_limit(
         self, send_messages_mock
     ):

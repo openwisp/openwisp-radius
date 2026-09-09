@@ -768,7 +768,7 @@ class CreatePhoneTokenView(
         X-Forwarded-For is caller-controlled and could bypass the quota.
         Reverse proxies must replace REMOTE_ADDR with the client address.
         """
-        return request.META["REMOTE_ADDR"]
+        return request.META.get("REMOTE_ADDR")
 
     @swagger_auto_schema(
         operation_description=("""
