@@ -1654,6 +1654,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     """
     Phone Verification Token (sent via SMS)
+
+    WARNING: Application code must not create or save phone tokens directly
+    with self.objects.create() or calling self.save() without first calling
+    self.full_clean(), as it can bypass policy and quota validation.
     """
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -1679,10 +1683,13 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     def clean(self):
         if not hasattr(self, "user"):
             return
-        self._validate_phone_number_prefix()
-        self._validate_phone_number_type()
+        self._validate_phone_number_policy()
         self._validate_phone_number_uniqueness()
         self._validate_max_attempts()
+
+    def _validate_phone_number_policy(self):
+        self._validate_phone_number_prefix()
+        self._validate_phone_number_type()
 
     def _validate_phone_number_prefix(self):
         mobile_prefixes = self.organization.radius_settings.allowed_mobile_prefixes_list
@@ -1764,9 +1771,12 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
                     user=self.user
                 )
             )
-        self._validate_phone_number_prefix()
-        self._validate_phone_number_type()
+        try:
+            self._validate_phone_number_policy()
+        except ValidationError as error:
+            raise ValueError(error) from None
         org_radius_settings = self.organization.radius_settings
+        phone_number = f"{str(self.phone_number)[:-4]}****"
         message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
         )
@@ -1778,19 +1788,21 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
         try:
             sms_message.send(meta_data=org_radius_settings.sms_meta_data)
         except Exception:
-            logger.exception(
-                "Failed to submit SMS token %s to the SMS backend for user %s, "
-                "organization %s.",
+            logger.error(
+                "Failed to submit SMS token %s to the SMS backend for phone number %s, "
+                "user %s, organization %s.",
                 self.pk,
+                phone_number,
                 self.user.pk,
                 self.organization.pk,
             )
             raise
         else:
             logger.info(
-                "SMS token %s was submitted to the SMS backend for user %s, "
-                "organization %s.",
+                "SMS token %s was submitted to the SMS backend for phone number %s, "
+                "user %s, organization %s.",
                 self.pk,
+                phone_number,
                 self.user.pk,
                 self.organization.pk,
             )

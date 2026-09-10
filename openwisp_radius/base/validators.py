@@ -13,7 +13,10 @@ def is_mobile_prefix_allowed(phone_number, mobile_prefixes):
     # Let other field validators raise for missing values.
     if not phone_number:
         return True
-    country_code = phonenumbers.parse(str(phone_number)).country_code
+    try:
+        country_code = phonenumbers.parse(str(phone_number)).country_code
+    except phonenumbers.NumberParseException:
+        return False
     return not mobile_prefixes or f"+{country_code}" in mobile_prefixes
 
 

@@ -239,6 +239,27 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         send_messages_mock.assert_not_called()
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_create_phone_token_rejects_malformed_phone_number(
+        self, send_messages_mock
+    ):
+        self._register_user()
+        token = Token.objects.last()
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"phone_number": "garbage"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token.key}",
+        )
+        self.assertEqual(
+            response.status_code,
+            400,
+            "SMS token requests must reject malformed phone numbers.",
+        )
+        self.assertEqual(PhoneToken.objects.count(), 0)
+        send_messages_mock.assert_not_called()
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
     def test_change_phone_number_rejects_fixed_line_number(self, send_messages_mock):
         self._register_user()
         token = Token.objects.last()
