@@ -793,23 +793,30 @@ class CreatePhoneTokenView(
             ip=self.get_ident(request),
             phone_number=phone_number,
         )
+        org_cooldown = self.organization.radius_settings.sms_cooldown
         try:
-            phone_token.full_clean()
-            if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified(organization=self.organization)
+            with transaction.atomic():
+                # acquire lock on the user to prevent bypassing
+                # cooldown period with concurrent requests
+                phone_token.user = (
+                    get_user_model().objects.select_for_update().get(pk=request.user.pk)
+                )
+                phone_token.full_clean()
+                if kwargs.get("enforce_unverified", True):
+                    phone_token._validate_already_verified(
+                        organization=self.organization
+                    )
+                self.enforce_sms_request_cooldown(org_cooldown, phone_number)
+                phone_token.save()
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({"user": str(e)})
-        org_cooldown = self.organization.radius_settings.sms_cooldown
-        try:
-            self.enforce_sms_request_cooldown(org_cooldown, phone_number)
         except SmsAttemptCooldownException as e:
             return Response(
                 {"non_field_errors": [str(e)], "cooldown": e.cooldown}, status=400
             )
-        phone_token.save()
         return Response(
             {"cooldown": org_cooldown},
             status=201,
