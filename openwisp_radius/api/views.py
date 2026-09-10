@@ -786,7 +786,8 @@ class CreatePhoneTokenView(
     def create(self, *args, **kwargs):
         request = self.request
         self.validate_membership(request.user)
-        phone_number = request.data.get("phone_number", request.user.phone_number)
+        # only the change phone number endpoint can change the phone number
+        phone_number = kwargs.pop("phone_number", request.user.phone_number)
         phone_token = PhoneToken(
             user=request.user,
             organization=self.organization,
@@ -997,7 +998,9 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         # the user is marked unverified, so that if the
         # creation of the phone token fails, the
         # the user's is_verified state remains unchanged
-        self.create_phone_token(*args, **kwargs)
+        self.create_phone_token(
+            *args, phone_number=serializer.validated_data["phone_number"], **kwargs
+        )
         serializer.save()
         return Response(None, status=200)
 

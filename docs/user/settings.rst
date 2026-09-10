@@ -498,11 +498,12 @@ Using the setting above will only allow phone numbers from the UK
 
 **Default**: ``False``
 
-OpenWISP RADIUS only allow using mobile phone numbers for user
+OpenWISP RADIUS only allows using mobile phone numbers for user
 registration and SMS verification. This can cause issues in regions where
-fixed line and mobile phone numbers uses the same pattern (e.g. USA).
-Setting the value to ``True`` would make phone number type checking less
-strict.
+fixed-line and mobile phone numbers use the same pattern (e.g. USA).
+Setting the value to ``True`` allows ``MOBILE`` and
+``FIXED_LINE_OR_MOBILE`` phone numbers for registration and SMS
+verification.
 
 .. _openwisp_radius_optional_registration_fields:
 

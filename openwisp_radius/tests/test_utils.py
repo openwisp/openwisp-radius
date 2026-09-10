@@ -4,12 +4,25 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 
-from ..utils import find_available_username, get_one_time_login_url, validate_csvfile
+from ..utils import (
+    find_available_username,
+    get_one_time_login_url,
+    mask_phone_number,
+    validate_csvfile,
+)
 from . import FileMixin
 from .mixins import BaseTestCase
 
 
 class TestUtils(FileMixin, BaseTestCase):
+    def test_mask_phone_number(self):
+        for phone_number, expected in (
+            ("+39 366 435 1808", "+39******1808"),
+            ("+1 202 555 1234", "+1******1234"),
+        ):
+            with self.subTest(phone_number=phone_number):
+                self.assertEqual(mask_phone_number(phone_number), expected)
+
     def test_find_available_username(self):
         User = get_user_model()
         User.objects.create(username="rohith", password="password")

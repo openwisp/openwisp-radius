@@ -248,7 +248,7 @@ class TestPhoneToken(BaseTestCase):
             "SMS token %s was submitted to the SMS backend for phone number %s, "
             "user %s, organization %s.",
             token.pk,
-            f"{str(token.phone_number)[:-4]}****",
+            "+39******1808",
             token.user.pk,
             token.organization.pk,
         )
@@ -265,7 +265,7 @@ class TestPhoneToken(BaseTestCase):
             "Failed to submit SMS token %s to the SMS backend for phone number %s, "
             "user %s, organization %s.",
             token.pk,
-            f"{str(token.phone_number)[:-4]}****",
+            "+39******1808",
             token.user.pk,
             token.organization.pk,
         )
