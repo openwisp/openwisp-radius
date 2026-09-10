@@ -731,7 +731,10 @@ Create SMS token
 **Requires the user auth token (Bearer Token)**.
 
 Used for SMS verification, sends a code via SMS to the phone number of the
-user.
+user. The number must comply with
+:ref:`OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES
+<openwisp_radius_allowed_mobile_prefixes>` and
+``OPENWISP_RADIUS_ALLOW_FIXED_LINE_OR_MOBILE``.
 
 .. code-block:: text
 

@@ -245,9 +245,10 @@ class TestPhoneToken(BaseTestCase):
     def test_send_token_logs_submission(self, send_messages_mock, logger_mock):
         token = self._create_token()
         logger_mock.info.assert_called_once_with(
-            "SMS token %s was submitted to the SMS backend for user %s, "
-            "organization %s.",
+            "SMS token %s was submitted to the SMS backend for phone number %s, "
+            "user %s, organization %s.",
             token.pk,
+            f"{str(token.phone_number)[:-4]}****",
             token.user.pk,
             token.organization.pk,
         )
@@ -260,10 +261,11 @@ class TestPhoneToken(BaseTestCase):
         send_messages_mock.side_effect = RuntimeError("SMS backend unavailable")
         with self.assertRaisesMessage(RuntimeError, "SMS backend unavailable"):
             token.send_token()
-        logger_mock.exception.assert_called_once_with(
-            "Failed to submit SMS token %s to the SMS backend for user %s, "
-            "organization %s.",
+        logger_mock.error.assert_called_once_with(
+            "Failed to submit SMS token %s to the SMS backend for phone number %s, "
+            "user %s, organization %s.",
             token.pk,
+            f"{str(token.phone_number)[:-4]}****",
             token.user.pk,
             token.organization.pk,
         )
@@ -279,7 +281,7 @@ class TestPhoneToken(BaseTestCase):
         self.default_org.radius_settings.full_clean()
         self.default_org.radius_settings.save()
         with self.assertRaisesMessage(
-            ValidationError, "This international mobile prefix is not allowed."
+            ValueError, "This international mobile prefix is not allowed."
         ):
             token.send_token()
         send_messages_mock.assert_not_called()
@@ -294,7 +296,7 @@ class TestPhoneToken(BaseTestCase):
         send_messages_mock.reset_mock()
         with mock.patch.object(app_settings, "ALLOW_FIXED_LINE_OR_MOBILE", False):
             with self.assertRaisesMessage(
-                ValidationError, "Only mobile phone numbers are allowed."
+                ValueError, "Only mobile phone numbers are allowed."
             ):
                 token.send_token()
         send_messages_mock.assert_not_called()
