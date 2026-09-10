@@ -197,12 +197,31 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         send_messages_mock.assert_called_once()
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
-    def test_create_phone_token_rejects_disallowed_prefix(self, send_messages_mock):
+    def test_create_phone_token_uses_stored_phone_number(self, send_messages_mock):
+        self._register_user()
+        token = Token.objects.last()
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        response = self.client.post(
+            url,
+            json.dumps({"phone_number": "+44 7795 106991"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token.key}",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            str(PhoneToken.objects.get().phone_number),
+            self._extra_registration_params["phone_number"],
+            "The generic SMS-token endpoint must use the stored phone number.",
+        )
+        send_messages_mock.assert_called_once()
+
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_change_phone_number_rejects_disallowed_prefix(self, send_messages_mock):
         self._register_user()
         self.default_org.radius_settings.allowed_mobile_prefixes = "+39"
         self.default_org.radius_settings.save()
         token = Token.objects.last()
-        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        url = reverse("radius:phone_number_change", args=[self.default_org.slug])
         response = self.client.post(
             url,
             json.dumps({"phone_number": "+44 7795 106991"}),
@@ -212,41 +231,18 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.status_code,
             400,
-            "SMS token requests must reject destinations with disallowed prefixes.",
+            "Phone changes must reject destinations with disallowed prefixes.",
         )
         self.assertEqual(PhoneToken.objects.count(), 0)
         send_messages_mock.assert_not_called()
 
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
-    def test_create_phone_token_rejects_fixed_line_number(self, send_messages_mock):
-        self._register_user()
-        token = Token.objects.last()
-        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
-        response = self.client.post(
-            url,
-            json.dumps({"phone_number": "+3903031234"}),
-            content_type="application/json",
-            HTTP_AUTHORIZATION=f"Bearer {token.key}",
-        )
-        self.assertEqual(
-            response.status_code,
-            400,
-            "SMS token requests must reject fixed-line destinations.",
-        )
-        self.assertEqual(
-            str(response.data["phone_number"][0]),
-            "Only mobile phone numbers are allowed.",
-        )
-        self.assertEqual(PhoneToken.objects.count(), 0)
-        send_messages_mock.assert_not_called()
-
-    @mock.patch("openwisp_radius.utils.SmsMessage.send")
-    def test_create_phone_token_rejects_malformed_phone_number(
+    def test_change_phone_number_rejects_malformed_phone_number(
         self, send_messages_mock
     ):
         self._register_user()
         token = Token.objects.last()
-        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        url = reverse("radius:phone_number_change", args=[self.default_org.slug])
         response = self.client.post(
             url,
             json.dumps({"phone_number": "garbage"}),
@@ -256,7 +252,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(
             response.status_code,
             400,
-            "SMS token requests must reject malformed phone numbers.",
+            "Phone changes must reject malformed phone numbers.",
         )
         self.assertEqual(PhoneToken.objects.count(), 0)
         send_messages_mock.assert_not_called()
@@ -330,6 +326,16 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
     def test_create_phone_token_locks_daily_quota(self, send_messages_mock):
         self._register_user()
         token = Token.objects.last()
+        phone_token = PhoneToken.objects.create(
+            user=token.user,
+            organization=self.default_org,
+            ip="192.0.2.1",
+            phone_number=token.user.phone_number,
+        )
+        PhoneToken.objects.filter(pk=phone_token.pk).update(
+            created=timezone.now() - timedelta(days=1)
+        )
+        send_messages_mock.reset_mock()
         url = reverse("radius:phone_token_create", args=[self.default_org.slug])
         with mock.patch(
             "openwisp_radius.api.views.transaction.atomic",
@@ -341,9 +347,14 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
                 autospec=True,
                 side_effect=QuerySet.select_for_update,
             ) as select_for_update_mock:
-                response = self.client.post(
-                    url, HTTP_AUTHORIZATION=f"Bearer {token.key}"
-                )
+                with mock.patch.object(
+                    PhoneToken.objects,
+                    "select_for_update",
+                    wraps=PhoneToken.objects.select_for_update,
+                ) as generic_lock_mock:
+                    response = self.client.post(
+                        url, HTTP_AUTHORIZATION=f"Bearer {token.key}"
+                    )
         self.assertEqual(response.status_code, 201)
         atomic_mock.assert_called_once_with()
         self.assertIn(
@@ -351,6 +362,7 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
             [call.args[0].model for call in select_for_update_mock.call_args_list],
             "Daily quota checks must lock a PhoneToken row.",
         )
+        generic_lock_mock.assert_called_once_with()
         send_messages_mock.assert_called_once()
 
     @freeze_time(_TEST_DATE)

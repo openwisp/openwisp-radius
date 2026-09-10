@@ -57,6 +57,7 @@ from ..utils import (
     generate_sms_token,
     get_sms_default_valid_until,
     load_model,
+    mask_phone_number,
     prefix_generate_users,
     validate_csvfile,
 )
@@ -1739,7 +1740,13 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
         # from bypassing the daily limit checks
         locked_qs = qs.select_for_update()
         locked_qs.filter(user=self.user).first()
-        locked_qs.filter(ip=self.ip).first()
+        # if it's a new IP, acquire a generic lock
+        # to prevent concurrent requests bypassing limits
+        if not locked_qs.filter(ip=self.ip).first():
+            # This is done on purpose, slow but safe!
+            # Generating millions of SMS messages per
+            # day is out of scope!
+            PhoneToken.objects.select_for_update().first()
         # limit generation of tokens per day by user
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
@@ -1781,7 +1788,6 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
         except ValidationError as error:
             raise ValueError(error) from None
         org_radius_settings = self.organization.radius_settings
-        phone_number = f"{str(self.phone_number)[:-4]}****"
         message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
         )
@@ -1790,6 +1796,11 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
             from_phone=str(org_radius_settings.sms_sender),
             to=[str(self.phone_number)],
         )
+        # Masking the full phone number allows to keep a fragment for debugging.
+        # This aligns with SMS provider logs, which usually only track the
+        # recipient's phone number and the sender's IP and are not aware
+        # of our internal UUIDs.
+        masked_phone_number = mask_phone_number(self.phone_number)
         try:
             sms_message.send(meta_data=org_radius_settings.sms_meta_data)
         except Exception:
@@ -1797,7 +1808,7 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
                 "Failed to submit SMS token %s to the SMS backend for phone number %s, "
                 "user %s, organization %s.",
                 self.pk,
-                phone_number,
+                masked_phone_number,
                 self.user.pk,
                 self.organization.pk,
             )
@@ -1807,7 +1818,7 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
                 "SMS token %s was submitted to the SMS backend for phone number %s, "
                 "user %s, organization %s.",
                 self.pk,
-                phone_number,
+                masked_phone_number,
                 self.user.pk,
                 self.organization.pk,
             )
