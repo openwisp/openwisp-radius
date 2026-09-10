@@ -1735,6 +1735,11 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
         date_end = date_start + timedelta(days=1)
         PhoneToken = load_model("PhoneToken")
         qs = PhoneToken.objects.filter(created__range=[date_start, date_end])
+        # acquire locks to prevent concurrent requests
+        # from bypassing the daily limit checks
+        locked_qs = qs.select_for_update()
+        locked_qs.filter(user=self.user).first()
+        locked_qs.filter(ip=self.ip).first()
         # limit generation of tokens per day by user
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:

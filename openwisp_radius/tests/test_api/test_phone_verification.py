@@ -7,6 +7,8 @@ from allauth.account.models import EmailAddress
 from dateutil import parser
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.db import transaction
+from django.db.models import QuerySet
 from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
@@ -321,6 +323,50 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
             "Changing X-Forwarded-For must not bypass the daily SMS limit.",
         )
         self.assertEqual(PhoneToken.objects.filter(ip="192.0.2.1").count(), 1)
+        send_messages_mock.assert_called_once()
+
+    @freeze_time(_TEST_DATE)
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_create_phone_token_locks_daily_quota(self, send_messages_mock):
+        self._register_user()
+        token = Token.objects.last()
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        with mock.patch(
+            "openwisp_radius.api.views.transaction.atomic",
+            wraps=transaction.atomic,
+        ) as atomic_mock:
+            with mock.patch.object(
+                QuerySet,
+                "select_for_update",
+                autospec=True,
+                side_effect=QuerySet.select_for_update,
+            ) as select_for_update_mock:
+                response = self.client.post(
+                    url, HTTP_AUTHORIZATION=f"Bearer {token.key}"
+                )
+        self.assertEqual(response.status_code, 201)
+        atomic_mock.assert_called_once_with()
+        self.assertIn(
+            PhoneToken,
+            [call.args[0].model for call in select_for_update_mock.call_args_list],
+            "Daily quota checks must lock a PhoneToken row.",
+        )
+        send_messages_mock.assert_called_once()
+
+    @freeze_time(_TEST_DATE)
+    @mock.patch("openwisp_radius.utils.SmsMessage.send")
+    def test_create_phone_token_locks_user_for_cooldown(self, send_messages_mock):
+        self._register_user()
+        token = Token.objects.last()
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        with mock.patch.object(
+            get_user_model().objects,
+            "select_for_update",
+            wraps=get_user_model().objects.select_for_update,
+        ) as select_for_update_mock:
+            response = self.client.post(url, HTTP_AUTHORIZATION=f"Bearer {token.key}")
+        self.assertEqual(response.status_code, 201)
+        select_for_update_mock.assert_called_once_with()
         send_messages_mock.assert_called_once()
 
     @capture_any_output()
