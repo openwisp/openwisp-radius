@@ -214,6 +214,11 @@ The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
 ``second``, ``minute``, ``hour`` or ``day`` as the throttle period,
 setting it to ``None`` will result in no throttling.
 
+SMS token requests use the connection address in ``REMOTE_ADDR`` for their
+daily IP limit. When deploying behind a reverse proxy, configure it to
+replace ``REMOTE_ADDR`` with the client address and discard
+client-supplied forwarding headers.
+
 List of Endpoints
 ~~~~~~~~~~~~~~~~~
 
@@ -726,7 +731,10 @@ Create SMS token
 **Requires the user auth token (Bearer Token)**.
 
 Used for SMS verification, sends a code via SMS to the phone number of the
-user.
+user. The number must comply with
+:ref:`OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES
+<openwisp_radius_allowed_mobile_prefixes>` and
+``OPENWISP_RADIUS_ALLOW_FIXED_LINE_OR_MOBILE``.
 
 .. code-block:: text
 
