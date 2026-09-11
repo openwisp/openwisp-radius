@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponse
@@ -600,6 +601,14 @@ class CreatePhoneTokenView(
         IsAuthenticated,
     )
 
+    def get_ident(self, request):
+        """Override DRF's client-ID lookup for the SMS token IP quota.
+
+        X-Forwarded-For is caller-controlled and could bypass the quota.
+        Reverse proxies must replace REMOTE_ADDR with the client address.
+        """
+        return request.META.get("REMOTE_ADDR")
+
     @swagger_auto_schema(
         operation_description=(
             """
@@ -618,29 +627,35 @@ class CreatePhoneTokenView(
     def create(self, *args, **kwargs):
         request = self.request
         self.validate_membership(request.user)
-        phone_number = request.data.get("phone_number", request.user.phone_number)
+        # only the change phone number endpoint can change the phone number
+        phone_number = kwargs.pop("phone_number", request.user.phone_number)
         phone_token = PhoneToken(
             user=request.user,
             ip=self.get_ident(request),
             phone_number=phone_number,
         )
+        org_cooldown = self.organization.radius_settings.sms_cooldown
         try:
-            phone_token.full_clean()
-            if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified()
+            with transaction.atomic():
+                # acquire lock on the user to prevent bypassing
+                # cooldown period with concurrent requests
+                phone_token.user = (
+                    get_user_model().objects.select_for_update().get(pk=request.user.pk)
+                )
+                phone_token.full_clean()
+                if kwargs.get("enforce_unverified", True):
+                    phone_token._validate_already_verified()
+                self.enforce_sms_request_cooldown(org_cooldown, phone_number)
+                phone_token.save()
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({"user": str(e)})
-        org_cooldown = self.organization.radius_settings.sms_cooldown
-        try:
-            self.enforce_sms_request_cooldown(org_cooldown, phone_number)
         except SmsAttemptCooldownException as e:
             return Response(
                 {"non_field_errors": [str(e)], "cooldown": e.cooldown}, status=400
             )
-        phone_token.save()
         return Response(
             {"cooldown": org_cooldown},
             status=201,
@@ -794,7 +809,9 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         # the user is marked unverified, so that if the
         # creation of the phone token fails, the
         # the user's is_verified state remains unchanged
-        self.create_phone_token(*args, **kwargs)
+        self.create_phone_token(
+            *args, phone_number=serializer.validated_data["phone_number"], **kwargs
+        )
         serializer.save()
         return Response(None, status=200)
 

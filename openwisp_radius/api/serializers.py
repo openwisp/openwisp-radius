@@ -1,6 +1,5 @@
 import logging
 
-import phonenumbers
 import swapper
 from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
@@ -21,7 +20,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.serializerfields import PhoneNumberField
-from phonenumbers import PhoneNumberType, phonenumberutil
 from rest_framework import serializers
 from rest_framework.authtoken.serializers import (
     AuthTokenSerializer as BaseAuthTokenSerializer,
@@ -33,6 +31,7 @@ from openwisp_users.backends import UsersAuthenticationBackend
 
 from .. import settings as app_settings
 from ..base.forms import PasswordResetForm
+from ..base.validators import is_mobile_phone_number, is_mobile_prefix_allowed
 from ..counters.exceptions import SkipCheck
 from ..registration import REGISTRATION_METHOD_CHOICES
 from ..utils import (
@@ -97,13 +96,7 @@ class AuthTokenSerializer(BaseAuthTokenSerializer):
 
 class AllowedMobilePrefixMixin(object):
     def is_prefix_allowed(self, phone_number, mobile_prefixes):
-        """
-        Verifies if a phone number's international prefix is allowed
-        """
-        country_code = phonenumbers.parse(str(phone_number)).country_code
-        if not mobile_prefixes:
-            return True
-        return "+" + str(country_code) in mobile_prefixes
+        return is_mobile_prefix_allowed(phone_number, mobile_prefixes)
 
 
 class AuthorizeSerializer(serializers.Serializer):
@@ -522,11 +515,10 @@ class RegisterSerializer(
                 raise serializers.ValidationError(
                     _("This international mobile prefix is not allowed.")
                 )
-            phone_number_type = phonenumberutil.number_type(phone_number)
-            allowed_types = [PhoneNumberType.MOBILE]
-            if app_settings.ALLOW_FIXED_LINE_OR_MOBILE:
-                allowed_types.append(PhoneNumberType.FIXED_LINE_OR_MOBILE)
-            if phone_number_type not in allowed_types:
+            if not is_mobile_phone_number(
+                phone_number,
+                allow_fixed_line_or_mobile=app_settings.ALLOW_FIXED_LINE_OR_MOBILE,
+            ):
                 raise serializers.ValidationError(
                     _("Only mobile phone numbers are allowed.")
                 )
