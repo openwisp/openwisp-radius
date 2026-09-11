@@ -468,10 +468,11 @@ accounting will be saved as usual.
 
 This setting is used to specify a list of international mobile prefixes
 which should be allowed to register into the system via the :ref:`user
-registration API <radius_user_registration>`.
+registration API <radius_user_registration>` and to receive SMS
+verification tokens.
 
 That is, only users with phone numbers using the specified international
-prefixes will be allowed to register.
+prefixes will be allowed to register or receive SMS verification tokens.
 
 Leaving this unset or setting it to an empty list (``[]``) will
 effectively allow any international mobile prefix to register (which is
@@ -497,10 +498,12 @@ Using the setting above will only allow phone numbers from the UK
 
 **Default**: ``False``
 
-OpenWISP RADIUS only allow using mobile phone numbers for user
-registration. This can cause issues in regions where fixed line and mobile
-phone numbers uses the same pattern (e.g. USA). Setting the value to
-``True`` would make phone number type checking less strict.
+OpenWISP RADIUS only allows using mobile phone numbers for user
+registration and SMS verification. This can cause issues in regions where
+fixed-line and mobile phone numbers use the same pattern (e.g. USA).
+Setting the value to ``True`` allows ``MOBILE`` and
+``FIXED_LINE_OR_MOBILE`` phone numbers for registration and SMS
+verification.
 
 .. _openwisp_radius_optional_registration_fields:
 
