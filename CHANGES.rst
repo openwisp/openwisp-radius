@@ -1,6 +1,18 @@
 Change log
 ==========
 
+Version 1.3.1 [2026-09-11]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- **Security fix resolving several issues relating to SMS sending**:
+
+  - Prevented bypassing the allowed international prefixes.
+  - Prevented bypassing SMS quota and cooldown limits.
+  - Added privacy preserving SMS submission audit logs.
+
 Version 1.3.0 [2026-09-04]
 --------------------------
 
