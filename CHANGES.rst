@@ -107,6 +107,21 @@ Bugfixes
 - Fixed WebSocket authorization for RADIUS batch status updates so staff
   users can only receive updates for organizations they manage.
 
+Version 1.2.3 [2026-09-11]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- **Security fix resolving several issues relating to SMS sending**:
+
+  - Prevented bypassing the allowed international prefixes.
+  - Prevented bypassing SMS quota and cooldown limits.
+  - Added privacy preserving SMS submission audit logs.
+
+- Validated JSON password reset confirmation organization `#753
+  <https://github.com/openwisp/openwisp-radius/issues/753>`_
+
 Version 1.2.2 [2026-04-25]
 --------------------------
 
