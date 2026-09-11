@@ -1,3 +1,7 @@
+class BatchProcessingError(Exception):
+    pass
+
+
 class PhoneTokenException(Exception):
     pass
 

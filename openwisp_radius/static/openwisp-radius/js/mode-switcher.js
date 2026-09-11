@@ -9,6 +9,12 @@
       ),
       guided = $(".field-group, .field-user"),
       custom = $(".field-groupname, .field-username");
+    if (!mode.length) {
+      // view-only page: no mode selector, show all data rows
+      allExceptMode.show();
+      $(".field-mode").hide();
+      return;
+    }
     mode.change(function () {
       allExceptMode.hide();
       if (mode.val() === "guided") {

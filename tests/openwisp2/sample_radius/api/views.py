@@ -1,6 +1,10 @@
+from rest_framework import serializers
+
 from openwisp_radius.api.freeradius_views import AccountingView as BaseAccountingView
 from openwisp_radius.api.freeradius_views import AuthorizeView as BaseAuthorizeView
 from openwisp_radius.api.freeradius_views import PostAuthView as BasePostAuthView
+from openwisp_radius.api.serializers import RadiusBatchSerializer
+from openwisp_radius.api.views import BatchDetailView as BaseBatchDetailView
 from openwisp_radius.api.views import BatchView as BaseBatchView
 from openwisp_radius.api.views import ChangePhoneNumberView as BaseChangePhoneNumberView
 from openwisp_radius.api.views import CreatePhoneTokenView as BaseCreatePhoneTokenView
@@ -47,7 +51,21 @@ class AccountingView(BaseAccountingView):
     pass
 
 
+class BatchSerializer(RadiusBatchSerializer):
+    customized = serializers.SerializerMethodField()
+
+    def get_customized(self, obj):
+        return True
+
+    class Meta(RadiusBatchSerializer.Meta):
+        fields = (*RadiusBatchSerializer.Meta.fields, "customized")
+
+
 class BatchView(BaseBatchView):
+    serializer_class = BatchSerializer
+
+
+class BatchDetailView(BaseBatchDetailView):
     pass
 
 
@@ -115,6 +133,7 @@ authorize = AuthorizeView.as_view()
 postauth = PostAuthView.as_view()
 accounting = AccountingView.as_view()
 batch = BatchView.as_view()
+batch_detail = BatchDetailView.as_view()
 register = RegisterView.as_view()
 obtain_auth_token = ObtainAuthTokenView.as_view()
 validate_auth_token = ValidateAuthTokenView.as_view()

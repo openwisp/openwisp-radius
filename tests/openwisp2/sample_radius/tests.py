@@ -1,6 +1,9 @@
+from django.urls import reverse
+
 from openwisp_radius.tests import test_migrations as base_migration_tests
 from openwisp_radius.tests.test_admin import TestAdmin as BaseTestAdmin
 from openwisp_radius.tests.test_api.test_api import TestApi as BaseTestApi
+from openwisp_radius.tests.test_api.test_batch import TestBatch as BaseTestBatch
 from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestApiReject as BaseTestApiReject,
 )
@@ -66,6 +69,8 @@ from openwisp_radius.tests.test_users_integration import (
 )
 from openwisp_radius.tests.test_utils import TestUtils as BaseTestUtils
 
+from .api.views import BatchSerializer
+
 additional_fields = [
     ("social_security_number", "123-45-6789"),
 ]
@@ -78,6 +83,16 @@ class TestAdmin(BaseTestAdmin):
 
 class TestApi(BaseTestApi):
     pass
+
+
+class TestBatch(BaseTestBatch):
+    def test_batch_uses_custom_creation_serializer(self):
+        self._superuser_login()
+        response = self.client.post(
+            reverse("radius:batch"),
+            self._radius_batch_prefix_data(),
+        )
+        self.assertTrue(response.json()["customized"])
 
 
 class TestFreeradiusApi(BaseTestFreeradiusApi):
@@ -207,6 +222,7 @@ class TestPhoneTokenOrganizationPopulateResolution(
 
 del BaseTestAdmin
 del BaseTestApi
+del BaseTestBatch
 del BaseTestFreeradiusApi
 del BaseTestApiReject
 del BaseTestAutoGroupname
@@ -236,3 +252,4 @@ del BaseTestUtils
 del BaseTestAssertionConsumerServiceView
 del BaseTestLoginView
 del base_migration_tests
+del BatchSerializer
