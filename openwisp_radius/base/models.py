@@ -57,10 +57,16 @@ from ..utils import (
     generate_sms_token,
     get_sms_default_valid_until,
     load_model,
+    mask_phone_number,
     prefix_generate_users,
     validate_csvfile,
 )
-from .validators import ipv6_network_validator, password_reset_url_validator
+from .validators import (
+    ipv6_network_validator,
+    is_mobile_phone_number,
+    is_mobile_prefix_allowed,
+    password_reset_url_validator,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1649,6 +1655,10 @@ class AbstractOrganizationRadiusSettings(UUIDModel):
 class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     """
     Phone Verification Token (sent via SMS)
+
+    WARNING: Application code must not create or save phone tokens directly
+    with self.objects.create() or calling self.save() without first calling
+    self.full_clean(), as it can bypass policy and quota validation.
     """
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -1674,8 +1684,29 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
     def clean(self):
         if not hasattr(self, "user"):
             return
+        self._validate_phone_number_policy()
         self._validate_phone_number_uniqueness()
         self._validate_max_attempts()
+
+    def _validate_phone_number_policy(self):
+        self._validate_phone_number_prefix()
+        self._validate_phone_number_type()
+
+    def _validate_phone_number_prefix(self):
+        mobile_prefixes = self.organization.radius_settings.allowed_mobile_prefixes_list
+        if not is_mobile_prefix_allowed(self.phone_number, mobile_prefixes):
+            raise ValidationError(
+                {"phone_number": _("This international mobile prefix is not allowed.")}
+            )
+
+    def _validate_phone_number_type(self):
+        if not is_mobile_phone_number(
+            self.phone_number,
+            allow_fixed_line_or_mobile=app_settings.ALLOW_FIXED_LINE_OR_MOBILE,
+        ):
+            raise ValidationError(
+                {"phone_number": _("Only mobile phone numbers are allowed.")}
+            )
 
     def _validate_phone_number_uniqueness(self):
         """
@@ -1705,6 +1736,17 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
         date_end = date_start + timedelta(days=1)
         PhoneToken = load_model("PhoneToken")
         qs = PhoneToken.objects.filter(created__range=[date_start, date_end])
+        # acquire locks to prevent concurrent requests
+        # from bypassing the daily limit checks
+        locked_qs = qs.select_for_update()
+        locked_qs.filter(user=self.user).first()
+        # if it's a new IP, acquire a generic lock
+        # to prevent concurrent requests bypassing limits
+        if not locked_qs.filter(ip=self.ip).first():
+            # This is done on purpose, slow but safe!
+            # Generating millions of SMS messages per
+            # day is out of scope!
+            PhoneToken.objects.select_for_update().first()
         # limit generation of tokens per day by user
         user_token_count = qs.filter(user=self.user).count()
         if user_token_count >= app_settings.SMS_TOKEN_MAX_USER_DAILY:
@@ -1741,6 +1783,10 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
                     user=self.user
                 )
             )
+        try:
+            self._validate_phone_number_policy()
+        except ValidationError as error:
+            raise ValueError(error) from None
         org_radius_settings = self.organization.radius_settings
         message = _(org_radius_settings.sms_message).format(
             organization=org_radius_settings.organization.name, code=self.token
@@ -1750,7 +1796,32 @@ class AbstractPhoneToken(OrgMixin, TimeStampedEditableModel):
             from_phone=str(org_radius_settings.sms_sender),
             to=[str(self.phone_number)],
         )
-        sms_message.send(meta_data=org_radius_settings.sms_meta_data)
+        # Masking the full phone number allows to keep a fragment for debugging.
+        # This aligns with SMS provider logs, which usually only track the
+        # recipient's phone number and the sender's IP and are not aware
+        # of our internal UUIDs.
+        masked_phone_number = mask_phone_number(self.phone_number)
+        try:
+            sms_message.send(meta_data=org_radius_settings.sms_meta_data)
+        except Exception:
+            logger.error(
+                "Failed to submit SMS token %s to the SMS backend for phone number %s, "
+                "user %s, organization %s.",
+                self.pk,
+                masked_phone_number,
+                self.user.pk,
+                self.organization.pk,
+            )
+            raise
+        else:
+            logger.info(
+                "SMS token %s was submitted to the SMS backend for phone number %s, "
+                "user %s, organization %s.",
+                self.pk,
+                masked_phone_number,
+                self.user.pk,
+                self.organization.pk,
+            )
 
     def is_valid(self, token, organization=None):
         self.attempts += 1
