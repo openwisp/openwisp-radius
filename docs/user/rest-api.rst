@@ -730,10 +730,10 @@ counter and includes the following fields:
   counter cannot be evaluated.
 - ``type``: quota unit, such as ``seconds`` or ``bytes``. It is ``null``
   for an unsupported counter.
-- ``reset``: Unix timestamp in seconds for the end of the current counter
-  period. It is ``null`` for counters which never reset, unsupported reset
-  policies, or counters which cannot be evaluated. It can differ for each
-  check.
+- ``reset``: Unix timestamp in seconds for the end of the counter period
+  used to calculate ``result``. It is ``null`` for counters which never
+  reset, unsupported reset policies, or counters which cannot be
+  evaluated. It can differ for each check.
 
 Example response:
 

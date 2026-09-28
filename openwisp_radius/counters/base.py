@@ -101,7 +101,10 @@ class BaseCounter(ABC):
         return row[0] or 0
 
     def get_counter(self):
-        start_time, end_time = self.get_reset_timestamps()
+        timestamps = getattr(self, "_usage_reset_timestamps", None)
+        if timestamps is None:
+            timestamps = self.get_reset_timestamps()
+        start_time, end_time = timestamps
         return self._get_counter(start_time, end_time)
 
     def check(self):
@@ -151,8 +154,14 @@ class BaseCounter(ABC):
         return int(self.get_counter())
 
     def get_consumption_and_reset(self):
-        _, end_time = self.get_reset_timestamps()
-        return self.consumed(), end_time
+        timestamps = self.get_reset_timestamps()
+        # Ensure consumption and reset refer to the same period at its boundary.
+        self._usage_reset_timestamps = timestamps
+        try:
+            _, end_time = timestamps
+            return self.consumed(), end_time
+        finally:
+            del self._usage_reset_timestamps
 
 
 class BaseDailyCounter(BaseCounter):
