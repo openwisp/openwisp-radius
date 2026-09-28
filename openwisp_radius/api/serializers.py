@@ -333,6 +333,7 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
         fields = ("attribute", "op", "value", "result", "type", "reset")
 
     def get_consumption_and_reset(self, obj):
+        # internal cache to ensure counters are evaluated once per check object
         if not hasattr(self, "_usage"):
             self._usage = {}
         if obj.pk not in self._usage:
