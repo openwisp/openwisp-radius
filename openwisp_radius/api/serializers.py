@@ -326,26 +326,40 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
 class UserGroupCheckSerializer(serializers.ModelSerializer):
     result = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
+    reset = serializers.SerializerMethodField()
 
     class Meta:
         model = RadiusGroupCheck
-        fields = ("attribute", "op", "value", "result", "type")
+        fields = ("attribute", "op", "value", "result", "type", "reset")
+
+    def get_consumption_and_reset(self, obj):
+        # internal cache to ensure counters are evaluated once per check object
+        if not hasattr(self, "_usage"):
+            self._usage = {}
+        if obj.pk not in self._usage:
+            try:
+                Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
+                counter = Counter(
+                    user=self.context["user"],
+                    group=self.context["group"],
+                    group_check=obj,
+                )
+                # BACKWARD COMPATIBILITY: custom counters may only implement
+                # consumed(). TODO: Remove this fallback in 1.5.0.
+                method = getattr(counter, "get_consumption_and_reset", None)
+                if method is None:
+                    consumed, reset = counter.consumed(), None
+                else:
+                    consumed, reset = method()
+                value = int(obj.value)
+                self._usage[obj.pk] = (min(consumed, value), reset)
+            except (SkipCheck, ValueError, KeyError):
+                self._usage[obj.pk] = (None, None)
+        return self._usage[obj.pk]
 
     def get_result(self, obj):
-        try:
-            Counter = app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP[obj.attribute]
-            counter = Counter(
-                user=self.context["user"],
-                group=self.context["group"],
-                group_check=obj,
-            )
-            consumed = counter.consumed()
-            value = int(obj.value)
-            if consumed > value:
-                consumed = value
-            return consumed
-        except (SkipCheck, ValueError, KeyError):
-            return None
+        consumed, _ = self.get_consumption_and_reset(obj)
+        return consumed
 
     def get_type(self, obj):
         try:
@@ -354,6 +368,10 @@ class UserGroupCheckSerializer(serializers.ModelSerializer):
             return None
         else:
             return counter.get_attribute_type()
+
+    def get_reset(self, obj):
+        _, reset = self.get_consumption_and_reset(obj)
+        return reset
 
 
 class UserRadiusUsageSerializer(serializers.Serializer):

@@ -720,6 +720,38 @@ shows how much time and/or traffic the user has consumed.
 
 Responds only to **GET**.
 
+The response contains a ``checks`` list. Each item represents a configured
+counter and includes the following fields:
+
+- ``attribute``: RADIUS check attribute name.
+- ``op``: RADIUS check operator.
+- ``value``: configured quota as a string.
+- ``result``: consumed quota, capped at ``value``. It is ``null`` when the
+  counter cannot be evaluated.
+- ``type``: quota unit, such as ``seconds`` or ``bytes``. It is ``null``
+  for an unsupported counter.
+- ``reset``: Unix timestamp in seconds for the end of the counter period
+  used to calculate ``result``. It is ``null`` for counters which never
+  reset, unsupported reset policies, or counters which cannot be
+  evaluated. It can differ for each check.
+
+Example response:
+
+.. code-block:: json
+
+    {
+      "checks": [
+        {
+          "attribute": "Max-Daily-Session",
+          "op": ":=",
+          "value": "10800",
+          "result": 3600,
+          "type": "seconds",
+          "reset": 1735689600
+        }
+      ]
+    }
+
 Create SMS token
 ++++++++++++++++
 
