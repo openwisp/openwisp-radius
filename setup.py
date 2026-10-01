@@ -55,7 +55,7 @@ setup(
         "dj-rest-auth>=6.0,<7.3",
         "django-sendsms~=0.5.0",
         "django-private-storage~=3.1.0",
-        "django-ipware>=5.0,<7.1",
+        "django-ipware>=5.0,<8.1",
         "pyrad~=2.4",
         # Python 3.13 removed the built-in telnetlib module.
         "telnetlib3>=5,<6",
