@@ -24,6 +24,7 @@ from ..migrations import (
     migrate_registered_users_multitenant_reverse,
 )
 from ..utils import load_model
+from . import CreateRadiusObjectsMixin
 from .mixins import BaseTestCase
 
 RegisteredUser = load_model("RegisteredUser")
@@ -828,7 +829,7 @@ class TestMigrationRadiusBatchExpirationDateCopy(BaseTestCase):
         self.assertEqual(user.expiration_date, newer_expiration_date)
 
 
-class TestMigrationRemovePrivilegedUsersFromBatches(BaseTestCase):
+class TestMigrationRemovePrivilegedUsersFromBatches(CreateRadiusObjectsMixin, TestCase):
     migration_path = (
         "openwisp_radius.migrations.0051_remove_privileged_users_from_batches"
     )
