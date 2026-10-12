@@ -6,14 +6,16 @@ from unittest.mock import MagicMock
 
 import swapper
 from django.apps.registry import apps
+from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
+from django.db.models.signals import post_delete
 from django.test import TestCase
 from django.utils import timezone
 from freezegun import freeze_time
 
 from openwisp_users.tests.utils import TestOrganizationMixin
-from openwisp_utils.tests import capture_any_output
+from openwisp_utils.tests import capture_any_output, catch_signal
 
 from ..migrations import (
     _filter_valid_organization_memberships,
@@ -824,3 +826,95 @@ class TestMigrationRadiusBatchExpirationDateCopy(BaseTestCase):
         self._copy_batch_expiration_to_user()
         user.refresh_from_db()
         self.assertEqual(user.expiration_date, newer_expiration_date)
+
+
+class TestMigrationRemovePrivilegedUsersFromBatches(BaseTestCase):
+    migration_path = (
+        "openwisp_radius.migrations.0051_remove_privileged_users_from_batches"
+    )
+
+    def test_remove_privileged_users_from_batches(self):
+        org = self._get_org()
+        expiration_date = timezone.now().date() + timedelta(days=7)
+        own_expiration_date = timezone.now().date() + timedelta(days=30)
+        user = self._create_user(
+            username="user", email="user@openwisp.com", expiration_date=expiration_date
+        )
+        staff = self._create_user(
+            username="staff",
+            email="staff@openwisp.com",
+            is_staff=True,
+            expiration_date=expiration_date,
+        )
+        member_staff = self._create_user(
+            username="member",
+            email="member@openwisp.com",
+            is_staff=True,
+        )
+        superuser = self._create_admin(username="root", email="root@openwisp.com")
+        superuser.expiration_date = expiration_date
+        superuser.save()
+        with freeze_time(timezone.now() - timedelta(days=1)):
+            self._create_org_user(user=member_staff, organization=org)
+        batch = self._create_radius_batch(
+            name="batch",
+            strategy="prefix",
+            prefix="batch",
+            organization=org,
+            expiration_date=expiration_date,
+        )
+        for batch_user in [user, staff, member_staff, superuser]:
+            batch.save_user(batch_user)
+        member_staff.expiration_date = own_expiration_date
+        member_staff.save()
+        apps = MagicMock()
+        apps.get_model.return_value = RadiusBatch
+        migration_module = importlib.import_module(self.migration_path)
+        with catch_signal(post_delete) as handler:
+            migration_module.remove_privileged_users_from_batches(apps, MagicMock())
+        apps.get_model.assert_called_once_with("openwisp_radius", "RadiusBatch")
+        deleted_org_users = [
+            call.kwargs["instance"].user
+            for call in handler.call_args_list
+            if call.kwargs["sender"] is OrganizationUser
+        ]
+        self.assertCountEqual(
+            deleted_org_users,
+            [staff, superuser],
+            "post_delete was not sent for the removed memberships",
+        )
+        self.assertEqual(list(batch.users.all()), [user])
+        self.assertEqual(
+            get_user_model()
+            .objects.filter(pk__in=[staff.pk, member_staff.pk, superuser.pk])
+            .count(),
+            3,
+            "the accounts of the users removed from the batch were deleted",
+        )
+
+        for batch_user in [staff, superuser]:
+            with self.subTest(user=batch_user.username):
+                batch_user.refresh_from_db()
+                self.assertIsNone(
+                    batch_user.expiration_date,
+                    "the expiration date set by the batch was kept",
+                )
+                self.assertFalse(
+                    OrganizationUser.objects.filter(
+                        user=batch_user, organization=org
+                    ).exists(),
+                    "the membership created by the batch was kept",
+                )
+
+        with self.subTest("the changes made to the other users are kept"):
+            user.refresh_from_db()
+            member_staff.refresh_from_db()
+            self.assertEqual(user.expiration_date, expiration_date)
+            self.assertEqual(member_staff.expiration_date, own_expiration_date)
+            for batch_user in [user, member_staff]:
+                self.assertTrue(
+                    OrganizationUser.objects.filter(
+                        user=batch_user, organization=org
+                    ).exists(),
+                    f"the membership of {batch_user.username} was removed",
+                )
