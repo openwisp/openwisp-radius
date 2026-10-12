@@ -370,6 +370,7 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
     search_fields = ["name"]
     actions = ["delete_selected_batches"]
     autocomplete_fields = ["group"]
+    readonly_fields = ("users",)
     form = RadiusBatchForm
     help_text = {
         "text": _(
@@ -563,7 +564,6 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
                 "csvfile",
                 "number_of_users",
                 "group",
-                "users",
                 "expiration_date",
                 "name",
                 "organization",
