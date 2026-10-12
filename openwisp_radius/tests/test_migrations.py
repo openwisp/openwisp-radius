@@ -870,9 +870,19 @@ class TestMigrationRemovePrivilegedUsersFromBatches(BaseTestCase):
         apps = MagicMock()
         apps.get_model.return_value = RadiusBatch
         migration_module = importlib.import_module(self.migration_path)
-        with catch_signal(post_delete) as handler:
+        with catch_signal(post_delete) as handler, self.assertLogs(
+            self.migration_path, level="WARNING"
+        ) as logs:
             migration_module.remove_privileged_users_from_batches(apps, MagicMock())
         apps.get_model.assert_called_once_with("openwisp_radius", "RadiusBatch")
+        self.assertEqual(
+            logs.output,
+            [
+                f"WARNING:{self.migration_path}:Removed 3 staff users and "
+                "superusers from batches and 2 organization memberships "
+                "created by batches"
+            ],
+        )
         deleted_org_users = [
             call.kwargs["instance"].user
             for call in handler.call_args_list
@@ -918,3 +928,7 @@ class TestMigrationRemovePrivilegedUsersFromBatches(BaseTestCase):
                     ).exists(),
                     f"the membership of {batch_user.username} was removed",
                 )
+
+        with self.subTest("nothing is logged when there is nothing to remove"):
+            with self.assertNoLogs(self.migration_path, level="WARNING"):
+                migration_module.remove_privileged_users_from_batches(apps, MagicMock())

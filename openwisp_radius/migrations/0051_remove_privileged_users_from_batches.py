@@ -1,9 +1,13 @@
+import logging
+
 import swapper
 from django.conf import settings
 from django.db import migrations
 from django.db.models import F, Q
 
 from openwisp_radius.migrations import get_swapped_model
+
+logger = logging.getLogger(__name__)
 
 
 def remove_privileged_users_from_batches(apps, schema_editor):
@@ -28,6 +32,7 @@ def remove_privileged_users_from_batches(apps, schema_editor):
     batch_users = RadiusBatch.users.through.objects.filter(
         Q(user__is_staff=True) | Q(user__is_superuser=True)
     ).select_related("radiusbatch")
+    deleted_org_users = 0
     for batch_user in batch_users.iterator():
         batch = batch_user.radiusbatch
         org_users = OrganizationUser.objects.filter(
@@ -38,7 +43,15 @@ def remove_privileged_users_from_batches(apps, schema_editor):
         )
         for org_user in org_users.iterator():
             org_user.delete()
-    batch_users.delete()
+            deleted_org_users += 1
+    deleted_batch_users, _ = batch_users.delete()
+    if deleted_batch_users:
+        logger.warning(
+            "Removed %s staff users and superusers from batches "
+            "and %s organization memberships created by batches",
+            deleted_batch_users,
+            deleted_org_users,
+        )
 
 
 class Migration(migrations.Migration):
