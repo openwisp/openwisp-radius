@@ -6,6 +6,29 @@ Version 1.4.0 [unreleased]
 
 Work in progress.
 
+Version 1.3.2 [2026-10-12]
+--------------------------
+
+Changes
+~~~~~~~
+
+Dependencies
+++++++++++++
+
+- Updated lxml requirement to 6.1.3
+
+Bugfixes
+~~~~~~~~
+
+- Rejected existing users in batch user imports
+
+  **This is a security change/fix**:
+
+  - Rejected CSV rows whose email belongs to an existing user
+  - Made the users of a batch read only in the admin
+  - Removed staff users and superusers from existing batches
+  - Reverted the expiration date and membership set by their import
+
 Version 1.3.1 [2026-09-11]
 --------------------------
 
