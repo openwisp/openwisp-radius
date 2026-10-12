@@ -1163,7 +1163,12 @@ class AbstractRadiusBatch(OrgMixin, TimeStampedEditableModel):
                     {"email": _("Multiple users match this email address.")}
                 )
             if users:
-                return next(iter(users.values())), None
+                user = next(iter(users.values()))
+                if not user._state.adding:
+                    raise ValidationError(
+                        {"email": _("A user with this email address already exists.")}
+                    )
+                return user, None
         generated_password = None
         username, password, email, first_name, last_name = row
         if not username and email:

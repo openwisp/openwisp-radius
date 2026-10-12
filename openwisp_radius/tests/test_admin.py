@@ -1234,6 +1234,39 @@ class TestAdmin(
         )
         self.assertIn("group", readonly_fields)
 
+    def test_radius_batch_change_form_cannot_attach_users(self):
+        batch = self._create_radius_batch(
+            name="test2", strategy="prefix", prefix="test-prefix12"
+        )
+        self.assertEqual(batch.status, RadiusBatch.PENDING)
+        user = self._create_user(username="user", email="user@openwisp.com")
+        administrator = self._create_administrator(organizations=[self.default_org])
+        self.client.force_login(administrator)
+        change_url = reverse(
+            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
+        )
+
+        with self.subTest("users are not rendered as an editable field"):
+            response = self.client.get(change_url)
+            self.assertContains(response, "field-users")
+            self.assertNotContains(response, 'name="users"')
+
+        with self.subTest("submitted users are not attached to the batch"):
+            data = self._get_prefix_post_data()
+            data["users"] = [str(user.pk)]
+            response = self.client.post(change_url, data)
+            self.assertEqual(response.status_code, 302, "the form was not saved")
+            self.assertFalse(
+                batch.users.filter(pk=user.pk).exists(),
+                "the user was attached to the batch",
+            )
+
+        with self.subTest("deleting the batch keeps the user"):
+            batch.delete()
+            self.assertTrue(
+                User.objects.filter(pk=user.pk).exists(), "the user was deleted"
+            )
+
     def test_radius_batch_default_group(self):
         url = reverse(
             f"admin:{self.app_label}_radiusbatch_default_group",
