@@ -74,6 +74,32 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             self.assertIsNone(ra.stop_time)
             self.assertEqual(ra.username, user.username)
 
+        with self.subTest("top-level window redirects to redirurl"):
+            response = self.client.post(
+                url,
+                {"redirurl": "http://localhost:8080/default/status"},
+                HTTP_SEC_FETCH_DEST="document",
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, "http://localhost:8080/default/status")
+
+        with self.subTest("iframe does not redirect"):
+            response = self.client.post(
+                url,
+                {"redirurl": "http://localhost:8080/default/status"},
+                HTTP_SEC_FETCH_DEST="iframe",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, b"logged in")
+
+        with self.subTest("unsafe redirurl is ignored"):
+            for redirurl in ["javascript:alert(1)", "/default/status", "//evil.com"]:
+                response = self.client.post(
+                    url, {"redirurl": redirurl}, HTTP_SEC_FETCH_DEST="document"
+                )
+                self.assertEqual(response.status_code, 200, redirurl)
+                self.assertEqual(response.content, b"logged in")
+
         cache.delete(f"rt-{radius_token.user.username}")
 
     @capture_any_output()
@@ -86,6 +112,23 @@ class TestIntegrations(TestOrganizationMixin, TestCase):
             self.assertEqual(response.status_code, 200)
             response = self.client.post(url, {"logout_id": "123"})
             self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, b"logged out in")
+
+        with self.subTest("top-level window redirects to redirurl"):
+            response = self.client.post(
+                url,
+                {"redirurl": "https://localhost:8080/default/login"},
+                HTTP_SEC_FETCH_DEST="document",
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, "https://localhost:8080/default/login")
+
+        with self.subTest("unsafe redirurl is ignored"):
+            response = self.client.post(
+                url, {"redirurl": "javascript:alert(1)"}, HTTP_SEC_FETCH_DEST="document"
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, b"logged out in")
 
         radius_token = self._create_rad_token()
         user = radius_token.user
