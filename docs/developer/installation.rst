@@ -49,14 +49,16 @@ Install the system dependencies:
         libspatialite-dev \
         spatialite-bin \
         libsqlite3-mod-spatialite
-    # for selenium tests
-    sudo apt install -y chromium-browser
+    # For running E2E Selenium tests (Firefox is the default browser)
+    sudo apt install firefox chromium
 
-Fork and clone the forked repository:
+Fork the `openwisp-radius repository
+<https://github.com/openwisp/openwisp-radius>`_ on GitHub, then clone your
+fork. Replace ``YOUR_GITHUB_USERNAME`` with your GitHub username:
 
 .. code-block:: shell
 
-    git clone git://github.com/<your_fork>/openwisp-radius
+    git clone git@github.com:YOUR_GITHUB_USERNAME/openwisp-radius.git
 
 Navigate into the cloned repository:
 
@@ -153,11 +155,11 @@ To install the latest development version tarball via HTTPs:
 
     pip install https://github.com/openwisp/openwisp-radius/tarball/master
 
-Alternatively you can use the git protocol:
+Alternatively you can install the latest development version from Git:
 
 .. code-block:: shell
 
-    pip install -e git+git://github.com/openwisp/openwisp-radius#egg=openwisp_radius[saml,openvpn_status]
+    pip install -e git+https://github.com/openwisp/openwisp-radius#egg=openwisp_radius[saml,openvpn_status]
 
 .. _radius_migrate_existing_freeradius_db:
 
