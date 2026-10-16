@@ -1376,6 +1376,15 @@ class TestIsSmsVerificationEnabled(ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 403)
         self.assertIn("SMS verification is not enabled", str(r.data))
 
+    def test_sms_verification_disabled_logs_client_ip(self):
+        url = reverse("radius:phone_token_create", args=[self.default_org.slug])
+        with self.assertLogs("openwisp_radius.api.permissions", "WARNING") as logs:
+            r = self.client.post(
+                url, REMOTE_ADDR="192.0.2.1", HTTP_X_FORWARDED_FOR="203.0.113.1"
+            )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("Client IP address: 192.0.2.1", logs.output[0])
+
     @capture_stderr()
     def test_validate_phone_token_403(self):
         url = reverse("radius:phone_token_validate", args=[self.default_org.slug])

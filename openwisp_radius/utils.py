@@ -1,4 +1,5 @@
 import csv
+import ipaddress
 import logging
 import math
 import os
@@ -33,6 +34,15 @@ logger = logging.getLogger(__name__)
 
 def load_model(model):
     return swapper.load_model("openwisp_radius", model)
+
+
+def get_client_ip(request):
+    client_ip = request.META.get("REMOTE_ADDR", "")
+    try:
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    return str(getattr(address, "ipv4_mapped", None) or address)
 
 
 def mask_phone_number(phone_number):
