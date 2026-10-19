@@ -185,6 +185,9 @@ is on a different host in the private network, the value should be the
 private IP of freeradius host like ``192.0.2.50``. If your freeradius is
 on a public network, please use the public IP of your freeradius instance.
 
+The client address is read from ``REMOTE_ADDR``, ``X-Forwarded-For`` is
+ignored. Reverse proxies must set ``REMOTE_ADDR`` to the client address.
+
 You can use subnets when freeradius is hosted on a variable IP, e.g.:
 
 - ``198.168.0.0/24`` to allow the entire LAN.
