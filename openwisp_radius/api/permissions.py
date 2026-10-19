@@ -1,11 +1,10 @@
 import logging
 
 from django.utils.translation import gettext_lazy as _
-from ipware import get_client_ip
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from ..utils import get_organization_radius_settings, load_model
+from ..utils import get_client_ip, get_organization_radius_settings, load_model
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,7 @@ OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
 class IsSmsVerificationEnabled(BasePermission):
     def has_permission(self, request, view):
         organization = getattr(view, "organization")
-        client_ip = get_client_ip(request)[0]
+        client_ip = get_client_ip(request)
         verification = get_organization_radius_settings(
             organization, "sms_verification"
         )

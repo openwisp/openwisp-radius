@@ -68,7 +68,12 @@ from ..exceptions import (
     SmsAttemptCooldownException,
     UserAlreadyVerified,
 )
-from ..utils import generate_pdf, get_organization_radius_settings, load_model
+from ..utils import (
+    generate_pdf,
+    get_client_ip,
+    get_organization_radius_settings,
+    load_model,
+)
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
@@ -768,7 +773,7 @@ class CreatePhoneTokenView(
         X-Forwarded-For is caller-controlled and could bypass the quota.
         Reverse proxies must replace REMOTE_ADDR with the client address.
         """
-        return request.META.get("REMOTE_ADDR")
+        return get_client_ip(request)
 
     @swagger_auto_schema(
         operation_description=("""
