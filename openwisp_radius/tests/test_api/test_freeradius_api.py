@@ -2563,8 +2563,8 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
             called_station_id="AA-BB-CC-DD-EE-FF",
         )
         fail_msg = self.fail_msg.replace("127.0.0.1", "203.0.113.1")
-        with mock.patch(self.freeradius_hosts_path, [allowed_ip]):
 
+        with mock.patch(self.freeradius_hosts_path, [allowed_ip]):
             with self.subTest("spoofed allowed address cannot authorize"):
                 response = self.client.post(
                     reverse("radius:authorize"),
