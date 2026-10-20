@@ -29,6 +29,9 @@ Bugfixes
   - Removed staff users and superusers from existing batches
   - Reverted the expiration date and membership set by their import
 
+  Advisory: `GHSA-83gw-w3g2-6658
+  <https://github.com/openwisp/openwisp-radius/security/advisories/GHSA-83gw-w3g2-6658>`_.
+
 Version 1.3.1 [2026-09-11]
 --------------------------
 
@@ -40,6 +43,9 @@ Bugfixes
   - Prevented bypassing the allowed international prefixes.
   - Prevented bypassing SMS quota and cooldown limits.
   - Added privacy preserving SMS submission audit logs.
+
+  Advisory: `GHSA-pfx3-4m53-g475
+  <https://github.com/openwisp/openwisp-radius/security/advisories/GHSA-pfx3-4m53-g475>`_.
 
 Version 1.3.0 [2026-09-04]
 --------------------------
