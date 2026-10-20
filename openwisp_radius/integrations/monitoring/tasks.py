@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from datetime import timezone as datetime_timezone
 
 from celery import shared_task
@@ -232,9 +232,14 @@ def _get_watermark(latest_completed_hour):
             watermark = None
         if watermark and watermark.tzinfo and watermark <= latest_completed_hour:
             return watermark
+        logger.warning("Ignoring invalid registration metrics watermark")
     points = _get_completion_metric().read(order="-time", limit=1, precision="s")
     if points:
-        return timezone.datetime.fromtimestamp(points[0]["time"], datetime_timezone.utc)
+        watermark = timezone.datetime.fromtimestamp(
+            points[0]["time"], datetime_timezone.utc
+        )
+        if watermark <= latest_completed_hour:
+            return watermark
     return _get_legacy_watermark() or (latest_completed_hour - timedelta(hours=1))
 
 
@@ -257,25 +262,29 @@ def _write_registration_metrics(start_time, end_time):
 
 @shared_task
 def write_user_registration_metrics(start_time=None, end_time=None):
-    """
-    This task is expected to be executed hourly.
+    """Writes registration metrics for an explicit or missing hour interval.
 
-    This task writes user registration metrics to the InfluxDB.
-    It writes to the following metrics:
-        - User Signups: This shows the number of new users who
-            have registered using different methods
-        - Total User Signups: This shows the total number of
-            users registered using different methods
+    When start_time and end_time are provided, writes that interval directly.
+    Otherwise, backfills up to 24 completed UTC hours and queues another task
+    if more work remains.
     """
-    if start_time and end_time:
+    if start_time is not None or end_time is not None:
+        if start_time is None or end_time is None:
+            raise ValueError("start_time and end_time must be provided together")
+        if isinstance(start_time, str):
+            start_time = datetime.fromisoformat(start_time)
+        if isinstance(end_time, str):
+            end_time = datetime.fromisoformat(end_time)
         _write_registration_metrics(start_time, end_time)
         return
     lock = getattr(cache, "lock", None)
     if lock:
         lock = lock(REGISTRATION_METRICS_LOCK, timeout=900, blocking_timeout=0)
         if not lock.acquire(blocking=False):
+            logger.info("Registration metrics task skipped because its lock is held")
             return
     elif not cache.add(REGISTRATION_METRICS_LOCK, "locked", timeout=900):
+        logger.info("Registration metrics task skipped because its lock is held")
         return
     schedule_continuation = False
     try:
@@ -299,6 +308,11 @@ def write_user_registration_metrics(start_time=None, end_time=None):
         else:
             cache.delete(REGISTRATION_METRICS_LOCK)
     if schedule_continuation:
+        logger.info(
+            "Scheduling registration metrics continuation from %s to %s",
+            watermark,
+            latest_completed_hour,
+        )
         write_user_registration_metrics.delay()
 
 
