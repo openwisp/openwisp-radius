@@ -73,6 +73,10 @@ Django project's settings as following:
         }
     )
 
+The task processes completed UTC hours and backfills missed intervals. It
+requires a cache shared by all workers to coordinate task execution and
+persist its progress.
+
 .. note::
 
     Ensure your Django project is correctly configured to utilize OpenWISP

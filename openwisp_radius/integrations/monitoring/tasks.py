@@ -1,10 +1,14 @@
 import logging
+from datetime import timedelta
+from datetime import timezone as datetime_timezone
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.db.models import Count, F, Q
 from django.utils import timezone
+from openwisp_monitoring.db import timeseries_db
 from swapper import load_model
 
 from . import settings as app_settings
@@ -20,6 +24,10 @@ DeviceLocation = load_model("geo", "Location")
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+REGISTRATION_METRICS_WATERMARK = "openwisp-radius:registration-metrics:v1:watermark"
+REGISTRATION_METRICS_LOCK = "openwisp-radius:registration-metrics:v1:lock"
+REGISTRATION_METRICS_MAX_HOURS = 24
 
 
 def _get_user_signup_metric(organization_id, registration_method):
@@ -52,22 +60,20 @@ def _get_total_user_signup_metric(organization_id, registration_method):
     return metric
 
 
-def _write_user_signup_metric_for_all(metric_key):
+def _write_user_signup_metric_for_all(metric_key, start_time, end_time):
     metric_data = []
-    start_time = timezone.now() - timezone.timedelta(hours=1)
-    end_time = timezone.now()
     if metric_key == "user_signups":
         get_metric_func = _get_user_signup_metric
     else:
         get_metric_func = _get_total_user_signup_metric
     # Get the total number of registered users
     registered_user_query = RegisteredUser.objects.exclude(
-        user__date_joined__gt=end_time,
+        user__date_joined__gte=end_time,
     )
     if metric_key == "user_signups":
         registered_user_query = registered_user_query.filter(
-            user__date_joined__gt=start_time,
-            user__date_joined__lte=end_time,
+            user__date_joined__gte=start_time,
+            user__date_joined__lt=end_time,
         )
     total_registered_users = dict(
         registered_user_query.values_list("method").annotate(
@@ -81,8 +87,12 @@ def _write_user_signup_metric_for_all(metric_key):
     )
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
-            date_joined__gt=start_time,
-            date_joined__lte=end_time,
+            date_joined__gte=start_time,
+            date_joined__lt=end_time,
+        )
+    else:
+        users_without_registereduser_query = users_without_registereduser_query.filter(
+            date_joined__lt=end_time
         )
     users_without_registereduser = users_without_registereduser_query.count()
 
@@ -100,14 +110,12 @@ def _write_user_signup_metric_for_all(metric_key):
         if method is None:
             continue
         metric = get_metric_func(organization_id="__all__", registration_method=method)
-        metric_data.append((metric, {"value": count}))
-    Metric.batch_write(metric_data)
+        metric_data.append((metric, {"value": count, "time": start_time}))
+    return metric_data
 
 
-def _write_user_signup_metrics_for_orgs(metric_key):
+def _write_user_signup_metrics_for_orgs(metric_key, start_time, end_time):
     metric_data = []
-    start_time = timezone.now() - timezone.timedelta(hours=1)
-    end_time = timezone.now()
     if metric_key == "user_signups":
         get_metric_func = _get_user_signup_metric
     else:
@@ -121,14 +129,14 @@ def _write_user_signup_metrics_for_orgs(metric_key):
         method="pending_verification"
     ).exclude(
         user__openwisp_users_organizationuser__organization_id=F("organization_id"),
-        user__openwisp_users_organizationuser__created__gt=end_time,
+        user__openwisp_users_organizationuser__created__gte=end_time,
     )
 
     if metric_key == "user_signups":
         registered_users_query = registered_users_query.filter(
             user__openwisp_users_organizationuser__organization_id=F("organization_id"),
-            user__openwisp_users_organizationuser__created__gt=start_time,
-            user__openwisp_users_organizationuser__created__lte=end_time,
+            user__openwisp_users_organizationuser__created__gte=start_time,
+            user__openwisp_users_organizationuser__created__lt=end_time,
         )
     registered_users = registered_users_query.values_list(
         "organization_id",
@@ -143,7 +151,11 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     )
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
-            created__gt=start_time, created__lte=end_time
+            created__gte=start_time, created__lt=end_time
+        )
+    else:
+        users_without_registereduser_query = users_without_registereduser_query.filter(
+            created__lt=end_time
         )
     users_without_registereduser = dict(
         users_without_registereduser_query.values_list("organization_id").annotate(
@@ -158,7 +170,7 @@ def _write_user_signup_metrics_for_orgs(metric_key):
         metric = get_metric_func(
             organization_id=org_id, registration_method=registration_method
         )
-        metric_data.append((metric, {"value": count}))
+        metric_data.append((metric, {"value": count, "time": start_time}))
 
     # Write metrics for organizations having only users without a
     # RegisteredUser for that organization. These organizations are not
@@ -168,13 +180,83 @@ def _write_user_signup_metrics_for_orgs(metric_key):
         metric = get_metric_func(
             organization_id=org_id, registration_method="unspecified"
         )
-        metric_data.append((metric, {"value": count}))
+        metric_data.append((metric, {"value": count, "time": start_time}))
+    return metric_data
 
-    Metric.batch_write(metric_data)
+
+def _get_completion_metric():
+    return Metric._get_or_create(
+        configuration="reg_metrics_done",
+        name="Registration metrics completion",
+        key="radius_registration_metrics_completion",
+        object_id=None,
+        content_type=None,
+    )[0]
+
+
+def _get_completed_hour(value):
+    return value.astimezone(datetime_timezone.utc).replace(
+        minute=0, second=0, microsecond=0
+    )
+
+
+def _get_legacy_watermark():
+    latest = None
+    for key in ("user_signups", "tot_user_signups"):
+        points = timeseries_db.read(
+            key=key,
+            fields="count",
+            tags={"organization_id": "__all__"},
+            order="-time",
+            limit=1,
+            precision="s",
+        )
+        if points:
+            timestamp = timezone.datetime.fromtimestamp(
+                points[0]["time"], datetime_timezone.utc
+            )
+            latest = max(latest, timestamp) if latest else timestamp
+    if latest:
+        watermark = _get_completed_hour(latest)
+        if watermark < latest:
+            watermark += timedelta(hours=1)
+        return watermark
+
+
+def _get_watermark(latest_completed_hour):
+    value = cache.get(REGISTRATION_METRICS_WATERMARK)
+    if value:
+        try:
+            watermark = timezone.datetime.fromisoformat(value)
+        except (TypeError, ValueError):
+            watermark = None
+        if watermark and watermark.tzinfo and watermark <= latest_completed_hour:
+            return watermark
+    points = _get_completion_metric().read(order="-time", limit=1, precision="s")
+    if points:
+        return timezone.datetime.fromtimestamp(points[0]["time"], datetime_timezone.utc)
+    return _get_legacy_watermark() or (latest_completed_hour - timedelta(hours=1))
+
+
+def _write_registration_metrics(start_time, end_time):
+    metric_data = []
+    for metric_key in ("user_signups", "tot_user_signups"):
+        metric_data.extend(
+            _write_user_signup_metric_for_all(metric_key, start_time, end_time)
+        )
+        metric_data.extend(
+            _write_user_signup_metrics_for_orgs(metric_key, start_time, end_time)
+        )
+    if metric_data:
+        Metric.batch_write(metric_data, acknowledged=True)
+    Metric.batch_write(
+        [(_get_completion_metric(), {"value": 1, "time": end_time})],
+        acknowledged=True,
+    )
 
 
 @shared_task
-def write_user_registration_metrics():
+def write_user_registration_metrics(start_time=None, end_time=None):
     """
     This task is expected to be executed hourly.
 
@@ -185,10 +267,39 @@ def write_user_registration_metrics():
         - Total User Signups: This shows the total number of
             users registered using different methods
     """
-    _write_user_signup_metric_for_all(metric_key="user_signups")
-    _write_user_signup_metric_for_all(metric_key="tot_user_signups")
-    _write_user_signup_metrics_for_orgs(metric_key="user_signups")
-    _write_user_signup_metrics_for_orgs(metric_key="tot_user_signups")
+    if start_time and end_time:
+        _write_registration_metrics(start_time, end_time)
+        return
+    lock = getattr(cache, "lock", None)
+    if lock:
+        lock = lock(REGISTRATION_METRICS_LOCK, timeout=900, blocking_timeout=0)
+        if not lock.acquire(blocking=False):
+            return
+    elif not cache.add(REGISTRATION_METRICS_LOCK, "locked", timeout=900):
+        return
+    schedule_continuation = False
+    try:
+        latest_completed_hour = _get_completed_hour(timezone.now())
+        watermark = _get_watermark(latest_completed_hour)
+        for _ in range(REGISTRATION_METRICS_MAX_HOURS):
+            if watermark >= latest_completed_hour:
+                break
+            end_time = watermark + timedelta(hours=1)
+            _write_registration_metrics(watermark, end_time)
+            cache.set(
+                REGISTRATION_METRICS_WATERMARK, end_time.isoformat(), timeout=None
+            )
+            watermark = end_time
+            if lock:
+                lock.extend(900)
+        schedule_continuation = watermark < latest_completed_hour
+    finally:
+        if lock:
+            lock.release()
+        else:
+            cache.delete(REGISTRATION_METRICS_LOCK)
+    if schedule_continuation:
+        write_user_registration_metrics.delay()
 
 
 @shared_task

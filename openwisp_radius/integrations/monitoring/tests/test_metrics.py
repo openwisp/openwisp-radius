@@ -1,10 +1,13 @@
-from unittest.mock import patch
+from datetime import datetime, timedelta
+from datetime import timezone as datetime_timezone
+from unittest.mock import call, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import tag
 from django.utils import timezone
+from freezegun import freeze_time
 from swapper import load_model
 
 from openwisp_radius.tests import _RADACCT
@@ -35,7 +38,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             chart,
             organization_id=[str(organization_id)],
         )
-        return {trace_name: values[-1] for trace_name, values in points["traces"]}
+        return {
+            trace_name: next(value for value in reversed(values) if value is not None)
+            for trace_name, values in points["traces"]
+        }
 
     def _assert_pending_verification_excluded(self, points):
         """
@@ -46,7 +52,12 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         - trace-level values (time series data)
         - summary-level aggregation
         """
-        self.assertEqual(points["traces"][0][1][-1], 0)
+        self.assertEqual(
+            next(
+                value for value in reversed(points["traces"][0][1]) if value is not None
+            ),
+            0,
+        )
         summary = points.get("summary", {})
         # Summary should not contain any positive counts
         for key, value in summary.items():
@@ -714,14 +725,23 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             "User does not has OrganizationUser and RegisteredUser object"
         ):
             self._get_admin()
-            write_user_registration_metrics.delay()
+            write_user_registration_metrics.delay(
+                timezone.now() - timedelta(hours=1), timezone.now()
+            )
 
             user_signup_chart = user_signup_metric.chart_set.first()
             all_points = self._read_chart(
                 user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
             org_points = self._read_chart(
                 user_signup_chart, organization_id=[str(org.id)]
@@ -733,7 +753,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
             org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
@@ -746,20 +773,36 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
         with self.subTest("User has OrganizationUser but no RegisteredUser object"):
             user = self._create_org_user(organization=org).user
-            write_user_registration_metrics.delay()
+            write_user_registration_metrics.delay(
+                timezone.now() - timedelta(hours=1), timezone.now()
+            )
 
             user_signup_chart = user_signup_metric.chart_set.first()
             all_points = self._read_chart(
                 user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
             org_points = self._read_chart(
                 user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
 
             total_user_signup_chart = total_user_signup_metric.chart_set.first()
@@ -767,13 +810,27 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
             org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(all_points["traces"][0][0], "unspecified")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"], {"unspecified": 1})
 
         self.metric_model.post_delete_receiver(user_signup_metric)
@@ -783,21 +840,37 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             "Test user has both OrganizationUser and RegisteredUser object"
         ):
             self._create_registered_user(user=user)
-            write_user_registration_metrics.delay()
+            write_user_registration_metrics.delay(
+                timezone.now() - timedelta(hours=1), timezone.now()
+            )
 
             user_signup_chart = user_signup_metric.chart_set.first()
             all_points = self._read_chart(
                 user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(all_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(all_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(all_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(all_points["summary"]["mobile_phone"], 1)
             self.assertEqual(all_points["summary"].get("unspecified", 0), 0)
             org_points = self._read_chart(
                 user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(org_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(org_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(org_points["summary"]["mobile_phone"], 1)
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
@@ -806,14 +879,28 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 total_user_signup_chart, organization_id=["__all__"]
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(org_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(org_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(org_points["summary"]["mobile_phone"], 1)
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
             org_points = self._read_chart(
                 total_user_signup_chart, organization_id=[str(org.id)]
             )
             self.assertEqual(org_points["traces"][0][0], "mobile_phone")
-            self.assertEqual(org_points["traces"][0][1][-1], 1)
+            self.assertEqual(
+                next(
+                    value
+                    for value in reversed(org_points["traces"][0][1])
+                    if value is not None
+                ),
+                1,
+            )
             self.assertEqual(org_points["summary"]["mobile_phone"], 1)
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
@@ -829,7 +916,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self._create_registered_user(
             user=user, organization=org, method="pending_verification"
         )
-        write_user_registration_metrics.delay()
+        write_user_registration_metrics.delay(
+            timezone.now() - timedelta(hours=1), timezone.now()
+        )
 
         user_signup_chart = user_signup_metric.chart_set.first()
         org_points = self._read_chart(user_signup_chart, organization_id=[str(org.pk)])
@@ -869,7 +958,12 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 chart,
                 organization_id=[str(organization_id)],
             )
-            return {trace_name: values[-1] for trace_name, values in points["traces"]}
+            return {
+                trace_name: next(
+                    value for value in reversed(values) if value is not None
+                )
+                for trace_name, values in points["traces"]
+            }
 
         cache.clear()
         create_general_metrics(None, None)
@@ -888,7 +982,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             organization=org2,
             method="email",
         )
-        write_user_registration_metrics.delay()
+        write_user_registration_metrics.delay(
+            timezone.now() - timedelta(hours=1), timezone.now()
+        )
         for metric_key in ["user_signups", "tot_user_signups"]:
             all_points = _get_metric_traces(metric_key, "__all__")
             org1_points = _get_metric_traces(metric_key, org1.pk)
@@ -950,7 +1046,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             organization=org2,
         )
 
-        write_user_registration_metrics.delay()
+        write_user_registration_metrics.delay(
+            timezone.now() - timedelta(hours=1), timezone.now()
+        )
 
         org1_user_signups = self._get_metric_traces("user_signups", org1.pk)
         org2_user_signups = self._get_metric_traces("user_signups", org2.pk)
@@ -960,3 +1058,202 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(org2_user_signups.get("unspecified", 0), 1)
         self.assertEqual(org1_total_signups.get("mobile_phone", 0), 1)
         self.assertEqual(org2_total_signups.get("unspecified", 0), 1)
+
+    @freeze_time("2026-10-20T12:00:00Z")
+    def test_delayed_user_registration_metrics(self):
+        """
+        Ensure delayed tasks backfill registrations from their scheduled interval.
+        A worker executes the task two hours after a user registers at the
+        end of its scheduled interval. The registration must still be written
+        to the organization's user signup metric.
+        """
+        from ..tasks import (
+            REGISTRATION_METRICS_WATERMARK,
+            write_user_registration_metrics,
+        )
+
+        cache.clear()
+        create_general_metrics(None, None)
+        organization = self._get_org()
+        user = self._create_user()
+        self._create_org_user(user=user, organization=organization)
+        self._create_registered_user(user=user, organization=organization)
+        scheduled_at = timezone.now()
+        cache.set(REGISTRATION_METRICS_WATERMARK, scheduled_at.isoformat(), None)
+
+        with freeze_time(scheduled_at + timedelta(hours=2)):
+            write_user_registration_metrics.delay()
+
+        registrations = self._get_metric_traces("user_signups", organization.pk)
+        self.assertEqual(
+            registrations.get("mobile_phone", 0),
+            1,
+            "The delayed task must record registrations from its scheduled interval.",
+        )
+
+    @freeze_time("2026-10-20T14:30:00Z")
+    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    def test_backfills_missing_completed_hours(self, write_metrics):
+        from ..tasks import (
+            REGISTRATION_METRICS_WATERMARK,
+            write_user_registration_metrics,
+        )
+
+        cache.clear()
+        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T11:00:00+00:00", None)
+        write_user_registration_metrics()
+        self.assertEqual(
+            write_metrics.call_args_list,
+            [
+                call(
+                    datetime(2026, 10, 20, 11, tzinfo=datetime_timezone.utc),
+                    datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc),
+                ),
+                call(
+                    datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc),
+                    datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
+                ),
+                call(
+                    datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
+                    datetime(2026, 10, 20, 14, tzinfo=datetime_timezone.utc),
+                ),
+            ],
+        )
+        self.assertEqual(
+            cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T14:00:00+00:00"
+        )
+
+    @freeze_time("2026-10-20T14:30:00Z")
+    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    def test_cold_start_processes_latest_completed_hour(self, write_metrics):
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        write_user_registration_metrics()
+        write_metrics.assert_called_once_with(
+            datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
+            datetime(2026, 10, 20, 14, tzinfo=datetime_timezone.utc),
+        )
+
+    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    def test_recovers_watermark_from_completion_metric(self, get_completion_metric):
+        from ..tasks import _get_watermark
+
+        cache.clear()
+        watermark = datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc)
+        get_completion_metric.return_value.read.return_value = [
+            {"time": int(watermark.timestamp())}
+        ]
+        self.assertEqual(
+            _get_watermark(datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)),
+            watermark,
+        )
+
+    @patch("openwisp_radius.integrations.monitoring.tasks.timeseries_db.read")
+    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    def test_bootstraps_after_legacy_metrics(self, get_completion_metric, read):
+        from ..tasks import _get_watermark
+
+        cache.clear()
+        get_completion_metric.return_value.read.return_value = []
+        latest = datetime(2026, 10, 20, 14, 23, tzinfo=datetime_timezone.utc)
+        read.side_effect = [
+            [{"time": int(latest.timestamp())}],
+            [],
+        ]
+        self.assertEqual(
+            _get_watermark(datetime(2026, 10, 20, 16, tzinfo=datetime_timezone.utc)),
+            datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc),
+        )
+
+    @freeze_time("2026-10-20T14:30:00Z")
+    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    def test_skips_execution_when_another_worker_holds_lock(self, write_metrics):
+        from ..tasks import REGISTRATION_METRICS_LOCK, write_user_registration_metrics
+
+        cache.clear()
+        cache.set(REGISTRATION_METRICS_LOCK, "locked", 900)
+        write_user_registration_metrics()
+        write_metrics.assert_not_called()
+
+    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    def test_skips_execution_when_redis_lock_is_held(self, write_metrics, cache_lock):
+        from ..tasks import write_user_registration_metrics
+
+        cache.clear()
+        cache_lock.return_value.acquire.return_value = False
+        write_user_registration_metrics()
+        cache_lock.assert_called_once()
+        write_metrics.assert_not_called()
+
+    @freeze_time("2026-10-20T14:30:00Z")
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks._write_registration_metrics",
+        side_effect=RuntimeError,
+    )
+    def test_does_not_advance_watermark_after_write_failure(self, write_metrics):
+        from ..tasks import (
+            REGISTRATION_METRICS_WATERMARK,
+            write_user_registration_metrics,
+        )
+
+        cache.clear()
+        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None)
+        with self.assertRaises(RuntimeError):
+            write_user_registration_metrics()
+        self.assertEqual(
+            cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T13:00:00+00:00"
+        )
+        write_metrics.assert_called_once()
+
+    @patch("openwisp_radius.integrations.monitoring.tasks.Metric.batch_write")
+    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch(
+        (
+            "openwisp_radius.integrations.monitoring.tasks."
+            "_write_user_signup_metrics_for_orgs"
+        ),
+        return_value=[],
+    )
+    @patch(
+        (
+            "openwisp_radius.integrations.monitoring.tasks."
+            "_write_user_signup_metric_for_all"
+        ),
+        return_value=[],
+    )
+    def test_acknowledges_metrics_before_completion(
+        self,
+        all_metrics,
+        organization_metrics,
+        get_completion_metric,
+        batch_write,
+    ):
+        from ..tasks import _write_registration_metrics
+
+        start_time = datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc)
+        end_time = start_time + timedelta(hours=1)
+        all_metrics.return_value = [("metric", {"value": 1, "time": start_time})]
+        _write_registration_metrics(start_time, end_time)
+        self.assertEqual(
+            batch_write.call_args_list,
+            [
+                call(
+                    [
+                        ("metric", {"value": 1, "time": start_time}),
+                        ("metric", {"value": 1, "time": start_time}),
+                    ],
+                    acknowledged=True,
+                ),
+                call(
+                    [
+                        (
+                            get_completion_metric.return_value,
+                            {"value": 1, "time": end_time},
+                        )
+                    ],
+                    acknowledged=True,
+                ),
+            ],
+        )
