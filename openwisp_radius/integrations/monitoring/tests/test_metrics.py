@@ -1266,6 +1266,25 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         write_metrics.assert_not_called()
 
     @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
+    def test_validates_registration_metric_time_bounds(self, write_metrics):
+        for start_time, end_time, message in (
+            (
+                "2026-10-20T12:00:00",
+                "2026-10-20T13:00:00+00:00",
+                "start_time and end_time must be timezone-aware",
+            ),
+            (
+                "2026-10-20T13:00:00+00:00",
+                "2026-10-20T12:00:00+00:00",
+                "start_time must be earlier than end_time",
+            ),
+        ):
+            with self.subTest(start_time=start_time, end_time=end_time):
+                with self.assertRaisesRegex(ValueError, message):
+                    write_user_registration_metrics(start_time, end_time)
+        write_metrics.assert_not_called()
+
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_parses_registration_metric_time_bounds(self, write_metrics):
         write_user_registration_metrics(
             "2026-10-20T12:00:00+00:00", "2026-10-20T13:00:00+00:00"
