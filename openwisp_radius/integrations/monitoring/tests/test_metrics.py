@@ -13,7 +13,9 @@ from swapper import load_model
 from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
+from .. import utils
 from ..migrations import create_general_metrics
+from ..tasks import write_user_registration_metrics
 from ..utils import sha1_hash
 from .mixins import CreateDeviceMonitoringMixin
 
@@ -709,8 +711,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     def test_write_user_registration_metrics(self):
-        from ..tasks import write_user_registration_metrics
-
         # The TransactionTestCase truncates all the data after each test.
         # The general metrics and charts which are created by migrations
         # get deleted after each test. Therefore, we create them again here.
@@ -905,8 +905,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
 
     def test_pending_verification_excluded_from_metrics(self):
-        from ..tasks import write_user_registration_metrics
-
         cache.clear()
         create_general_metrics(None, None)
         org = self._create_org(name="pending_verification_test_org")
@@ -950,7 +948,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         - Global metrics aggregate both methods.
         - Each organization only counts its own method.
         """
-        from ..tasks import write_user_registration_metrics
 
         def _get_metric_traces(metric_key, organization_id):
             chart = self.metric_model.objects.get(key=metric_key).chart_set.first()
@@ -1023,8 +1020,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         - ``tot_user_signups`` still counts org1 with its registration method.
         - org2 must not inherit org1's registration method.
         """
-        from ..tasks import write_user_registration_metrics
-
         cache.clear()
         create_general_metrics(None, None)
         org1 = self._get_org()
@@ -1060,7 +1055,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(org2_total_signups.get("unspecified", 0), 1)
 
     @freeze_time("2026-10-20T12:00:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
     def test_delayed_user_registration_metrics(self, cache_lock):
         """
         Ensure delayed tasks backfill registrations from their scheduled interval.
@@ -1068,11 +1063,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         end of its scheduled interval. The registration must still be written
         to the organization's user signup metric.
         """
-        from ..tasks import (
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
         create_general_metrics(None, None)
         organization = self._get_org()
@@ -1080,7 +1070,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self._create_org_user(user=user, organization=organization)
         self._create_registered_user(user=user, organization=organization)
         scheduled_at = timezone.now()
-        cache.set(REGISTRATION_METRICS_WATERMARK, scheduled_at.isoformat(), None)
+        cache.set(utils.REGISTRATION_METRICS_WATERMARK, scheduled_at.isoformat(), None)
         cache_lock.return_value.acquire.return_value = True
 
         with freeze_time(scheduled_at + timedelta(hours=2)):
@@ -1094,16 +1084,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_backfills_missing_completed_hours(self, write_metrics, cache_lock):
-        from ..tasks import (
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
-        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T11:00:00+00:00", None)
+        cache.set(
+            utils.REGISTRATION_METRICS_WATERMARK, "2026-10-20T11:00:00+00:00", None
+        )
         cache_lock.return_value.acquire.return_value = True
         write_user_registration_metrics()
         self.assertEqual(
@@ -1124,7 +1111,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ],
         )
         self.assertEqual(
-            cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T14:00:00+00:00"
+            cache.get(utils.REGISTRATION_METRICS_WATERMARK), "2026-10-20T14:00:00+00:00"
         )
         cache_lock.return_value.extend.assert_has_calls(
             [call(900, replace_ttl=True)] * 3
@@ -1132,13 +1119,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         cache_lock.return_value.release.assert_called_once_with()
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_cold_start_processes_latest_completed_hour(
         self, write_metrics, cache_lock
     ):
-        from ..tasks import write_user_registration_metrics
-
         cache.clear()
         cache_lock.return_value.acquire.return_value = True
         write_user_registration_metrics()
@@ -1147,25 +1132,23 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             datetime(2026, 10, 20, 14, tzinfo=datetime_timezone.utc),
         )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     def test_recovers_watermark_from_completion_metric(self, get_completion_metric):
-        from ..tasks import _get_watermark
-
         cache.clear()
         watermark = datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc)
         get_completion_metric.return_value.read.return_value = [
             {"time": int(watermark.timestamp())}
         ]
         self.assertEqual(
-            _get_watermark(datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)),
+            utils._get_watermark(
+                datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)
+            ),
             watermark,
         )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks.timeseries_db.read")
-    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch("openwisp_radius.integrations.monitoring.utils.timeseries_db.read")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     def test_bootstraps_after_legacy_metrics(self, get_completion_metric, read):
-        from ..tasks import _get_watermark
-
         cache.clear()
         get_completion_metric.return_value.read.return_value = []
         latest = datetime(2026, 10, 20, 14, 23, tzinfo=datetime_timezone.utc)
@@ -1174,16 +1157,16 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             [],
         ]
         self.assertEqual(
-            _get_watermark(datetime(2026, 10, 20, 16, tzinfo=datetime_timezone.utc)),
+            utils._get_watermark(
+                datetime(2026, 10, 20, 16, tzinfo=datetime_timezone.utc)
+            ),
             datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc),
         )
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.logger.error")
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils.logger.error")
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_requires_cache_backend_with_locks(self, write_metrics, error):
-        from ..tasks import write_user_registration_metrics
-
         cache.clear()
         write_user_registration_metrics()
         write_metrics.assert_not_called()
@@ -1191,11 +1174,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             "Registration metrics require a cache backend with locks"
         )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_skips_execution_when_redis_lock_is_held(self, write_metrics, cache_lock):
-        from ..tasks import write_user_registration_metrics
-
         cache.clear()
         cache_lock.return_value.acquire.return_value = False
         write_user_registration_metrics()
@@ -1203,41 +1184,38 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         write_metrics.assert_not_called()
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
     @patch(
-        "openwisp_radius.integrations.monitoring.tasks._write_registration_metrics",
+        "openwisp_radius.integrations.monitoring.utils._write_registration_metrics",
         side_effect=RuntimeError,
     )
     def test_does_not_advance_watermark_after_write_failure(
         self, write_metrics, cache_lock
     ):
-        from ..tasks import (
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
-        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None)
+        cache.set(
+            utils.REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None
+        )
         cache_lock.return_value.acquire.return_value = True
         with self.assertRaises(RuntimeError):
             write_user_registration_metrics()
         self.assertEqual(
-            cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T13:00:00+00:00"
+            cache.get(utils.REGISTRATION_METRICS_WATERMARK), "2026-10-20T13:00:00+00:00"
         )
         write_metrics.assert_called_once()
 
-    @patch("openwisp_radius.integrations.monitoring.tasks.Metric.batch_write")
-    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_metric_model")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     @patch(
         (
-            "openwisp_radius.integrations.monitoring.tasks."
+            "openwisp_radius.integrations.monitoring.utils."
             "_write_user_signup_metrics_for_orgs"
         ),
         return_value=[],
     )
     @patch(
         (
-            "openwisp_radius.integrations.monitoring.tasks."
+            "openwisp_radius.integrations.monitoring.utils."
             "_write_user_signup_metric_for_all"
         ),
         return_value=[],
@@ -1247,14 +1225,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         all_metrics,
         organization_metrics,
         get_completion_metric,
-        batch_write,
+        get_metric_model,
     ):
-        from ..tasks import _write_registration_metrics
-
         start_time = datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc)
         end_time = start_time + timedelta(hours=1)
         all_metrics.return_value = [("metric", {"value": 1, "time": start_time})]
-        _write_registration_metrics(start_time, end_time)
+        get_metric_model.return_value = self.metric_model
+        with patch.object(self.metric_model, "batch_write") as batch_write:
+            utils._write_registration_metrics(start_time, end_time)
         self.assertEqual(
             batch_write.call_args_list,
             [
@@ -1277,10 +1255,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             ],
         )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_requires_both_registration_metric_time_bounds(self, write_metrics):
-        from ..tasks import write_user_registration_metrics
-
         for kwargs in ({"start_time": timezone.now()}, {"end_time": timezone.now()}):
             with self.subTest(kwargs=kwargs):
                 with self.assertRaisesRegex(
@@ -1289,10 +1265,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                     write_user_registration_metrics(**kwargs)
         write_metrics.assert_not_called()
 
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_parses_registration_metric_time_bounds(self, write_metrics):
-        from ..tasks import write_user_registration_metrics
-
         write_user_registration_metrics(
             "2026-10-20T12:00:00+00:00", "2026-10-20T13:00:00+00:00"
         )
@@ -1303,30 +1277,26 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     @patch(
-        "openwisp_radius.integrations.monitoring.tasks._get_legacy_watermark",
+        "openwisp_radius.integrations.monitoring.utils._get_legacy_watermark",
         return_value=None,
     )
-    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     def test_ignores_future_completion_watermark(
         self, get_completion_metric, get_legacy_watermark
     ):
-        from ..tasks import _get_watermark
-
         cache.clear()
         latest_completed_hour = datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)
         get_completion_metric.return_value.read.return_value = [
             {"time": int((latest_completed_hour + timedelta(hours=1)).timestamp())}
         ]
         self.assertEqual(
-            _get_watermark(latest_completed_hour),
+            utils._get_watermark(latest_completed_hour),
             latest_completed_hour - timedelta(hours=1),
         )
 
-    @patch("openwisp_radius.integrations.monitoring.tasks.logger.warning")
-    @patch("openwisp_radius.integrations.monitoring.tasks._get_completion_metric")
+    @patch("openwisp_radius.integrations.monitoring.utils.logger.warning")
+    @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     def test_ignores_invalid_cached_watermarks(self, get_completion_metric, warning):
-        from ..tasks import REGISTRATION_METRICS_WATERMARK, _get_watermark
-
         latest_completed_hour = datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)
         watermark = latest_completed_hour - timedelta(hours=1)
         get_completion_metric.return_value.read.return_value = [
@@ -1338,69 +1308,59 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             "2026-10-20T16:00:00+00:00",
         ):
             with self.subTest(value=value):
-                cache.set(REGISTRATION_METRICS_WATERMARK, value, None)
-                self.assertEqual(_get_watermark(latest_completed_hour), watermark)
+                cache.set(utils.REGISTRATION_METRICS_WATERMARK, value, None)
+                self.assertEqual(utils._get_watermark(latest_completed_hour), watermark)
         self.assertEqual(warning.call_count, 3)
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
     @patch(
         (
             "openwisp_radius.integrations.monitoring.tasks."
             "write_user_registration_metrics.delay"
         )
     )
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_schedules_registration_metric_backfill_continuation(
         self, write_metrics, delay, cache_lock
     ):
-        from ..tasks import (
-            REGISTRATION_METRICS_MAX_HOURS,
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
-        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-19T00:00:00+00:00", None)
+        cache.set(
+            utils.REGISTRATION_METRICS_WATERMARK, "2026-10-19T00:00:00+00:00", None
+        )
         cache_lock.return_value.acquire.return_value = True
         write_user_registration_metrics()
-        self.assertEqual(write_metrics.call_count, REGISTRATION_METRICS_MAX_HOURS)
+        self.assertEqual(write_metrics.call_count, utils.REGISTRATION_METRICS_MAX_HOURS)
         delay.assert_called_once_with()
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
-    @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_renews_and_releases_registration_metric_lock(
         self, write_metrics, cache_lock
     ):
-        from ..tasks import (
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
-        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None)
+        cache.set(
+            utils.REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None
+        )
         cache_lock.return_value.acquire.return_value = True
         write_user_registration_metrics()
         cache_lock.return_value.extend.assert_called_once_with(900, replace_ttl=True)
         cache_lock.return_value.release.assert_called_once_with()
 
     @freeze_time("2026-10-20T14:30:00Z")
-    @patch("openwisp_radius.integrations.monitoring.tasks.cache.lock", create=True)
+    @patch("openwisp_radius.integrations.monitoring.utils.cache.lock", create=True)
     @patch(
-        "openwisp_radius.integrations.monitoring.tasks._write_registration_metrics",
+        "openwisp_radius.integrations.monitoring.utils._write_registration_metrics",
         side_effect=RuntimeError,
     )
     def test_releases_registration_metric_lock_after_failure(
         self, write_metrics, cache_lock
     ):
-        from ..tasks import (
-            REGISTRATION_METRICS_WATERMARK,
-            write_user_registration_metrics,
-        )
-
         cache.clear()
-        cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None)
+        cache.set(
+            utils.REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None
+        )
         cache_lock.return_value.acquire.return_value = True
         with self.assertRaises(RuntimeError):
             write_user_registration_metrics()

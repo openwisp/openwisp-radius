@@ -73,8 +73,8 @@ Django project's settings as following:
         }
     )
 
-The task processes completed UTC hours and backfills missed intervals. It
-requires a cache shared by all workers to coordinate task execution and
+The task processes completed UTC hours and fills in missed time periods.
+It requires a cache shared by all workers to coordinate task execution and
 persist its progress. The cache backend must support distributed locks.
 
 .. note::
