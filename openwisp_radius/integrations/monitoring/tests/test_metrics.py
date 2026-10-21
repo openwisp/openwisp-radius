@@ -1092,9 +1092,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     @freeze_time("2026-10-20T14:30:00Z")
+    @patch("openwisp_radius.integrations.monitoring.tasks.cache.touch")
     @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
-    def test_backfills_missing_completed_hours(self, write_metrics):
+    def test_backfills_missing_completed_hours(self, write_metrics, touch):
         from ..tasks import (
+            REGISTRATION_METRICS_LOCK,
             REGISTRATION_METRICS_WATERMARK,
             write_user_registration_metrics,
         )
@@ -1122,6 +1124,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(
             cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T14:00:00+00:00"
         )
+        self.assertEqual(touch.call_count, 3)
+        touch.assert_called_with(REGISTRATION_METRICS_LOCK, 900)
 
     @freeze_time("2026-10-20T14:30:00Z")
     @patch("openwisp_radius.integrations.monitoring.tasks._write_registration_metrics")
@@ -1383,4 +1387,5 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         cache_lock.return_value.acquire.return_value = True
         with self.assertRaises(RuntimeError):
             write_user_registration_metrics()
+        cache_lock.return_value.extend.assert_called_once_with(900)
         cache_lock.return_value.release.assert_called_once_with()

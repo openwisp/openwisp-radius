@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from datetime import timezone as datetime_timezone
+from uuid import uuid4
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 REGISTRATION_METRICS_WATERMARK = "openwisp-radius:registration-metrics:v1:watermark"
 REGISTRATION_METRICS_LOCK = "openwisp-radius:registration-metrics:v1:lock"
+REGISTRATION_METRICS_LOCK_TIMEOUT = 900
 REGISTRATION_METRICS_MAX_HOURS = 24
 
 
@@ -279,14 +281,25 @@ def write_user_registration_metrics(start_time=None, end_time=None):
         _write_registration_metrics(start_time, end_time, write_completion=False)
         return
     lock = getattr(cache, "lock", None)
+    lock_value = None
     if lock:
-        lock = lock(REGISTRATION_METRICS_LOCK, timeout=900, blocking_timeout=0)
+        lock = lock(
+            REGISTRATION_METRICS_LOCK,
+            timeout=REGISTRATION_METRICS_LOCK_TIMEOUT,
+            blocking_timeout=0,
+        )
         if not lock.acquire(blocking=False):
             logger.info("Registration metrics task skipped because its lock is held")
             return
-    elif not cache.add(REGISTRATION_METRICS_LOCK, "locked", timeout=900):
-        logger.info("Registration metrics task skipped because its lock is held")
-        return
+    else:
+        lock_value = uuid4().hex
+        if not cache.add(
+            REGISTRATION_METRICS_LOCK,
+            lock_value,
+            timeout=REGISTRATION_METRICS_LOCK_TIMEOUT,
+        ):
+            logger.info("Registration metrics task skipped because its lock is held")
+            return
     schedule_continuation = False
     try:
         latest_completed_hour = _get_completed_hour(timezone.now())
@@ -295,18 +308,23 @@ def write_user_registration_metrics(start_time=None, end_time=None):
             if watermark >= latest_completed_hour:
                 break
             end_time = watermark + timedelta(hours=1)
+            if lock:
+                lock.extend(REGISTRATION_METRICS_LOCK_TIMEOUT)
+            elif cache.get(REGISTRATION_METRICS_LOCK) != lock_value or not cache.touch(
+                REGISTRATION_METRICS_LOCK, REGISTRATION_METRICS_LOCK_TIMEOUT
+            ):
+                logger.warning("Registration metrics task lost its lock")
+                return
             _write_registration_metrics(watermark, end_time)
             cache.set(
                 REGISTRATION_METRICS_WATERMARK, end_time.isoformat(), timeout=None
             )
             watermark = end_time
-            if lock:
-                lock.extend(900)
         schedule_continuation = watermark < latest_completed_hour
     finally:
         if lock:
             lock.release()
-        else:
+        elif cache.get(REGISTRATION_METRICS_LOCK) == lock_value:
             cache.delete(REGISTRATION_METRICS_LOCK)
     if schedule_continuation:
         logger.info(
