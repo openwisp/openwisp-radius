@@ -1126,7 +1126,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(
             cache.get(REGISTRATION_METRICS_WATERMARK), "2026-10-20T14:00:00+00:00"
         )
-        self.assertEqual(cache_lock.return_value.extend.call_count, 3)
+        cache_lock.return_value.extend.assert_has_calls(
+            [call(900, replace_ttl=True)] * 3
+        )
         cache_lock.return_value.release.assert_called_once_with()
 
     @freeze_time("2026-10-20T14:30:00Z")
@@ -1380,7 +1382,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         cache.set(REGISTRATION_METRICS_WATERMARK, "2026-10-20T13:00:00+00:00", None)
         cache_lock.return_value.acquire.return_value = True
         write_user_registration_metrics()
-        cache_lock.return_value.extend.assert_called_once_with(900)
+        cache_lock.return_value.extend.assert_called_once_with(900, replace_ttl=True)
         cache_lock.return_value.release.assert_called_once_with()
 
     @freeze_time("2026-10-20T14:30:00Z")
@@ -1402,5 +1404,5 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         cache_lock.return_value.acquire.return_value = True
         with self.assertRaises(RuntimeError):
             write_user_registration_metrics()
-        cache_lock.return_value.extend.assert_called_once_with(900)
+        cache_lock.return_value.extend.assert_called_once_with(900, replace_ttl=True)
         cache_lock.return_value.release.assert_called_once_with()

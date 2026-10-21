@@ -299,7 +299,7 @@ def write_user_registration_metrics(start_time=None, end_time=None):
             if watermark >= latest_completed_hour:
                 break
             end_time = watermark + timedelta(hours=1)
-            lock.extend(REGISTRATION_METRICS_LOCK_TIMEOUT)
+            lock.extend(REGISTRATION_METRICS_LOCK_TIMEOUT, replace_ttl=True)
             _write_registration_metrics(watermark, end_time)
             cache.set(
                 REGISTRATION_METRICS_WATERMARK, end_time.isoformat(), timeout=None
