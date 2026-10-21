@@ -1280,6 +1280,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         write_metrics.assert_called_once_with(
             datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc),
             datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
+            write_completion=False,
         )
 
     @patch(

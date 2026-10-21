@@ -243,7 +243,7 @@ def _get_watermark(latest_completed_hour):
     return _get_legacy_watermark() or (latest_completed_hour - timedelta(hours=1))
 
 
-def _write_registration_metrics(start_time, end_time):
+def _write_registration_metrics(start_time, end_time, write_completion=True):
     metric_data = []
     for metric_key in ("user_signups", "tot_user_signups"):
         metric_data.extend(
@@ -254,10 +254,11 @@ def _write_registration_metrics(start_time, end_time):
         )
     if metric_data:
         Metric.batch_write(metric_data, acknowledged=True)
-    Metric.batch_write(
-        [(_get_completion_metric(), {"value": 1, "time": end_time})],
-        acknowledged=True,
-    )
+    if write_completion:
+        Metric.batch_write(
+            [(_get_completion_metric(), {"value": 1, "time": end_time})],
+            acknowledged=True,
+        )
 
 
 @shared_task
@@ -275,7 +276,7 @@ def write_user_registration_metrics(start_time=None, end_time=None):
             start_time = datetime.fromisoformat(start_time)
         if isinstance(end_time, str):
             end_time = datetime.fromisoformat(end_time)
-        _write_registration_metrics(start_time, end_time)
+        _write_registration_metrics(start_time, end_time, write_completion=False)
         return
     lock = getattr(cache, "lock", None)
     if lock:
