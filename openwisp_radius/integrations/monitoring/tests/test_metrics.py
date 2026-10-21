@@ -1278,6 +1278,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 "2026-10-20T12:00:00+00:00",
                 "start_time must be earlier than end_time",
             ),
+            (
+                "2026-10-20T12:00:00+00:00",
+                "2026-10-20T12:00:00+00:00",
+                "start_time must be earlier than end_time",
+            ),
         ):
             with self.subTest(start_time=start_time, end_time=end_time):
                 with self.assertRaisesRegex(ValueError, message):
