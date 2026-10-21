@@ -1,3 +1,4 @@
+import importlib
 from datetime import timedelta
 from unittest import mock
 
@@ -403,3 +404,6 @@ class TestTasks(FileMixin, BaseTestCase):
         tasks.delete_inactive_users.delay()
         self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
         self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
+
+    def test_imports_monitoring_tasks_without_monitoring_integration(self):
+        importlib.import_module("openwisp_radius.integrations.monitoring.tasks")

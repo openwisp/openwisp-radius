@@ -11,10 +11,7 @@ from . import settings as app_settings
 from . import utils
 from .utils import clean_registration_method, sha1_hash
 
-Metric = load_model("monitoring", "Metric")
-Chart = load_model("monitoring", "Chart")
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
-Device = load_model("config", "Device")
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +77,14 @@ def post_save_radiusaccounting(
     # Do not use organization_id for device lookup if shared accounting is enabled
     if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
+    device_model = load_model("config", "Device")
     try:
         device = (
-            Device.objects.select_related("devicelocation")
+            device_model.objects.select_related("devicelocation")
             .only("id", "organization_id", "devicelocation__location_id")
             .get(device_lookup)
         )
-    except Device.DoesNotExist:
+    except device_model.DoesNotExist:
         logger.warning(
             f'Device object not found with MAC "{called_station_id}"'
             f' and organization "{organization_id}".'
@@ -98,11 +96,13 @@ def post_save_radiusaccounting(
             extra_tags.pop("organization_id")
     else:
         object_id = str(device.id)
-        content_type = ContentType.objects.get_for_model(Device)
+        content_type = ContentType.objects.get_for_model(device_model)
         if hasattr(device, "devicelocation"):
             extra_tags["location_id"] = str(device.devicelocation.location_id)
 
-    metric, created = Metric._get_or_create(
+    # Monitoring is optional, so resolve its models only when this task runs.
+    metric_model = utils._get_metric_model()
+    metric, created = metric_model._get_or_create(
         configuration="radius_acc",
         name="RADIUS Accounting",
         key="radius_acc",
@@ -123,7 +123,8 @@ def post_save_radiusaccounting(
         # A chart cannot be created without object_id and content_type.
         return
     if created:
+        chart_model = load_model("monitoring", "Chart")
         for configuration in metric.config_dict["charts"].keys():
-            chart = Chart(metric=metric, configuration=configuration)
+            chart = chart_model(metric=metric, configuration=configuration)
             chart.full_clean()
             chart.save()
