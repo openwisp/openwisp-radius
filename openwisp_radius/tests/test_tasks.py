@@ -1,4 +1,5 @@
 import importlib
+import sys
 from datetime import timedelta
 from unittest import mock
 
@@ -406,4 +407,29 @@ class TestTasks(FileMixin, BaseTestCase):
         self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
 
     def test_imports_monitoring_tasks_without_monitoring_integration(self):
-        importlib.import_module("openwisp_radius.integrations.monitoring.tasks")
+        prefix = "openwisp_radius.integrations.monitoring"
+        module_names = (f"{prefix}.tasks", f"{prefix}.utils")
+        package = importlib.import_module(prefix)
+        sentinel = object()
+        cached_modules = {
+            name: sys.modules.pop(name, sentinel) for name in module_names
+        }
+        cached_attributes = {
+            name.rsplit(".", 1)[1]: getattr(package, name.rsplit(".", 1)[1], sentinel)
+            for name in module_names
+        }
+        for name in cached_attributes:
+            package.__dict__.pop(name, None)
+        try:
+            importlib.import_module(f"{prefix}.tasks")
+        finally:
+            for name in module_names:
+                sys.modules.pop(name, None)
+            for name, module in cached_modules.items():
+                if module is not sentinel:
+                    sys.modules[name] = module
+            for name, module in cached_attributes.items():
+                if module is sentinel:
+                    package.__dict__.pop(name, None)
+                else:
+                    setattr(package, name, module)

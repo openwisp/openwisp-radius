@@ -5,6 +5,7 @@ from celery import shared_task
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from swapper import load_model
 
 from . import settings as app_settings
@@ -28,9 +29,11 @@ def write_user_registration_metrics(start_time=None, end_time=None):
         if start_time is None or end_time is None:
             raise ValueError("start_time and end_time must be provided together")
         if isinstance(start_time, str):
-            start_time = datetime.fromisoformat(start_time)
+            start_time = parse_datetime(start_time)
         if isinstance(end_time, str):
-            end_time = datetime.fromisoformat(end_time)
+            end_time = parse_datetime(end_time)
+        if not isinstance(start_time, datetime) or not isinstance(end_time, datetime):
+            raise ValueError("start_time and end_time must be valid ISO datetimes")
         if not timezone.is_aware(start_time) or not timezone.is_aware(end_time):
             raise ValueError("start_time and end_time must be timezone-aware")
         if start_time >= end_time:

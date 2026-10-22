@@ -1164,6 +1164,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     @freeze_time("2026-10-20T14:30:00Z")
+    @patch(
+        "openwisp_radius.integrations.monitoring.utils.cache.lock", None, create=True
+    )
     @patch("openwisp_radius.integrations.monitoring.utils.logger.error")
     @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_requires_cache_backend_with_locks(self, write_metrics, error):
@@ -1269,6 +1272,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_validates_registration_metric_time_bounds(self, write_metrics):
         for start_time, end_time, message in (
             (
+                "invalid",
+                "2026-10-20T13:00:00+00:00",
+                "start_time and end_time must be valid ISO datetimes",
+            ),
+            (
                 "2026-10-20T12:00:00",
                 "2026-10-20T13:00:00+00:00",
                 "start_time and end_time must be timezone-aware",
@@ -1291,14 +1299,18 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
     @patch("openwisp_radius.integrations.monitoring.utils._write_registration_metrics")
     def test_parses_registration_metric_time_bounds(self, write_metrics):
-        write_user_registration_metrics(
-            "2026-10-20T12:00:00+00:00", "2026-10-20T13:00:00+00:00"
-        )
-        write_metrics.assert_called_once_with(
-            datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc),
-            datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
-            write_completion=False,
-        )
+        for start_time, end_time in (
+            ("2026-10-20T12:00:00+00:00", "2026-10-20T13:00:00+00:00"),
+            ("2026-10-20T12:00:00Z", "2026-10-20T13:00:00Z"),
+        ):
+            with self.subTest(start_time=start_time, end_time=end_time):
+                write_user_registration_metrics(start_time, end_time)
+                write_metrics.assert_called_once_with(
+                    datetime(2026, 10, 20, 12, tzinfo=datetime_timezone.utc),
+                    datetime(2026, 10, 20, 13, tzinfo=datetime_timezone.utc),
+                    write_completion=False,
+                )
+                write_metrics.reset_mock()
 
     @patch(
         "openwisp_radius.integrations.monitoring.utils._get_legacy_watermark",
@@ -1321,6 +1333,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     @patch("openwisp_radius.integrations.monitoring.utils.logger.warning")
     @patch("openwisp_radius.integrations.monitoring.utils._get_completion_metric")
     def test_ignores_invalid_cached_watermarks(self, get_completion_metric, warning):
+        cache.clear()
+        self.addCleanup(cache.clear)
         latest_completed_hour = datetime(2026, 10, 20, 15, tzinfo=datetime_timezone.utc)
         watermark = latest_completed_hour - timedelta(hours=1)
         get_completion_metric.return_value.read.return_value = [
