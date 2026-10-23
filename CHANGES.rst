@@ -6,6 +6,23 @@ Version 1.4.0 [unreleased]
 
 Work in progress.
 
+Version 1.3.3 [2026-10-23]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Ignored ``X-Forwarded-For`` in allowed hosts check `#807
+  <https://github.com/openwisp/openwisp-radius/issues/807>`_
+
+  **This is a security change/fix**:
+
+  Exclusively read ``REMOTE_ADDR``, ignoring spoofable forwarded headers
+  like ``X-Forwarded-For`` in the FreeRADIUS API allowed hosts check.
+
+  Advisory: `GHSA-hvmx-g7m2-vqx8
+  <https://github.com/openwisp/openwisp-radius/security/advisories/GHSA-hvmx-g7m2-vqx8>`_.
+
 Version 1.3.2 [2026-10-12]
 --------------------------
 
