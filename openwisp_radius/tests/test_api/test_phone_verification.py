@@ -570,6 +570,30 @@ class TestPhoneVerification(ApiTokenMixin, BaseTestCase):
         self.assertEqual(reg_user.method, "mobile_phone")
         self.assertIsNone(cache.get(cache_key))
 
+    def test_validate_phone_token_locks_attempt_counter(self):
+        self.test_create_phone_token_201()
+        user = User.objects.get(email=self._test_email)
+        user_token = Token.objects.get(user=user)
+        phone_token = PhoneToken.objects.filter(user=user).last()
+        url = reverse("radius:phone_token_validate", args=[self.default_org.slug])
+        with mock.patch(
+            "openwisp_radius.api.views.transaction.atomic",
+            wraps=transaction.atomic,
+        ) as atomic_mock:
+            with mock.patch.object(
+                PhoneToken.objects,
+                "select_for_update",
+                wraps=PhoneToken.objects.select_for_update,
+            ) as select_for_update_mock:
+                response = self.client.post(
+                    url,
+                    {"code": phone_token.token},
+                    HTTP_AUTHORIZATION=f"Bearer {user_token.key}",
+                )
+        self.assertEqual(response.status_code, 200)
+        atomic_mock.assert_called_once_with()
+        select_for_update_mock.assert_called_once_with()
+
     @capture_any_output()
     @mock.patch("openwisp_radius.utils.SmsMessage.send")
     def test_validate_phone_token_200_clears_old_and_new_radius_token_cache_keys(
