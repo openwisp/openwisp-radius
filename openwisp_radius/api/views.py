@@ -914,21 +914,23 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_token = (
-            PhoneToken.objects.filter(user=user, organization=self.organization)
-            .order_by("-created")
-            .first()
-        )
-        if not phone_token:
-            return self._error_response(
-                _("No verification code found in the system for this user.")
+        with transaction.atomic():
+            phone_token = (
+                PhoneToken.objects.select_for_update()
+                .filter(user=user, organization=self.organization)
+                .order_by("-created")
+                .first()
             )
-        try:
-            is_valid = phone_token.is_valid(
-                serializer.data["code"], organization=self.organization
-            )
-        except PhoneTokenException as e:
-            return self._error_response(str(e))
+            if not phone_token:
+                return self._error_response(
+                    _("No verification code found in the system for this user.")
+                )
+            try:
+                is_valid = phone_token.is_valid(
+                    serializer.data["code"], organization=self.organization
+                )
+            except PhoneTokenException as e:
+                return self._error_response(str(e))
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
