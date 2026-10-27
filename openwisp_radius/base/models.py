@@ -417,7 +417,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
     interval = models.IntegerField(
         verbose_name=_("interval"), db_column="acctinterval", null=True, blank=True
     )
-    session_time = models.PositiveIntegerField(
+    session_time = models.PositiveBigIntegerField(
         verbose_name=_("session time"),
         db_column="acctsessiontime",
         null=True,

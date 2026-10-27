@@ -617,6 +617,40 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
 
     @freeze_time(START_DATE)
     @capture_any_output()
+    def test_accounting_session_time_range(self):
+        data = self.acct_post_data
+        data["status_type"] = "Stop"
+        data["session_time"] = 4294967009
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        ra = RadiusAccounting.objects.first()
+        self.assertEqual(ra.session_time, 4294967009)
+
+    @freeze_time(START_DATE)
+    @capture_any_output()
+    def test_accounting_session_time_invalid_range(self):
+        with self.subTest("negative session_time"):
+            data = self.acct_post_data
+            data["status_type"] = "Stop"
+            data["session_time"] = -1
+            data = self._get_accounting_params(**data)
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("session_time", response.data)
+
+        with self.subTest("session_time exceeds 32-bit unsigned int"):
+            data = self.acct_post_data
+            data["status_type"] = "Stop"
+            data["session_time"] = 4294967296
+            data = self._get_accounting_params(**data)
+            response = self.post_json(data)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("session_time", response.data)
+
+    @freeze_time(START_DATE)
+    @capture_any_output()
     @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     @mock.patch(
         "openwisp_radius.api.serializers.RadiusAccountingSerializer.save",

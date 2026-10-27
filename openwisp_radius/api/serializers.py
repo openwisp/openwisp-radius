@@ -171,7 +171,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     framed_ipv6_address = serializers.IPAddressField(
         required=False, allow_blank=True, protocol="IPv6"
     )
-    session_time = serializers.IntegerField(required=False)
+    session_time = serializers.IntegerField(
+        required=False, min_value=0, max_value=4294967295
+    )
     stop_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
     input_octets = serializers.IntegerField(required=False)
