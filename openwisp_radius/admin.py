@@ -247,8 +247,10 @@ class RadiusGroupAdmin(OrganizationFirstMixin, TimeStampedEditableAdmin):
             )
         return None
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
+    def get_actions(self, request, action_location=None):
+        # for Django <= 6.0, which does not accept action_location
+        kwargs = {"action_location": action_location} if action_location else {}
+        actions = super().get_actions(request, **kwargs)
         if "delete_selected" in actions:
             del actions["delete_selected"]
         return actions
@@ -511,8 +513,10 @@ class RadiusBatchAdmin(MultitenantAdminMixin, TimeStampedEditableAdmin):
         extra_context["help_text"] = self.help_text
         return super().add_view(request, form_url, extra_context)
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
+    def get_actions(self, request, action_location=None):
+        # for Django <= 6.0, which does not accept action_location
+        kwargs = {"action_location": action_location} if action_location else {}
+        actions = super().get_actions(request, **kwargs)
         if "delete_selected" in actions:
             del actions["delete_selected"]
         return actions
