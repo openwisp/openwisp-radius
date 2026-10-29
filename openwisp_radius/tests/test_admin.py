@@ -733,7 +733,9 @@ class TestAdmin(
             self.assertEqual(response.status_code, 200)
             radsetting.refresh_from_db()
             self.assertContains(response, "The URL must contain the ")
-            self.assertContains(response, "errors field-password_reset_url")
+            self.assertContains(
+                response, 'id="id_radius_settings-0-password_reset_url_error"'
+            )
 
         with self.subTest("Ensure admin HTML shows the default value"):
             response = self.client.get(url)
@@ -850,7 +852,7 @@ class TestAdmin(
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "errors field-number_of_users")
+        self.assertContains(response, 'id="id_number_of_users_error"')
 
     def _login(self, username="admin", password="tester"):
         self.client.force_login(User.objects.get(username=username))
@@ -1539,7 +1541,7 @@ class TestAdmin(
                 " eg: {organization} verification code: {code}.",
                 html=True,
             )
-            self.assertContains(response, "errors field-sms_message")
+            self.assertContains(response, 'id="id_radius_settings-0-sms_message_error"')
 
         with self.subTest("Ensure admin HTML shows the default value"):
             response = self.client.get(url)
