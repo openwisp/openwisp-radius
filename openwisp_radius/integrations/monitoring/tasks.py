@@ -1,194 +1,47 @@
 import logging
+from datetime import datetime
 
 from celery import shared_task
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, F, Q
+from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from swapper import load_model
 
 from . import settings as app_settings
+from . import utils
 from .utils import clean_registration_method, sha1_hash
 
-Metric = load_model("monitoring", "Metric")
-Chart = load_model("monitoring", "Chart")
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
-RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
-OrganizationUser = load_model("openwisp_users", "OrganizationUser")
-Device = load_model("config", "Device")
-DeviceLocation = load_model("geo", "Location")
-User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
 
-def _get_user_signup_metric(organization_id, registration_method):
-    metric, _ = Metric._get_or_create(
-        configuration="user_signups",
-        name="User SignUps",
-        key="user_signups",
-        object_id=None,
-        content_type=None,
-        extra_tags={
-            "organization_id": str(organization_id),
-            "method": registration_method,
-        },
-    )
-    return metric
-
-
-def _get_total_user_signup_metric(organization_id, registration_method):
-    metric, _ = Metric._get_or_create(
-        configuration="tot_user_signups",
-        name="Total User SignUps",
-        key="tot_user_signups",
-        object_id=None,
-        content_type=None,
-        extra_tags={
-            "organization_id": str(organization_id),
-            "method": registration_method,
-        },
-    )
-    return metric
-
-
-def _write_user_signup_metric_for_all(metric_key):
-    metric_data = []
-    start_time = timezone.now() - timezone.timedelta(hours=1)
-    end_time = timezone.now()
-    if metric_key == "user_signups":
-        get_metric_func = _get_user_signup_metric
-    else:
-        get_metric_func = _get_total_user_signup_metric
-    # Get the total number of registered users
-    registered_user_query = RegisteredUser.objects.exclude(
-        user__date_joined__gt=end_time,
-    )
-    if metric_key == "user_signups":
-        registered_user_query = registered_user_query.filter(
-            user__date_joined__gt=start_time,
-            user__date_joined__lte=end_time,
-        )
-    total_registered_users = dict(
-        registered_user_query.values_list("method").annotate(
-            count=Count("user", distinct=True)
-        )
-    )
-    # Some manually created users, like superuser may not have a
-    # RegisteredUser object. We would count them with "unspecified" method
-    users_without_registereduser_query = User.objects.filter(
-        registered_users__isnull=True
-    )
-    if metric_key == "user_signups":
-        users_without_registereduser_query = users_without_registereduser_query.filter(
-            date_joined__gt=start_time,
-            date_joined__lte=end_time,
-        )
-    users_without_registereduser = users_without_registereduser_query.count()
-
-    # Add the number of users which do not have a related RegisteredUser
-    # to the number of users which registered using "unspecified" method.
-    try:
-        total_registered_users[""] = (
-            total_registered_users[""] + users_without_registereduser
-        )
-    except KeyError:
-        total_registered_users[""] = users_without_registereduser
-
-    for method, count in total_registered_users.items():
-        method = clean_registration_method(method)
-        if method is None:
-            continue
-        metric = get_metric_func(organization_id="__all__", registration_method=method)
-        metric_data.append((metric, {"value": count}))
-    Metric.batch_write(metric_data)
-
-
-def _write_user_signup_metrics_for_orgs(metric_key):
-    metric_data = []
-    start_time = timezone.now() - timezone.timedelta(hours=1)
-    end_time = timezone.now()
-    if metric_key == "user_signups":
-        get_metric_func = _get_user_signup_metric
-    else:
-        get_metric_func = _get_total_user_signup_metric
-
-    # Get registration data grouped by organization and registration method.
-    # Scope OrganizationUser joins to the same organization as the
-    # RegisteredUser to avoid memberships from other organizations affecting
-    # this organization's signup metrics.
-    registered_users_query = RegisteredUser.objects.exclude(
-        method="pending_verification"
-    ).exclude(
-        user__openwisp_users_organizationuser__organization_id=F("organization_id"),
-        user__openwisp_users_organizationuser__created__gt=end_time,
-    )
-
-    if metric_key == "user_signups":
-        registered_users_query = registered_users_query.filter(
-            user__openwisp_users_organizationuser__organization_id=F("organization_id"),
-            user__openwisp_users_organizationuser__created__gt=start_time,
-            user__openwisp_users_organizationuser__created__lte=end_time,
-        )
-    registered_users = registered_users_query.values_list(
-        "organization_id",
-        "method",
-    ).annotate(count=Count("user_id", distinct=True))
-
-    # Count users without a RegisteredUser for this organization.
-    # A simple ``registered_users__isnull=True`` check would incorrectly
-    # exclude users having RegisteredUser rows only in other organizations.
-    users_without_registereduser_query = OrganizationUser.objects.exclude(
-        user__registered_users__organization_id=F("organization_id")
-    )
-    if metric_key == "user_signups":
-        users_without_registereduser_query = users_without_registereduser_query.filter(
-            created__gt=start_time, created__lte=end_time
-        )
-    users_without_registereduser = dict(
-        users_without_registereduser_query.values_list("organization_id").annotate(
-            count=Count("user_id", distinct=True)
-        )
-    )
-
-    for org_id, registration_method, count in registered_users:
-        registration_method = clean_registration_method(registration_method)
-        if registration_method == "unspecified":
-            count += users_without_registereduser.pop(org_id, 0)
-        metric = get_metric_func(
-            organization_id=org_id, registration_method=registration_method
-        )
-        metric_data.append((metric, {"value": count}))
-
-    # Write metrics for organizations having only users without a
-    # RegisteredUser for that organization. These organizations are not
-    # present in ``registered_users`` because they have no matching
-    # RegisteredUser rows.
-    for org_id, count in users_without_registereduser.items():
-        metric = get_metric_func(
-            organization_id=org_id, registration_method="unspecified"
-        )
-        metric_data.append((metric, {"value": count}))
-
-    Metric.batch_write(metric_data)
-
-
 @shared_task
-def write_user_registration_metrics():
-    """
-    This task is expected to be executed hourly.
+def write_user_registration_metrics(start_time=None, end_time=None):
+    """Writes registration metrics for an explicit or missing hour interval.
 
-    This task writes user registration metrics to the InfluxDB.
-    It writes to the following metrics:
-        - User Signups: This shows the number of new users who
-            have registered using different methods
-        - Total User Signups: This shows the total number of
-            users registered using different methods
+    When start_time and end_time are provided, writes that interval directly.
+    Otherwise, fills in up to 24 completed UTC hours and queues another task
+    if more work remains.
     """
-    _write_user_signup_metric_for_all(metric_key="user_signups")
-    _write_user_signup_metric_for_all(metric_key="tot_user_signups")
-    _write_user_signup_metrics_for_orgs(metric_key="user_signups")
-    _write_user_signup_metrics_for_orgs(metric_key="tot_user_signups")
+    if start_time is not None or end_time is not None:
+        if start_time is None or end_time is None:
+            raise ValueError("start_time and end_time must be provided together")
+        if isinstance(start_time, str):
+            start_time = parse_datetime(start_time)
+        if isinstance(end_time, str):
+            end_time = parse_datetime(end_time)
+        if not isinstance(start_time, datetime) or not isinstance(end_time, datetime):
+            raise ValueError("start_time and end_time must be valid ISO datetimes")
+        if not timezone.is_aware(start_time) or not timezone.is_aware(end_time):
+            raise ValueError("start_time and end_time must be timezone-aware")
+        if start_time >= end_time:
+            raise ValueError("start_time must be earlier than end_time")
+        utils._write_registration_metrics(start_time, end_time, write_completion=False)
+        return
+    if utils.write_registration_metrics():
+        write_user_registration_metrics.delay()
 
 
 @shared_task
@@ -227,13 +80,14 @@ def post_save_radiusaccounting(
     # Do not use organization_id for device lookup if shared accounting is enabled
     if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
+    device_model = load_model("config", "Device")
     try:
         device = (
-            Device.objects.select_related("devicelocation")
+            device_model.objects.select_related("devicelocation")
             .only("id", "organization_id", "devicelocation__location_id")
             .get(device_lookup)
         )
-    except Device.DoesNotExist:
+    except device_model.DoesNotExist:
         logger.warning(
             f'Device object not found with MAC "{called_station_id}"'
             f' and organization "{organization_id}".'
@@ -245,11 +99,13 @@ def post_save_radiusaccounting(
             extra_tags.pop("organization_id")
     else:
         object_id = str(device.id)
-        content_type = ContentType.objects.get_for_model(Device)
+        content_type = ContentType.objects.get_for_model(device_model)
         if hasattr(device, "devicelocation"):
             extra_tags["location_id"] = str(device.devicelocation.location_id)
 
-    metric, created = Metric._get_or_create(
+    # Monitoring is optional, so resolve its models only when this task runs.
+    metric_model = utils._get_metric_model()
+    metric, created = metric_model._get_or_create(
         configuration="radius_acc",
         name="RADIUS Accounting",
         key="radius_acc",
@@ -270,7 +126,8 @@ def post_save_radiusaccounting(
         # A chart cannot be created without object_id and content_type.
         return
     if created:
+        chart_model = load_model("monitoring", "Chart")
         for configuration in metric.config_dict["charts"].keys():
-            chart = Chart(metric=metric, configuration=configuration)
+            chart = chart_model(metric=metric, configuration=configuration)
             chart.full_clean()
             chart.save()
