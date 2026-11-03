@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 import requests
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
@@ -28,6 +28,22 @@ def post_accounting_data(request, data):
             requests.post(url=url, data=data, timeout=2)
         except Exception as err:
             logger.warning(err)
+
+
+def captive_portal_response(request, text):
+    """
+    Mimics real captive portals by redirecting to "redirurl", but only
+    for top-level navigations: iframe consumers expect the plain text.
+    """
+    redirurl = request.POST.get("redirurl", "")
+    parsed = urlparse(redirurl)
+    if (
+        request.headers.get("Sec-Fetch-Dest") == "document"
+        and parsed.scheme in ("http", "https")
+        and parsed.netloc
+    ):
+        return HttpResponseRedirect(redirurl)
+    return HttpResponse(text)
 
 
 @csrf_exempt
@@ -61,7 +77,7 @@ def captive_portal_login(request):
         )
         post_accounting_data(request, data)
         logger.info(f"RadiusAccounting session {id_} created for {username}")
-    return HttpResponse("logged in")
+    return captive_portal_response(request, "logged in")
 
 
 @csrf_exempt
@@ -89,4 +105,4 @@ def captive_portal_logout(request):
             logger.info(
                 f"RadiusAccounting session {ra.session_id} terminated by {ra.username}"
             )
-    return HttpResponse("logged out in")
+    return captive_portal_response(request, "logged out in")
