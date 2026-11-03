@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from unittest import mock
 from uuid import UUID
 
@@ -653,25 +652,23 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data["detail"], "Verification e-mail sent.")
 
-    if (sys.version_info.major, sys.version_info.minor) > (3, 6):
-
-        @override_dj_rest_auth_settings(USE_JWT=True)
-        def test_registration_with_jwt(self):
-            user_count = User.objects.all().count()
-            url = reverse("radius:rest_register", args=[self.default_org.slug])
-            r = self.client.post(
-                url,
-                {
-                    "username": self._test_email,
-                    "email": self._test_email,
-                    "password1": "password",
-                    "password2": "password",
-                },
-            )
-            self.assertEqual(r.status_code, 201)
-            self.assertIn("access", r.data)
-            self.assertIn("refresh", r.data)
-            self.assertEqual(User.objects.all().count(), user_count + 1)
+    @override_dj_rest_auth_settings(USE_JWT=True)
+    def test_registration_with_jwt(self):
+        user_count = User.objects.all().count()
+        url = reverse("radius:rest_register", args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            {
+                "username": self._test_email,
+                "email": self._test_email,
+                "password1": "password",
+                "password2": "password",
+            },
+        )
+        self.assertEqual(r.status_code, 201)
+        self.assertIn("access", r.data)
+        self.assertIn("refresh", r.data)
+        self.assertEqual(User.objects.all().count(), user_count + 1)
 
     def test_api_batch_add_users(self):
         response = self._radius_batch_post_request(self._radius_batch_prefix_data())

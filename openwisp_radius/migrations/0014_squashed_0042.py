@@ -3,7 +3,6 @@
 # This is the second of two squash migrations. Migrations 0011-0013 stay
 # separate because they safely update identifiers in existing FreeRADIUS tables.
 
-import django
 import django.db.migrations.operations.special
 import django.db.models.deletion
 import django.utils.timezone
@@ -179,11 +178,7 @@ class Migration(migrations.Migration):
                     "method",
                     models.CharField(
                         blank=True,
-                        choices=(
-                            openwisp_radius.registration.REGISTRATION_METHOD_CHOICES
-                            if django.VERSION < (5, 0)
-                            else openwisp_radius.registration.get_registration_choices
-                        ),
+                        choices=openwisp_radius.registration.get_registration_choices,
                         default="",
                         help_text="users can sign up in different ways, some methods are valid as indirect identity verification (eg: mobile phone SIM card in most countries)",
                         max_length=64,

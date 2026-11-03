@@ -26,7 +26,7 @@ setup(
     author="OpenWISP",
     author_email="support@openwisp.io",
     description="OpenWISP Radius",
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     long_description=open("README.rst").read(),
     url="https://openwisp.org",
     download_url="https://github.com/openwisp/openwisp-radius/releases",

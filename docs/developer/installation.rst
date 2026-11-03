@@ -27,7 +27,7 @@ OpenWISP architecture.
 Dependencies
 ------------
 
-- Python >= 3.9
+- Python >= 3.11
 
 Installing for Development
 --------------------------
