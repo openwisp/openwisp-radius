@@ -134,8 +134,8 @@ class RadiusAccountingAdmin(OrganizationFirstMixin, BaseAccounting):
         "organization",
         "username",
         "session_time",
-        "input_octets",
-        "output_octets",
+        "formatted_input_octets",
+        "formatted_output_octets",
         "calling_station_id",
         "called_station_id",
         "start_time",
@@ -150,6 +150,32 @@ class RadiusAccountingAdmin(OrganizationFirstMixin, BaseAccounting):
     ]
     list_filter = ["start_time", "stop_time", MultitenantOrgFilter]
     ordering = ["-start_time"]
+
+    def get_readonly_fields(self, request, obj=None):
+        """Add detail displays because ReadOnlyAdmin replaces readonly_fields."""
+        fields = list(super().get_readonly_fields(request, obj))
+        return fields + ["formatted_input_octets", "formatted_output_octets"]
+
+    def get_fields(self, request, obj=None):
+        """Replace detail fields generated from the ReadOnlyAdmin field list."""
+        fields = super().get_fields(request, obj)
+        replacements = {
+            "input_octets": "formatted_input_octets",
+            "output_octets": "formatted_output_octets",
+        }
+        return [
+            replacements.get(field, field)
+            for field in fields
+            if field not in replacements.values()
+        ]
+
+    @admin.display(description=_("input octets"), ordering="input_octets")
+    def formatted_input_octets(self, obj):
+        return obj.get_input_octets_display()
+
+    @admin.display(description=_("output octets"), ordering="output_octets")
+    def formatted_output_octets(self, obj):
+        return obj.get_output_octets_display()
 
 
 @admin.register(Nas)
