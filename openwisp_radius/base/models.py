@@ -4,6 +4,7 @@ import logging
 import os
 import string
 from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from io import StringIO
 from typing import Iterable
 
@@ -21,6 +22,7 @@ from django.db import models, transaction
 from django.db.models import JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.utils.formats import number_format
 from django.utils.timezone import localdate, now
 from django.utils.translation import gettext_lazy as _
 from model_utils.fields import AutoLastModifiedField
@@ -538,6 +540,29 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         verbose_name = _("accounting")
         verbose_name_plural = _("accountings")
         abstract = True
+
+    @staticmethod
+    def _format_octets(value):
+        if value is None:
+            return None
+        for factor, unit in (
+            (10**12, "TB"),
+            (10**9, "GB"),
+            (10**6, "MB"),
+            (10**3, "kB"),
+        ):
+            if abs(value) >= factor:
+                scaled_value = (Decimal(value) / Decimal(factor)).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+                return f"{number_format(scaled_value, decimal_pos=2)} {unit}"
+        return f"{value} B"
+
+    def get_input_octets_display(self):
+        return self._format_octets(self.input_octets)
+
+    def get_output_octets_display(self):
+        return self._format_octets(self.output_octets)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

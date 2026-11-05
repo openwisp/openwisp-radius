@@ -24,6 +24,8 @@ openwisp-radius.
 **Default**: ``False``
 
 Whether ``radacct`` entries are editable from the django admin or not.
+Useful during development, not meant for production usage. Input/output
+octets are never editable, even when this setting is enabled.
 
 ``OPENWISP_RADIUS_EDITABLE_POSTAUTH``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
