@@ -66,6 +66,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             (999, "999 B"),
             (1000, "1.00 kB"),
             (1500000, "1.50 MB"),
+            (1599999, "1.60 MB"),
             (1000000000, "1.00 GB"),
             (1000000000000, "1.00 TB"),
         ]

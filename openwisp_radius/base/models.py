@@ -551,7 +551,9 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             (10**3, "kB"),
         ):
             if abs(value) >= factor:
-                return f"{number_format(value / factor, decimal_pos=2)} {unit}"
+                return (
+                    f"{number_format(round(value / factor, 2), decimal_pos=2)} {unit}"
+                )
         return f"{value} B"
 
     def get_input_octets_display(self):
