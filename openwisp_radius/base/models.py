@@ -539,6 +539,26 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         verbose_name_plural = _("accountings")
         abstract = True
 
+    @staticmethod
+    def _format_octets(value):
+        if value is None:
+            return None
+        for factor, unit in (
+            (10**12, "TB"),
+            (10**9, "GB"),
+            (10**6, "MB"),
+            (10**3, "kB"),
+        ):
+            if abs(value) >= factor:
+                return f"{value / factor:.2f} {unit}"
+        return f"{value} B"
+
+    def get_input_octets_display(self):
+        return self._format_octets(self.input_octets)
+
+    def get_output_octets_display(self):
+        return self._format_octets(self.output_octets)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # used for radius_accounting_closed signal

@@ -58,6 +58,22 @@ class TestNas(BaseTestCase):
 
 
 class TestRadiusAccounting(FileMixin, BaseTestCase):
+    def test_formatted_octets(self):
+        cases = [
+            (None, None),
+            (0, "0 B"),
+            (999, "999 B"),
+            (1000, "1.00 kB"),
+            (1500000, "1.50 MB"),
+            (1000000000, "1.00 GB"),
+            (1000000000000, "1.00 TB"),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                accounting = RadiusAccounting(input_octets=value, output_octets=value)
+                self.assertEqual(accounting.get_input_octets_display(), expected)
+                self.assertEqual(accounting.get_output_octets_display(), expected)
+
     def test_string_representation(self):
         radiusaccounting = RadiusAccounting(unique_id="entry acctuniqueid")
         self.assertEqual(str(radiusaccounting), radiusaccounting.unique_id)
