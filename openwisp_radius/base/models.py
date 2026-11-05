@@ -4,6 +4,7 @@ import logging
 import os
 import string
 from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from io import StringIO
 from typing import Iterable
 
@@ -551,9 +552,10 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             (10**3, "kB"),
         ):
             if abs(value) >= factor:
-                return (
-                    f"{number_format(round(value / factor, 2), decimal_pos=2)} {unit}"
+                scaled_value = (Decimal(value) / Decimal(factor)).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
                 )
+                return f"{number_format(scaled_value, decimal_pos=2)} {unit}"
         return f"{value} B"
 
     def get_input_octets_display(self):
