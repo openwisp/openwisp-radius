@@ -210,8 +210,8 @@ class TestAdmin(
 
     def test_radiusaccounting_changelist_octets(self):
         for session_id, input_octets, output_octets in [
-            ("small", 999, 2000000),
-            ("large", 1000, 1000000),
+            ("small", 999, 10000000),
+            ("large", 1000, 2000000),
         ]:
             self._create_radius_accounting(
                 unique_id=session_id,
@@ -232,7 +232,7 @@ class TestAdmin(
                     [obj.session_id for obj in response.context["cl"].result_list],
                     expected,
                 )
-                for value in ("999 B", "1.00 kB", "1.00 MB", "2.00 MB"):
+                for value in ("999 B", "1.00 kB", "2.00 MB", "10.00 MB"):
                     self.assertContains(response, value)
 
     def test_postauth_change(self):

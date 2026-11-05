@@ -21,6 +21,7 @@ from django.db import models, transaction
 from django.db.models import JSONField, ProtectedError, Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.utils.formats import number_format
 from django.utils.timezone import localdate, now
 from django.utils.translation import gettext_lazy as _
 from model_utils.fields import AutoLastModifiedField
@@ -550,7 +551,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             (10**3, "kB"),
         ):
             if abs(value) >= factor:
-                return f"{value / factor:.2f} {unit}"
+                return f"{number_format(value / factor, decimal_pos=2)} {unit}"
         return f"{value} B"
 
     def get_input_octets_display(self):

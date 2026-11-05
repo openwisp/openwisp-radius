@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import override
 from netaddr import EUI, mac_unix
 
 from openwisp_users.tests.utils import TestMultitenantAdminMixin
@@ -73,6 +74,10 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
                 accounting = RadiusAccounting(input_octets=value, output_octets=value)
                 self.assertEqual(accounting.get_input_octets_display(), expected)
                 self.assertEqual(accounting.get_output_octets_display(), expected)
+        with self.subTest("localized decimal separator"):
+            accounting = RadiusAccounting(input_octets=1500000)
+            with override("de"):
+                self.assertEqual(accounting.get_input_octets_display(), "1,50 MB")
 
     def test_string_representation(self):
         radiusaccounting = RadiusAccounting(unique_id="entry acctuniqueid")
