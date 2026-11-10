@@ -378,6 +378,13 @@ framed_protocol       Framed protocol
 framed_ip_address     framed IP address
 ===================== =====================
 
+.. note::
+
+    ``session_time`` corresponds to the RADIUS ``Acct-Session-Time``
+    attribute, measured in seconds. The accounting API accepts integers
+    from ``0`` to ``4294967295`` (inclusive). Values outside this range
+    result in an HTTP ``400 Bad Request`` validation response.
+
 Pagination
 """"""""""
 
