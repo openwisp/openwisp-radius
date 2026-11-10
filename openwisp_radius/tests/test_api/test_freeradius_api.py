@@ -1948,8 +1948,8 @@ class TestTransactionFreeradiusApi(
                 "username": user.username,
                 "unique_id": "legacy_format_session",
                 "stop_time": None,
-                "called_station_id": "AA-BB-CC-DD-EE-FF",
-                "calling_station_id": "5C-7D-C1-72-A7-3B",
+                "called_station_id": "Aa-Bb-Cc-Dd-Ee-Ff",
+                "calling_station_id": "5c-7D-c1-72-A7-3b",
             }
         )
         self._create_radius_accounting(**acct_data)
@@ -2354,7 +2354,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     def test_mac_address_roaming_with_legacy_mac_address_format(self):
         acct_post_data = self.acct_post_data
         acct_post_data["username"] = "tester"
-        acct_post_data["calling_station_id"] = "00-11-22-33-44-55"
+        acct_post_data["calling_station_id"] = "Aa-Bb-Cc-Dd-Ee-Ff"
         self._get_org_user()
         self._login_and_obtain_auth_token()
         self._create_radius_accounting(**acct_post_data)
@@ -2363,7 +2363,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         payload.update(
             {
                 "unique_id": "roaming-legacy-format",
-                "username": "00-11-22-33-44-55",
+                "username": "aa-bb-cc-dd-ee-ff",
                 "status_type": "Start",
                 "nas_ip_address": "172.16.64.92",
             }

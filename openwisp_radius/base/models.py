@@ -59,7 +59,7 @@ from ..utils import (
     generate_sms_token,
     get_sms_default_valid_until,
     load_model,
-    mac_address_variants,
+    mac_address_variants_q,
     mask_phone_number,
     normalize_mac_address,
     prefix_generate_users,
@@ -666,7 +666,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         """
         if not called_station_id:
             return 0
-        variants = mac_address_variants(called_station_id)
+        variants_q = mac_address_variants_q("called_station_id", called_station_id)
         stop_time = now()
         closed_count = 0
         batch_size = 1000
@@ -676,7 +676,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 closed_sessions = list(
                     cls.objects.select_for_update()
                     .filter(
-                        called_station_id__in=variants,
+                        variants_q,
                         stop_time__isnull=True,
                     )
                     .only(

@@ -374,8 +374,9 @@ the system checks, and normalization stays disabled until it is corrected.
 
     MAC roaming, simultaneous-use, and Accounting-On lookups match the
     supported MAC representations, including sessions stored before the
-    setting was enabled. Values in an unsupported representation are left
-    unchanged.
+    setting was enabled. The MAC portion is matched case-insensitively,
+    while a suffix starting with ``:`` is matched exactly. Values in an
+    unsupported representation are left unchanged.
 
 Matching of :ref:`OPENWISP_RADIUS_CALLED_STATION_IDS
 <openwisp_radius_called_station_ids>` values remains compatible with the

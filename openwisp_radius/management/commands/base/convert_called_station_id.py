@@ -4,11 +4,12 @@ from uuid import UUID
 
 import openvpn_status
 from django.core.management import BaseCommand
+from django.db.models import Q
 from netaddr import EUI, mac_unix
 from telnetlib3 import telnetlib
 
 from .... import settings as app_settings
-from ....utils import load_model, mac_address_variants
+from ....utils import load_model, mac_address_variants_q
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +107,12 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             queryset = queryset.filter(organization__id=org)
         if not app_settings.MAC_ADDRESS_FORMAT:
             return queryset.filter(called_station_id__in=unconverted_ids).iterator()
-        candidates = set()
+        if not unconverted_ids:
+            return queryset.none()
+        query = Q()
         for value in unconverted_ids:
-            candidates.update(mac_address_variants(value))
-        return queryset.filter(called_station_id__in=candidates).iterator()
+            query |= mac_address_variants_q("called_station_id", value)
+        return queryset.filter(query).iterator()
 
     def add_arguments(self, parser):
         parser.add_argument("--unique_id", action="store", type=str, default="")

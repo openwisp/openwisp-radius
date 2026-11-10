@@ -434,7 +434,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             session_options.update(
                 unique_id=f"nas-reboot-legacy-{index}",
                 username=f"nas-reboot-legacy-{index}",
-                called_station_id="AA-BB-CC-DD-EE-FF",
+                called_station_id="Aa-Bb-Cc-Dd-Ee-Ff",
             )
             self._create_radius_accounting(**session_options)
         with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted"):

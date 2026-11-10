@@ -13,6 +13,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import validate_email
+from django.db.models import Q
 from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -105,6 +106,34 @@ def mac_address_variants(value):
         variants.add(f"{formatted}{suffix}")
         variants.add(f"{formatted.upper()}{suffix}")
     return variants
+
+
+def mac_address_variants_q(field, value):
+    """
+    Return a ``Q`` object matching ``field`` against the supported
+    representations of a leading MAC address.
+
+    The MAC portion is matched case-insensitively, while a suffix starting
+    with ``:`` is matched exactly. Non-MAC values are matched exactly.
+
+    The case-insensitive comparison cannot use the plain B-tree index on
+    station ID columns, so callers should keep the surrounding query narrow.
+    """
+    parts = _split_mac_address(value)
+    if parts is None:
+        return Q(**{field: value})
+    mac, suffix = parts
+    suffix = suffix or ""
+    query = Q()
+    for mac_format in MAC_ADDRESS_FORMATS:
+        variant = f"{_format_mac(mac, mac_format)}{suffix}"
+        condition = Q(**{f"{field}__iexact": variant})
+        if suffix:
+            # ``iexact`` also ignores the suffix case, so constrain it
+            # separately to preserve the exact suffix.
+            condition &= Q(**{f"{field}__regex": f"{re.escape(suffix)}$"})
+        query |= condition
+    return query
 
 
 def normalize_mac_address(value):

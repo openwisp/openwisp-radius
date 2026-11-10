@@ -11,12 +11,14 @@ from ..utils import (
     find_available_username,
     format_mac_address,
     get_one_time_login_url,
+    load_model,
     mac_address_variants,
+    mac_address_variants_q,
     mask_phone_number,
     normalize_mac_address,
     validate_csvfile,
 )
-from . import FileMixin
+from . import _RADACCT, FileMixin
 from .mixins import BaseTestCase
 
 
@@ -130,6 +132,44 @@ class TestUtils(FileMixin, BaseTestCase):
         )
         self.assertEqual(mac_address_variants("not-a-mac"), {"not-a-mac"})
         self.assertEqual(mac_address_variants(None), {None})
+
+    def test_mac_address_variants_q(self):
+        RadiusAccounting = load_model("RadiusAccounting")
+        options = _RADACCT.copy()
+        for index, called_station_id in enumerate(
+            (
+                "Aa-Bb-Cc-Dd-Ee-Ff:Host",
+                "Aa-Bb-Cc-Dd-Ee-Ff:host",
+                "Aa-Bb-Cc-Dd-Ee-Ff:host.name+a",
+                "Aa-Bb-Cc-Dd-Ee-Ff:host$name",
+                "Aa-Bb-Cc-Dd-Ee-Ff:hostXnameYa",
+                "not-a-mac",
+                "NOT-A-MAC",
+                None,
+                "",
+            )
+        ):
+            options.update(
+                unique_id=f"variants-q-{index}",
+                username=f"variants-q-{index}",
+                called_station_id=called_station_id,
+            )
+            self._create_radius_accounting(**options)
+        for lookup, expected in (
+            ("aa:bb:cc:dd:ee:ff:Host", {"Aa-Bb-Cc-Dd-Ee-Ff:Host"}),
+            ("aa:bb:cc:dd:ee:ff:host.name+a", {"Aa-Bb-Cc-Dd-Ee-Ff:host.name+a"}),
+            ("aa:bb:cc:dd:ee:ff:host$name", {"Aa-Bb-Cc-Dd-Ee-Ff:host$name"}),
+            ("not-a-mac", {"not-a-mac"}),
+            (None, {None}),
+            ("", {""}),
+        ):
+            with self.subTest(lookup=lookup):
+                matched = set(
+                    RadiusAccounting.objects.filter(
+                        mac_address_variants_q("called_station_id", lookup)
+                    ).values_list("called_station_id", flat=True)
+                )
+                self.assertEqual(matched, expected)
 
     def test_mask_phone_number(self):
         for phone_number, expected in (

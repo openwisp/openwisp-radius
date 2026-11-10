@@ -821,7 +821,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         self.assertEqual(len(sessions), 1)
         self.assertEqual(sessions[0].called_station_id, "aa:aa:aa:aa:aa:0a")
         RadiusAccounting.objects.filter(pk=session.pk).update(
-            called_station_id="AA:AA:AA:AA:AA:0A"
+            called_station_id="aA:aA:aA:aA:aA:0a"
         )
         sessions = list(
             command._get_unconverted_sessions(
@@ -829,4 +829,4 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             )
         )
         self.assertEqual(len(sessions), 1)
-        self.assertEqual(sessions[0].called_station_id, "AA:AA:AA:AA:AA:0A")
+        self.assertEqual(sessions[0].called_station_id, "aA:aA:aA:aA:aA:0a")
