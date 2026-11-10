@@ -3,6 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from . import settings as app_settings
 from .registration import validate_user_settable_registration_methods
+from .utils import MAC_ADDRESS_FORMATS
 
 
 @checks.register
@@ -69,3 +70,20 @@ def check_user_settable_registration_methods(app_configs, **kwargs):
             )
         )
     return errors
+
+
+@checks.register
+def check_mac_address_format(app_configs, **kwargs):
+    value = app_settings.MAC_ADDRESS_FORMAT
+    if value is None or (isinstance(value, str) and value in MAC_ADDRESS_FORMATS):
+        return []
+    return [
+        checks.Error(
+            msg="Improperly Configured",
+            hint=(
+                "OPENWISP_RADIUS_MAC_ADDRESS_FORMAT must be one of "
+                '"colon", "hyphen", "dotted", "plain" or None.'
+            ),
+            obj="Settings",
+        )
+    ]

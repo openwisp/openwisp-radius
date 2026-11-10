@@ -43,6 +43,7 @@ from ..utils import (
     get_organization_radius_settings,
     get_user_group,
     load_model,
+    normalize_mac_address,
 )
 from .utils import ErrorDictMixin, IDVerificationHelper
 
@@ -297,7 +298,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         do not overwrite it back to unconverted ID during interim updates
         """
         ids = app_settings.CALLED_STATION_IDS
-        if not ids or instance.called_station_id == acct_data["called_station_id"]:
+        stored_called_station_id = normalize_mac_address(instance.called_station_id)
+        called_station_id = normalize_mac_address(acct_data.get("called_station_id"))
+        if not ids or stored_called_station_id == called_station_id:
             return acct_data
         try:
             organization = acct_data["organization"]
@@ -311,7 +314,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 unconverted_ids = ids.get(str(organization.id), {}).get(
                     "unconverted_ids", []
                 ) + ids.get(organization.slug, {}).get("unconverted_ids", [])
-                if acct_data["called_station_id"] in unconverted_ids:
+                if called_station_id in {
+                    normalize_mac_address(value) for value in unconverted_ids
+                }:
                     acct_data["called_station_id"] = instance.called_station_id
         except Exception:
             logger.exception("Got exception in _check_called_station_id")

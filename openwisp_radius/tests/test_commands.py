@@ -791,3 +791,40 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
                 call_command("convert_called_station_id")
             radius_acc.refresh_from_db()
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
+
+    @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
+    @patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon")
+    def test_get_unconverted_sessions_with_mac_address_format(self):
+        from ..management.commands.base.convert_called_station_id import (
+            BaseConvertCalledStationIdCommand,
+        )
+
+        options = _RADACCT.copy()
+        options.update(
+            unique_id="unconverted-with-format",
+            organization=self.default_org,
+            nas_ip_address="192.168.182.3",
+            start_time=now(),
+            called_station_id="AA-AA-AA-AA-AA-0A",
+            stop_time=None,
+        )
+        self._create_radius_accounting(**options)
+        session = RadiusAccounting.objects.get(unique_id="unconverted-with-format")
+        command = BaseConvertCalledStationIdCommand()
+        sessions = list(
+            command._get_unconverted_sessions(
+                str(self.default_org.id), ["AA-AA-AA-AA-AA-0A"]
+            )
+        )
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0].called_station_id, "aa:aa:aa:aa:aa:0a")
+        RadiusAccounting.objects.filter(pk=session.pk).update(
+            called_station_id="AA:AA:AA:AA:AA:0A"
+        )
+        sessions = list(
+            command._get_unconverted_sessions(
+                str(self.default_org.id), ["AA-AA-AA-AA-AA-0A"]
+            )
+        )
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0].called_station_id, "AA:AA:AA:AA:AA:0A")

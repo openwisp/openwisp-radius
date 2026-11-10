@@ -3,6 +3,7 @@ import ipaddress
 import logging
 import math
 import os
+import re
 from datetime import timedelta
 from io import BytesIO, StringIO
 
@@ -16,6 +17,8 @@ from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from netaddr import EUI
+from netaddr.core import AddrFormatError
 from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
@@ -30,6 +33,90 @@ DEFAULT_SESSION_TIME_LIMIT = "10800"  # seconds
 DEFAULT_SESSION_TRAFFIC_LIMIT = "3000000000"  # bytes (octets)
 
 logger = logging.getLogger(__name__)
+
+MAC_ADDRESS_FORMATS = {
+    "colon": "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+    "hyphen": "{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}",
+    "dotted": "{:02x}{:02x}.{:02x}{:02x}.{:02x}{:02x}",
+    "plain": "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+}
+RE_MAC_ADDRESS = re.compile(
+    r"^(?P<mac>"
+    r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}|"
+    r"(?:[0-9a-f]{2}-){5}[0-9a-f]{2}|"
+    r"(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}|"
+    r"[0-9a-f]{12}"
+    r")(?!:[0-9a-f]{2}(?::|$))(?P<suffix>:.*)?\Z",
+    re.IGNORECASE,
+)
+
+
+def _split_mac_address(value):
+    if not isinstance(value, str) or not value:
+        return None
+    match = RE_MAC_ADDRESS.match(value)
+    if not match:
+        return None
+    try:
+        return EUI(match.group("mac")), match.group("suffix")
+    except (AddrFormatError, ValueError, TypeError):
+        return None
+
+
+def _format_mac(mac, mac_format):
+    return MAC_ADDRESS_FORMATS[mac_format].format(*mac.words)
+
+
+def format_mac_address(value, mac_format, keep_suffix=True):
+    """
+    Render a leading MAC address in ``value`` using ``mac_format``.
+
+    Values that do not start with a supported MAC representation, or that
+    are not strings, are returned unchanged.
+    """
+    if not isinstance(mac_format, str) or mac_format not in MAC_ADDRESS_FORMATS:
+        raise ValueError(f"Unsupported MAC address format: {mac_format}")
+    parts = _split_mac_address(value)
+    if parts is None:
+        return value
+    mac, suffix = parts
+    formatted = _format_mac(mac, mac_format)
+    if keep_suffix and suffix:
+        formatted += suffix
+    return formatted
+
+
+def mac_address_variants(value):
+    """
+    Return the supported representations of a leading MAC address.
+
+    The original value and both lowercase and uppercase renderings are
+    included, so lookups also match rows stored before the format setting
+    was enabled. Non-MAC values produce a single-element set.
+    """
+    parts = _split_mac_address(value)
+    if parts is None:
+        return {value}
+    mac, suffix = parts
+    suffix = suffix or ""
+    variants = {value}
+    for mac_format in MAC_ADDRESS_FORMATS:
+        formatted = _format_mac(mac, mac_format)
+        variants.add(f"{formatted}{suffix}")
+        variants.add(f"{formatted.upper()}{suffix}")
+    return variants
+
+
+def normalize_mac_address(value):
+    """
+    Apply the configured ``OPENWISP_RADIUS_MAC_ADDRESS_FORMAT`` to ``value``.
+
+    Returns ``value`` unchanged when the setting is disabled or invalid.
+    """
+    mac_format = app_settings.MAC_ADDRESS_FORMAT
+    if not isinstance(mac_format, str) or mac_format not in MAC_ADDRESS_FORMATS:
+        return value
+    return format_mac_address(value, mac_format)
 
 
 def load_model(model):

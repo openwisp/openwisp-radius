@@ -2589,6 +2589,24 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 response.data[1]["calling_station_id"], "11:22:33:44:55:66"
             )
 
+        with self.subTest("Test filtering with dotted called_station_id"):
+            response = self.client.get(path, {"called_station_id": "AABB.CCDD.EEFF"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                {item["called_station_id"] for item in response.data},
+                {"AA-BB-CC-DD-EE-FF", "AA:BB:CC:DD:EE:FF"},
+            )
+
+        with self.subTest("Test filtering with plain calling_station_id"):
+            response = self.client.get(path, {"calling_station_id": "112233445566"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.data), 2)
+            self.assertEqual(
+                {item["calling_station_id"] for item in response.data},
+                {"11-22-33-44-55-66", "11:22:33:44:55:66"},
+            )
+
 
 del BaseTestCase
 del BaseTransactionTestCase

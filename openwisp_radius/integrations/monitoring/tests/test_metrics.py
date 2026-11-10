@@ -9,6 +9,7 @@ from swapper import load_model
 
 from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
+from openwisp_radius.utils import format_mac_address
 
 from ..migrations import create_general_metrics
 from ..utils import sha1_hash
@@ -124,6 +125,35 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points["traces"][0][0], "mobile_phone")
         self.assertEqual(points["traces"][0][1][-1], 1)
         self.assertEqual(points["summary"], {"mobile_phone": 1})
+
+    @patch("logging.Logger.warning")
+    def test_post_save_radiusaccounting_dotted_called_station_id(self, *args):
+        user = self._create_user()
+        self._create_registered_user(user=user)
+        device = self._create_device()
+        called_station_id = format_mac_address(
+            device.mac_address.replace("-", ":"), "dotted"
+        )
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "unique_id": "mac-format-metric",
+                "username": user.username,
+                "called_station_id": called_station_id,
+                "calling_station_id": "00:00:00:00:00:00",
+                "input_octets": "8000000000",
+                "output_octets": "9000000000",
+            }
+        )
+        options["stop_time"] = timezone.now()
+        self._create_radius_accounting(**options)
+        self.assertTrue(
+            self.metric_model.objects.filter(
+                configuration="radius_acc",
+                object_id=str(device.id),
+                content_type=ContentType.objects.get_for_model(self.device_model),
+            ).exists()
+        )
 
     @patch("logging.Logger.warning")
     def test_post_save_radiusaccounting_device_without_location(self, *args):

@@ -12,7 +12,7 @@ from openwisp_radius.tasks import send_login_email
 
 from . import settings as app_settings
 from . import tasks
-from .utils import create_default_groups, load_model
+from .utils import create_default_groups, load_model, normalize_mac_address
 
 logger = logging.getLogger(__name__)
 
@@ -87,19 +87,13 @@ def organization_post_save(instance, **kwargs):
 def convert_radius_called_station_id(instance, created, **kwargs):
     if not created or not instance.called_station_id:
         return
-    try:
-        # organization slug is maintained for backward compatibility
-        # but will removed in future versions
-        assert instance.called_station_id in app_settings.CALLED_STATION_IDS.get(
-            str(instance.organization.id), {}
-        ).get(
-            "unconverted_ids", []
-        ) or instance.called_station_id in app_settings.CALLED_STATION_IDS.get(
-            instance.organization.slug, {}
-        ).get(
-            "unconverted_ids", []
-        )
-    except AssertionError:
+    setting = app_settings.CALLED_STATION_IDS
+    unconverted_ids = setting.get(str(instance.organization.id), {}).get(
+        "unconverted_ids", []
+    ) + setting.get(instance.organization.slug, {}).get("unconverted_ids", [])
+    if instance.called_station_id not in {
+        normalize_mac_address(value) for value in unconverted_ids
+    }:
         return
     tasks.convert_called_station_id.delay(instance.unique_id)
 

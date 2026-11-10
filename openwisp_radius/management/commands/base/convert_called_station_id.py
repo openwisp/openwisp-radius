@@ -8,7 +8,7 @@ from netaddr import EUI, mac_unix
 from telnetlib3 import telnetlib
 
 from .... import settings as app_settings
-from ....utils import load_model
+from ....utils import load_model, mac_address_variants
 
 logger = logging.getLogger(__name__)
 
@@ -97,17 +97,19 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             )
 
     def _get_unconverted_sessions(self, org, unconverted_ids):
-        lookup = dict(
-            called_station_id__in=unconverted_ids,
-            stop_time__isnull=True,
-        )
+        queryset = RadiusAccounting.objects.filter(stop_time__isnull=True)
         try:
             UUID(org)
         except ValueError:
-            lookup["organization__slug"] = org
+            queryset = queryset.filter(organization__slug=org)
         else:
-            lookup["organization__id"] = org
-        return RadiusAccounting.objects.filter(**lookup).iterator()
+            queryset = queryset.filter(organization__id=org)
+        if not app_settings.MAC_ADDRESS_FORMAT:
+            return queryset.filter(called_station_id__in=unconverted_ids).iterator()
+        candidates = set()
+        for value in unconverted_ids:
+            candidates.update(mac_address_variants(value))
+        return queryset.filter(called_station_id__in=candidates).iterator()
 
     def add_arguments(self, parser):
         parser.add_argument("--unique_id", action="store", type=str, default="")

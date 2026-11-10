@@ -37,6 +37,7 @@ from ..utils import (
     get_group_replies,
     get_user_group,
     load_model,
+    mac_address_variants,
 )
 from .serializers import (
     AuthorizeSerializer,
@@ -137,7 +138,10 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         # Get the most recent open session for the roaming user
         open_session = (
             RadiusAccounting.objects.select_related("organization__radius_settings")
-            .filter(calling_station_id=calling_station_id, stop_time=None)
+            .filter(
+                calling_station_id__in=mac_address_variants(calling_station_id),
+                stop_time=None,
+            )
             .order_by("-start_time")
             .first()
         )
@@ -381,8 +385,8 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
         # of the same client on the same NAS.
         if called_station_id and calling_station_id:
             open_sessions = open_sessions.exclude(
-                called_station_id=called_station_id,
-                calling_station_id=calling_station_id,
+                called_station_id__in=mac_address_variants(called_station_id),
+                calling_station_id__in=mac_address_variants(calling_station_id),
             )
         open_sessions = open_sessions.count()
         if open_sessions >= max_simultaneous:

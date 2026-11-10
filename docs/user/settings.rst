@@ -334,6 +334,53 @@ converted (as per configuration defined in
 <openwisp_radius_called_station_ids>`) just after the RADIUS session is
 created.
 
+.. _openwisp_radius_mac_address_format:
+
+``OPENWISP_RADIUS_MAC_ADDRESS_FORMAT``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``None``
+
+If set, the MAC address at the beginning of the ``called_station_id`` and
+``calling_station_id`` fields of RADIUS accounting sessions is normalized
+to the specified format whenever a session is created or updated. Accepted
+values are:
+
+- ``"colon"``: ``aa:bb:cc:dd:ee:ff``
+- ``"hyphen"``: ``aa-bb-cc-dd-ee-ff``
+- ``"dotted"``: ``aabb.ccdd.eeff``
+- ``"plain"``: ``aabbccddeeff``
+
+The output is always lowercase. Only the leading MAC address is
+normalized; a suffix starting with ``:`` (for example ``:hostname`` or
+``:SSID``) is preserved. Values which do not start with a MAC address are
+stored unchanged, since RADIUS does not require these attributes to
+contain MAC addresses.
+
+.. note::
+
+    A bare 12-character hexadecimal string is also a valid MAC
+    representation, so a 12-character hexadecimal station ID which is not
+    a MAC address (for example, a numeric identifier) is normalized too.
+    Values which do not match a supported MAC representation are left
+    unchanged.
+
+The setting is disabled by default for backward compatibility. Existing
+accounting records are not modified: only sessions created or updated
+after enabling the setting are normalized. An invalid value is reported by
+the system checks, and normalization stays disabled until it is corrected.
+
+.. note::
+
+    MAC roaming, simultaneous-use, and Accounting-On lookups match the
+    supported MAC representations, including sessions stored before the
+    setting was enabled. Values in an unsupported representation are left
+    unchanged.
+
+Matching of :ref:`OPENWISP_RADIUS_CALLED_STATION_IDS
+<openwisp_radius_called_station_ids>` values remains compatible with the
+configured representation.
+
 .. _openwisp_radius_openvpn_datetime_format:
 
 ``OPENWISP_RADIUS_OPENVPN_DATETIME_FORMAT``

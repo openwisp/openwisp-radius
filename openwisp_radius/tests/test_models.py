@@ -89,6 +89,133 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         radiusaccounting = RadiusAccounting(unique_id="unique")
         self.assertEqual(radiusaccounting.pk, radiusaccounting.unique_id)
 
+    def test_mac_address_format(self):
+        base_options = dict(
+            _RADACCT,
+            organization=self.default_org,
+            nas_ip_address="192.168.182.3",
+            start_time=timezone.now(),
+        )
+        cases = (
+            (
+                "colon",
+                "00-27-22-F3-FA-F1",
+                "5c-7d-c1-72-a7-3b",
+                "00:27:22:f3:fa:f1",
+                "5c:7d:c1:72:a7:3b",
+            ),
+            (
+                "hyphen",
+                "00:27:22:F3:FA:F1",
+                "5C:7D:C1:72:A7:3B",
+                "00-27-22-f3-fa-f1",
+                "5c-7d-c1-72-a7-3b",
+            ),
+            (
+                "dotted",
+                "0027.22F3.FAF1",
+                "5C7DC172A73B",
+                "0027.22f3.faf1",
+                "5c7d.c172.a73b",
+            ),
+            (
+                "plain",
+                "00:27:22:F3:FA:F1",
+                "5C-7D-C1-72-A7-3B",
+                "002722f3faf1",
+                "5c7dc172a73b",
+            ),
+        )
+        for mac_format, called, calling, expected_called, expected_calling in cases:
+            with self.subTest(format=mac_format):
+                with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", mac_format):
+                    options = base_options.copy()
+                    options.update(
+                        unique_id=f"mac-format-{mac_format}",
+                        called_station_id=called,
+                        calling_station_id=calling,
+                    )
+                    session = self._create_radius_accounting(**options)
+                    session.refresh_from_db()
+                    self.assertEqual(session.called_station_id, expected_called)
+                    self.assertEqual(session.calling_station_id, expected_calling)
+
+        with self.subTest("save without full_clean"):
+            with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon"):
+                session = RadiusAccounting(
+                    organization=self.default_org,
+                    unique_id="mac-format-direct-save",
+                    session_id="mac-format-direct-save",
+                    nas_ip_address="192.168.182.3",
+                    called_station_id="00-27-22-F3-FA-F1:hostname",
+                    calling_station_id="5C-7D-C1-72-A7-3B",
+                )
+                session.save()
+                session.refresh_from_db()
+                self.assertEqual(
+                    session.called_station_id, "00:27:22:f3:fa:f1:hostname"
+                )
+                self.assertEqual(session.calling_station_id, "5c:7d:c1:72:a7:3b")
+
+        with self.subTest("disabled"):
+            with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", None):
+                options = base_options.copy()
+                options.update(
+                    unique_id="mac-format-disabled",
+                    called_station_id="00-27-22-F3-FA-F1:hostname",
+                    calling_station_id="5C:7D:C1:72:A7:3B",
+                )
+                session = self._create_radius_accounting(**options)
+                session.refresh_from_db()
+                self.assertEqual(
+                    session.called_station_id, "00-27-22-F3-FA-F1:hostname"
+                )
+                self.assertEqual(session.calling_station_id, "5C:7D:C1:72:A7:3B")
+
+        with self.subTest("non-MAC values unchanged"):
+            with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon"):
+                options = base_options.copy()
+                options.update(
+                    unique_id="mac-format-non-mac",
+                    called_station_id="192.168.1.1",
+                    calling_station_id="not-a-mac",
+                )
+                session = self._create_radius_accounting(**options)
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, "192.168.1.1")
+                self.assertEqual(session.calling_station_id, "not-a-mac")
+
+        with self.subTest("idempotent"):
+            with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted"):
+                options = base_options.copy()
+                options.update(
+                    unique_id="mac-format-idempotent",
+                    called_station_id="AA:BB:CC:DD:EE:FF:SSID",
+                )
+                session = self._create_radius_accounting(**options)
+                session.save()
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, "aabb.ccdd.eeff:SSID")
+
+        with self.subTest("update_fields"):
+            with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon"):
+                options = base_options.copy()
+                options["unique_id"] = "mac-format-update-fields"
+                session = self._create_radius_accounting(**options)
+                RadiusAccounting.objects.filter(pk=session.pk).update(
+                    called_station_id="00-27-22-F3-FA-F1",
+                    calling_station_id="5C-7D-C1-72-A7-3B",
+                )
+                session.refresh_from_db()
+                session.save(update_fields=["called_station_id"])
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, "00:27:22:f3:fa:f1")
+                self.assertEqual(session.calling_station_id, "5C-7D-C1-72-A7-3B")
+                session.called_station_id = "00-11-22-33-44-55"
+                session.save(update_fields=["stop_time"])
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, "00:27:22:f3:fa:f1")
+
     def test_ipv6_validator(self):
         radiusaccounting = RadiusAccounting(
             organization=self.default_org,
@@ -274,6 +401,48 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             )
         self.assertEqual(closed_count, 2)
 
+    def test_close_stale_sessions_on_nas_boot_with_mac_address_format(self):
+        options = dict(
+            _RADACCT,
+            organization=self.default_org,
+            nas_ip_address="192.168.182.3",
+            start_time=timezone.now(),
+        )
+        with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted"):
+            for index in (1, 2):
+                session_options = options.copy()
+                session_options.update(
+                    unique_id=f"nas-reboot-format-{index}",
+                    username=f"nas-reboot-format-{index}",
+                    called_station_id="AA-BB-CC-DD-EE-FF",
+                )
+                self._create_radius_accounting(**session_options)
+            closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+                called_station_id="aa:bb:cc:dd:ee:ff"
+            )
+        self.assertEqual(closed_count, 2)
+
+    def test_close_stale_sessions_on_nas_boot_with_legacy_mac_address_format(self):
+        options = dict(
+            _RADACCT,
+            organization=self.default_org,
+            nas_ip_address="192.168.182.3",
+            start_time=timezone.now(),
+        )
+        for index in (1, 2):
+            session_options = options.copy()
+            session_options.update(
+                unique_id=f"nas-reboot-legacy-{index}",
+                username=f"nas-reboot-legacy-{index}",
+                called_station_id="AA-BB-CC-DD-EE-FF",
+            )
+            self._create_radius_accounting(**session_options)
+        with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted"):
+            closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
+                called_station_id="aa:bb:cc:dd:ee:ff"
+            )
+        self.assertEqual(closed_count, 2)
+
     def test_save_update_fields_persists_backfilled_start_time(self):
         options = _RADACCT.copy()
         session = self._create_radius_accounting(
@@ -311,6 +480,24 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     @mock.patch.object(app_settings, "CONVERT_CALLED_STATION_ON_CREATE", True)
     def test_convert_called_station_id_with_organization_slug(self, *args, **kwargs):
         self._run_convert_called_station_id_tests()
+
+    @mock.patch("openwisp_radius.receivers.tasks.convert_called_station_id.delay")
+    @mock.patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
+    @mock.patch.object(app_settings, "CONVERT_CALLED_STATION_ON_CREATE", True)
+    @mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon")
+    def test_convert_called_station_id_with_mac_address_format(self, mocked_delay):
+        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
+        RadiusAppConfig.connect_signals()
+        with mock.patch.object(app_settings, "CALLED_STATION_IDS", _CALLED_STATION_IDS):
+            self._create_radius_accounting(
+                organization=self.default_org,
+                unique_id="convert-with-format",
+                session_id="convert-with-format",
+                nas_ip_address="192.168.182.3",
+                called_station_id="AA-AA-AA-AA-AA-0A",
+                calling_station_id="bb:bb:bb:bb:bb:0b",
+            )
+        mocked_delay.assert_called_once_with("convert-with-format")
 
 
 class TestRadiusCheck(BaseTestCase):

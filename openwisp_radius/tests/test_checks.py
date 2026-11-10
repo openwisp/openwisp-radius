@@ -123,3 +123,24 @@ class TestChecks(TestCase):
                     self.assertEqual(len(error_list), 0)
         finally:
             unregister_registration_method(custom_method, fail_loud=False)
+
+    def test_check_mac_address_format(self):
+        with self.subTest("unset"):
+            with patch("openwisp_radius.settings.MAC_ADDRESS_FORMAT", None):
+                self.assertEqual(checks.check_mac_address_format(None), [])
+
+        with self.subTest("valid values"):
+            for value in ("colon", "hyphen", "dotted", "plain"):
+                with patch("openwisp_radius.settings.MAC_ADDRESS_FORMAT", value):
+                    self.assertEqual(checks.check_mac_address_format(None), [])
+
+        with self.subTest("invalid values"):
+            for value in ("invalid", "COLON", 1):
+                with patch("openwisp_radius.settings.MAC_ADDRESS_FORMAT", value):
+                    error_list = checks.check_mac_address_format(None)
+                    self.assertEqual(len(error_list), 1)
+                    self.assertEqual(error_list[0].msg, "Improperly Configured")
+                    self.assertIn(
+                        "OPENWISP_RADIUS_MAC_ADDRESS_FORMAT",
+                        error_list[0].hint,
+                    )

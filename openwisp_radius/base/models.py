@@ -59,7 +59,9 @@ from ..utils import (
     generate_sms_token,
     get_sms_default_valid_until,
     load_model,
+    mac_address_variants,
     mask_phone_number,
+    normalize_mac_address,
     prefix_generate_users,
     validate_csvfile,
 )
@@ -574,9 +576,19 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         fields = kwargs.get("fields")
         self._set_initial_stop_time(fields=fields)
 
+    def clean(self):
+        super().clean()
+        self._normalize_station_ids()
+
+    def _normalize_station_ids(self, update_fields=None):
+        for field in ("called_station_id", "calling_station_id"):
+            if update_fields is None or field in update_fields:
+                setattr(self, field, normalize_mac_address(getattr(self, field)))
+
     def save(self, *args, **kwargs):
         created = self._state.adding
         update_fields = kwargs.get("update_fields")
+        self._normalize_station_ids(update_fields)
         if not self.start_time:
             self.start_time = now()
             if update_fields is not None:
@@ -654,6 +666,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         """
         if not called_station_id:
             return 0
+        variants = mac_address_variants(called_station_id)
         stop_time = now()
         closed_count = 0
         batch_size = 1000
@@ -663,7 +676,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
                 closed_sessions = list(
                     cls.objects.select_for_update()
                     .filter(
-                        called_station_id=called_station_id,
+                        called_station_id__in=variants,
                         stop_time__isnull=True,
                     )
                     .only(

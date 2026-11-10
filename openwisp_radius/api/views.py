@@ -69,6 +69,8 @@ from ..exceptions import (
     UserAlreadyVerified,
 )
 from ..utils import (
+    MAC_ADDRESS_FORMATS,
+    format_mac_address,
     generate_pdf,
     get_client_ip,
     get_organization_radius_settings,
@@ -1074,17 +1076,25 @@ class RadiusAccountingFilter(AccountingFilter):
 
     def filter_mac_address(self, queryset, name, value):
         """
-        The input MAC address in any of these two formats:
+        The input MAC address may use any supported representation:
             - AA-BB-CC-DD-EE-FF (quadrants separated by hyphen)
             - AA:BB:CC:DD:EE:FF (quadrants separated by colon)
+            - AABB.CCDD.EEFF (quadrants separated by dot)
+            - AABBCCDDEEFF (no separator)
         The below lookup ensures that the filtering is
         case-insensitive and works across different formats.
         """
+        variants = {
+            format_mac_address(value, mac_format) for mac_format in MAC_ADDRESS_FORMATS
+        }
+        if len(variants) == 1:
+            # Not a MAC address: preserve the legacy separator fallback.
+            variants.update((value.replace(":", "-"), value.replace("-", ":")))
         lookup = f"{name}__iexact"
-        return queryset.filter(
-            Q(**{lookup: value.replace(":", "-")})
-            | Q(**{lookup: value.replace("-", ":")})
-        )
+        query = Q()
+        for variant in variants:
+            query |= Q(**{lookup: variant})
+        return queryset.filter(query)
 
 
 @method_decorator(

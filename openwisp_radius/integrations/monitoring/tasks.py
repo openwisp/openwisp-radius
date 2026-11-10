@@ -7,6 +7,7 @@ from django.db.models import Count, F, Q
 from django.utils import timezone
 from swapper import load_model
 
+from ...utils import format_mac_address
 from . import settings as app_settings
 from .utils import clean_registration_method, sha1_hash
 
@@ -217,7 +218,11 @@ def post_save_radiusaccounting(
     registration_method = clean_registration_method(registration_method)
     if registration_method is None:
         registration_method = "unspecified"
-    device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
+    device_lookup = Q(
+        mac_address__iexact=format_mac_address(
+            called_station_id, "colon", keep_suffix=False
+        )
+    )
     extra_tags = {
         "method": registration_method,
         "organization_id": organization_id,

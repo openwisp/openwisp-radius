@@ -170,6 +170,7 @@ for organization in CALLED_STATION_IDS.keys():  # pragma: no cover
 CONVERT_CALLED_STATION_ON_CREATE = get_settings_value(
     "CONVERT_CALLED_STATION_ON_CREATE", False
 )
+MAC_ADDRESS_FORMAT = get_settings_value("MAC_ADDRESS_FORMAT", None)
 OPENVPN_DATETIME_FORMAT = get_settings_value(
     "OPENVPN_DATETIME_FORMAT", "%a %b %d %H:%M:%S %Y"
 )

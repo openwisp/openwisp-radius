@@ -616,6 +616,21 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    @mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon")
+    def test_accounting_start_with_mac_address_format(self):
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        data = self.acct_post_data
+        data["status_type"] = "Start"
+        data["called_station_id"] = "AA-BB-CC-DD-EE-FF:hostname"
+        data["calling_station_id"] = "5C-7D-C1-72-A7-3B"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 201)
+        ra = RadiusAccounting.objects.get(unique_id=data["unique_id"])
+        self.assertEqual(ra.called_station_id, "aa:bb:cc:dd:ee:ff:hostname")
+        self.assertEqual(ra.calling_station_id, "5c:7d:c1:72:a7:3b")
+
+    @freeze_time(START_DATE)
     @capture_any_output()
     @mock.patch("openwisp_radius.receivers.send_login_email.delay")
     @mock.patch(
@@ -867,6 +882,35 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
             self.assertEqual(ra.called_station_id, "00-00-22-22-33-33")
+
+    @mock.patch.object(
+        app_settings,
+        "CALLED_STATION_IDS",
+        {
+            "test-org": {
+                "openvpn_config": [
+                    {"host": "127.0.0.1", "port": 7505, "password": "somepassword"}
+                ],
+                "unconverted_ids": ["00-27-22-F3-FA-F1:hostname"],
+            }
+        },
+    )
+    @mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon")
+    @freeze_time(START_DATE)
+    def test_accounting_update_conversion_with_mac_address_format(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        ra.called_station_id = "00-00-11-11-22-22"
+        ra.save()
+        ra.refresh_from_db()
+        self.assertEqual(ra.called_station_id, "00:00:11:11:22:22")
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+        data["called_station_id"] = "00:27:22:F3:FA:F1:hostname"
+        data = self._get_accounting_params(**data)
+        response = self.post_json(data)
+        self.assertEqual(response.status_code, 200)
+        ra.refresh_from_db()
+        self.assertEqual(ra.called_station_id, "00:00:11:11:22:22")
 
     @freeze_time(START_DATE)
     @capture_any_output()
@@ -1855,6 +1899,71 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["control:Auth-Type"], "Accept")
 
+    @mock.patch.object(app_settings, "SIMULTANEOUS_USE_ENABLED", True)
+    def test_authorize_simultaneous_use_with_mac_address_format(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        self._create_radius_groupcheck(
+            group=group,
+            groupname=group.name,
+            attribute="Simultaneous-Use",
+            op=":=",
+            value="1",
+        )
+        with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "hyphen"):
+            acct_data = self.acct_post_data
+            acct_data.update(
+                {
+                    "username": user.username,
+                    "unique_id": "format_session_1",
+                    "stop_time": None,
+                }
+            )
+            session = self._create_radius_accounting(**acct_data)
+            self.assertEqual(session.called_station_id, "00-27-22-f3-fa-f1:hostname")
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "called_station_id": "00:27:22:F3:FA:F1:hostname",
+                    "calling_station_id": "5C-7D-C1-72-A7-3B",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+    @mock.patch.object(app_settings, "SIMULTANEOUS_USE_ENABLED", True)
+    def test_authorize_simultaneous_use_with_legacy_mac_address_format(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        self._create_radius_groupcheck(
+            group=group,
+            groupname=group.name,
+            attribute="Simultaneous-Use",
+            op=":=",
+            value="1",
+        )
+        acct_data = self.acct_post_data
+        acct_data.update(
+            {
+                "username": user.username,
+                "unique_id": "legacy_format_session",
+                "stop_time": None,
+                "called_station_id": "AA-BB-CC-DD-EE-FF",
+                "calling_station_id": "5C-7D-C1-72-A7-3B",
+            }
+        )
+        self._create_radius_accounting(**acct_data)
+        with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon"):
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "called_station_id": "aa:bb:cc:dd:ee:ff",
+                    "calling_station_id": "5c:7d:c1:72:a7:3b",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
     @mock.patch.object(app_settings, "SIMULTANEOUS_USE_ENABLED", False)
     @mock.patch("openwisp_radius.api.freeradius_views.RadiusAccounting.objects.count")
     def test_authorize_simultaneous_use_disabled_in_settings(self, mocked_count):
@@ -2214,6 +2323,59 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 1,
             )
         OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=False)
+
+    @mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted")
+    def test_mac_address_roaming_with_format(self):
+        acct_post_data = self.acct_post_data
+        acct_post_data["username"] = "tester"
+        acct_post_data["calling_station_id"] = "00-11-22-33-44-55"
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        session = self._create_radius_accounting(**acct_post_data)
+        self.assertEqual(session.calling_station_id, "0011.2233.4455")
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
+        payload = self.acct_post_data
+        payload.update(
+            {
+                "unique_id": "roaming-with-format",
+                "username": "00-11-22-33-44-55",
+                "status_type": "Start",
+                "nas_ip_address": "172.16.64.92",
+            }
+        )
+        response = self.client.post(
+            self._acct_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.filter(username="tester").count(), 2)
+
+    def test_mac_address_roaming_with_legacy_mac_address_format(self):
+        acct_post_data = self.acct_post_data
+        acct_post_data["username"] = "tester"
+        acct_post_data["calling_station_id"] = "00-11-22-33-44-55"
+        self._get_org_user()
+        self._login_and_obtain_auth_token()
+        self._create_radius_accounting(**acct_post_data)
+        OrganizationRadiusSettings.objects.update(mac_addr_roaming_enabled=True)
+        payload = self.acct_post_data
+        payload.update(
+            {
+                "unique_id": "roaming-legacy-format",
+                "username": "00-11-22-33-44-55",
+                "status_type": "Start",
+                "nas_ip_address": "172.16.64.92",
+            }
+        )
+        with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "dotted"):
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.filter(username="tester").count(), 2)
 
     def test_emulate_roaming(self):
         """
