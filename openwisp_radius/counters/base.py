@@ -88,18 +88,24 @@ class BaseCounter(ABC):
                 logger=self.logger,
             )
 
-    def get_counter(self):
+    def _get_counter(self, start_time, end_time):
         """
         The SQL query is executed with raw SQL for maximum flexibility and
         adherence to freeradius.
         """
         with connection.cursor() as cursor:
-            start_time, end_time = self.get_reset_timestamps()
             cursor.execute(self.sql, self.get_sql_params(start_time, end_time))
             row = cursor.fetchone()
         # return result,
         # or if nothing is returned (no sessions present), return zero
         return row[0] or 0
+
+    def get_counter(self):
+        timestamps = getattr(self, "_usage_reset_timestamps", None)
+        if timestamps is None:
+            timestamps = self.get_reset_timestamps()
+        start_time, end_time = timestamps
+        return self._get_counter(start_time, end_time)
 
     def check(self):
         if not self.group_check:
@@ -146,6 +152,16 @@ class BaseCounter(ABC):
 
     def consumed(self):
         return int(self.get_counter())
+
+    def get_consumption_and_reset(self):
+        timestamps = self.get_reset_timestamps()
+        # Ensure consumption and reset refer to the same period at its boundary.
+        self._usage_reset_timestamps = timestamps
+        try:
+            _, end_time = timestamps
+            return self.consumed(), end_time
+        finally:
+            del self._usage_reset_timestamps
 
 
 class BaseDailyCounter(BaseCounter):

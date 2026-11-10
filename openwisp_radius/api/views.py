@@ -69,7 +69,12 @@ from ..exceptions import (
     SmsAttemptCooldownException,
     UserAlreadyVerified,
 )
-from ..utils import generate_pdf, get_organization_radius_settings, load_model
+from ..utils import (
+    generate_pdf,
+    get_client_ip,
+    get_organization_radius_settings,
+    load_model,
+)
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
 from .permissions import (
@@ -791,6 +796,14 @@ class CreatePhoneTokenView(
         IsAuthenticated,
     )
 
+    def get_ident(self, request):
+        """Override DRF's client-ID lookup for the SMS token IP quota.
+
+        X-Forwarded-For is caller-controlled and could bypass the quota.
+        Reverse proxies must replace REMOTE_ADDR with the client address.
+        """
+        return get_client_ip(request)
+
     @swagger_auto_schema(
         operation_description=("""
             **Requires the user auth token (Bearer Token).**
@@ -807,30 +820,38 @@ class CreatePhoneTokenView(
     def create(self, *args, **kwargs):
         request = self.request
         self.validate_membership(request.user)
-        phone_number = request.data.get("phone_number", request.user.phone_number)
+        # only the change phone number endpoint can change the phone number
+        phone_number = kwargs.pop("phone_number", request.user.phone_number)
         phone_token = PhoneToken(
             user=request.user,
             organization=self.organization,
             ip=self.get_ident(request),
             phone_number=phone_number,
         )
+        org_cooldown = self.organization.radius_settings.sms_cooldown
         try:
-            phone_token.full_clean()
-            if kwargs.get("enforce_unverified", True):
-                phone_token._validate_already_verified(organization=self.organization)
+            with transaction.atomic():
+                # acquire lock on the user to prevent bypassing
+                # cooldown period with concurrent requests
+                phone_token.user = (
+                    get_user_model().objects.select_for_update().get(pk=request.user.pk)
+                )
+                phone_token.full_clean()
+                if kwargs.get("enforce_unverified", True):
+                    phone_token._validate_already_verified(
+                        organization=self.organization
+                    )
+                self.enforce_sms_request_cooldown(org_cooldown, phone_number)
+                phone_token.save()
         except ValidationError as e:
             error_dict = self._get_error_dict(e)
             raise serializers.ValidationError(error_dict)
         except UserAlreadyVerified as e:
             raise serializers.ValidationError({"user": str(e)})
-        org_cooldown = self.organization.radius_settings.sms_cooldown
-        try:
-            self.enforce_sms_request_cooldown(org_cooldown, phone_number)
         except SmsAttemptCooldownException as e:
             return Response(
                 {"non_field_errors": [str(e)], "cooldown": e.cooldown}, status=400
             )
-        phone_token.save()
         return Response(
             {"cooldown": org_cooldown},
             status=201,
@@ -922,21 +943,23 @@ class ValidatePhoneTokenView(DispatchOrgMixin, GenericAPIView):
         self.validate_membership(user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_token = (
-            PhoneToken.objects.filter(user=user, organization=self.organization)
-            .order_by("-created")
-            .first()
-        )
-        if not phone_token:
-            return self._error_response(
-                _("No verification code found in the system for this user.")
+        with transaction.atomic():
+            phone_token = (
+                PhoneToken.objects.select_for_update()
+                .filter(user=user, organization=self.organization)
+                .order_by("-created")
+                .first()
             )
-        try:
-            is_valid = phone_token.is_valid(
-                serializer.data["code"], organization=self.organization
-            )
-        except PhoneTokenException as e:
-            return self._error_response(str(e))
+            if not phone_token:
+                return self._error_response(
+                    _("No verification code found in the system for this user.")
+                )
+            try:
+                is_valid = phone_token.is_valid(
+                    serializer.data["code"], organization=self.organization
+                )
+            except PhoneTokenException as e:
+                return self._error_response(str(e))
         if not is_valid:
             return self._error_response(_("Invalid code."))
         else:
@@ -1011,7 +1034,9 @@ class ChangePhoneNumberView(ThrottledAPIMixin, CreatePhoneTokenView):
         # the user is marked unverified, so that if the
         # creation of the phone token fails, the
         # the user's is_verified state remains unchanged
-        self.create_phone_token(*args, **kwargs)
+        self.create_phone_token(
+            *args, phone_number=serializer.validated_data["phone_number"], **kwargs
+        )
         serializer.save()
         return Response(None, status=200)
 

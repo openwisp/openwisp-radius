@@ -179,8 +179,8 @@ class TestAdmin(
             authentication="RADIUS",
             connection_info_start="f",
             connection_info_stop="hgh",
-            input_octets="1",
-            output_octets="4",
+            input_octets="1200000000000",
+            output_octets="5600000000000",
             update_time="2017-03-10 11:50:00",
             session_id="1",
         )
@@ -193,12 +193,51 @@ class TestAdmin(
         )
         self.assertContains(response, "ok")
         self.assertNotContains(response, "errors")
+        self.assertContains(response, "1.20 TB")
+        self.assertContains(response, "5.60 TB")
+        with self.subTest("editable accounting"):
+            with mock.patch.object(app_settings, "EDITABLE_ACCOUNTING", True):
+                response = self.client.get(
+                    reverse(
+                        f"admin:{self.app_label}_radiusaccounting_change",
+                        args=[obj.pk],
+                    )
+                )
+            self.assertContains(response, "1.20 TB")
+            self.assertContains(response, "5.60 TB")
 
     def test_radiusaccounting_changelist_readonly(self):
         self.assertFalse(app_settings.EDITABLE_ACCOUNTING)
         url = reverse(f"admin:{self.app_label}_radiusaccounting_changelist")
         response = self.client.get(url)
         self.assertNotContains(response, "Add accounting")
+
+    def test_radiusaccounting_changelist_octets(self):
+        for session_id, input_octets, output_octets in [
+            ("small", 999, 10000000),
+            ("large", 1000, 2000000),
+        ]:
+            self._create_radius_accounting(
+                unique_id=session_id,
+                session_id=session_id,
+                nas_ip_address="127.0.0.1",
+                input_octets=input_octets,
+                output_octets=output_octets,
+            )
+        url = reverse(f"admin:{self.app_label}_radiusaccounting_changelist")
+        for ordering, expected in [
+            ("4", ["small", "large"]),
+            ("5", ["large", "small"]),
+        ]:
+            with self.subTest(ordering=ordering):
+                response = self.client.get(url, {"o": ordering})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    [obj.session_id for obj in response.context["cl"].result_list],
+                    expected,
+                )
+                for value in ("999 B", "1.00 kB", "2.00 MB", "10.00 MB"):
+                    self.assertContains(response, value)
 
     def test_postauth_change(self):
         options = dict(
@@ -755,7 +794,9 @@ class TestAdmin(
             self.assertEqual(response.status_code, 200)
             radsetting.refresh_from_db()
             self.assertContains(response, "The URL must contain the ")
-            self.assertContains(response, "errors field-password_reset_url")
+            self.assertContains(
+                response, 'id="id_radius_settings-0-password_reset_url_error"'
+            )
 
         with self.subTest("Ensure admin HTML shows the default value"):
             response = self.client.get(url)
@@ -872,7 +913,7 @@ class TestAdmin(
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "errors field-number_of_users")
+        self.assertContains(response, 'id="id_number_of_users_error"')
 
     def _login(self, username="admin", password="tester"):
         self.client.force_login(User.objects.get(username=username))
@@ -1256,6 +1297,39 @@ class TestAdmin(
         )
         self.assertIn("group", readonly_fields)
 
+    def test_radius_batch_change_form_cannot_attach_users(self):
+        batch = self._create_radius_batch(
+            name="test2", strategy="prefix", prefix="test-prefix12"
+        )
+        self.assertEqual(batch.status, RadiusBatch.PENDING)
+        user = self._create_user(username="user", email="user@openwisp.com")
+        administrator = self._create_administrator(organizations=[self.default_org])
+        self.client.force_login(administrator)
+        change_url = reverse(
+            f"admin:{self.app_label}_radiusbatch_change", args=[batch.pk]
+        )
+
+        with self.subTest("users are not rendered as an editable field"):
+            response = self.client.get(change_url)
+            self.assertContains(response, "field-users")
+            self.assertNotContains(response, 'name="users"')
+
+        with self.subTest("submitted users are not attached to the batch"):
+            data = self._get_prefix_post_data()
+            data["users"] = [str(user.pk)]
+            response = self.client.post(change_url, data)
+            self.assertEqual(response.status_code, 302, "the form was not saved")
+            self.assertFalse(
+                batch.users.filter(pk=user.pk).exists(),
+                "the user was attached to the batch",
+            )
+
+        with self.subTest("deleting the batch keeps the user"):
+            batch.delete()
+            self.assertTrue(
+                User.objects.filter(pk=user.pk).exists(), "the user was deleted"
+            )
+
     def test_radius_batch_default_group(self):
         url = reverse(
             f"admin:{self.app_label}_radiusbatch_default_group",
@@ -1528,7 +1602,7 @@ class TestAdmin(
                 " eg: {organization} verification code: {code}.",
                 html=True,
             )
-            self.assertContains(response, "errors field-sms_message")
+            self.assertContains(response, 'id="id_radius_settings-0-sms_message_error"')
 
         with self.subTest("Ensure admin HTML shows the default value"):
             response = self.client.get(url)

@@ -1,10 +1,12 @@
 import csv
+import ipaddress
 import logging
 import math
 import os
 from datetime import timedelta
 from io import BytesIO, StringIO
 
+import phonenumbers
 import swapper
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -32,6 +34,29 @@ logger = logging.getLogger(__name__)
 
 def load_model(model):
     return swapper.load_model("openwisp_radius", model)
+
+
+def get_client_ip(request):
+    client_ip = request.META.get("REMOTE_ADDR", "")
+    try:
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    return str(getattr(address, "ipv4_mapped", None) or address)
+
+
+def mask_phone_number(phone_number):
+    """Masks a phone number.
+
+    Returns only the international prefix, asterisks and the last 4 digits.
+    Used for logging.
+    """
+    number = phonenumbers.parse(str(phone_number))
+    country_code = f"+{number.country_code}"
+    national_number = str(number.national_number)
+    return (
+        f"{country_code}{'*' * max(len(national_number) - 4, 0)}{national_number[-4:]}"
+    )
 
 
 def get_model(apps, model_path):

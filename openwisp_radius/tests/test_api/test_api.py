@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from unittest import mock
 from uuid import UUID
 
@@ -22,6 +21,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import formats, timezone
+from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -39,6 +39,7 @@ from openwisp_radius.api.serializers import (
 )
 from openwisp_radius.api.views import PasswordResetConfirmView, PasswordResetView
 from openwisp_radius.base.forms import PasswordResetForm
+from openwisp_radius.counters.base import BaseCounter
 from openwisp_users.api.serializers import (
     PasswordResetSerializer as UsersPasswordResetSerializer,
 )
@@ -668,25 +669,23 @@ class TestApi(TestDisabledOrgApiMixin, AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data["detail"], "Verification e-mail sent.")
 
-    if (sys.version_info.major, sys.version_info.minor) > (3, 6):
-
-        @override_dj_rest_auth_settings(USE_JWT=True)
-        def test_registration_with_jwt(self):
-            user_count = User.objects.all().count()
-            url = reverse("radius:rest_register", args=[self.default_org.slug])
-            r = self.client.post(
-                url,
-                {
-                    "username": self._test_email,
-                    "email": self._test_email,
-                    "password1": "password",
-                    "password2": "password",
-                },
-            )
-            self.assertEqual(r.status_code, 201)
-            self.assertIn("access", r.data)
-            self.assertIn("refresh", r.data)
-            self.assertEqual(User.objects.all().count(), user_count + 1)
+    @override_dj_rest_auth_settings(USE_JWT=True)
+    def test_registration_with_jwt(self):
+        user_count = User.objects.all().count()
+        url = reverse("radius:rest_register", args=[self.default_org.slug])
+        r = self.client.post(
+            url,
+            {
+                "username": self._test_email,
+                "email": self._test_email,
+                "password1": "password",
+                "password2": "password",
+            },
+        )
+        self.assertEqual(r.status_code, 201)
+        self.assertIn("access", r.data)
+        self.assertIn("refresh", r.data)
+        self.assertEqual(User.objects.all().count(), user_count + 1)
 
     def test_api_batch_add_users(self):
         response = self._radius_batch_post_request(self._radius_batch_prefix_data())
@@ -1478,8 +1477,140 @@ class TestApi(TestDisabledOrgApiMixin, AcctMixin, ApiTokenMixin, BaseTestCase):
                 "result": None,
                 "type": None,
                 "value": "2000000000",
+                "reset": None,
             },
         )
+
+    def test_user_group_check_serializer_reuses_counter_period(self):
+        reset_time = 1_520_035_200
+
+        class Counter:
+            calls = 0
+
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+            @classmethod
+            def get_attribute_type(cls):
+                return "seconds"
+
+            def get_consumption_and_reset(self):
+                self.__class__.calls += 1
+                return 3600, reset_time
+
+        group = self._create_radius_group(name="custom counter group")
+        group_check = self._create_radius_groupcheck(
+            attribute="Custom-Session-Counter",
+            op=":=",
+            value="7200",
+            group=group,
+            groupname=group.name,
+        )
+        with mock.patch.object(
+            app_settings,
+            "CHECK_ATTRIBUTE_COUNTERS_MAP",
+            {group_check.attribute: Counter},
+        ):
+            serializer = UserGroupCheckSerializer(
+                group_check,
+                context={"user": self._get_user(), "group": group},
+            )
+            self.assertDictEqual(
+                serializer.data,
+                {
+                    "attribute": "Custom-Session-Counter",
+                    "op": ":=",
+                    "value": "7200",
+                    "result": 3600,
+                    "type": "seconds",
+                    "reset": reset_time,
+                },
+            )
+        self.assertEqual(Counter.calls, 1)
+
+    def test_user_group_check_serializer_uses_legacy_counter_consumption(self):
+        class Counter:
+            @classmethod
+            def get_attribute_type(cls):
+                return "seconds"
+
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+            def consumed(self):
+                return 3600
+
+        group = self._create_radius_group(name="legacy custom counter group")
+        group_check = self._create_radius_groupcheck(
+            attribute="Legacy-Custom-Session-Counter",
+            op=":=",
+            value="7200",
+            group=group,
+            groupname=group.name,
+        )
+        with mock.patch.object(
+            app_settings,
+            "CHECK_ATTRIBUTE_COUNTERS_MAP",
+            {group_check.attribute: Counter},
+        ):
+            serializer = UserGroupCheckSerializer(
+                group_check,
+                context={"user": self._get_user(), "group": group},
+            )
+            self.assertDictEqual(
+                serializer.data,
+                {
+                    "attribute": "Legacy-Custom-Session-Counter",
+                    "op": ":=",
+                    "value": "7200",
+                    "result": 3600,
+                    "type": "seconds",
+                    "reset": None,
+                },
+            )
+
+    def test_user_group_check_serializer_uses_overridden_consumption(self):
+        class Counter(BaseCounter):
+            counter_name = "CustomSessionCounter"
+            check_name = "Custom-Session-Counter"
+            reply_names = ("Session-Timeout",)
+            reset = "never"
+            sql = "SELECT 0"
+
+            def get_sql_params(self, start_time, end_time):
+                return []
+
+            def consumed(self):
+                return 3600
+
+        group = self._create_radius_group(name="custom counter group")
+        group_check = self._create_radius_groupcheck(
+            attribute=Counter.check_name,
+            op=":=",
+            value="7200",
+            group=group,
+            groupname=group.name,
+        )
+        with mock.patch.object(
+            app_settings,
+            "CHECK_ATTRIBUTE_COUNTERS_MAP",
+            {group_check.attribute: Counter},
+        ):
+            serializer = UserGroupCheckSerializer(
+                group_check,
+                context={"user": self._get_user(), "group": group},
+            )
+            self.assertDictEqual(
+                serializer.data,
+                {
+                    "attribute": "Custom-Session-Counter",
+                    "op": ":=",
+                    "value": "7200",
+                    "result": 3600,
+                    "type": "seconds",
+                    "reset": None,
+                },
+            )
 
     def _add_model_permission(self, user, model, actions):
         """action must be one of: 'view', 'add', 'change', 'delete'"""
@@ -2205,6 +2336,7 @@ class TestApi(TestDisabledOrgApiMixin, AcctMixin, ApiTokenMixin, BaseTestCase):
 
 
 class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
+    @freeze_time("2018-03-02T11:43:24+01:00")
     def test_user_radius_usage_view(self):
         auth_url = reverse("radius:user_auth_token", args=[self.default_org.slug])
         usage_url = reverse("radius:user_radius_usage", args=[self.default_org.slug])
@@ -2228,6 +2360,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 0,
                     "type": "seconds",
+                    "reset": 1520035200,
                 },
             )
             self.assertDictEqual(
@@ -2238,6 +2371,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 0,
                     "type": "bytes",
+                    "reset": 1520035200,
                 },
             )
 
@@ -2269,6 +2403,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 261,
                     "type": "seconds",
+                    "reset": 1520035200,
                 },
             )
             self.assertDictEqual(
@@ -2279,6 +2414,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 2000000000,
                     "type": "bytes",
+                    "reset": 1520035200,
                 },
             )
 
@@ -2307,6 +2443,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 522,
                     "type": "seconds",
+                    "reset": 1520035200,
                 },
             )
             self.assertDictEqual(
@@ -2317,6 +2454,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 3000000000,
                     "type": "bytes",
+                    "reset": 1520035200,
                 },
             )
 
@@ -2345,6 +2483,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "10800",
                     "result": 783,
                     "type": "seconds",
+                    "reset": 1520035200,
                 },
             )
             self.assertDictEqual(
@@ -2355,6 +2494,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                     "value": "3000000000",
                     "result": 3000000000,
                     "type": "bytes",
+                    "reset": 1520035200,
                 },
             )
 
@@ -2381,6 +2521,7 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 "result": None,
                 "type": None,
                 "value": "2000000000",
+                "reset": None,
             },
         )
 

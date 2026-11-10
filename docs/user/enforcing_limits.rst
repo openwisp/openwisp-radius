@@ -167,6 +167,13 @@ Please look at the source code of OpenWISP RADIUS to find out more.
 Once the new class is ready, you will need to add it to
 :ref:`radius_counters_setting`.
 
+Custom counters which inherit from ``BaseCounter`` automatically expose
+their consumption and reset time in the user usage API. A custom counter
+which does not inherit from ``BaseCounter`` can implement
+``get_consumption_and_reset`` and return a tuple containing the consumed
+quota and the Unix reset timestamp in seconds, or ``None`` when it does
+not reset.
+
 It is also possible to implement a check class in a completely custom
 fashion (that is, not inheriting from ``BaseCounter``), the only
 requirements are:

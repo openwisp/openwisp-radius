@@ -5,9 +5,18 @@ on:
   push:
     branches:
       - master
+      - "[0-9]+.[0-9]+"
   pull_request:
     branches:
       - master
+      - "[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -18,21 +27,27 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
         django-version:
-          - django~=5.1.0
           - django~=5.2.0
+          - django~=6.0.0
+          - django~=6.1.0
+        exclude:
+          - python-version: "3.11"
+            django-version: django~=6.0.0
+          - python-version: "3.11"
+            django-version: django~=6.1.0
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Cache APT packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /var/cache/apt/archives
           key: apt-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
@@ -45,7 +60,7 @@ jobs:
           sudo dpkg-reconfigure man-db
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -54,9 +69,11 @@ jobs:
 
       - name: Install Dependencies
         id: deps
+        env:
+          DJANGO_VERSION: ${{ matrix.django-version }}
         run: |
           sudo apt update -qq
-          sudo apt-get -qq -y install xmlsec1 gettext \
+          sudo apt-get -qq -y install xmlsec1 gettext libharfbuzz-subset0 \
               sqlite3 \
               fping \
               gdal-bin \
@@ -70,7 +87,7 @@ jobs:
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
           pip install --upgrade --force-reinstall --no-deps --no-cache-dir https://github.com/openwisp/openwisp-users/tarball/issues/522-disabled-org
-          pip install -U ${{ matrix.django-version }}
+          pip install -U "$DJANGO_VERSION"
 
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
@@ -94,7 +111,7 @@ jobs:
 
       - name: Upload Coverage
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           parallel: true
           format: cobertura
@@ -102,10 +119,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   coveralls:
+    name: Finalize Coveralls report
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Coveralls Finished
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           parallel-finished: true

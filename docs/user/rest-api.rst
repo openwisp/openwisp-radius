@@ -226,6 +226,11 @@ The rate descriptions used in ``DEFAULT_THROTTLE_RATES`` may include
 ``second``, ``minute``, ``hour`` or ``day`` as the throttle period,
 setting it to ``None`` will result in no throttling.
 
+SMS token requests use the connection address in ``REMOTE_ADDR`` for their
+daily IP limit. When deploying behind a reverse proxy, configure it to
+replace ``REMOTE_ADDR`` with the client address and discard
+client-supplied forwarding headers.
+
 List of Endpoints
 ~~~~~~~~~~~~~~~~~
 
@@ -727,6 +732,38 @@ shows how much time and/or traffic the user has consumed.
 
 Responds only to **GET**.
 
+The response contains a ``checks`` list. Each item represents a configured
+counter and includes the following fields:
+
+- ``attribute``: RADIUS check attribute name.
+- ``op``: RADIUS check operator.
+- ``value``: configured quota as a string.
+- ``result``: consumed quota, capped at ``value``. It is ``null`` when the
+  counter cannot be evaluated.
+- ``type``: quota unit, such as ``seconds`` or ``bytes``. It is ``null``
+  for an unsupported counter.
+- ``reset``: Unix timestamp in seconds for the end of the counter period
+  used to calculate ``result``. It is ``null`` for counters which never
+  reset, unsupported reset policies, or counters which cannot be
+  evaluated. It can differ for each check.
+
+Example response:
+
+.. code-block:: json
+
+    {
+      "checks": [
+        {
+          "attribute": "Max-Daily-Session",
+          "op": ":=",
+          "value": "10800",
+          "result": 3600,
+          "type": "seconds",
+          "reset": 1735689600
+        }
+      ]
+    }
+
 Create SMS token
 ++++++++++++++++
 
@@ -738,7 +775,10 @@ Create SMS token
 **Requires the user auth token (Bearer Token)**.
 
 Used for SMS verification, sends a code via SMS to the phone number of the
-user.
+user. The number must comply with
+:ref:`OPENWISP_RADIUS_ALLOWED_MOBILE_PREFIXES
+<openwisp_radius_allowed_mobile_prefixes>` and
+``OPENWISP_RADIUS_ALLOW_FIXED_LINE_OR_MOBILE``.
 
 .. code-block:: text
 
