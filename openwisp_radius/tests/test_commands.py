@@ -795,6 +795,8 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
     @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
     @patch.object(app_settings, "MAC_ADDRESS_FORMAT", "colon")
     def test_get_unconverted_sessions_with_mac_address_format(self):
+        # Importing the command patches openvpn_status at import time using
+        # OPENVPN_DATETIME_FORMAT, so defer it until the patch is active.
         from ..management.commands.base.convert_called_station_id import (
             BaseConvertCalledStationIdCommand,
         )

@@ -82,12 +82,14 @@ class TestUtils(FileMixin, BaseTestCase):
                     normalize_mac_address("00-27-22-F3-FA-F1"),
                     "00:27:22:f3:fa:f1",
                 )
+
         with self.subTest("disabled"):
             with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", None):
                 self.assertEqual(
                     normalize_mac_address("00-27-22-F3-FA-F1"),
                     "00-27-22-F3-FA-F1",
                 )
+
         with self.subTest("invalid format"):
             with mock.patch.object(app_settings, "MAC_ADDRESS_FORMAT", "invalid"):
                 self.assertEqual(
