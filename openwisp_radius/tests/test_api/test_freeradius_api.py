@@ -802,6 +802,49 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertAcctData(ra, data)
 
     @freeze_time(START_DATE)
+    def test_accounting_uint32_session_time_postgresql(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        for value in (0, 2_147_483_647, 2_147_483_648, 4_294_967_295):
+            with self.subTest(session_time=value):
+                data = self.acct_post_data
+                data["status_type"] = "Interim-Update"
+                data["session_time"] = str(value)
+                data = self._get_accounting_params(**data)
+                response = self.post_json(data)
+                self.assertEqual(response.status_code, 200)
+                ra.refresh_from_db()
+                self.assertEqual(ra.session_time, value)
+
+    @freeze_time(START_DATE)
+    def test_accounting_uint32_session_time_rejects_out_of_range(self):
+        ra = self._create_radius_accounting(**self._acct_initial_data)
+        for value in (-1, 4_294_967_296):
+            with self.subTest(session_time=value):
+                data = self.acct_post_data
+                data["status_type"] = "Interim-Update"
+                data["session_time"] = str(value)
+                data = self._get_accounting_params(**data)
+                response = self.post_json(data)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("session_time", response.data)
+                ra.refresh_from_db()
+                self.assertEqual(ra.session_time, 0)
+
+    @freeze_time(START_DATE)
+    @capture_any_output()
+    def test_accounting_uint32_session_time_start(self):
+        data = self.acct_post_data
+        data["status_type"] = "Start"
+        data["session_time"] = str(2**32 - 1)
+        data = self._get_accounting_params(**data)
+
+        response = self.post_json(data)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RadiusAccounting.objects.count(), 1)
+        self.assertEqual(RadiusAccounting.objects.first().session_time, 2**32 - 1)
+
+    @freeze_time(START_DATE)
     def test_accounting_update_missing_octets(self):
         self.assertEqual(RadiusAccounting.objects.count(), 0)
         ra = self._create_radius_accounting(**self._acct_initial_data)
