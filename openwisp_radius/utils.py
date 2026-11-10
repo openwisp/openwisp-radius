@@ -137,14 +137,25 @@ def mac_address_variants_q(field, value):
     return query
 
 
+def get_mac_address_format():
+    """
+    Return the configured ``OPENWISP_RADIUS_MAC_ADDRESS_FORMAT`` value, or
+    ``None`` when it is disabled or invalid.
+    """
+    mac_format = app_settings.MAC_ADDRESS_FORMAT
+    if isinstance(mac_format, str) and mac_format in MAC_ADDRESS_FORMATS:
+        return mac_format
+    return None
+
+
 def normalize_mac_address(value):
     """
     Apply the configured ``OPENWISP_RADIUS_MAC_ADDRESS_FORMAT`` to ``value``.
 
     Returns ``value`` unchanged when the setting is disabled or invalid.
     """
-    mac_format = app_settings.MAC_ADDRESS_FORMAT
-    if not isinstance(mac_format, str) or mac_format not in MAC_ADDRESS_FORMATS:
+    mac_format = get_mac_address_format()
+    if mac_format is None:
         return value
     return format_mac_address(value, mac_format)
 

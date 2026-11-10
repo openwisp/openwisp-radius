@@ -9,7 +9,7 @@ from netaddr import EUI, mac_unix
 from telnetlib3 import telnetlib
 
 from .... import settings as app_settings
-from ....utils import load_model, mac_address_variants_q
+from ....utils import get_mac_address_format, load_model, mac_address_variants_q
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
             queryset = queryset.filter(organization__slug=org)
         else:
             queryset = queryset.filter(organization__id=org)
-        if not app_settings.MAC_ADDRESS_FORMAT:
+        if get_mac_address_format() is None:
             return queryset.filter(called_station_id__in=unconverted_ids).iterator()
         if not unconverted_ids:
             return queryset.none()

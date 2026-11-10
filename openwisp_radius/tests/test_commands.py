@@ -830,3 +830,40 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
         )
         self.assertEqual(len(sessions), 1)
         self.assertEqual(sessions[0].called_station_id, "aA:aA:aA:aA:aA:0a")
+
+    @patch.object(app_settings, "OPENVPN_DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S")
+    @patch.object(app_settings, "MAC_ADDRESS_FORMAT", None)
+    def test_get_unconverted_sessions_with_invalid_mac_address_format(self):
+        # Importing the command patches openvpn_status at import time using
+        # OPENVPN_DATETIME_FORMAT, so defer it until the patch is active.
+        from ..management.commands.base.convert_called_station_id import (
+            BaseConvertCalledStationIdCommand,
+        )
+
+        options = _RADACCT.copy()
+        options.update(
+            unique_id="unconverted-invalid-format",
+            organization=self.default_org,
+            nas_ip_address="192.168.182.3",
+            start_time=now(),
+            called_station_id="AA-AA-AA-AA-AA-0A",
+            stop_time=None,
+        )
+        self._create_radius_accounting(**options)
+        command = BaseConvertCalledStationIdCommand()
+        for mac_format in ("invalid", ["colon"]):
+            with self.subTest(mac_format=mac_format):
+                with patch.object(app_settings, "MAC_ADDRESS_FORMAT", mac_format):
+                    differing = list(
+                        command._get_unconverted_sessions(
+                            str(self.default_org.id), ["aa:aa:aa:aa:aa:0a"]
+                        )
+                    )
+                    exact = list(
+                        command._get_unconverted_sessions(
+                            str(self.default_org.id), ["AA-AA-AA-AA-AA-0A"]
+                        )
+                    )
+                self.assertEqual(differing, [])
+                self.assertEqual(len(exact), 1)
+                self.assertEqual(exact[0].called_station_id, "AA-AA-AA-AA-AA-0A")
