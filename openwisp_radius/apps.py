@@ -6,6 +6,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.utils.translation import gettext_lazy as _
 from swapper import get_model_name
 
+from openwisp_users.signals import organization_disabled, organization_enabled
 from openwisp_utils.admin_theme.menu import register_menu_group
 from openwisp_utils.api.apps import ApiAppConfig
 from openwisp_utils.utils import default_or_test
@@ -15,6 +16,8 @@ from .receivers import (
     close_previous_radius_accounting_sessions,
     convert_radius_called_station_id,
     create_default_groups_handler,
+    organization_disabled_handler,
+    organization_enabled_handler,
     organization_post_save,
     organization_pre_save,
     radius_user_group_change,
@@ -106,6 +109,16 @@ class OpenwispRadiusConfig(ApiAppConfig):
             organization_post_save,
             sender=Organization,
             dispatch_uid="openwisp_radius_org_post_save",
+        )
+        organization_disabled.connect(
+            organization_disabled_handler,
+            sender=Organization,
+            dispatch_uid="openwisp_radius_organization_disabled",
+        )
+        organization_enabled.connect(
+            organization_enabled_handler,
+            sender=Organization,
+            dispatch_uid="openwisp_radius_organization_enabled",
         )
         post_delete.connect(
             self.radiustoken_post_delete,

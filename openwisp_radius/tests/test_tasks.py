@@ -15,6 +15,8 @@ from openwisp_radius import tasks
 from openwisp_utils.tests import capture_any_output, capture_stdout
 
 from .. import settings as app_settings
+from ..coa import ChangeOfAuthorizationManager
+from ..radclient.client import RadClient
 from ..utils import load_model
 from . import _RADACCT, FileMixin
 from .mixins import BaseTestCase
@@ -34,6 +36,19 @@ class TestTasks(FileMixin, BaseTestCase):
         app.config_from_object("django.conf:settings", namespace="CELERY")
         app.autodiscover_tasks()
         cls.celery_worker = start_worker(app)
+
+    def _create_radius_accounting_session(
+        self, organization, nas_ip_address, unique_id
+    ):
+        options = _RADACCT.copy()
+        options.update(
+            {
+                "organization": organization,
+                "nas_ip_address": nas_ip_address,
+                "unique_id": unique_id,
+            }
+        )
+        return self._create_radius_accounting(**options)
 
     @freeze_time("1998-01-28")
     def _get_user_from_radius_batch(self, **kwargs):
@@ -403,3 +418,180 @@ class TestTasks(FileMixin, BaseTestCase):
         tasks.delete_inactive_users.delay()
         self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
         self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
+
+    @mock.patch.object(RadClient, "perform_disconnect", return_value=True)
+    def test_disconnect_organization_sessions(self, mocked_disconnect):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        self._create_nas(
+            name="10.8.0.0/24",
+            organization=org,
+            short_name="test",
+            type="Virtual",
+            secret="testing123",
+        )
+        session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-1"
+        )
+        org.is_active = False
+        org.save()
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+
+        session.refresh_from_db()
+        self.assertNotEqual(session.stop_time, None)
+        self.assertEqual(session.terminate_cause, "Admin-Reset")
+        mocked_disconnect.assert_called_once_with({"User-Name": session.username})
+
+    @mock.patch.object(RadClient, "perform_disconnect")
+    def test_disconnect_organization_sessions_coa_disabled(self, mocked_disconnect):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = False
+        org.radius_settings.save()
+        session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-2"
+        )
+        org.is_active = False
+        org.save()
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+
+        session.refresh_from_db()
+        self.assertEqual(session.stop_time, None)
+        mocked_disconnect.assert_not_called()
+
+    @mock.patch.object(RadClient, "perform_disconnect")
+    def test_disconnect_organization_sessions_missing_nas_secret(
+        self, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-3"
+        )
+        org.is_active = False
+        org.save()
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        session.refresh_from_db()
+        self.assertEqual(session.stop_time, None)
+        mocked_disconnect.assert_not_called()
+
+    def test_disconnect_organization_sessions_missing_radius_settings(self):
+        org = self._get_org()
+        org.radius_settings.delete()
+        with self.assertLogs("openwisp_radius.tasks", level="WARNING") as logs:
+            org.is_active = False
+            org.save()
+            tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("does not have any OpenWISP RADIUS settings", logs.output[0])
+
+    @mock.patch.object(
+        ChangeOfAuthorizationManager,
+        "disconnect_session",
+        side_effect=[RuntimeError, True],
+    )
+    def test_disconnect_organization_sessions_continues_after_error(
+        self, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        org.is_active = False
+        org.save()
+        failed_session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-error"
+        )
+        closed_session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-success"
+        )
+        with self.assertLogs("openwisp_radius.tasks", level="ERROR"):
+            tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        failed_session.refresh_from_db()
+        closed_session.refresh_from_db()
+        self.assertEqual(failed_session.stop_time, None)
+        self.assertNotEqual(closed_session.stop_time, None)
+        self.assertEqual(mocked_disconnect.call_count, 2)
+
+    @mock.patch.object(RadClient, "perform_disconnect", return_value=True)
+    @mock.patch.object(ChangeOfAuthorizationManager, "get_radsecret_from_radacct")
+    def test_disconnect_organization_sessions_partial_failure(
+        self, mocked_get_secret, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+
+        working_session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-4"
+        )
+        unreachable_session = self._create_radius_accounting_session(
+            org, "10.9.0.1", "disconnect-5"
+        )
+        org.is_active = False
+        org.save()
+
+        def get_secret_side_effect(rad_acct):
+            if rad_acct.pk == working_session.pk:
+                return "testing123"
+            return None
+
+        mocked_get_secret.side_effect = get_secret_side_effect
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        working_session.refresh_from_db()
+        unreachable_session.refresh_from_db()
+        self.assertEqual(working_session.stop_time is not None, True)
+        self.assertEqual(working_session.terminate_cause, "Admin-Reset")
+        self.assertEqual(unreachable_session.stop_time, None)
+        mocked_disconnect.assert_called_once_with(
+            {"User-Name": working_session.username}
+        )
+
+    @mock.patch("openwisp_radius.tasks.DISCONNECT_BATCH_SIZE", 2)
+    @mock.patch.object(RadClient, "perform_disconnect", return_value=True)
+    @mock.patch.object(ChangeOfAuthorizationManager, "get_radsecret_from_radacct")
+    def test_disconnect_organization_sessions_batches_bulk_updates(
+        self, mocked_get_secret, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        mocked_get_secret.return_value = "testing123"
+        sessions = [
+            self._create_radius_accounting_session(org, "10.8.0.1", f"batch-{index}")
+            for index in range(3)
+        ]
+        org.is_active = False
+        org.save()
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        for session in sessions:
+            session.refresh_from_db()
+            self.assertNotEqual(session.stop_time, None)
+            self.assertEqual(session.terminate_cause, "Admin-Reset")
+        self.assertEqual(mocked_disconnect.call_count, 3)
+
+    @mock.patch.object(RadClient, "perform_disconnect")
+    def test_disconnect_organization_sessions_reenabled_is_noop(
+        self, mocked_disconnect
+    ):
+        org = self._get_org()
+        org.radius_settings.coa_enabled = True
+        org.radius_settings.save()
+        self._create_nas(
+            name="10.8.0.0/24",
+            organization=org,
+            short_name="test",
+            type="Virtual",
+            secret="testing123",
+        )
+        session = self._create_radius_accounting_session(
+            org, "10.8.0.1", "disconnect-6"
+        )
+        org.is_active = False
+        org.save()
+        org.is_active = True
+        org.save()
+        tasks.disconnect_organization_sessions.delay(organization_id=str(org.pk))
+        session.refresh_from_db()
+        self.assertEqual(session.stop_time, None)
+        mocked_disconnect.assert_not_called()

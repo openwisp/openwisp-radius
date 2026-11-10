@@ -5,6 +5,7 @@ Receiver functions for django signals (eg: post_save)
 import logging
 
 from celery.exceptions import OperationalError
+from django.core.cache import cache
 from django.db import transaction
 from django.utils.timezone import now
 
@@ -49,7 +50,9 @@ def set_default_group_handler(sender, instance, created, **kwargs):
     RadiusGroup = load_model("RadiusGroup")
     RadiusUserGroup = load_model("RadiusUserGroup")
     queryset = RadiusGroup.objects.filter(
-        default=True, organization_id=instance.organization_id
+        default=True,
+        organization_id=instance.organization_id,
+        organization__is_active=True,
     )
 
     transaction.on_commit(_set_default_group)
@@ -82,6 +85,31 @@ def organization_post_save(instance, **kwargs):
         rg.name = rg.name.replace(instance.__old_slug, instance.slug)
         rg.full_clean()
         rg.save()
+
+
+def _flush_organization_radius_cache(organization_pk):
+    OrganizationRadiusSettings = load_model("OrganizationRadiusSettings")
+    for prefix in ("", "ip-", "org-active-"):
+        cache.delete(OrganizationRadiusSettings.get_cache_key(organization_pk, prefix))
+
+
+def organization_disabled_handler(sender, instance, **kwargs):
+    _flush_organization_radius_cache(instance.pk)
+    RadiusToken = load_model("RadiusToken")
+    # RadiusToken is a short-lived credential recreated on every login, so
+    # deleting it here is safe and revokes any standing FreeRADIUS
+    # token-based authorization for this organization immediately. No
+    # reconfiguration is needed on re-enable. User's next login provisions a
+    # fresh token automatically.
+    RadiusToken.objects.filter(organization_id=instance.pk).delete()
+    try:
+        tasks.disconnect_organization_sessions.delay(organization_id=str(instance.pk))
+    except OperationalError:
+        logger.warning("Celery broker is unreachable")
+
+
+def organization_enabled_handler(sender, instance, **kwargs):
+    _flush_organization_radius_cache(instance.pk)
 
 
 def convert_radius_called_station_id(instance, created, **kwargs):

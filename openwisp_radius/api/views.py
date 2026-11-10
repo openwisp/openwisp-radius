@@ -7,6 +7,7 @@ from dj_rest_auth.registration.views import RegisterView as BaseRegisterView
 from django.contrib.auth import get_user_model
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.cache import cache
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -76,7 +77,11 @@ from ..utils import (
 )
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
-from .permissions import IsRegistrationEnabled, IsSmsVerificationEnabled
+from .permissions import (
+    IsOrganizationActive,
+    IsRegistrationEnabled,
+    IsSmsVerificationEnabled,
+)
 from .serializers import (
     AuthTokenSerializer,
     BatchUserSerializer,
@@ -195,6 +200,8 @@ batch = BatchView.as_view()
 
 
 class DispatchOrgMixin(object):
+    allow_disabled_organization_writes = False
+
     def dispatch(self, *args, **kwargs):
         try:
             self.organization = Organization.objects.select_related(
@@ -203,6 +210,9 @@ class DispatchOrgMixin(object):
         except Organization.DoesNotExist:
             raise Http404("No Organization matches the given query.")
         return super().dispatch(*args, **kwargs)
+
+    def get_permissions(self):
+        return super().get_permissions() + [IsOrganizationActive()]
 
     def validate_membership(self, user):
         if not (user.is_superuser or user.is_member(self.organization)):
@@ -358,12 +368,18 @@ class RadiusTokenMixin(object):
     def get_or_create_radius_token(
         self, user, organization, enable_auth=True, renew=True, password_based=None
     ):
+        if not organization.is_active:
+            raise DjangoPermissionDenied(
+                _("The organization {organization} is currently disabled.").format(
+                    organization=organization.name
+                )
+            )
         if renew:
             self._delete_used_token(user, organization)
         try:
-            radius_token, _ = RadiusToken.objects.get_or_create(
+            radius_token = RadiusToken.objects.get_or_create(
                 user=user, organization=organization
-            )
+            )[0]
         except IntegrityError:
             radius_token = RadiusToken.objects.get(user=user)
             self._radius_accounting_nas_stop(user, radius_token.organization)
@@ -469,9 +485,22 @@ class ObtainAuthTokenView(
             ):
                 try:
                     with transaction.atomic():
-                        OrganizationUser.objects.get_or_create(
-                            user=user, organization=self.organization
-                        )
+                        try:
+                            OrganizationUser.objects.get(
+                                user=user, organization=self.organization
+                            )
+                        except OrganizationUser.DoesNotExist:
+                            try:
+                                with transaction.atomic():
+                                    org_user = OrganizationUser(
+                                        user=user, organization=self.organization
+                                    )
+                                    org_user.full_clean()
+                                    org_user.save()
+                            except IntegrityError:
+                                OrganizationUser.objects.get(
+                                    user=user, organization=self.organization
+                                )
                         RegisteredUser.get_or_create_for_user_and_org(
                             user=user,
                             organization=self.organization,

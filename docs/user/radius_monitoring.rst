@@ -7,6 +7,13 @@ OpenWISP RADIUS includes an optional Django sub-app that adds integration
 with :doc:`OpenWISP Monitoring </monitoring/index>` to provide RADIUS
 metrics.
 
+.. important::
+
+    Disabling an organization does not remove its historical monitoring
+    data. Sessions that end after the organization is disabled still
+    produce accounting metrics. If the related device is no longer
+    available, the metric is stored without a device link.
+
 .. image:: ../images/radius-dashboard-charts.png
     :alt: RADIUS session dashboard charts
 

@@ -117,11 +117,13 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # Scope OrganizationUser joins to the same organization as the
     # RegisteredUser to avoid memberships from other organizations affecting
     # this organization's signup metrics.
-    registered_users_query = RegisteredUser.objects.exclude(
-        method="pending_verification"
-    ).exclude(
-        user__openwisp_users_organizationuser__organization_id=F("organization_id"),
-        user__openwisp_users_organizationuser__created__gt=end_time,
+    registered_users_query = (
+        RegisteredUser.objects.filter(organization__is_active=True)
+        .exclude(method="pending_verification")
+        .exclude(
+            user__openwisp_users_organizationuser__organization_id=F("organization_id"),
+            user__openwisp_users_organizationuser__created__gt=end_time,
+        )
     )
 
     if metric_key == "user_signups":
@@ -138,9 +140,9 @@ def _write_user_signup_metrics_for_orgs(metric_key):
     # Count users without a RegisteredUser for this organization.
     # A simple ``registered_users__isnull=True`` check would incorrectly
     # exclude users having RegisteredUser rows only in other organizations.
-    users_without_registereduser_query = OrganizationUser.objects.exclude(
-        user__registered_users__organization_id=F("organization_id")
-    )
+    users_without_registereduser_query = OrganizationUser.objects.filter(
+        organization__is_active=True
+    ).exclude(user__registered_users__organization_id=F("organization_id"))
     if metric_key == "user_signups":
         users_without_registereduser_query = users_without_registereduser_query.filter(
             created__gt=start_time, created__lte=end_time
