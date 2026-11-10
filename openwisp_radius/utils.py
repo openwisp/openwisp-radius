@@ -116,15 +116,16 @@ def mac_address_variants_q(field, value):
     The MAC portion is matched case-insensitively, while a suffix starting
     with ``:`` is matched exactly. Non-MAC values are matched exactly.
 
-    The case-insensitive comparison cannot use the plain B-tree index on
-    station ID columns, so callers should keep the surrounding query narrow.
+    Exact variants are included in an ``__in`` branch so databases can use
+    the station ID index for common values; mixed-case legacy values use the
+    case-insensitive branches.
     """
     parts = _split_mac_address(value)
     if parts is None:
         return Q(**{field: value})
     mac, suffix = parts
     suffix = suffix or ""
-    query = Q()
+    query = Q(**{f"{field}__in": mac_address_variants(value)})
     for mac_format in MAC_ADDRESS_FORMATS:
         variant = f"{_format_mac(mac, mac_format)}{suffix}"
         condition = Q(**{f"{field}__iexact": variant})
