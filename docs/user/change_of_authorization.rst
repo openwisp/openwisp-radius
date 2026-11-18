@@ -20,6 +20,14 @@ sending CoA RADIUS packet to NAS for all open RADIUS sessions of the user.
 This allows enforcing RADIUS limits without requiring the user to
 re-authenticate with the NAS.
 
+.. important::
+
+    A RADIUS group change does not trigger CoA for a disabled
+    organization. If CoA is enabled, OpenWISP tries to disconnect the
+    organization's open sessions and marks each successfully closed
+    session with the ``Admin-Reset`` terminate cause. If CoA is disabled,
+    no operation is performed.
+
 The CoA RADIUS packet contains the RADIUS Attributes defined in the new
 *RADIUS Group* of the user. If the new *RADIUS Group* does not specify any
 attributes, the CoA RADIUS packet will unset the attributes set by the

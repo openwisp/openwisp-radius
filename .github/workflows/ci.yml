@@ -86,6 +86,7 @@ jobs:
           pip install -U pip wheel setuptools
           pip install -U -r requirements-test.txt
           pip install -e .[saml,openvpn_status]
+          pip install --upgrade --force-reinstall --no-deps --no-cache-dir https://github.com/openwisp/openwisp-users/tarball/issues/522-disabled-org
           pip install -U "$DJANGO_VERSION"
 
       - name: Start InfluxDB and Redis container

@@ -51,6 +51,18 @@ Auth <radius_post_auth>`, :ref:`Accounting <radius_accounting>`).
     the :ref:`freeradius allowed hosts list
     <openwisp_radius_freeradius_allowed_hosts>`.
 
+.. important::
+
+    Requests for a disabled organization cannot authorize new access. The
+    authorization endpoint returns the rejection configured in
+    :ref:`OPENWISP_RADIUS_API_AUTHORIZE_REJECT
+    <openwisp_radius_api_authorize_reject>`, while an accounting ``Start``
+    request returns ``403``. Accounting ``Interim-Update`` and ``Stop``
+    requests remain accepted so existing sessions can be updated and
+    closed. Post-authentication records and ``Accounting-On`` and
+    ``Accounting-Off`` requests also continue to be accepted for auditing
+    and network administration.
+
 .. _radius_freeradius_api_authentication:
 
 FreeRADIUS API Authentication
