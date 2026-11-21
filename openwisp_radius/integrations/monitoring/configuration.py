@@ -90,6 +90,12 @@ RADIUS_METRICS = {
             "tot_user_signups": total_user_singups_chart_config,
         },
     },
+    "reg_metrics_done": {
+        "label": _("Registration metrics completion"),
+        "name": "Registration metrics completion",
+        "key": "radius_registration_metrics_completion",
+        "field_name": "completed",
+    },
     "radius_acc": {
         "label": _("RADIUS Accounting"),
         "name": "{name}",

@@ -16,8 +16,9 @@ class CreateDeviceMonitoringMixin(object):
         # By default timeseries_db.db shall connect to the database
         # defined in settings when apps are loaded. We don't want that while testing
         timeseries_db.db_name = cls.TEST_DB
-        del timeseries_db.db
-        del timeseries_db.dbs
+        # cached_property values are present only after their first access.
+        timeseries_db.__dict__.pop("db", None)
+        timeseries_db.__dict__.pop("dbs", None)
         timeseries_db.create_database()
         manage_short_retention_policy()
         super().setUpClass()
