@@ -17,7 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
-from django_filters.rest_framework import CharFilter, DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
@@ -1064,29 +1064,6 @@ class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
 update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
 
 
-class RadiusAccountingFilter(AccountingFilter):
-    called_station_id = CharFilter(
-        field_name="called_station_id", method="filter_mac_address"
-    )
-    calling_station_id = CharFilter(
-        field_name="calling_station_id", method="filter_mac_address"
-    )
-
-    def filter_mac_address(self, queryset, name, value):
-        """
-        The input MAC address in any of these two formats:
-            - AA-BB-CC-DD-EE-FF (quadrants separated by hyphen)
-            - AA:BB:CC:DD:EE:FF (quadrants separated by colon)
-        The below lookup ensures that the filtering is
-        case-insensitive and works across different formats.
-        """
-        lookup = f"{name}__iexact"
-        return queryset.filter(
-            Q(**{lookup: value.replace(":", "-")})
-            | Q(**{lookup: value.replace("-", ":")})
-        )
-
-
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -1100,7 +1077,7 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = RadiusAccountingFilter
+    filterset_class = AccountingFilter
     queryset = RadiusAccounting.objects.all().order_by("-start_time")
 
 

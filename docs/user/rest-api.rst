@@ -418,6 +418,16 @@ stop_time          Stop time (less or equal to)
 is_open            If stop_time is null
 ================== ================================
 
+.. note::
+
+    When ``called_station_id`` or ``calling_station_id`` is a valid MAC
+    address (colon, hyphen or dot separated), it is stored and returned in
+    uppercase colon-separated format (``AA:BB:CC:DD:EE:FF``), regardless
+    of the format sent by the NAS. Other values, such as
+    ``AA:BB:CC:DD:EE:FF:hostname`` or IP addresses, are preserved
+    unchanged. The filters accept any of the supported MAC formats.
+    Existing rows are converted by a database migration.
+
 .. _radius_user_api_endpoints:
 
 User API Endpoints

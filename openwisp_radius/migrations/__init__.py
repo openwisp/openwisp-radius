@@ -6,7 +6,7 @@ from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
 from django.db.models import Case, Exists, IntegerField, OuterRef, Prefetch, Value, When
 
-from ..utils import create_default_groups
+from ..utils import create_default_groups, sanitize_mac_address
 
 BATCH_SIZE = 1000
 
@@ -32,6 +32,29 @@ def _flush_bulk_create(model, objects, batch_size=BATCH_SIZE):
     if objects:
         model.objects.bulk_create(objects, batch_size=batch_size)
         objects.clear()
+
+
+def sanitize_station_ids(apps, schema_editor):
+    db_alias = schema_editor.connection.alias
+    for model_name in ("RadiusAccounting", "RadiusPostAuth"):
+        model = get_swapped_model(apps, "openwisp_radius", model_name)
+        manager = model.objects.using(db_alias)
+        for field in ("called_station_id", "calling_station_id"):
+            queryset = (
+                manager.exclude(**{f"{field}__isnull": True})
+                .exclude(**{field: ""})
+                .only("pk", field)
+            )
+            for batch in _batched_iterator(queryset.iterator(chunk_size=BATCH_SIZE)):
+                changed = []
+                for obj in batch:
+                    value = sanitize_mac_address(getattr(obj, field))
+                    if value != getattr(obj, field):
+                        setattr(obj, field, value)
+                        changed.append(obj)
+                # historical models do not call pre_save(), so values
+                # are sanitized above instead of relying on MacAddressField
+                manager.bulk_update(changed, [field])
 
 
 def _registered_user_extra_kwargs(registered_user, extra_fields=()):

@@ -22,9 +22,10 @@ from ..migrations import (
     _filter_valid_registered_users,
     _get_first_valid_membership_organization_id,
     migrate_registered_users_multitenant_reverse,
+    sanitize_station_ids,
 )
 from ..utils import load_model
-from . import CreateRadiusObjectsMixin
+from . import _RADACCT, CreateRadiusObjectsMixin
 from .mixins import BaseTestCase
 
 RegisteredUser = load_model("RegisteredUser")
@@ -933,3 +934,44 @@ class TestMigrationRemovePrivilegedUsersFromBatches(CreateRadiusObjectsMixin, Te
         with self.subTest("nothing is logged when there is nothing to remove"):
             with self.assertNoLogs(self.migration_path, level="WARNING"):
                 migration_module.remove_privileged_users_from_batches(apps, MagicMock())
+
+
+class TestSanitizeStationIdsMigration(BaseTestCase):
+    def test_sanitize_station_ids(self):
+        legacy_values = (
+            ("aa-bb-cc-dd-ee-ff", "AA:BB:CC:DD:EE:FF"),
+            ("aabb.ccdd.eeff", "AA:BB:CC:DD:EE:FF"),
+            ("aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"),
+            ("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"),
+            ("00-27-22-F3-FA-F1:hostname", "00-27-22-F3-FA-F1:hostname"),
+            ("123456789012", "123456789012"),
+            ("", ""),
+            (None, None),
+        )
+        rows = []
+        for index, (legacy, expected) in enumerate(legacy_values):
+            session = self._create_radius_accounting(
+                **{**_RADACCT, "unique_id": f"migration-{index}"},
+            )
+            post_auth = self._create_radius_postauth(
+                username=f"user-{index}", reply="Access-Accept"
+            )
+            # update() bypasses pre_save(), which simulates rows saved before
+            # the MAC addresses were normalized
+            for obj in (session, post_auth):
+                type(obj).objects.filter(pk=obj.pk).update(
+                    called_station_id=legacy, calling_station_id=legacy
+                )
+            rows.append((session, post_auth, expected))
+        sanitize_station_ids(apps, MagicMock(connection=connection))
+        for session, post_auth, expected in rows:
+            for obj in (session, post_auth):
+                obj.refresh_from_db()
+                for field in ("called_station_id", "calling_station_id"):
+                    with self.subTest(model=type(obj).__name__, field=field):
+                        self.assertEqual(getattr(obj, field), expected)
+        with self.subTest("second run does not change anything"):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
+            for session, post_auth, expected in rows:
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, expected)

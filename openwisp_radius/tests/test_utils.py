@@ -8,6 +8,7 @@ from ..utils import (
     find_available_username,
     get_one_time_login_url,
     mask_phone_number,
+    sanitize_mac_address,
     validate_csvfile,
 )
 from . import FileMixin
@@ -15,6 +16,41 @@ from .mixins import BaseTestCase
 
 
 class TestUtils(FileMixin, BaseTestCase):
+    def test_sanitize_mac_address(self):
+        canonical = "AA:BB:CC:DD:EE:FF"
+        for value in (
+            "AA:BB:CC:DD:EE:FF",
+            "aa:bb:cc:dd:ee:ff",
+            "AA-BB-CC-DD-EE-FF",
+            "aa-bb-cc-dd-ee-ff",
+            "AABB.CCDD.EEFF",
+            "aabb.ccdd.eeff",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(sanitize_mac_address(value), canonical)
+
+    def test_sanitize_mac_address_preserves_non_macs(self):
+        for value in (
+            None,
+            "",
+            123,
+            "192.168.1.1",
+            "::1",
+            "2001:db8::1",
+            "00-11-22-33-44-55-66-77",
+            "00-27-22-F3-FA-F1:hostname",
+            "00:27:22:F3:FA:F1:hostname",
+            "hostname",
+            "1-2-3-4-5-6",
+            "AA:BB-CC:DD-EE:FF",
+            "AAAA-BBBB-CCCC",
+            # 12 digits without separators could be a phone number
+            "aabbccddeeff",
+            "123456789012",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(sanitize_mac_address(value), value)
+
     def test_mask_phone_number(self):
         for phone_number, expected in (
             ("+39 366 435 1808", "+39******1808"),
