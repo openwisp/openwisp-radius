@@ -73,6 +73,7 @@ from ..utils import (
     get_client_ip,
     get_organization_radius_settings,
     load_model,
+    sanitize_mac_address,
 )
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
@@ -1064,6 +1065,15 @@ class UpdateRegisteredUserMethodView(DispatchOrgMixin, GenericAPIView):
 update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_view()
 
 
+class RadiusAccountingFilter(AccountingFilter):
+    called_station_id = filters.CharFilter(method="filter_station_id")
+    calling_station_id = filters.CharFilter(method="filter_station_id")
+
+    def filter_station_id(self, queryset, name, value):
+        # iexact skips MacAddressField.to_python(), so MACs are sanitized here
+        return queryset.filter(**{f"{name}__iexact": sanitize_mac_address(value)})
+
+
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
@@ -1077,7 +1087,7 @@ class RadiusAccountingView(ProtectedAPIMixin, FilterByOrganizationManaged, ListA
     serializer_class = RadiusAccountingSerializer
     pagination_class = AccountingViewPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = AccountingFilter
+    filterset_class = RadiusAccountingFilter
     queryset = RadiusAccounting.objects.all().order_by("-start_time")
 
 

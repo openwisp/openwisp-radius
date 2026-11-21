@@ -9,6 +9,7 @@ from django.apps.registry import apps
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
+from django.db.models import CharField, Value
 from django.db.models.signals import post_delete
 from django.test import TestCase
 from django.utils import timezone
@@ -956,13 +957,17 @@ class TestSanitizeStationIdsMigration(BaseTestCase):
             post_auth = self._create_radius_postauth(
                 username=f"user-{index}", reply="Access-Accept"
             )
-            # update() bypasses pre_save(), which simulates rows saved before
-            # the MAC addresses were normalized
+            # a plain CharField skips MacAddressField preparation, which
+            # simulates rows saved before the MAC addresses were normalized
+            raw = Value(legacy, output_field=CharField())
             for obj in (session, post_auth):
                 type(obj).objects.filter(pk=obj.pk).update(
-                    called_station_id=legacy, calling_station_id=legacy
+                    called_station_id=raw, calling_station_id=raw
                 )
             rows.append((session, post_auth, expected))
+        session = rows[0][0]
+        session.refresh_from_db()
+        self.assertEqual(session.called_station_id, "aa-bb-cc-dd-ee-ff")
         sanitize_station_ids(apps, MagicMock(connection=connection))
         for session, post_auth, expected in rows:
             for obj in (session, post_auth):

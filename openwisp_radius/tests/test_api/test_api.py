@@ -2545,7 +2545,9 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         with self.subTest("Test superuser can view all sessions"):
             admin = self._create_admin()
             self.client.force_login(admin)
-            response = self.client.get(path)
+            # session, user, pagination count and page
+            with self.assertNumQueries(4):
+                response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data), 3)
             self.assertEqual(response.data[0]["unique_id"], data3["unique_id"])
@@ -2580,6 +2582,15 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         with self.subTest("Test filtering with a called_station_id which is not a MAC"):
             response = self.client.get(
                 path, {"called_station_id": data3["called_station_id"]}
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                [item["unique_id"] for item in response.data], [data3["unique_id"]]
+            )
+
+        with self.subTest("Test filtering with a non-MAC value is case-insensitive"):
+            response = self.client.get(
+                path, {"called_station_id": data3["called_station_id"].swapcase()}
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
