@@ -41,6 +41,12 @@ creation operations > Add`` (URL:
 ``Generate from prefix``, fill in the remaining fields that are shown
 after the selection of the strategy and save.
 
+.. important::
+
+    Users cannot be generated for disabled organizations. If the
+    organization is disabled before a queued batch is processed, OpenWISP
+    will skip the batch and will not generate users.
+
 Once the batch object has been created, a PDF containing the user
 credentials can be downloaded by using the "Download user credentials"
 button in the upper right corner of the page:

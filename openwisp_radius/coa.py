@@ -45,6 +45,25 @@ class ChangeOfAuthorizationManager:
                     f'Failed to parse NAS IP network for "{nas.id}" object. Skipping!'
                 )
 
+    def disconnect_session(self, session):
+        """
+        Send a RADIUS Disconnect-Request for a single RadiusAccounting
+        session. Returns True on success, False otherwise (failure is
+        already logged).
+        """
+        radsecret = self.get_radsecret_from_radacct(session)
+        if not radsecret:
+            logger.warning(
+                f'Failed to find RADIUS secret for "{session.unique_id}". '
+                "Skipping disconnect."
+            )
+            return False
+        client = RadClient(host=session.nas_ip_address, radsecret=radsecret)
+        if not client.perform_disconnect({"User-Name": session.username}):
+            logger.warning(f'Failed to disconnect "{session.unique_id}".')
+            return False
+        return True
+
     def get_radius_attributes(self, user, old_group_id, new_group):
         """
         Get RADIUS attributes for CoA operation including both checks and replies.
@@ -111,6 +130,8 @@ class ChangeOfAuthorizationManager:
                 f'Failed to find RadiusGroup with "{new_group_id}" ID.'
                 " Skipping CoA operation."
             )
+            return
+        if not new_rad_group.organization.is_active:
             return
         org_radius_settings = new_rad_group.organization.radius_settings
         # The coa_enabled value is provided by a FallbackBooleanChoiceField on the

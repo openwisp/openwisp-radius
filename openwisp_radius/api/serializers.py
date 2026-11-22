@@ -14,6 +14,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
 from django.utils import formats, timezone
+from django.utils.functional import lazy
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_serializer_method
 from phonenumber_field.serializerfields import PhoneNumberField
@@ -25,6 +26,7 @@ from rest_framework.fields import empty
 
 from openwisp_radius.api.exceptions import CrossOrgRegistrationException
 from openwisp_users.api.mixins import (
+    DISABLED_ORGANIZATION_ERROR_MESSAGE,
     FilterSerializerByOrgManaged,
     FilterSerializerByOrgMembership,
 )
@@ -462,8 +464,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RadiusOrganizationField(serializers.SlugRelatedField):
+    default_error_messages = {
+        "does_not_exist": lazy(
+            lambda message: message.replace("{pk_value}", "{value}"), str
+        )(DISABLED_ORGANIZATION_ERROR_MESSAGE)
+    }
+
     def get_queryset(self):
-        queryset = Organization.objects.all()
+        queryset = Organization.objects.filter(is_active=True)
         request = self.context.get("request", None)
         if not request.user.is_superuser:
             queryset = queryset.filter(pk__in=request.user.organizations_dict.keys())
