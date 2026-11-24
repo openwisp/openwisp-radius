@@ -287,7 +287,6 @@ CELERY_BEAT_SCHEDULE = {
     "delete_old_radacct": {
         "task": "openwisp_radius.tasks.delete_old_radacct",
         "schedule": crontab(hour=0, minute=40),
-        "args": [365],
         "relative": True,
     },
     "unverify_inactive_users": {

@@ -926,6 +926,25 @@ class AbstractRadiusGroupReply(
     def __str__(self):
         return str(self.groupname)
 
+    def clean(self):
+        super().clean()
+        if self.attribute != "Session-Timeout":
+            return
+        limit = app_settings.session_timeout_limit()
+        try:
+            timeout = int(self.value)
+        except (TypeError, ValueError):
+            timeout = -1
+        if not 0 <= timeout <= limit:
+            raise ValidationError(
+                {
+                    "value": _(
+                        "Session-Timeout must be between 0 and %(limit)s seconds."
+                    )
+                    % {"limit": limit}
+                }
+            )
+
 
 class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
     username = models.CharField(verbose_name=_("username"), max_length=64)

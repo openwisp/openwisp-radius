@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import TestCase
 
 from openwisp_radius import checks
@@ -9,6 +9,7 @@ from openwisp_radius.registration import (
     unregister_registration_method,
     validate_user_settable_registration_methods,
 )
+from openwisp_radius.utils import load_model
 
 
 class TestChecks(TestCase):
@@ -123,3 +124,35 @@ class TestChecks(TestCase):
                     self.assertEqual(len(error_list), 0)
         finally:
             unregister_registration_method(custom_method, fail_loud=False)
+
+    def test_group_timeout_cannot_exceed_retention(self):
+        group = load_model("RadiusGroup").objects.first()
+        reply = load_model("RadiusGroupReply")(
+            group=group, attribute="Session-Timeout", value="86401"
+        )
+        with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1):
+            with self.assertRaises(ValidationError):
+                reply.full_clean()
+
+    def test_database_check_reports_saved_timeout_exceeding_retention(self):
+        group = load_model("RadiusGroup").objects.first()
+        reply = load_model("RadiusGroupReply").objects.create(
+            group=group, attribute="Session-Timeout", value="86401"
+        )
+        with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1):
+            errors = checks.check_group_session_timeouts(None, databases=["default"])
+        self.assertEqual(len(errors), 1)
+        self.assertIn(group.name, errors[0].msg)
+        self.assertIn(group.organization.name, errors[0].msg)
+        self.assertIn(reply.value, errors[0].msg)
+
+    def test_group_timeout_respects_radius_limit_with_indefinite_retention(self):
+        group = load_model("RadiusGroup").objects.first()
+        reply = load_model("RadiusGroupReply")(
+            group=group, attribute="Session-Timeout", value=str(2**32 - 1)
+        )
+        with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", None):
+            reply.full_clean()
+            reply.value = str(2**32)
+            with self.assertRaises(ValidationError):
+                reply.full_clean()

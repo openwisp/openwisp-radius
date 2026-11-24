@@ -1142,3 +1142,37 @@ default value is translated in other languages. If the value is customized
 the translations will not work, so if you need this message to be
 translated in different languages you should either not change the default
 value or prepare the additional translations.
+
+``OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``365``
+
+Controls how long closed RADIUS sessions are kept. The
+``delete_old_radacct`` command and scheduled task use this value to remove
+sessions that ended more than this many days ago. For example, set it to
+``90`` to keep closed sessions for 90 days:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS = 90
+
+Set it to ``None`` to keep sessions indefinitely. Cleanup runs only when
+the command or task is run, not automatically when a session reaches this
+age. An explicit number of days passed to the command or task overrides
+this setting.
+
+The setting also limits how long newly authorized sessions can last.
+Shorter limits from a RADIUS group or usage counter still apply. The
+network access server must enforce this limit; changing the setting does
+not affect sessions that are already open.
+
+The default timeout is capped at the RADIUS attribute maximum of
+``4294967295`` seconds. Manually configured group timeouts must fit within
+this maximum and, when retention is enabled, its duration.
+
+If a scheduled cleanup job passes a number of days, move that value to
+this setting and remove the argument from the job. This keeps cleanup and
+session limits consistent. Before reducing the retention period, run
+``manage.py check --database default`` against the deployment database to
+identify group session limits that need updating.

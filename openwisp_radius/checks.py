@@ -3,6 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from . import settings as app_settings
 from .registration import validate_user_settable_registration_methods
+from .utils import load_model
 
 
 @checks.register
@@ -68,4 +69,33 @@ def check_user_settable_registration_methods(app_configs, **kwargs):
                 obj="Settings",
             )
         )
+    return errors
+
+
+@checks.register(checks.Tags.database)
+def check_group_session_timeouts(app_configs, **kwargs):
+    if not kwargs.get("databases"):
+        return []
+    errors = []
+    limit = app_settings.session_timeout_limit()
+    replies = (
+        load_model("RadiusGroupReply")
+        .objects.filter(attribute="Session-Timeout", group__isnull=False)
+        .select_related("group__organization")
+    )
+    for reply in replies.iterator():
+        try:
+            timeout = int(reply.value)
+        except ValueError:
+            timeout = -1
+        if not 0 <= timeout <= limit:
+            errors.append(
+                checks.Warning(
+                    f'Organization "{reply.group.organization}" group '
+                    f'"{reply.group}" has Session-Timeout "{reply.value}", '
+                    f"outside the allowed range 0 to {limit}.",
+                    obj=reply,
+                    id="openwisp_radius.W001",
+                )
+            )
     return errors

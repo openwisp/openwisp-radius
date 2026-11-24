@@ -29,6 +29,16 @@ RADIUS_API = get_settings_value("API", True)
 RADIUS_API_BASEURL = get_settings_value("API_BASEURL", "/")
 RADIUS_API_URLCONF = get_settings_value("API_URLCONF", None)
 EDITABLE_ACCOUNTING = get_settings_value("EDITABLE_ACCOUNTING", False)
+ACCOUNTING_RETENTION_DAYS = get_settings_value("ACCOUNTING_RETENTION_DAYS", 365)
+
+
+def session_timeout_limit():
+    maximum = 2**32 - 1
+    if ACCOUNTING_RETENTION_DAYS:
+        return min(maximum, ACCOUNTING_RETENTION_DAYS * 86400)
+    return maximum
+
+
 EDITABLE_POSTAUTH = get_settings_value("EDITABLE_POSTAUTH", False)
 GROUPCHECK_ADMIN = get_settings_value("GROUPCHECK_ADMIN", False)
 GROUPREPLY_ADMIN = get_settings_value("GROUPREPLY_ADMIN", False)

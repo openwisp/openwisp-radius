@@ -347,6 +347,17 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             if counter_result is not None:
                 return counter_result
 
+        retention = app_settings.ACCOUNTING_RETENTION_DAYS
+        if retention:
+            maximum_timeout = app_settings.session_timeout_limit()
+            reply = data.get("Session-Timeout")
+            timeout = reply.get("value") if isinstance(reply, dict) else reply
+            try:
+                timeout = int(timeout)
+            except (TypeError, ValueError):
+                timeout = maximum_timeout
+            if not isinstance(reply, dict) or timeout >= maximum_timeout:
+                data["Session-Timeout"] = min(timeout, maximum_timeout)
         return data, self.accept_status
 
     def _check_simultaneous_use(

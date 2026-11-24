@@ -190,7 +190,13 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 password=radius_token.key, auth_header=self.auth_header
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+            self.assertEqual(
+                response.data,
+                {
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                },
+            )
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_authorize_radius_token_after_password_login_expired(self):
@@ -273,7 +279,13 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             response = self._authorize_user(auth_header=self.auth_header)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+            self.assertEqual(
+                response.data,
+                {
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                },
+            )
 
         with self.subTest("other-organization record does not pass authorization"):
             RegisteredUser.objects.filter(user=user).delete()
@@ -1663,7 +1675,10 @@ class TestTransactionFreeradiusApi(
     @capture_stderr()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
-        truncated_accept_response = {"control:Auth-Type": "Accept"}
+        truncated_accept_response = {
+            "control:Auth-Type": "Accept",
+            "Session-Timeout": 365 * 86400,
+        }
 
         with self.subTest("SkipCheck"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
@@ -2091,6 +2106,30 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.data, _AUTH_TYPE_ACCEPT_RESPONSE)
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(rad_token, second_rad_token)
+
+    def test_authorize_limits_session_to_retention(self):
+        self._get_org_user()
+        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1):
+            with mock.patch.object(app_settings, "COUNTERS", []):
+                response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["Session-Timeout"], 86400)
+
+    def test_authorize_without_retention_has_no_default_timeout(self):
+        self._get_org_user()
+        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
+            with mock.patch.object(app_settings, "COUNTERS", []):
+                response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Session-Timeout", response.data)
+
+    def test_authorize_caps_timeout_at_radius_attribute_maximum(self):
+        self._get_org_user()
+        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 100000):
+            with mock.patch.object(app_settings, "COUNTERS", []):
+                response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["Session-Timeout"], 2**32 - 1)
 
 
 class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
