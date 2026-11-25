@@ -8,7 +8,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.cache.backends.locmem import LocMemCache
 from django.core.management import call_command
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, connection, transaction
+from django.db.migrations.loader import MigrationLoader
 from django.test import tag
 from django.utils import timezone
 from swapper import load_model
@@ -1624,9 +1625,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
 
     def test_empty_initialization_recovers_before_first_session(self):
-        output = StringIO()
-        call_command("seed_radius_traffic", stdout=output)
-        self.assertEqual(output.getvalue(), "RADIUS traffic baselines initialized.\n")
+        reconcile_radius_traffic(seed=True)
         cache.delete(RECONCILIATION_STATE_KEY)
         self._create_device()
         self._create_traffic_session(input_octets=25)
@@ -2000,3 +1999,89 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         with self.assertRaisesMessage(RuntimeError, "Registration metrics unavailable"):
             write_user_registration_metrics()
         reconcile.assert_called_once_with()
+
+    def test_cutover_preserves_unique_users_and_reports_only_new_growth_afterward(self):
+        device = self._create_device()
+        user = self._create_user()
+        self._create_registered_user(user=user)
+        stop_time = timezone.now()
+        start_time = stop_time - timezone.timedelta(hours=1)
+        closed_session = self._create_traffic_session(
+            unique_id="closed",
+            username=user.username,
+            start_time=start_time,
+            stop_time=stop_time,
+            input_octets=8 * 10**9,
+            output_octets=3 * 10**9,
+        )
+        open_session = self._create_traffic_session(
+            unique_id="open",
+            called_station_id=device.mac_address.replace(":", "-").upper(),
+            start_time=start_time,
+            input_octets=5 * 10**9,
+            output_octets=None,
+        )
+        create_general_metrics(None, None)
+        unique_users = self.chart_model.objects.get(configuration="gen_rad_session")
+        unique_users_before = unique_users.read()["summary"]
+        self.assertEqual(unique_users_before, {"mobile_phone": 1})
+
+        migration = ("openwisp_radius_monitoring", "0002_initialize_traffic")
+        loader = MigrationLoader(connection)
+        historical_apps = loader.project_state().apps
+        with connection.schema_editor(atomic=False) as schema_editor:
+            loader.get_migration(*migration).operations[0].code(
+                historical_apps, schema_editor
+            )
+
+        group = (str(self.default_org.pk), device.mac_address)
+        self.assertEqual(
+            cache.get(RECONCILIATION_STATE_KEY)["groups"],
+            {group: (13 * 10**9, 3 * 10**9)},
+        )
+        metric = self.metric_model.objects.get(
+            object_id=str(device.pk), extra_tags__accounting_organization_id=group[0]
+        )
+        fields = ["input_octets", "output_octets", "baseline_input", "baseline_output"]
+        (opening_point,) = metric.read(fields=fields)
+        self.assertEqual(
+            {field: opening_point[field] for field in fields},
+            {
+                "input_octets": 5 * 10**9,
+                "output_octets": 0,
+                "baseline_input": 13 * 10**9,
+                "baseline_output": 3 * 10**9,
+            },
+        )
+        self.assertEqual(unique_users.read()["summary"], unique_users_before)
+        closed_session.refresh_from_db()
+        open_session.refresh_from_db()
+        self.assertEqual(closed_session.stop_time, stop_time)
+        self.assertEqual(open_session.stop_time, None)
+
+        RadiusAccounting.objects.filter(pk=open_session.pk).update(
+            input_octets=7 * 10**9, output_octets=10**9, update_time=timezone.now()
+        )
+        reconcile_radius_traffic()
+        latest_point = metric.read(fields=fields, order="-time", limit=1)[0]
+        self.assertEqual(latest_point["input_octets"], 2 * 10**9)
+        self.assertEqual(latest_point["output_octets"], 10**9)
+
+    @patch(f"{ACCOUNTING_PATH}.logger.exception")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write", side_effect=RuntimeError("offline"))
+    def test_cutover_exposes_submission_failure_without_saving_baseline(
+        self, batch_write, log_failure
+    ):
+        self._create_device()
+        self._create_traffic_session(start_time=timezone.now())
+        loader = MigrationLoader(connection)
+        migration = loader.get_migration(
+            "openwisp_radius_monitoring", "0002_initialize_traffic"
+        )
+        with connection.schema_editor(atomic=False) as schema_editor:
+            with self.assertRaisesMessage(RuntimeError, "offline"):
+                migration.operations[0].code(apps, schema_editor)
+        batch_write.assert_called_once()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["check"], False)
+        log_failure.assert_called_once()
+        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), None)

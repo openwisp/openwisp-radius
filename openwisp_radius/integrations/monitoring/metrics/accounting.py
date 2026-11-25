@@ -186,7 +186,7 @@ def _cleanup_coordination(queryset):
         yield prepare_cleanup
 
 
-def _accounting_totals(queryset):
+def _accounting_totals(queryset, include_open=False):
     """Sum retained session traffic by accounting organization and device MAC.
 
     Reconciliation compares these totals with previous observations to measure
@@ -195,7 +195,7 @@ def _accounting_totals(queryset):
     clean_called_station_id = Lower(
         Replace(Coalesce("called_station_id", Value("")), Value("-"), Value(":"))
     )
-    return (
+    totals = (
         queryset.order_by()
         .annotate(clean_called_station_id=clean_called_station_id)
         .values("organization_id", "clean_called_station_id")
@@ -203,8 +203,14 @@ def _accounting_totals(queryset):
             input_total=Coalesce(Sum("input_octets"), 0),
             output_total=Coalesce(Sum("output_octets"), 0),
         )
-        .iterator()
     )
+    if include_open:
+        open_sessions = Q(stop_time__isnull=True)
+        totals = totals.annotate(
+            open_input=Coalesce(Sum("input_octets", filter=open_sessions), 0),
+            open_output=Coalesce(Sum("output_octets", filter=open_sessions), 0),
+        )
+    return totals.iterator()
 
 
 def _traffic_delta(group, previous, current):
@@ -431,3 +437,61 @@ def _submit_cleanup_checkpoint(state, adjusted_totals, points):
     state["groups"].update(adjusted_totals)
     state.pop("cleanup", None)
     _submit_traffic(state, points)
+
+
+def initialize_traffic(queryset):
+    """Submit opening traffic and seed hourly baselines from the same SQL snapshot."""
+    snapshot_time = timezone.now()
+    groups = {}
+    submitted_input = submitted_output = 0
+    try:
+        with _reconciliation_lock() as acquired:
+            if not acquired:
+                raise RuntimeError(
+                    _("RADIUS traffic reconciliation or cleanup is running.")
+                )
+            snapshot_time = timezone.now()
+            logger.info("Taking RADIUS traffic cutover snapshot at %s", snapshot_time)
+            # Accounting stays live during the upgrade. A close after the
+            # legacy queue drain can be missed, and a reopen can count twice.
+            rows = _accounting_totals(queryset, include_open=True)
+            while batch := list(islice(rows, 1000)):
+                points = []
+                for row in batch:
+                    group = (
+                        str(row["organization_id"]),
+                        row["clean_called_station_id"],
+                    )
+                    total = (row["input_total"], row["output_total"])
+                    opening_traffic = (row["open_input"], row["open_output"])
+                    groups[group] = total
+                    points.append(
+                        _traffic_point(
+                            group, total, opening_traffic, snapshot_time, check=False
+                        )
+                    )
+                # Monitoring can submit valid points before raising for invalid
+                # ones. Do not put this batch in the hourly retry state.
+                Metric.batch_write(points)
+                submitted_input += sum(row["open_input"] for row in batch)
+                submitted_output += sum(row["open_output"] for row in batch)
+            if groups:
+                _save_traffic_state({"active": True, "groups": groups, "queued": None})
+    except Exception:
+        logger.exception(
+            "RADIUS traffic cutover at %s failed after submitting %s input and %s "
+            "output octets in successful batches. Other points may have been "
+            "submitted. Do not retry with a fresh snapshot without checking.",
+            snapshot_time,
+            submitted_input,
+            submitted_output,
+        )
+        raise
+    logger.info(
+        "RADIUS traffic cutover at %s submitted %s input and %s output octets "
+        "across %s groups. Submission does not confirm persistence.",
+        snapshot_time,
+        submitted_input,
+        submitted_output,
+        len(groups),
+    )
