@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import tag
 from django.utils import timezone
+from openwisp_monitoring.db import timeseries_db
 from swapper import load_model
 
 from openwisp_radius.tests import _RADACCT
@@ -816,6 +817,70 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(org_points["traces"][0][1][-1], 1)
             self.assertEqual(org_points["summary"]["mobile_phone"], 1)
             self.assertEqual(org_points["summary"].get("unspecified", 0), 0)
+
+    def test_total_user_signups_chart_fills_missing_buckets(self):
+        cache.clear()
+        create_general_metrics(None, None)
+        chart = self.metric_model.objects.get(key="tot_user_signups").chart_set.first()
+        metric, _ = self.metric_model._get_or_create(
+            configuration="tot_user_signups",
+            name="Total User SignUps",
+            key="tot_user_signups",
+            object_id=None,
+            content_type=None,
+            extra_tags={"organization_id": "__all__", "method": "unspecified"},
+        )
+        now = timezone.now()
+        metric.write(5, time=now - timezone.timedelta(days=3))
+        metric.write(7, time=now - timezone.timedelta(days=1))
+        points = chart.read(
+            time="30d",
+            additional_query_kwargs={
+                "additional_params": {"organization_id": ["__all__"]}
+            },
+        )
+        trace_name, values = points["traces"][0]
+        self.assertEqual(trace_name, "unspecified")
+        days = {
+            bucket.split(" ")[0]: value for bucket, value in zip(points["x"], values)
+        }
+        first_day = str((now - timezone.timedelta(days=3)).date())
+        missing_day = str((now - timezone.timedelta(days=2)).date())
+        last_day = str((now - timezone.timedelta(days=1)).date())
+        self.assertEqual(days[first_day], 5)
+        self.assertEqual(days[last_day], 7)
+        self.assertIsNotNone(days[missing_day])
+        if timeseries_db.backend_name == "influxdb2":
+            self.assertEqual(days[missing_day], 5)
+
+    def test_total_user_signups_chart_includes_the_end_date(self):
+        cache.clear()
+        create_general_metrics(None, None)
+        chart = self.metric_model.objects.get(key="tot_user_signups").chart_set.first()
+        metric, _ = self.metric_model._get_or_create(
+            configuration="tot_user_signups",
+            name="Total User SignUps",
+            key="tot_user_signups",
+            object_id=None,
+            content_type=None,
+            extra_tags={"organization_id": "__all__", "method": "unspecified"},
+        )
+        end_date = (timezone.localtime() - timezone.timedelta(days=1)).replace(
+            microsecond=0
+        )
+        metric.write(3, time=end_date)
+        # the dates are passed like the monitoring API does
+        date_format = "%Y-%m-%d %H:%M:%S"
+        points = chart.read(
+            time="30d",
+            start_date=(end_date - timezone.timedelta(days=1)).strftime(date_format),
+            end_date=end_date.strftime(date_format),
+            additional_query_kwargs={
+                "additional_params": {"organization_id": ["__all__"]}
+            },
+        )
+        # the point written exactly at the end date is not excluded
+        self.assertEqual(points["summary"], {"unspecified": 3})
 
     def test_pending_verification_excluded_from_metrics(self):
         from ..tasks import write_user_registration_metrics

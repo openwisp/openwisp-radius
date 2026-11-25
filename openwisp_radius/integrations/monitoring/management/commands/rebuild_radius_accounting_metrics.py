@@ -109,14 +109,6 @@ class Command(BaseCommand):
             "calling_station_id": sha1_hash(session.calling_station_id),
             "called_station_id": session.called_station_id,
         }
-        where = " AND ".join(
-            f"\"{key}\" = '{self._escape_tag_value(value)}'"
-            for key, value in tags.items()
+        timeseries_db.delete_metric_data(
+            key="radius_acc", tags=tags, timestamp=session.stop_time
         )
-        timeseries_db.query(
-            "DELETE FROM radius_acc "
-            f"WHERE time = '{session.stop_time.isoformat()}' AND {where}"
-        )
-
-    def _escape_tag_value(self, value):
-        return str(value).replace("'", r"\'")
