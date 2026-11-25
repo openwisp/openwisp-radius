@@ -41,7 +41,7 @@ START_DATE = "2019-04-20T22:14:09+01:00"
 _AUTH_TYPE_ACCEPT_RESPONSE = {
     "control:Auth-Type": "Accept",
     "CoovaChilli-Max-Total-Octets": 3000000000,
-    "Session-Timeout": 10800,
+    "Session-Timeout": {"op": "<=", "value": 10800},
 }
 _AUTH_TYPE_REJECT_RESPONSE = {"control:Auth-Type": "Reject"}
 _BASE_COUNTER_CHECK = "openwisp_radius.counters.base.BaseCounter.check"
@@ -194,7 +194,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 response.data,
                 {
                     "control:Auth-Type": "Accept",
-                    "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    "Session-Timeout": {
+                        "op": "<=",
+                        "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    },
                 },
             )
 
@@ -283,7 +286,10 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 response.data,
                 {
                     "control:Auth-Type": "Accept",
-                    "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    "Session-Timeout": {
+                        "op": "<=",
+                        "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    },
                 },
             )
 
@@ -1603,7 +1609,7 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected["Session-Timeout"] = 1200
+                expected["Session-Timeout"] = {"op": "<=", "value": 1200}
                 expected["CoovaChilli-Max-Total-Octets"] = 1200
                 self.assertEqual(response.data, expected)
 
@@ -1641,7 +1647,7 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(mocked_check.call_count, 2)
             self.assertEqual(response.status_code, 200)
             expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-            expected["Session-Timeout"] = 10800
+            expected["Session-Timeout"] = {"op": "<=", "value": 10800}
             expected["CoovaChilli-Max-Total-Octets"] = 3000000000
             self.assertEqual(response.data, expected)
         reply.value = original_reply_value
@@ -1677,7 +1683,10 @@ class TestTransactionFreeradiusApi(
         self._get_org_user()
         truncated_accept_response = {
             "control:Auth-Type": "Accept",
-            "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+            "Session-Timeout": {
+                "op": "<=",
+                "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+            },
         }
 
         with self.subTest("SkipCheck"):
@@ -2113,7 +2122,7 @@ class TestTransactionFreeradiusApi(
             with mock.patch.object(app_settings, "COUNTERS", []):
                 response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["Session-Timeout"], 86400)
+        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
 
     def test_authorize_without_retention_has_no_default_timeout(self):
         self._get_org_user()
@@ -2129,7 +2138,54 @@ class TestTransactionFreeradiusApi(
             with mock.patch.object(app_settings, "COUNTERS", []):
                 response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["Session-Timeout"], 2**32 - 1)
+        self.assertEqual(
+            response.data["Session-Timeout"], {"op": "<=", "value": 2**32 - 1}
+        )
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_default_preserves_shorter_freeradius_policy(self):
+        self._get_org_user()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        # FreeRADIUS applies <= as a ceiling, unlike a scalar's := assignment.
+        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_caps_qualified_group_timeout(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        reply = RadiusGroupReply(
+            group=group, attribute="reply:Session-Timeout", op="=", value="3600"
+        )
+        reply.full_clean()
+        reply.save()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["reply:Session-Timeout"], {"op": "=", "value": "3600"}
+        )
+        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_preserves_legacy_dynamic_timeout_for_freeradius(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        expression = "%{expr:3600 - 60}"
+        # Existing policies may predate the integer-only model validation.
+        RadiusGroupReply.objects.create(
+            group=group, attribute="Session-Timeout", op="=", value=expression
+        )
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["Session-Timeout"], {"op": "=", "value": expression}
+        )
+        self.assertEqual(
+            response.data["reply:Session-Timeout"], {"op": "<=", "value": 86400}
+        )
 
 
 class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
@@ -2173,7 +2229,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 response.data,
                 {
                     "control:Auth-Type": "Accept",
-                    "Session-Timeout": 10539,
+                    "Session-Timeout": {"op": "<=", "value": 10539},
                     "CoovaChilli-Max-Total-Octets": 1487813647,
                 },
             )
@@ -2270,7 +2326,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             response.data,
             {
                 "control:Auth-Type": "Accept",
-                "Session-Timeout": 10800,
+                "Session-Timeout": {"op": "<=", "value": 10800},
                 "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )

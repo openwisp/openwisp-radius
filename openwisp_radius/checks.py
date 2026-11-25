@@ -1,6 +1,6 @@
 from django.core import checks
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connection
+from django.db import connections
 
 from . import settings as app_settings
 from .registration import validate_user_settable_registration_methods
@@ -80,25 +80,32 @@ def check_group_session_timeouts(app_configs, **kwargs):
     errors = []
     limit = app_settings.session_timeout_limit()
     model = load_model("RadiusGroupReply")
-    # Database checks also run before migrations create this table.
-    if model._meta.db_table not in connection.introspection.table_names():
-        return errors
-    replies = model.objects.filter(
-        attribute="Session-Timeout", group__isnull=False
-    ).select_related("group__organization")
-    for reply in replies.iterator():
-        try:
-            timeout = int(reply.value)
-        except ValueError:
-            timeout = -1
-        if not 0 <= timeout <= limit:
-            errors.append(
-                checks.Warning(
-                    f'Organization "{reply.group.organization}" group '
-                    f'"{reply.group}" has Session-Timeout "{reply.value}", '
-                    f"outside the allowed range 0 to {limit}.",
-                    obj=reply,
-                    id="openwisp_radius.W001",
-                )
+    for alias in kwargs["databases"]:
+        # Database checks also run before migrations create this table.
+        if model._meta.db_table not in connections[alias].introspection.table_names():
+            continue
+        replies = (
+            model.objects.using(alias)
+            .filter(
+                attribute__in=("Session-Timeout", "reply:Session-Timeout"),
+                group__isnull=False,
             )
+            .select_related("group__organization")
+        )
+        for reply in replies.iterator():
+            try:
+                timeout = int(reply.value)
+            except ValueError:
+                timeout = -1
+            if not 0 <= timeout <= limit:
+                errors.append(
+                    checks.Error(
+                        f'Organization "{reply.group.organization}" group '
+                        f'"{reply.group}" in database "{alias}" has '
+                        f'Session-Timeout "{reply.value}", '
+                        f"outside the allowed range 0 to {limit}.",
+                        obj=reply,
+                        id="openwisp_radius.E001",
+                    )
+                )
     return errors

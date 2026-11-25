@@ -793,40 +793,52 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
 
     @capture_any_output()
+    @freeze_time(_TEST_DATE)
     def test_delete_old_radacct_uses_shared_retention(self):
-        options = _RADACCT.copy()
-        options.update(
-            unique_id="retention-default", stop_time=now() - timedelta(days=10)
-        )
-        self._create_radius_accounting(**options)
-        with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
-            call_command("delete_old_radacct")
-        self.assertEqual(
-            RadiusAccounting.objects.filter(unique_id="retention-default").count(), 0
-        )
+        with self.subTest("configured retention deletes older sessions"):
+            options = _RADACCT.copy()
+            options.update(
+                unique_id="retention-default", stop_time=now() - timedelta(days=10)
+            )
+            session = self._create_radius_accounting(**options)
+            with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
+                call_command("delete_old_radacct")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), False
+            )
 
-    @capture_any_output()
-    def test_delete_old_radacct_indefinite_retention(self):
-        options = _RADACCT.copy()
-        options.update(
-            unique_id="retention-indefinite", stop_time=now() - timedelta(days=10)
-        )
-        self._create_radius_accounting(**options)
-        with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
-            call_command("delete_old_radacct")
-        self.assertEqual(
-            RadiusAccounting.objects.filter(unique_id="retention-indefinite").count(), 1
-        )
+        with self.subTest("indefinite retention keeps closed sessions"):
+            options = _RADACCT.copy()
+            options.update(
+                unique_id="retention-indefinite", stop_time=now() - timedelta(days=10)
+            )
+            session = self._create_radius_accounting(**options)
+            with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
+                call_command("delete_old_radacct")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), True
+            )
 
-    @capture_any_output()
-    def test_delete_old_radacct_explicit_retention_overrides_setting(self):
-        options = _RADACCT.copy()
-        options.update(
-            unique_id="retention-override", stop_time=now() - timedelta(days=10)
-        )
-        self._create_radius_accounting(**options)
-        with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
-            call_command("delete_old_radacct", 30)
-        self.assertEqual(
-            RadiusAccounting.objects.filter(unique_id="retention-override").count(), 1
-        )
+        with self.subTest("explicit cleanup argument overrides configured retention"):
+            options = _RADACCT.copy()
+            options.update(
+                unique_id="retention-override", stop_time=now() - timedelta(days=10)
+            )
+            session = self._create_radius_accounting(**options)
+            with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
+                call_command("delete_old_radacct", 30)
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), True
+            )
+
+        with self.subTest("session exactly at the retention cutoff is kept"):
+            options = _RADACCT.copy()
+            options.update(
+                unique_id="retention-boundary", stop_time=now() - timedelta(days=5)
+            )
+            session = self._create_radius_accounting(**options)
+            with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
+                call_command("delete_old_radacct")
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), True
+            )

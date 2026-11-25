@@ -356,9 +356,18 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             try:
                 timeout = int(timeout)
             except (TypeError, ValueError):
-                timeout = maximum_timeout
-            if not isinstance(reply, dict) or timeout >= maximum_timeout:
-                data["Session-Timeout"] = min(timeout, maximum_timeout)
+                # Let FreeRADIUS evaluate legacy dynamic replies before applying
+                # the ceiling through the equivalent qualified attribute name.
+                name = "Session-Timeout" if reply is None else "reply:Session-Timeout"
+                data[name] = {"op": "<=", "value": maximum_timeout}
+            else:
+                if not isinstance(reply, dict) or timeout > maximum_timeout:
+                    # A scalar uses := in rlm_rest and would replace a shorter
+                    # timeout set by another FreeRADIUS policy.
+                    data["Session-Timeout"] = {
+                        "op": "<=",
+                        "value": min(timeout, maximum_timeout),
+                    }
         return data, self.accept_status
 
     def _check_simultaneous_use(

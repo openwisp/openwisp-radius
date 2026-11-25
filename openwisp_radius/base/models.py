@@ -931,7 +931,7 @@ class AbstractRadiusGroupReply(
         self._validate_session_timeout()
 
     def _validate_session_timeout(self):
-        if self.attribute != "Session-Timeout":
+        if self.attribute not in ("Session-Timeout", "reply:Session-Timeout"):
             return
         limit = app_settings.session_timeout_limit()
         try:

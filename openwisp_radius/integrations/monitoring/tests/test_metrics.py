@@ -7,7 +7,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.cache.backends.locmem import LocMemCache
-from django.core.management import call_command
+from django.core.exceptions import ValidationError
+from django.core.management import CommandError, call_command
 from django.db import DatabaseError, connection, transaction
 from django.db.migrations.loader import MigrationLoader
 from django.test import tag
@@ -1281,8 +1282,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             output_octets=None,
         )
         batch_write.reset_mock()
-        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
             reconcile_radius_traffic()
+        warning.assert_called_once_with(
+            'Device object not found with MAC "00:22:33:44:55:66"'
+            f' and organization "{self.default_org.pk}".'
+            " The metric will be written without a related object!"
+        )
         points = [
             point for call in batch_write.call_args_list for point in call.args[0]
         ]
@@ -1421,7 +1427,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertIn("cleanup", pending_state)
         batch_write.assert_not_called()
         reconcile_radius_traffic()
-        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
+        recovered_state = cache.get(RECONCILIATION_STATE_KEY)
+        recovered_state.pop("revision")
+        saved.pop("revision")
+        self.assertEqual(recovered_state, saved)
         batch_write.assert_called_once()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
 
@@ -1486,8 +1495,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
     def test_previously_unmatched_device_keeps_recovered_baseline(self):
         session = self._create_traffic_session()
-        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
             reconcile_radius_traffic(seed=True)
+        warning.assert_called_once_with(
+            f'Device object not found with MAC "{self.TEST_MAC_ADDRESS}"'
+            f' and organization "{session.organization_id}".'
+            " The metric will be written without a related object!"
+        )
         device = self._create_device()
         cache.delete(RECONCILIATION_STATE_KEY)
         RadiusAccounting.objects.filter(pk=session.pk).update(input_octets=125)
@@ -1579,14 +1593,24 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         shared_session = self._create_traffic_session(
             unique_id="shared-session", organization=other_org
         )
-        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
             reconcile_radius_traffic(seed=True)
+        warning.assert_called_once_with(
+            f'Device object not found with MAC "{self.TEST_MAC_ADDRESS}"'
+            f' and organization "{other_org.pk}".'
+            " The metric will be written without a related object!"
+        )
         RadiusAccounting.objects.filter(pk=own_session.pk).update(input_octets=110)
         RadiusAccounting.objects.filter(pk=shared_session.pk).update(input_octets=120)
         batch_write.reset_mock()
         with patch.object(monitoring_settings, "SHARED_ACCOUNTING", False):
-            with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+            with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
                 reconcile_radius_traffic()
+        warning.assert_called_once_with(
+            f'Device object not found with MAC "{self.TEST_MAC_ADDRESS}"'
+            f' and organization "{other_org.pk}".'
+            " The metric will be written without a related object!"
+        )
         points = {
             point[0].extra_tags["accounting_organization_id"]: point
             for call in batch_write.call_args_list
@@ -1764,8 +1788,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self._create_traffic_session(
             unique_id="another-group", called_station_id="00:22:33:44:55:66"
         )
-        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
             reconcile_radius_traffic(seed=True)
+        warning.assert_called_once_with(
+            'Device object not found with MAC "00:22:33:44:55:66"'
+            f' and organization "{self.default_org.pk}".'
+            " The metric will be written without a related object!"
+        )
         saved = cache.get(RECONCILIATION_STATE_KEY)
         RadiusAccounting.objects.update(input_octets=125)
         prepared = []
@@ -1779,9 +1808,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
         batch_write.reset_mock()
         with patch(f"{ACCOUNTING_PATH}._traffic_point", side_effect=prepare_point):
-            with patch(f"{ACCOUNTING_PATH}.logger.warning"):
+            with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
                 with self.assertRaisesMessage(ValueError, "invalid_field"):
                     reconcile_radius_traffic()
+        warning.assert_called_once_with(
+            'Device object not found with MAC "00:22:33:44:55:66"'
+            f' and organization "{self.default_org.pk}".'
+            " The metric will be written without a related object!"
+        )
         batch_write.assert_not_called()
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
 
@@ -1972,10 +2006,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(options["extra_values"]["baseline_input"], 0)
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
-    def test_registration_schedule_also_collects_traffic(self, reconcile):
+    @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
+    def test_registration_schedule_also_collects_traffic(
+        self, registrations, reconcile
+    ):
         from ..tasks import write_user_registration_metrics
 
         write_user_registration_metrics()
+        registrations.assert_called_once_with()
         reconcile.assert_called_once_with()
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
@@ -2102,3 +2140,135 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(
             [len(call.args[0]) for call in batch_write.call_args_list], [100, 1]
         )
+
+    def test_empty_cutover_counts_first_session_after_cache_loss(self):
+        from ..metrics.accounting import initialize_traffic
+
+        initialize_traffic(RadiusAccounting.objects.all())
+        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY)["active"], True)
+        self._create_device()
+        self._create_traffic_session(input_octets=25, start_time=timezone.now())
+        cache.delete(RECONCILIATION_STATE_KEY)
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
+            reconcile_radius_traffic()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
+
+    @patch(f"{ACCOUNTING_PATH}.cache.set", return_value=None)
+    def test_cleanup_rejects_silently_discarded_cache_state(self, save_state):
+        self._create_device()
+        session = self._create_traffic_session(
+            start_time=timezone.now() - timezone.timedelta(days=21),
+            stop_time=timezone.now() - timezone.timedelta(days=20),
+        )
+        state = {
+            "active": True,
+            "groups": {
+                (str(session.organization_id), self.TEST_MAC_ADDRESS): (100, 200)
+            },
+            "queued": None,
+        }
+        cache.add(RECONCILIATION_STATE_KEY, state, timeout=None)
+        with self.assertRaisesMessage(
+            RuntimeError, "Could not save RADIUS traffic state"
+        ):
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+        self.assertEqual(RadiusAccounting.objects.filter(pk=session.pk).exists(), True)
+
+    def test_failed_chart_provisioning_retries_missing_charts(self):
+        self._create_device()
+        self._create_traffic_session(start_time=timezone.now())
+        with patch.object(
+            self.chart_model, "full_clean", side_effect=ValidationError("offline")
+        ):
+            with self.assertRaisesMessage(ValidationError, "offline"):
+                reconcile_radius_traffic()
+        self.assertEqual(self.chart_model.objects.count(), 0)
+        reconcile_radius_traffic()
+        reconcile_radius_traffic()
+        self.assertEqual(
+            set(self.chart_model.objects.values_list("configuration", flat=True)),
+            {"radius_traffic", "rad_session"},
+        )
+        self.assertEqual(self.chart_model.objects.count(), 2)
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch.object(monitoring_settings, "SHARED_ACCOUNTING", True)
+    def test_shared_accounting_prefers_device_in_accounting_organization(
+        self, batch_write
+    ):
+        device = self._create_device()
+        org2 = self._create_org(name="second-device-organization")
+        self._create_device(organization=org2)
+        self._create_traffic_session(start_time=timezone.now())
+        reconcile_radius_traffic(seed=True)
+        metric = batch_write.call_args.args[0][0][0]
+        self.assertEqual(metric.object_id, str(device.pk))
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch.object(monitoring_settings, "SHARED_ACCOUNTING", True)
+    def test_shared_accounting_ambiguous_devices_do_not_block_cleanup(
+        self, batch_write
+    ):
+        org2 = self._create_org(name="second-device-organization")
+        org3 = self._create_org(name="accounting-organization")
+        self._create_device()
+        self._create_device(organization=org2)
+        session = self._create_traffic_session(
+            organization=org3, start_time=timezone.now()
+        )
+        with patch(f"{ACCOUNTING_PATH}.logger.warning") as warning:
+            reconcile_radius_traffic(seed=True)
+            RadiusAccounting.objects.filter(pk=session.pk).update(
+                stop_time=timezone.now() - timezone.timedelta(days=20)
+            )
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+        self.assertEqual(warning.call_count, 2)
+        self.assertEqual(
+            warning.call_args.args,
+            (
+                f'Device object not found with MAC "{self.TEST_MAC_ADDRESS}"'
+                f' and organization "{org3.pk}".'
+                " The metric will be written without a related object!",
+            ),
+        )
+        self.assertEqual(RadiusAccounting.objects.filter(pk=session.pk).exists(), False)
+        self.assertEqual(batch_write.call_args.args[0][0][0].object_id, None)
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    def test_cleanup_keeps_rows_during_partial_initialization(self, batch_write):
+        self._create_device()
+        session = self._create_traffic_session(
+            start_time=timezone.now() - timezone.timedelta(days=21)
+        )
+        reconcile_radius_traffic(seed=True)
+        state = cache.get(RECONCILIATION_STATE_KEY)
+        state["active"] = False
+        cache.set(RECONCILIATION_STATE_KEY, state, timeout=None)
+        RadiusAccounting.objects.filter(pk=session.pk).update(
+            stop_time=timezone.now() - timezone.timedelta(days=20)
+        )
+        with self.assertRaisesMessage(CommandError, "initialization"):
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+        self.assertEqual(RadiusAccounting.objects.filter(pk=session.pk).exists(), True)
+
+    def test_closure_point_is_submitted_before_chart_validation(self):
+        device = self._create_device()
+        user = self._create_user()
+        self._create_registered_user(user=user)
+        with patch.object(self.metric_model, "write", autospec=True) as write:
+            with patch.object(
+                self.chart_model, "full_clean", side_effect=ValidationError("offline")
+            ):
+                with self.assertRaisesMessage(ValidationError, "offline"):
+                    post_save_radiusaccounting(
+                        username=user.username,
+                        organization_id=str(device.organization_id),
+                        input_octets=100,
+                        output_octets=200,
+                        called_station_id=device.mac_address,
+                        calling_station_id="00:00:00:00:00:01",
+                    )
+        write.assert_called_once()
+        self.assertEqual(write.call_args.args[1], 0)
+        self.assertEqual(write.call_args.kwargs["extra_values"]["output_octets"], 0)
+        self.assertEqual(write.call_args.kwargs["check"], False)

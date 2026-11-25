@@ -50,7 +50,9 @@ def write_session(
         "calling_station_id": sha1_hash(calling_station_id),
         "called_station_id": called_station_id,
     }
-    metric = accounting_metric(organization_id, called_station_id, extra_tags)
+    metric = accounting_metric(
+        organization_id, called_station_id, extra_tags, create_charts=False
+    )
     metric.write(
         input_octets,
         extra_values={
@@ -60,6 +62,7 @@ def write_session(
         time=time,
         check=False,
     )
+    _ensure_device_charts(metric)
 
 
 def _get_registration_method(username, organization_id):
@@ -82,23 +85,28 @@ def _get_registration_method(username, organization_id):
     return registration_method
 
 
-def accounting_metric(organization_id, called_station_id, extra_tags):
+def accounting_metric(
+    organization_id, called_station_id, extra_tags, create_charts=True
+):
     """Get or create an accounting metric and its device charts.
 
     Unmatched devices still contribute to general charts. Add the device's
     location to ``extra_tags`` in place when available.
     """
     device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
-    # With shared accounting, the device may belong to another organization.
-    if not app_settings.SHARED_ACCOUNTING:
-        device_lookup &= Q(organization_id=organization_id)
+    devices = Device.objects.select_related("devicelocation").only(
+        "id", "organization_id", "devicelocation__location_id"
+    )
     try:
-        device = (
-            Device.objects.select_related("devicelocation")
-            .only("id", "organization_id", "devicelocation__location_id")
-            .get(device_lookup)
-        )
-    except Device.DoesNotExist:
+        try:
+            device = devices.get(device_lookup, organization_id=organization_id)
+        except Device.DoesNotExist:
+            if not app_settings.SHARED_ACCOUNTING:
+                raise
+            # MAC addresses are unique per organization, not across tenants.
+            # Only use a shared device when the match is unambiguous.
+            device = devices.get(device_lookup)
+    except (Device.DoesNotExist, Device.MultipleObjectsReturned):
         logger.warning(
             f'Device object not found with MAC "{called_station_id}"'
             f' and organization "{organization_id}".'
@@ -114,7 +122,7 @@ def accounting_metric(organization_id, called_station_id, extra_tags):
         if hasattr(device, "devicelocation"):
             extra_tags["location_id"] = str(device.devicelocation.location_id)
 
-    metric, created = Metric._get_or_create(
+    metric, _ = Metric._get_or_create(
         configuration="radius_acc",
         name="RADIUS Accounting",
         key="radius_acc",
@@ -122,11 +130,8 @@ def accounting_metric(organization_id, called_station_id, extra_tags):
         content_type=content_type,
         extra_tags=extra_tags,
     )
-    if object_id and created:
-        for configuration in metric.config_dict["charts"].keys():
-            chart = Chart(metric=metric, configuration=configuration)
-            chart.full_clean()
-            chart.save()
+    if create_charts:
+        _ensure_device_charts(metric)
     return metric
 
 
@@ -155,6 +160,13 @@ def _prepare_accounting_cleanup(queryset):
             )
         state = _load_traffic_state()
         _flush_traffic(state)
+        if not state["active"] and state["groups"]:
+            raise CommandError(
+                _(
+                    "RADIUS traffic initialization is incomplete; "
+                    "retry collection first."
+                )
+            )
 
         def prepare_cleanup(batch):
             if not state["active"]:
@@ -305,7 +317,14 @@ def _load_traffic_state():
 
 
 def _save_traffic_state(state):
-    if cache.set(RECONCILIATION_STATE_KEY, state, timeout=None) is False:
+    state["revision"] = str(uuid4())
+    saved = cache.set(RECONCILIATION_STATE_KEY, state, timeout=None)
+    # Some cache backends silently discard oversized values. Confirm the
+    # cleanup adjustment is retrievable before deleting its accounting rows.
+    # Compare a revision because queued, unsaved metrics do not compare equal
+    # after the cache serializes and reconstructs them.
+    stored = cache.get(RECONCILIATION_STATE_KEY)
+    if saved is False or stored is None or stored.get("revision") != state["revision"]:
         raise RuntimeError(_("Could not save RADIUS traffic state."))
 
 
@@ -373,28 +392,7 @@ def reconcile(seed=False):
             # Refresh the checkpoint even with no sessions. If the cache is
             # lost and the old checkpoint expires, the next run would seed
             # rather than count the first session's traffic.
-            metric = Metric(
-                key="radius_acc",
-                configuration="radius_acc",
-                field_name="input_octets",
-                extra_tags={
-                    "accounting_organization_id": "__all__",
-                    "called_station_id": "",
-                },
-            )
-            metric.full_clean()
-            options = {
-                "value": 0,
-                "check": False,
-                "time": timezone.now(),
-                "extra_values": {
-                    "output_octets": 0,
-                    "baseline_input": 0,
-                    "baseline_output": 0,
-                },
-            }
-            metric.write(**options, write=False)
-            _submit_traffic(state, [(metric, options)])
+            _submit_traffic(state, [_activation_point(timezone.now())])
         groups_to_reconcile = set(totals)
         groups_to_reconcile.update(state["groups"])
         groups_to_reconcile.discard(("__all__", ""))
@@ -482,6 +480,11 @@ def initialize_traffic(queryset):
                 submitted_output += sum(row["open_output"] for row in batch)
             if groups:
                 _save_traffic_state({"active": True, "groups": groups, "queued": None})
+            else:
+                # Persist activation even without sessions so the first hourly
+                # run counts traffic that arrived after this cutover.
+                Metric.batch_write([_activation_point(snapshot_time)])
+                _save_traffic_state({"active": True, "groups": {}, "queued": None})
     except Exception:
         logger.exception(
             "RADIUS traffic cutover at %s failed after submitting %s input and %s "
@@ -500,3 +503,41 @@ def initialize_traffic(queryset):
         submitted_output,
         len(groups),
     )
+
+
+def _ensure_device_charts(metric):
+    if not metric.object_id:
+        return
+    existing = set(metric.chart_set.values_list("configuration", flat=True))
+    # A validation failure can leave a saved metric with only some charts.
+    # Retry only the missing charts rather than relying on metric creation.
+    for configuration in metric.config_dict["charts"]:
+        if configuration not in existing:
+            chart = Chart(metric=metric, configuration=configuration)
+            chart.full_clean()
+            chart.save()
+
+
+def _activation_point(timestamp):
+    metric = Metric(
+        key="radius_acc",
+        configuration="radius_acc",
+        field_name="input_octets",
+        extra_tags={
+            "accounting_organization_id": "__all__",
+            "called_station_id": "",
+        },
+    )
+    metric.full_clean()
+    options = {
+        "value": 0,
+        "check": False,
+        "time": timestamp,
+        "extra_values": {
+            "output_octets": 0,
+            "baseline_input": 0,
+            "baseline_output": 0,
+        },
+    }
+    metric.write(**options, write=False)
+    return metric, options

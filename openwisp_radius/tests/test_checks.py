@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+from django.core.checks import ERROR
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db import connection
 from django.test import TestCase
 
 from openwisp_radius import checks
@@ -142,9 +144,14 @@ class TestChecks(TestCase):
         with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1):
             errors = checks.check_group_session_timeouts(None, databases=["default"])
         self.assertEqual(len(errors), 1)
-        self.assertIn(group.name, errors[0].msg)
-        self.assertIn(group.organization.name, errors[0].msg)
-        self.assertIn(reply.value, errors[0].msg)
+        self.assertEqual(
+            errors[0].msg,
+            f'Organization "{group.organization}" group "{group}" in database '
+            f'"default" has Session-Timeout "{reply.value}", '
+            "outside the allowed range 0 to 86400.",
+        )
+        self.assertEqual(errors[0].level, ERROR)
+        self.assertEqual(errors[0].id, "openwisp_radius.E001")
 
     def test_group_timeout_respects_radius_limit_with_indefinite_retention(self):
         group = load_model("RadiusGroup").objects.first()
@@ -168,3 +175,34 @@ class TestChecks(TestCase):
                     None, databases=["default"]
                 )
         self.assertEqual(errors, [])
+
+    def test_database_check_uses_requested_alias(self):
+        group = load_model("RadiusGroup").objects.first()
+        reply_model = load_model("RadiusGroupReply")
+        reply_model.objects.create(
+            group=group, attribute="Session-Timeout", value="86401"
+        )
+        replies = reply_model.objects.all()
+        with patch(
+            "openwisp_radius.checks.connections",
+            {"radius": connection},
+        ):
+            with patch.object(
+                reply_model.objects, "using", return_value=replies
+            ) as using:
+                with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1):
+                    errors = checks.check_group_session_timeouts(
+                        None, databases=["radius"]
+                    )
+        using.assert_called_once_with("radius")
+        self.assertEqual(len(errors), 1)
+        self.assertIn('database "radius"', errors[0].msg)
+
+    @patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1)
+    def test_qualified_group_timeout_cannot_exceed_retention(self):
+        group = load_model("RadiusGroup").objects.first()
+        reply = load_model("RadiusGroupReply")(
+            group=group, attribute="reply:Session-Timeout", value="86401"
+        )
+        with self.assertRaises(ValidationError):
+            reply.full_clean()

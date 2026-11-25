@@ -1161,9 +1161,36 @@ For example, set it to ``90`` to keep closed sessions for 90 days:
 
     OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS = 90
 
-Set it to ``None`` to keep sessions indefinitely.
+Set it to ``None`` to keep sessions indefinitely when cleanup uses the
+configured default. An explicit argument to ``delete_old_radacct`` still
+overrides this setting, including ``None``. Move any retention argument
+from the scheduled task into this setting and remove that argument from
+the schedule.
 
 New sessions are also limited to this duration, unless a group or
 :ref:`usage counter <radius_counters>` sets a shorter limit. The NAS must
 enforce session timeouts. Existing sessions are not affected by a setting
 change. ``None`` also disables this default session limit.
+
+The default timeout is the smaller of the retention period in seconds and
+the RADIUS attribute maximum, ``4,294,967,295`` seconds. This maximum does
+not change the accounting cleanup threshold.
+
+Before reducing retention, pause scheduled cleanup and load the proposed
+setting in the configuration used to run:
+
+.. code-block:: shell
+
+    ./manage.py check --database default
+
+Replace ``default`` with the deployment's accounting database alias. The
+check uses the loaded setting, not a value supplied on the command line.
+It reports errors naming the database, organization, group, saved timeout,
+and allowed limit. Correct incompatible group replies before deploying the
+new setting and resuming cleanup.
+
+Authorization applies retention with FreeRADIUS's ``<=`` operator so an
+existing shorter server-side timeout is not replaced by the default.
+Legacy dynamic group replies are left for FreeRADIUS to evaluate before
+the retention ceiling is applied. New group replies must contain an
+integer timeout; migrate incompatible saved replies before deployment.

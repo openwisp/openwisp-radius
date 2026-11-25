@@ -96,3 +96,38 @@ configured interval.
 
 Use a shared Django cache accessible to every worker and management
 command. A process-local cache is not suitable for production.
+
+Upgrading an existing Monitoring deployment
+-------------------------------------------
+
+The ``0002_initialize_traffic`` migration automatically reports the
+current traffic of open sessions and initializes aggregate baselines for
+open and closed sessions. The old collector already reported closed
+sessions. Do not run a separate baseline-seeding command.
+
+Use a maintenance window for the cutover:
+
+1. Pause accounting updates, scheduled metric collection, accounting
+   cleanup, and station-ID conversion. Let the legacy workers finish
+   queued session-closure writes, then stop those workers.
+2. Back up the accounting database, cache, and time-series data. Record
+   the current UTC timestamp immediately before running migrations and
+   retain it as the historical-repair cutoff.
+3. Deploy the new code and run ``./manage.py migrate`` with the shared
+   cache and Monitoring services available. Check the migration logs for
+   its snapshot time and submitted input and output octets.
+4. Start workers using the new code, resume accounting updates, and enable
+   the existing ``write_user_registration_metrics`` schedule. Confirm that
+   the next collection reports only traffic accumulated after the
+   snapshot.
+
+The migration is irreversible: SQL rollback cannot undo submitted metric
+writes. A failed migration may already have submitted some points. Check
+its logs and the stored points before retrying; taking a fresh snapshot
+can count the same traffic again. Submission alone does not confirm that
+points have reached the time-series database.
+
+Historical repairs with ``rebuild_radius_accounting_metrics --commit``
+must use an ``--end`` earlier than the recorded cutoff. Keep that cutoff
+even after old checkpoints expire; the command cannot reconstruct the
+original cutover time from the remaining points.
