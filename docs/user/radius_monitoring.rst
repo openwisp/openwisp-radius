@@ -116,10 +116,11 @@ Use a maintenance window for the cutover:
 3. Deploy the new code and run ``./manage.py migrate`` with the shared
    cache and Monitoring services available. Check the migration logs for
    its snapshot time and submitted input and output octets.
-4. Start workers using the new code, resume accounting updates, and enable
-   the existing ``write_user_registration_metrics`` schedule. Confirm that
-   the next collection reports only traffic accumulated after the
-   snapshot.
+4. After the migration succeeds, start workers using the new code, resume
+   accounting updates, accounting cleanup, and station-ID conversion, and
+   enable the existing ``write_user_registration_metrics`` schedule.
+   Confirm that the next collection reports only traffic accumulated after
+   the snapshot.
 
 The migration is irreversible: SQL rollback cannot undo submitted metric
 writes. A failed migration may already have submitted some points. Check

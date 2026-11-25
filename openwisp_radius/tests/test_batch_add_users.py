@@ -270,7 +270,7 @@ class TestTransactionPrefixUpload(FileMixin, BaseTransactionTestCase):
             response.json(),
             {
                 "control:Auth-Type": "Accept",
-                "Session-Timeout": 10800,
+                "Session-Timeout": {"op": "<=", "value": 10800},
                 "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )
