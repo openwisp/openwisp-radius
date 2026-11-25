@@ -2393,3 +2393,114 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(len(traffic_points), 1)
         self.assertEqual(traffic_points[0]["value"], 10)
         self.assertEqual(traffic_points[0]["extra_values"]["output_octets"], 15)
+
+    @patch(f"{ACCOUNTING_PATH}.logger.warning")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}._recover_baseline", side_effect=RuntimeError("offline"))
+    def test_retirement_read_failure_does_not_delay_cached_group(
+        self, recover, batch_write, warning
+    ):
+        active_device = self._create_device()
+        self._create_traffic_session(
+            input_octets=125, output_octets=230, start_time=timezone.now()
+        )
+        active_group = (str(self.default_org.pk), active_device.mac_address)
+        retiring_group = (str(self.default_org.pk), "aa:bb:cc:dd:ee:ff")
+        submitted_at = timezone.now()
+        cache.set(
+            RECONCILIATION_STATE_KEY,
+            {
+                "active": True,
+                "groups": {active_group: (100, 200), retiring_group: (0, 0)},
+                "retiring": {retiring_group: submitted_at},
+                "queued": None,
+            },
+            timeout=None,
+        )
+        reconcile_radius_traffic()
+        recover.assert_called_once_with(*retiring_group, since=submitted_at)
+        warning.assert_called_once_with(
+            "Could not read RADIUS traffic checkpoint for group %s; "
+            "deferring collection.",
+            retiring_group,
+            exc_info=True,
+        )
+        batch_write.assert_called_once()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
+        state = cache.get(RECONCILIATION_STATE_KEY)
+        self.assertEqual(state["groups"][active_group], (125, 230))
+        self.assertEqual(state["groups"][retiring_group], (0, 0))
+        self.assertEqual(state["retiring"], {retiring_group: submitted_at})
+
+    @patch(f"{ACCOUNTING_PATH}.logger.warning")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}._recover_baseline", side_effect=RuntimeError("offline"))
+    def test_uncached_group_read_failure_does_not_delay_cached_group(
+        self, recover, batch_write, warning
+    ):
+        active_device = self._create_device()
+        new_device = self._create_device(
+            name="new-device", mac_address="aa:bb:cc:dd:ee:ff"
+        )
+        self._create_traffic_session(
+            input_octets=125, output_octets=230, start_time=timezone.now()
+        )
+        self._create_traffic_session(
+            unique_id="new-session",
+            called_station_id=new_device.mac_address,
+            start_time=timezone.now(),
+        )
+        active_group = (str(self.default_org.pk), active_device.mac_address)
+        new_group = (str(self.default_org.pk), new_device.mac_address.lower())
+        cache.set(
+            RECONCILIATION_STATE_KEY,
+            {"active": True, "groups": {active_group: (100, 200)}, "queued": None},
+            timeout=None,
+        )
+        reconcile_radius_traffic()
+        recover.assert_called_once_with(*new_group)
+        warning.assert_called_once_with(
+            "Could not read RADIUS traffic checkpoint for group %s; "
+            "deferring collection.",
+            new_group,
+            exc_info=True,
+        )
+        batch_write.assert_called_once()
+        self.assertEqual(len(batch_write.call_args.args[0]), 1)
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
+        state = cache.get(RECONCILIATION_STATE_KEY)
+        self.assertEqual(state["groups"], {active_group: (125, 230)})
+
+    @patch(f"{ACCOUNTING_PATH}.logger.warning")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}._recover_baseline", side_effect=RuntimeError("offline"))
+    def test_unavailable_group_checkpoint_does_not_submit_empty_batch(
+        self, recover, batch_write, warning
+    ):
+        self._create_device()
+        self._create_traffic_session(start_time=timezone.now())
+        cache.set(
+            RECONCILIATION_STATE_KEY,
+            {"active": True, "groups": {}, "queued": None},
+            timeout=None,
+        )
+        reconcile_radius_traffic()
+        batch_write.assert_not_called()
+        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY)["groups"], {})
+        warning.assert_called_once()
+
+    @patch(f"{ACCOUNTING_PATH}.logger.warning")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}._recover_baseline", side_effect=RuntimeError("offline"))
+    def test_initialization_read_failure_does_not_activate_collection(
+        self, recover, batch_write, warning
+    ):
+        self._create_device()
+        self._create_traffic_session(start_time=timezone.now())
+        initial_state = {"active": False, "groups": {}, "queued": None}
+        cache.set(RECONCILIATION_STATE_KEY, initial_state, timeout=None)
+        with self.assertRaisesMessage(RuntimeError, "offline"):
+            reconcile_radius_traffic(seed=True)
+        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), initial_state)
+        batch_write.assert_not_called()
+        warning.assert_not_called()

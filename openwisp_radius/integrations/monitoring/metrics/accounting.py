@@ -398,7 +398,18 @@ def reconcile(seed=False):
         for group, timestamp in list(retiring.items()):
             if group in totals:
                 del retiring[group]
-            elif _recover_baseline(*group, since=timestamp) == (0, 0):
+                continue
+            try:
+                persisted = _recover_baseline(*group, since=timestamp)
+            except Exception:
+                logger.warning(
+                    "Could not read RADIUS traffic checkpoint for group %s; "
+                    "deferring collection.",
+                    group,
+                    exc_info=True,
+                )
+                continue
+            if persisted == (0, 0):
                 # Queue acceptance is not persistence. Keep the cached zero
                 # until recovery can no longer return the old negative baseline.
                 state["groups"].pop(group, None)
@@ -421,7 +432,20 @@ def reconcile(seed=False):
                 current = totals.get(group, (0, 0))
                 previous = state["groups"].get(group)
                 if previous is None:
-                    previous = _recover_baseline(*group)
+                    try:
+                        previous = _recover_baseline(*group)
+                    except Exception:
+                        # Activating after a skipped seed would later count
+                        # that group's retained history as newly discovered.
+                        if initializing:
+                            raise
+                        logger.warning(
+                            "Could not read RADIUS traffic checkpoint for group %s; "
+                            "deferring collection.",
+                            group,
+                            exc_info=True,
+                        )
+                        continue
                 if previous is None:
                     previous = current if initializing else (0, 0)
                 delta = _traffic_delta(group, previous, current)
@@ -434,6 +458,8 @@ def reconcile(seed=False):
                 points.append((metric, write_options))
                 if group not in totals:
                     absent[group] = write_options["time"]
+            if not points:
+                continue
             state["groups"].update(observed)
             retiring.update(absent)
             if retiring:
