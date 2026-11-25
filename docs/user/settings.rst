@@ -1192,5 +1192,7 @@ new setting and resuming cleanup.
 Authorization applies retention with FreeRADIUS's ``<=`` operator so an
 existing shorter server-side timeout is not replaced by the default.
 Legacy dynamic group replies are left for FreeRADIUS to evaluate before
-the retention ceiling is applied. New group replies must contain an
-integer timeout; migrate incompatible saved replies before deployment.
+the retention ceiling is applied. Both ``Session-Timeout`` and
+``reply:Session-Timeout`` contribute to the same ceiling. New group
+replies must contain an integer timeout; migrate incompatible saved
+replies before deployment.

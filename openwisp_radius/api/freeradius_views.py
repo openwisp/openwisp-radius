@@ -349,25 +349,26 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
 
         maximum_timeout = app_settings.session_timeout_limit(default=None)
         if maximum_timeout is not None:
-            # Bound new session lengths to the retention period so old sessions
-            # can be closed and cleaned up without losing unobserved traffic.
-            reply = data.get("Session-Timeout")
-            timeout = reply.get("value") if isinstance(reply, dict) else reply
-            try:
-                timeout = int(timeout)
-            except (TypeError, ValueError):
-                # Let FreeRADIUS evaluate legacy dynamic replies before applying
-                # the ceiling through the equivalent qualified attribute name.
-                name = "Session-Timeout" if reply is None else "reply:Session-Timeout"
-                data[name] = {"op": "<=", "value": maximum_timeout}
-            else:
-                if not isinstance(reply, dict) or timeout > maximum_timeout:
-                    # A scalar uses := in rlm_rest and would replace a shorter
-                    # timeout set by another FreeRADIUS policy.
-                    data["Session-Timeout"] = {
-                        "op": "<=",
-                        "value": min(timeout, maximum_timeout),
-                    }
+            dynamic_timeouts = []
+            for name in ("Session-Timeout", "reply:Session-Timeout"):
+                if name not in data:
+                    continue
+                reply = data.pop(name)
+                timeout = reply.get("value") if isinstance(reply, dict) else reply
+                try:
+                    maximum_timeout = min(int(timeout), maximum_timeout)
+                except (TypeError, ValueError):
+                    dynamic_timeouts.append(timeout)
+            # rlm_rest applies <= to each array value, evaluating legacy
+            # expressions before the numeric ceiling. Combining both spellings
+            # avoids overwriting one policy while enforcing retention.
+            dynamic_timeouts.append(maximum_timeout)
+            data["Session-Timeout"] = {
+                "op": "<=",
+                "value": (
+                    dynamic_timeouts if len(dynamic_timeouts) > 1 else maximum_timeout
+                ),
+            }
         return data, self.accept_status
 
     def _check_simultaneous_use(
