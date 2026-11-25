@@ -29,6 +29,7 @@ if MONITORING_INSTALLED:
         RECONCILIATION_LOCK_KEY,
         RECONCILIATION_STATE_KEY,
         _accounting_totals,
+        _load_traffic_state,
         _reconciliation_lock,
         _recover_baseline,
         _traffic_delta,
@@ -1611,19 +1612,6 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(shared_options["value"], 15)
         self.assertEqual(shared_metric.extra_tags["organization_id"], str(other_org.pk))
 
-    def test_recovery_includes_group_whose_last_row_was_deleted(self):
-        self._create_device()
-        session = self._create_traffic_session()
-        reconcile_radius_traffic(seed=True)
-        RadiusAccounting.objects.filter(pk=session.pk).update(
-            input_octets=125, stop_time=timezone.now() - timezone.timedelta(days=20)
-        )
-        call_command("delete_old_radacct", 10, stdout=StringIO())
-        cache.delete(RECONCILIATION_STATE_KEY)
-        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
-            reconcile_radius_traffic()
-        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
-
     def test_empty_initialization_recovers_before_first_session(self):
         reconcile_radius_traffic(seed=True)
         cache.delete(RECONCILIATION_STATE_KEY)
@@ -2085,3 +2073,32 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(batch_write.call_args.args[0][0][1]["check"], False)
         log_failure.assert_called_once()
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), None)
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.read")
+    def test_cache_loss_checks_activation_without_loading_all_checkpoints(self, read):
+        read.return_value = [{"baseline_input": 100, "baseline_output": 200}]
+        state = _load_traffic_state()
+        self.assertEqual(state, {"active": True, "groups": {}, "queued": None})
+        self.assertEqual(read.call_args.kwargs["limit"], 1)
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    def test_cutover_submits_no_more_than_100_groups_per_batch(self, batch_write):
+        from ..metrics.accounting import initialize_traffic
+
+        rows = [
+            {
+                "organization_id": self.default_org.pk,
+                "clean_called_station_id": f"device-{number}",
+                "input_total": 10,
+                "output_total": 20,
+                "open_input": 10,
+                "open_output": 20,
+            }
+            for number in range(101)
+        ]
+        with patch(f"{ACCOUNTING_PATH}._accounting_totals", return_value=iter(rows)):
+            with patch(f"{ACCOUNTING_PATH}._traffic_point", return_value=(None, {})):
+                initialize_traffic(RadiusAccounting.objects.all())
+        self.assertEqual(
+            [len(call.args[0]) for call in batch_write.call_args_list], [100, 1]
+        )

@@ -1,4 +1,4 @@
-"""Write accounting metrics and keep traffic baselines consistent during cleanup."""
+"""Write RADIUS session metrics and track traffic between collections."""
 
 import logging
 from contextlib import contextmanager
@@ -38,6 +38,11 @@ def write_session(
     called_station_id,
     time=None,
 ):
+    """Write a session point that can be used to count unique users.
+
+    Session closures pass zero to avoid double counting scheduled traffic.
+    Historical rebuilds pass the original session totals.
+    """
     registration_method = _get_registration_method(username, organization_id)
     extra_tags = {
         "method": registration_method,
@@ -78,9 +83,13 @@ def _get_registration_method(username, organization_id):
 
 
 def accounting_metric(organization_id, called_station_id, extra_tags):
-    """Share metric and device-chart lookup between session and traffic writes."""
+    """Get or create an accounting metric and its device charts.
+
+    Unmatched devices still contribute to general charts. Add the device's
+    location to ``extra_tags`` in place when available.
+    """
     device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
-    # Do not use organization_id for device lookup if shared accounting is enabled
+    # With shared accounting, the device may belong to another organization.
     if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
     try:
@@ -113,8 +122,6 @@ def accounting_metric(organization_id, called_station_id, extra_tags):
         content_type=content_type,
         extra_tags=extra_tags,
     )
-    # Unmatched identifiers still contribute to general metrics, but device
-    # charts require an object_id and content_type.
     if object_id and created:
         for configuration in metric.config_dict["charts"].keys():
             chart = Chart(metric=metric, configuration=configuration)
@@ -135,7 +142,12 @@ def _reconciliation_lock():
 
 
 @contextmanager
-def _cleanup_coordination(queryset):
+def _prepare_accounting_cleanup(queryset):
+    """Hold the collection lock through cleanup and its commit callback.
+
+    Deleting sessions lowers the current totals. Subtract the same traffic
+    from the baselines so cleanup doesn't hide traffic since the last run.
+    """
     with _reconciliation_lock() as acquired:
         if not acquired:
             raise CommandError(
@@ -147,6 +159,8 @@ def _cleanup_coordination(queryset):
         def prepare_cleanup(batch):
             if not state["active"]:
                 return lambda: None
+            # Cleanup deletes the whole batch in one transaction, so one session
+            # ID is enough to check whether it committed.
             session = batch.order_by("pk").values_list("pk", flat=True).first()
             if session is None:
                 return lambda: None
@@ -158,6 +172,8 @@ def _cleanup_coordination(queryset):
                 if baseline is None:
                     baseline = _recover_baseline(*group) or (0, 0)
                 baseline_input, baseline_output = baseline
+                # A negative baseline preserves unreported traffic even if
+                # cleanup deletes the last session in the group.
                 adjusted = (
                     baseline_input - row["input_total"],
                     baseline_output - row["output_total"],
@@ -168,8 +184,8 @@ def _cleanup_coordination(queryset):
                 )
                 metric.write(**write_options, write=False)
                 points.append((metric, write_options))
-            # Save the prepared adjustment before SQL can discard its traffic totals.
-            # Keep it separate from queued writes until deletion is committed.
+            # Cache the adjustment before the deleted totals are lost. Keep it
+            # out of the write queue until commit so a rollback can't apply it.
             state["cleanup"] = {
                 "session": session,
                 "groups": adjusted_totals,
@@ -187,10 +203,9 @@ def _cleanup_coordination(queryset):
 
 
 def _accounting_totals(queryset, include_open=False):
-    """Sum retained session traffic by accounting organization and device MAC.
+    """Sum session traffic by accounting organization and normalized device MAC.
 
-    Reconciliation compares these totals with previous observations to measure
-    new traffic, including traffic from sessions that have not yet closed.
+    With ``include_open``, get open subtotals in the same query.
     """
     clean_called_station_id = Lower(
         Replace(Coalesce("called_station_id", Value("")), Value("-"), Value(":"))
@@ -214,11 +229,7 @@ def _accounting_totals(queryset, include_open=False):
 
 
 def _traffic_delta(group, previous, current):
-    """Calculate newly observed input and output traffic independently.
-
-    Unexpected decreases are logged and clamped to zero so changed accounting
-    totals cannot produce negative traffic in charts.
-    """
+    """Clamp decreases to zero so charts never show negative traffic."""
     previous_input, previous_output = previous
     current_input, current_output = current
     input_delta = current_input - previous_input
@@ -241,10 +252,9 @@ def _traffic_delta(group, previous, current):
 
 
 def _recover_baseline(organization_id, called_station_id):
-    """Recover a group's latest observed totals after its cached baseline is lost.
+    """Recover the group's latest checkpoint from InfluxDB.
 
-    Only aggregate checkpoints contain baseline fields. Session-closure points
-    must not be used to decide which traffic has already been reported.
+    Session points share this measurement but have no baseline fields.
     """
     metric = Metric(key="radius_acc", configuration="radius_acc")
     points = metric.read(
@@ -261,47 +271,37 @@ def _recover_baseline(organization_id, called_station_id):
     )
     if not points:
         return None
-    # A location change creates another series, so InfluxDB can return one
-    # latest point for each series even when the query uses LIMIT 1.
+    # InfluxDB applies LIMIT 1 per series. A device that moved can have
+    # checkpoints in more than one series.
     latest = max(points, key=lambda point: point["time"])
     return latest["baseline_input"], latest["baseline_output"]
 
 
 def _load_traffic_state():
-    """Restore baselines and finish or discard a pending cleanup adjustment.
-
-    Prefer cached state, including pending writes. If it is missing, recover
-    persisted checkpoints rather than treating known traffic as a fresh start.
-    """
+    """Load traffic state and resolve any interrupted cleanup."""
     state = cache.get(RECONCILIATION_STATE_KEY)
     if state is not None:
         cleanup = state.get("cleanup")
         if cleanup is not None:
-            # Cleanup deletes every selected row in one transaction. One saved
-            # row ID distinguishes a committed deletion from a rollback without
-            # caching all IDs. Old sessions must not change outside this path.
+            # A missing row confirms cleanup committed only if no other path
+            # can delete the saved row.
             if RadiusAccounting.objects.filter(pk=cleanup["session"]).exists():
                 del state["cleanup"]
                 _save_traffic_state(state)
             else:
                 _submit_cleanup_checkpoint(state, cleanup["groups"], cleanup["points"])
         return state
-    # A checkpoint anywhere establishes that activation already happened.
-    # Read errors must propagate rather than silently reseeding live traffic.
+    # One checkpoint is enough to tell that collection has started. Recover
+    # group baselines as needed. Let read errors propagate rather than reseeding.
     metric = Metric(key="radius_acc", configuration="radius_acc")
     checkpoints = metric.read(
         fields=["baseline_input", "baseline_output"],
-        extra_fields=["accounting_organization_id", "called_station_id"],
         tags={},
         order="-time",
+        limit=1,
         where=[("baseline_input", ">=", -(2**63))],
     )
-    groups = {}
-    for point in checkpoints:
-        group = (point["accounting_organization_id"], point["called_station_id"] or "")
-        if group not in groups:
-            groups[group] = (point["baseline_input"], point["baseline_output"])
-    return {"active": bool(checkpoints), "groups": groups, "queued": None}
+    return {"active": bool(checkpoints), "groups": {}, "queued": None}
 
 
 def _save_traffic_state(state):
@@ -310,8 +310,7 @@ def _save_traffic_state(state):
 
 
 def _submit_traffic(state, points):
-    # Callers validate every point before changing observed totals or committing
-    # deletion. Preserve this prepared payload on an uncertain queue submission.
+    # If queue submission fails, retry the same points at the same timestamps.
     state["queued"] = points
     _save_traffic_state(state)
     _flush_traffic(state)
@@ -350,13 +349,15 @@ def _traffic_point(group, total, delta, timestamp, check=True):
 
 
 def reconcile(seed=False):
-    """Submit scheduled observations, not per-session or per-update traffic."""
+    """Collect traffic from open and closed sessions by organization and device.
+
+    Seed baselines on the first run without reporting earlier traffic.
+    """
     with _reconciliation_lock() as acquired:
         if not acquired:
             return False
         state = _load_traffic_state()
-        # Exhaust the SQL observation before changing state. A failed query is
-        # not an empty accounting table.
+        # If the SQL query fails, leave pending writes queued for the next run.
         totals = {
             (str(row["organization_id"]), row["clean_called_station_id"]): (
                 row["input_total"],
@@ -369,8 +370,9 @@ def reconcile(seed=False):
         if seed and not initializing:
             raise CommandError(_("Traffic baselines are already initialized."))
         if not totals:
-            # Refresh activation while idle so cache recovery can still count a
-            # first session after the original checkpoint expires.
+            # Refresh the checkpoint even with no sessions. If the cache is
+            # lost and the old checkpoint expires, the next run would seed
+            # rather than count the first session's traffic.
             metric = Metric(
                 key="radius_acc",
                 configuration="radius_acc",
@@ -397,8 +399,8 @@ def reconcile(seed=False):
         groups_to_reconcile.update(state["groups"])
         groups_to_reconcile.discard(("__all__", ""))
         remaining_groups = iter(groups_to_reconcile)
-        # Bound prepared payloads and avoid queuing a Celery task or serializing
-        # the whole baseline map separately for every accounting group.
+        # Batch submissions to limit payload size and avoid a separate task
+        # and full baseline cache write for every group.
         while True:
             batch = list(islice(remaining_groups, 1000))
             if not batch:
@@ -416,7 +418,7 @@ def reconcile(seed=False):
                 metric, write_options = _traffic_point(
                     group, current, delta, timezone.now(), check=not initializing
                 )
-                # No group in this batch advances if local validation fails.
+                # Validate every point before advancing any baseline in the batch.
                 metric.write(**write_options, write=False)
                 observed[group] = current
                 points.append((metric, write_options))
@@ -428,19 +430,21 @@ def reconcile(seed=False):
 
 
 def coordinate_accounting_cleanup(sender, queryset, **kwargs):
-    return _cleanup_coordination(queryset)
+    return _prepare_accounting_cleanup(queryset)
 
 
 def _submit_cleanup_checkpoint(state, adjusted_totals, points):
-    """Apply prepared baseline adjustments only after the SQL deletion commits."""
-    # Negative baselines retain growth on rows deleted before observation.
     state["groups"].update(adjusted_totals)
     state.pop("cleanup", None)
     _submit_traffic(state, points)
 
 
 def initialize_traffic(queryset):
-    """Submit opening traffic and seed hourly baselines from the same SQL snapshot."""
+    """Report open-session traffic when upgrading to scheduled collection.
+
+    Seed baselines for all sessions in that snapshot. The old collector
+    was responsible for reporting traffic from closed sessions.
+    """
     snapshot_time = timezone.now()
     groups = {}
     submitted_input = submitted_output = 0
@@ -452,10 +456,11 @@ def initialize_traffic(queryset):
                 )
             snapshot_time = timezone.now()
             logger.info("Taking RADIUS traffic cutover snapshot at %s", snapshot_time)
-            # Accounting stays live during the upgrade. A close after the
-            # legacy queue drain can be missed, and a reopen can count twice.
+            # Sessions that close between the legacy queue drain and this
+            # snapshot can be missed. Already reported sessions that reopen
+            # before the snapshot can count twice.
             rows = _accounting_totals(queryset, include_open=True)
-            while batch := list(islice(rows, 1000)):
+            while batch := list(islice(rows, 100)):
                 points = []
                 for row in batch:
                     group = (
@@ -470,8 +475,8 @@ def initialize_traffic(queryset):
                             group, total, opening_traffic, snapshot_time, check=False
                         )
                     )
-                # Monitoring can submit valid points before raising for invalid
-                # ones. Do not put this batch in the hourly retry state.
+                # Monitoring can submit part of a batch before raising. Keep
+                # cutover writes out of the scheduled collector's retry queue.
                 Metric.batch_write(points)
                 submitted_input += sum(row["open_input"] for row in batch)
                 submitted_output += sum(row["open_output"] for row in batch)
