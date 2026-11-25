@@ -2007,24 +2007,26 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
     @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
-    def test_registration_schedule_also_collects_traffic(
+    def test_registration_schedule_does_not_collect_traffic(
         self, registrations, reconcile
     ):
         from ..tasks import write_user_registration_metrics
 
         write_user_registration_metrics()
         registrations.assert_called_once_with()
-        reconcile.assert_called_once_with()
+        reconcile.assert_not_called()
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
     @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
-    def test_registration_failure_does_not_skip_traffic(self, registrations, reconcile):
+    def test_registration_failure_does_not_collect_traffic(
+        self, registrations, reconcile
+    ):
         from ..tasks import write_user_registration_metrics
 
         registrations.side_effect = RuntimeError("Registration metrics unavailable")
         with self.assertRaisesMessage(RuntimeError, "Registration metrics unavailable"):
             write_user_registration_metrics()
-        reconcile.assert_called_once_with()
+        reconcile.assert_not_called()
 
     def test_cutover_preserves_unique_users_and_reports_only_new_growth_afterward(self):
         device = self._create_device()
