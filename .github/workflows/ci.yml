@@ -95,6 +95,15 @@ jobs:
         run: |
           ./run-qa-checks
 
+      # Exercise real rlm_rest semantics once, not in every matrix job.
+      - name: FreeRADIUS timeout policy regression
+        if: matrix.python-version == '3.12' && matrix.django-version == 'django~=5.2.0'
+        run: |
+          sudo apt-get -qq -y install freeradius-utils
+          ./tests/manage.py test openwisp_radius.tests.test_freeradius_policy --no-input --verbosity=2
+        env:
+          FREERADIUS_POLICY_TEST: "1"
+
       - name: Tests
         if: ${{ !cancelled() && steps.deps.conclusion == 'success' }}
         run: |

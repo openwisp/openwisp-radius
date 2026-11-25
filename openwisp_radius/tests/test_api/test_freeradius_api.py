@@ -2148,7 +2148,7 @@ class TestTransactionFreeradiusApi(
         self._get_org_user()
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        # FreeRADIUS applies <= as a ceiling, unlike a scalar's := assignment.
+        # The final FreeRADIUS policy folds this ceiling into any existing limit.
         self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
 
     @mock.patch.object(app_settings, "COUNTERS", [])

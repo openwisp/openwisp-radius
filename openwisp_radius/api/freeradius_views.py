@@ -476,9 +476,9 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
     def _limit_session_timeout(self, data):
         """Apply the accounting retention ceiling to timeout replies in place.
 
-        Use <= so FreeRADIUS keeps any shorter timeout set by another policy.
-        The NAS must enforce the returned timeout. Leave replies unchanged
-        when accounting retention is disabled.
+        The final FreeRADIUS normalization policy folds these evaluated
+        ceilings into one minimum timeout, including existing server policies.
+        The NAS must enforce it. Leave replies unchanged when retention is disabled.
         """
         maximum_timeout = app_settings.session_timeout_limit(default=None)
         if maximum_timeout is not None:

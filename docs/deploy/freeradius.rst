@@ -252,6 +252,9 @@ all the organizations and can simply copy the configuration shown below.
             # update control { &REST-HTTP-Header += "${...api_token_header}" }
             rest
 
+            # Run after all policies that can set Session-Timeout.
+            normalize_session_timeout
+
             Post-Auth-Type REJECT {
                 # if you are not using Radius Token authentication method, please uncomment the following
                 # update control { &REST-HTTP-Header += "${....api_token_header}" }
@@ -265,6 +268,35 @@ all the organizations and can simply copy the configuration shown below.
             rest
         }
     }
+
+.. _radius_session_timeout_policy:
+
+.. rubric:: Normalizing session timeouts
+
+Install the following policy as
+``/etc/freeradius/policy.d/normalize_session_timeout`` and call it at the
+end of the successful ``post-auth`` path, after ``rest`` and any other
+policies that can set ``Session-Timeout``:
+
+.. literalinclude:: freeradius-session-timeout.conf
+    :language: ini
+
+The normal FreeRADIUS configuration loads files from ``policy.d``. If your
+configuration does not, include this file inside its ``policy`` section.
+
+FreeRADIUS evaluates legacy expressions and applies the REST reply
+operators before this policy runs. In FreeRADIUS 3, ``<=`` can retain a
+shorter existing timeout and append a larger value, leaving duplicate
+attributes. The policy keeps their minimum and restores exactly one
+``Session-Timeout`` in the final ``Access-Accept``. It reserves
+``control:Tmp-Integer-0`` as temporary storage and clears it afterward.
+Choose a different scratch attribute if another policy needs that value
+afterward.
+
+Existing deployments must install and call this policy before relying on
+the retention ceiling to preserve shorter FreeRADIUS session limits.
+
+.. rubric:: Accounting counters
 
 Ensure that ``acct_unique`` and ``acct_counters64`` are present in the
 ``pre-accounting`` section. The latter allows OpenWISP to receive complete
