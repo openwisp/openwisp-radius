@@ -1,5 +1,6 @@
 from django.core import checks
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
 
 from . import settings as app_settings
 from .registration import validate_user_settable_registration_methods
@@ -78,11 +79,13 @@ def check_group_session_timeouts(app_configs, **kwargs):
         return []
     errors = []
     limit = app_settings.session_timeout_limit()
-    replies = (
-        load_model("RadiusGroupReply")
-        .objects.filter(attribute="Session-Timeout", group__isnull=False)
-        .select_related("group__organization")
-    )
+    model = load_model("RadiusGroupReply")
+    # Database checks also run before migrations create this table.
+    if model._meta.db_table not in connection.introspection.table_names():
+        return errors
+    replies = model.objects.filter(
+        attribute="Session-Timeout", group__isnull=False
+    ).select_related("group__organization")
     for reply in replies.iterator():
         try:
             timeout = int(reply.value)

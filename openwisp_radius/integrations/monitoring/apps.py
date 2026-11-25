@@ -121,8 +121,8 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
                 _register_chart_configuration_choice(chart_key, chart_config)
 
     def connect_signal_receivers(self):
+        from .metrics.accounting import coordinate_accounting_cleanup
         from .receivers import radius_accounting_closed_handler
-        from .tasks import coordinate_accounting_cleanup
 
         RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 

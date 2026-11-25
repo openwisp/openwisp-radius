@@ -416,11 +416,9 @@ certain features and facilitate database cleanup:
 
 2. In the settings.py, `configure the CELERY_BEAT_SCHEDULE
 <https://github.com/openwisp/openwisp-radius/tree/master/tests/openwisp2/settings.py#L141>`_.
-Some celery tasks take an argument, for instance ``365`` is given here for
-``delete_old_radacct`` in the example settings. These arguments are passed
-to their respective management commands. More information about these
-parameters can be found at the :doc:`management commands page
-<../user/management_commands>`.
+Some celery tasks take arguments which are passed to their respective
+management commands. More information about these parameters can be found
+at the :doc:`management commands page <../user/management_commands>`.
 
 3. Add the following in your settings.py file:
 

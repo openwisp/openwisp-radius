@@ -412,10 +412,6 @@ if os.environ.get("MONITORING_INTEGRATION", False):
                 "args": None,
                 "relative": True,
             },
-            "reconcile_radius_traffic": {
-                "task": "openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic",
-                "schedule": timedelta(hours=1),
-            },
         }
     )
 

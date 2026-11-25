@@ -1677,7 +1677,7 @@ class TestTransactionFreeradiusApi(
         self._get_org_user()
         truncated_accept_response = {
             "control:Auth-Type": "Accept",
-            "Session-Timeout": 365 * 86400,
+            "Session-Timeout": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
         }
 
         with self.subTest("SkipCheck"):

@@ -54,6 +54,19 @@ When closing multiple sessions with ``bulk_update()``, use
 ``RadiusAccounting.emit_radius_accounting_closed()`` after the database
 update to emit this signal once for each closed session.
 
+``radius_accounting_cleanup``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Path**: ``openwisp_radius.signals.radius_accounting_cleanup``
+
+The ``delete_old_radacct`` command sends this signal before deleting
+closed sessions. The sender is the ``RadiusAccounting`` model and
+``queryset`` contains the sessions selected for deletion. Receivers return
+a context manager which yields a preparation callable. The command calls
+it with the queryset inside the deletion transaction, then registers its
+returned callable to run after commit. The context remains open through
+the commit.
+
 .. _radius_captive_portal_mock_views:
 
 Captive portal mock views

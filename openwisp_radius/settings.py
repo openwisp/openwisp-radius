@@ -32,11 +32,16 @@ EDITABLE_ACCOUNTING = get_settings_value("EDITABLE_ACCOUNTING", False)
 ACCOUNTING_RETENTION_DAYS = get_settings_value("ACCOUNTING_RETENTION_DAYS", 365)
 
 
-def session_timeout_limit():
+def session_timeout_limit(*, default=2**32 - 1):
+    """Return the retention limit, or the caller's limit when retention is off.
+
+    Authorization uses None to omit the reply; validation still enforces the
+    RADIUS attribute maximum even when accounting retention is disabled.
+    """
     maximum = 2**32 - 1
     if ACCOUNTING_RETENTION_DAYS:
         return min(maximum, ACCOUNTING_RETENTION_DAYS * 86400)
-    return maximum
+    return default
 
 
 EDITABLE_POSTAUTH = get_settings_value("EDITABLE_POSTAUTH", False)

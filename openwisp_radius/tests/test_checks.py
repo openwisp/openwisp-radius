@@ -156,3 +156,15 @@ class TestChecks(TestCase):
             reply.value = str(2**32)
             with self.assertRaises(ValidationError):
                 reply.full_clean()
+
+    def test_database_check_skips_missing_group_reply_table(self):
+        group = load_model("RadiusGroup").objects.first()
+        load_model("RadiusGroupReply").objects.create(
+            group=group, attribute="Session-Timeout", value="86401"
+        )
+        with patch("django.db.connection.introspection.table_names", return_value=[]):
+            with patch("openwisp_radius.settings.ACCOUNTING_RETENTION_DAYS", 1):
+                errors = checks.check_group_session_timeouts(
+                    None, databases=["default"]
+                )
+        self.assertEqual(errors, [])

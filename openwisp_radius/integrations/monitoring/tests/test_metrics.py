@@ -24,7 +24,7 @@ from .mixins import CreateDeviceMonitoringMixin
 # Discovery imports tests before filtering tags, but tasks require Monitoring models.
 MONITORING_INSTALLED = apps.is_installed("openwisp_radius.integrations.monitoring")
 if MONITORING_INSTALLED:
-    from ..tasks import (
+    from ..metrics.accounting import (
         RECONCILIATION_LOCK_KEY,
         RECONCILIATION_STATE_KEY,
         _accounting_totals,
@@ -32,11 +32,10 @@ if MONITORING_INSTALLED:
         _recover_baseline,
         _traffic_delta,
         _traffic_point,
-        post_save_radiusaccounting,
-        reconcile_radius_traffic,
     )
+    from ..tasks import post_save_radiusaccounting, reconcile_radius_traffic
 
-TASK_PATH = "openwisp_radius.integrations.monitoring.tasks"
+ACCOUNTING_PATH = "openwisp_radius.integrations.monitoring.metrics.accounting"
 
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 OrganizationUser = load_model("openwisp_users", "OrganizationUser")
@@ -984,7 +983,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(org1_total_signups.get("mobile_phone", 0), 1)
         self.assertEqual(org2_total_signups.get("unspecified", 0), 1)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_reconciliation_reports_growth_after_session_reopens(self, batch_write):
         device = self._create_device()
         options = _RADACCT.copy()
@@ -1008,7 +1007,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points[0][1]["value"], 20)
         self.assertEqual(points[0][1]["extra_values"]["output_octets"], 30)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_preserves_traffic_since_previous_observation(self, batch_write):
         device = self._create_device()
         options = _RADACCT.copy()
@@ -1044,7 +1043,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(points[0][1]["value"], 15)
         self.assertEqual(points[0][1]["extra_values"]["output_octets"], 15)
 
-    @patch(f"{TASK_PATH}.Metric.write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.write")
     def test_closed_session_writes_user_without_traffic(self, write):
         device = self._create_device()
         post_save_radiusaccounting(
@@ -1062,8 +1061,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         self.assertEqual(write.call_args.kwargs["check"], False)
 
-    @patch(f"{TASK_PATH}.post_save_radiusaccounting.delay")
-    def test_accounting_totals_group_sessions_and_missing_counters(self, closed):
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_accounting_totals_group_sessions_and_missing_totals(self, closed):
         options = _RADACCT.copy()
         options.update(
             unique_id="totals-closed",
@@ -1088,7 +1089,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             [
                 {
                     "organization_id": self.default_org.pk,
-                    "station": "aa:bb:cc:dd:ee:ff",
+                    "clean_called_station_id": "aa:bb:cc:dd:ee:ff",
                     "input_total": 100,
                     "output_total": 200,
                 }
@@ -1098,16 +1099,16 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_reconciliation_calculates_directions_independently(self):
         self.assertEqual(
             _traffic_delta(
-                group=("organization", "station"),
+                group=("organization", "called_station_id"),
                 previous=(100, 200),
                 current=(120, 250),
             ),
             (20, 50),
         )
 
-    @patch(f"{TASK_PATH}.logger.warning")
+    @patch(f"{ACCOUNTING_PATH}.logger.error")
     def test_reconciliation_reports_decreases_without_negative_traffic(self, warning):
-        group = ("organization", "station")
+        group = ("organization", "called_station_id")
         self.assertEqual(
             _traffic_delta(group=group, previous=(100, 200), current=(90, 250)),
             (0, 50),
@@ -1117,14 +1118,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_reconciliation_keeps_growth_with_negative_baseline(self):
         self.assertEqual(
             _traffic_delta(
-                group=("organization", "station"),
+                group=("organization", "called_station_id"),
                 previous=(-20, -30),
                 current=(0, 0),
             ),
             (20, 30),
         )
 
-    @patch(f"{TASK_PATH}.Metric.read")
+    @patch(f"{ACCOUNTING_PATH}.Metric.read")
     def test_checkpoint_recovery_uses_stable_accounting_group(self, read):
         read.return_value = [
             {
@@ -1142,7 +1143,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             },
         )
 
-    @patch(f"{TASK_PATH}.Metric.read")
+    @patch(f"{ACCOUNTING_PATH}.Metric.read")
     def test_checkpoint_recovery_selects_latest_across_device_locations(self, read):
         read.return_value = [
             {
@@ -1230,7 +1231,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
 
     @patch(
-        f"{TASK_PATH}.cache",
+        f"{ACCOUNTING_PATH}.cache",
         new_callable=lambda: LocMemCache("reconciliation-lock-test", {}),
     )
     def test_reconciliation_lock_prevents_overlapping_operations(self, test_cache):
@@ -1242,7 +1243,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(acquired_after_release, True)
 
     @patch(
-        f"{TASK_PATH}.cache",
+        f"{ACCOUNTING_PATH}.cache",
         new_callable=lambda: LocMemCache("reconciliation-lock-replacement-test", {}),
     )
     def test_reconciliation_lock_does_not_delete_a_replacement_lock(self, test_cache):
@@ -1264,7 +1265,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         options.update(kwargs)
         return self._create_radius_accounting(**options)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_reconciliation_seeds_then_counts_new_groups(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1278,7 +1279,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             output_octets=None,
         )
         batch_write.reset_mock()
-        with patch(f"{TASK_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
             reconcile_radius_traffic()
         points = [
             point for call in batch_write.call_args_list for point in call.args[0]
@@ -1290,7 +1291,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         self.assertEqual(len(points), 2)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_submission_failure_retries_same_point_before_new_growth(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1304,7 +1305,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         saved = cache.get(RECONCILIATION_STATE_KEY)
         batch_write.reset_mock()
         with patch(
-            f"{TASK_PATH}._accounting_totals", side_effect=DatabaseError("offline")
+            f"{ACCOUNTING_PATH}._accounting_totals",
+            side_effect=DatabaseError("offline"),
         ):
             with self.assertRaisesMessage(DatabaseError, "offline"):
                 reconcile_radius_traffic()
@@ -1322,7 +1324,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(retried[0][1], pending[0][1])
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 15)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_query_and_recovery_failures_preserve_cached_state(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1331,7 +1333,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         RadiusAccounting.objects.filter(pk=session.pk).update(input_octets=120)
         batch_write.reset_mock()
         with patch(
-            f"{TASK_PATH}._accounting_totals", side_effect=DatabaseError("offline")
+            f"{ACCOUNTING_PATH}._accounting_totals",
+            side_effect=DatabaseError("offline"),
         ):
             with self.assertRaisesMessage(DatabaseError, "offline"):
                 reconcile_radius_traffic()
@@ -1339,14 +1342,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         batch_write.assert_not_called()
         cache.delete(RECONCILIATION_STATE_KEY)
         with patch(
-            f"{TASK_PATH}.Metric.read", side_effect=RuntimeError("TSDB offline")
+            f"{ACCOUNTING_PATH}.Metric.read", side_effect=RuntimeError("TSDB offline")
         ):
             with self.assertRaisesMessage(RuntimeError, "TSDB offline"):
                 reconcile_radius_traffic()
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), None)
         batch_write.assert_not_called()
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_invalid_payload_is_not_submitted_or_saved(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1355,14 +1358,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         RadiusAccounting.objects.filter(pk=session.pk).update(input_octets=120)
         batch_write.reset_mock()
         with patch(
-            f"{TASK_PATH}.Metric.write", side_effect=ValueError("invalid field")
+            f"{ACCOUNTING_PATH}.Metric.write", side_effect=ValueError("invalid field")
         ):
             with self.assertRaisesMessage(ValueError, "invalid field"):
                 reconcile_radius_traffic()
         batch_write.assert_not_called()
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_last_row_preserves_growth_and_negative_baseline(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1389,7 +1392,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_rollback_does_not_adjust_baseline(self, batch_write):
         self._create_device()
         self._create_traffic_session(
@@ -1420,7 +1423,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         batch_write.assert_called_once()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_submission_failure_retains_adjustment_for_retry(self, batch_write):
         self._create_device()
         session = self._create_traffic_session()
@@ -1441,7 +1444,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(batch_write.call_args_list[0].args[0][0][1], checkpoint)
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_before_activation_does_not_create_baselines(self, batch_write):
         self._create_device()
         self._create_traffic_session(
@@ -1452,11 +1455,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), None)
         batch_write.assert_not_called()
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_reconciliation_and_cleanup_read_only_under_lock(self, batch_write):
         with _reconciliation_lock() as acquired:
             self.assertEqual(acquired, True)
-            with patch(f"{TASK_PATH}._accounting_totals") as totals:
+            with patch(f"{ACCOUNTING_PATH}._accounting_totals") as totals:
                 reconcile_radius_traffic()
                 with self.assertRaisesMessage(Exception, "retry cleanup"):
                     call_command("delete_old_radacct", 10, stdout=StringIO())
@@ -1475,24 +1478,24 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         # Keep a retained row in the group so recovery can discover it in SQL.
         self._create_traffic_session(unique_id="retained", input_octets=10)
         cache.delete(RECONCILIATION_STATE_KEY)
-        with patch(f"{TASK_PATH}.Metric.batch_write") as batch_write:
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
             reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 35)
 
     def test_previously_unmatched_device_keeps_recovered_baseline(self):
         session = self._create_traffic_session()
-        with patch(f"{TASK_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
             reconcile_radius_traffic(seed=True)
         device = self._create_device()
         cache.delete(RECONCILIATION_STATE_KEY)
         RadiusAccounting.objects.filter(pk=session.pk).update(input_octets=125)
-        with patch(f"{TASK_PATH}.Metric.batch_write") as batch_write:
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
             reconcile_radius_traffic()
         metric, options = batch_write.call_args.args[0][0]
         self.assertEqual(options["value"], 25)
         self.assertEqual(metric.object_id, str(device.pk))
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_keeps_reopened_session(self, batch_write):
         self._create_device()
         session = self._create_traffic_session(
@@ -1564,7 +1567,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             3,
         )
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_hourly_groups_preserve_organization_isolation_and_shared_accounting(
         self, batch_write
     ):
@@ -1574,13 +1577,13 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         shared_session = self._create_traffic_session(
             unique_id="shared-session", organization=other_org
         )
-        with patch(f"{TASK_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
             reconcile_radius_traffic(seed=True)
         RadiusAccounting.objects.filter(pk=own_session.pk).update(input_octets=110)
         RadiusAccounting.objects.filter(pk=shared_session.pk).update(input_octets=120)
         batch_write.reset_mock()
         with patch.object(monitoring_settings, "SHARED_ACCOUNTING", False):
-            with patch(f"{TASK_PATH}.logger.warning"):
+            with patch(f"{ACCOUNTING_PATH}.logger.warning"):
                 reconcile_radius_traffic()
         points = {
             point[0].extra_tags["accounting_organization_id"]: point
@@ -1616,7 +1619,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         call_command("delete_old_radacct", 10, stdout=StringIO())
         cache.delete(RECONCILIATION_STATE_KEY)
-        with patch(f"{TASK_PATH}.Metric.batch_write") as batch_write:
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
             reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
 
@@ -1627,11 +1630,11 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         cache.delete(RECONCILIATION_STATE_KEY)
         self._create_device()
         self._create_traffic_session(input_octets=25)
-        with patch(f"{TASK_PATH}.Metric.batch_write") as batch_write:
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
             reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_successive_cleanup_runs_subtract_only_deleted_rows(self, batch_write):
         self._create_device()
         first_session = self._create_traffic_session()
@@ -1648,8 +1651,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 55)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
-    def test_reconciliation_uses_new_totals_after_independent_counter_decrease(
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    def test_reconciliation_uses_new_totals_after_independent_total_decrease(
         self, batch_write
     ):
         self._create_device()
@@ -1658,9 +1661,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         RadiusAccounting.objects.filter(pk=session.pk).update(
             input_octets=90, output_octets=220
         )
-        with patch(f"{TASK_PATH}.logger.warning") as warning:
+        with patch(f"{ACCOUNTING_PATH}.logger.error") as error:
             reconcile_radius_traffic()
-        warning.assert_called_once()
+        error.assert_called_once()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
         self.assertEqual(
             batch_write.call_args.args[0][0][1]["extra_values"]["output_octets"], 20
@@ -1696,8 +1699,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.metric_model.objects.get(configuration="radius_acc").read(), []
         )
 
-    @patch(f"{TASK_PATH}.Metric.read", side_effect=RuntimeError("TSDB offline"))
-    @patch(f"{TASK_PATH}.Metric.write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.read", side_effect=RuntimeError("TSDB offline"))
+    @patch(f"{ACCOUNTING_PATH}.Metric.write")
     def test_closure_does_not_restore_traffic_during_recovery_outage(self, write, read):
         self._create_device()
         post_save_radiusaccounting(
@@ -1713,7 +1716,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(write.call_args.kwargs["check"], False)
         read.assert_not_called()
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_aggregates_all_expired_sessions_before_commit(self, batch_write):
         self._create_device()
         options = _RADACCT.copy()
@@ -1767,14 +1770,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         reconcile_radius_traffic()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 1001)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_reconciliation_validates_whole_batch_before_queueing(self, batch_write):
         self._create_device()
         self._create_traffic_session()
         self._create_traffic_session(
             unique_id="another-group", called_station_id="00:22:33:44:55:66"
         )
-        with patch(f"{TASK_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}.logger.warning"):
             reconcile_radius_traffic(seed=True)
         saved = cache.get(RECONCILIATION_STATE_KEY)
         RadiusAccounting.objects.update(input_octets=125)
@@ -1788,15 +1791,15 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             return point
 
         batch_write.reset_mock()
-        with patch(f"{TASK_PATH}._traffic_point", side_effect=prepare_point):
-            with patch(f"{TASK_PATH}.logger.warning"):
+        with patch(f"{ACCOUNTING_PATH}._traffic_point", side_effect=prepare_point):
+            with patch(f"{ACCOUNTING_PATH}.logger.warning"):
                 with self.assertRaisesMessage(ValueError, "invalid_field"):
                     reconcile_radius_traffic()
         batch_write.assert_not_called()
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
-    @patch(f"{TASK_PATH}._recover_baseline", return_value=None)
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}._recover_baseline", return_value=None)
     def test_reconciliation_processes_groups_beyond_first_batch(
         self, recover, batch_write
     ):
@@ -1808,14 +1811,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         rows = [
             {
                 "organization_id": self.default_org.pk,
-                "station": f"station-{group_number}",
+                "clean_called_station_id": f"called-station-id-{group_number}",
                 "input_total": 50,
                 "output_total": 100,
             }
             for group_number in range(1001)
         ]
-        with patch(f"{TASK_PATH}._accounting_totals", return_value=iter(rows)):
-            with patch(f"{TASK_PATH}._accounting_metric", return_value=metric):
+        with patch(f"{ACCOUNTING_PATH}._accounting_totals", return_value=iter(rows)):
+            with patch(f"{ACCOUNTING_PATH}.accounting_metric", return_value=metric):
                 reconcile_radius_traffic(seed=True)
         self.assertEqual(
             [len(call.args[0]) for call in batch_write.call_args_list], [1000, 1]
@@ -1823,8 +1826,10 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(len(cache.get(RECONCILIATION_STATE_KEY)["groups"]), 1001)
         current_rows = [row | {"input_total": 75} for row in rows]
         batch_write.reset_mock()
-        with patch(f"{TASK_PATH}._accounting_totals", return_value=iter(current_rows)):
-            with patch(f"{TASK_PATH}._accounting_metric", return_value=metric):
+        with patch(
+            f"{ACCOUNTING_PATH}._accounting_totals", return_value=iter(current_rows)
+        ):
+            with patch(f"{ACCOUNTING_PATH}.accounting_metric", return_value=metric):
                 reconcile_radius_traffic()
         self.assertEqual(
             [len(call.args[0]) for call in batch_write.call_args_list], [1000, 1]
@@ -1838,7 +1843,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             1001 * 25,
         )
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_cache_failure_before_deletion_preserves_rows(self, batch_write):
         self._create_device()
         session = self._create_traffic_session(
@@ -1850,7 +1855,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         batch_write.reset_mock()
 
         with self.subTest("cache write raises before deletion"):
-            with patch(f"{TASK_PATH}.cache.set", side_effect=RuntimeError("offline")):
+            with patch(
+                f"{ACCOUNTING_PATH}.cache.set", side_effect=RuntimeError("offline")
+            ):
                 with self.assertRaisesMessage(RuntimeError, "offline"):
                     call_command("delete_old_radacct", 10, stdout=StringIO())
             self.assertEqual(
@@ -1860,7 +1867,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             batch_write.assert_not_called()
 
         with self.subTest("cache write reports failure before deletion"):
-            with patch(f"{TASK_PATH}.cache.set", return_value=False):
+            with patch(f"{ACCOUNTING_PATH}.cache.set", return_value=False):
                 with self.assertRaisesMessage(
                     RuntimeError, "Could not save RADIUS traffic state."
                 ):
@@ -1871,7 +1878,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
             batch_write.assert_not_called()
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_cache_failure_after_commit_recovers_pending_adjustment(
         self, batch_write
     ):
@@ -1904,7 +1911,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 raise RuntimeError("cache offline after commit")
             return original_set(key, value, **kwargs)
 
-        with patch(f"{TASK_PATH}.cache.set", side_effect=fail_after_deletion):
+        with patch(f"{ACCOUNTING_PATH}.cache.set", side_effect=fail_after_deletion):
             with self.assertRaisesMessage(RuntimeError, "cache offline after commit"):
                 call_command("delete_old_radacct", 10, stdout=StringIO())
         self.assertEqual(
@@ -1933,7 +1940,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             batch_write.call_args.args[0][0][1]["extra_values"]["output_octets"], 0
         )
 
-    @patch(f"{TASK_PATH}.Metric.batch_write")
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
     def test_cleanup_retry_recovers_when_commit_callback_did_not_run(self, batch_write):
         self._create_device()
         session = self._create_traffic_session(
@@ -1965,3 +1972,31 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(
             batch_write.call_args.args[0][0][1]["extra_values"]["output_octets"], 30
         )
+
+    @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
+    def test_empty_reconciliation_refreshes_activation_checkpoint(self, batch_write):
+        reconcile_radius_traffic(seed=True)
+        batch_write.reset_mock()
+        reconcile_radius_traffic()
+        batch_write.assert_called_once()
+        metric, options = batch_write.call_args.args[0][0]
+        self.assertEqual(metric.extra_tags["accounting_organization_id"], "__all__")
+        self.assertEqual(options["value"], 0)
+        self.assertEqual(options["extra_values"]["baseline_input"], 0)
+
+    @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
+    def test_registration_schedule_also_collects_traffic(self, reconcile):
+        from ..tasks import write_user_registration_metrics
+
+        write_user_registration_metrics()
+        reconcile.assert_called_once_with()
+
+    @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
+    @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
+    def test_registration_failure_does_not_skip_traffic(self, registrations, reconcile):
+        from ..tasks import write_user_registration_metrics
+
+        registrations.side_effect = RuntimeError("Registration metrics unavailable")
+        with self.assertRaisesMessage(RuntimeError, "Registration metrics unavailable"):
+            write_user_registration_metrics()
+        reconcile.assert_called_once_with()

@@ -928,6 +928,9 @@ class AbstractRadiusGroupReply(
 
     def clean(self):
         super().clean()
+        self._validate_session_timeout()
+
+    def _validate_session_timeout(self):
         if self.attribute != "Session-Timeout":
             return
         limit = app_settings.session_timeout_limit()

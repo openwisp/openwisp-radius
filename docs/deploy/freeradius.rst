@@ -159,7 +159,7 @@ for the available configuration values.
         uri = "${..connect_uri}/api/v1/freeradius/accounting/"
         method = 'post'
         body = 'json'
-        data = '{"status_type": "%{Acct-Status-Type}", "session_id": "%{Acct-Session-Id}", "unique_id": "%{Acct-Unique-Session-Id}", "username": "%{User-Name}", "realm": "%{Realm}", "nas_ip_address": "%{NAS-IP-Address}", "nas_port_id": "%{NAS-Port}", "nas_port_type": "%{NAS-Port-Type}", "session_time": "%{Acct-Session-Time}", "authentication": "%{Acct-Authentic}", "input_octets": "%{Acct-Input-Octets}", "output_octets": "%{Acct-Output-Octets}", "called_station_id": "%{Called-Station-Id}", "calling_station_id": "%{Calling-Station-Id}", "terminate_cause": "%{Acct-Terminate-Cause}", "service_type": "%{Service-Type}", "framed_protocol": "%{Framed-Protocol}", "framed_ip_address": "%{Framed-IP-Address}"}'
+        data = '{"status_type": "%{Acct-Status-Type}", "session_id": "%{Acct-Session-Id}", "unique_id": "%{Acct-Unique-Session-Id}", "username": "%{User-Name}", "realm": "%{Realm}", "nas_ip_address": "%{NAS-IP-Address}", "nas_port_id": "%{NAS-Port}", "nas_port_type": "%{NAS-Port-Type}", "session_time": "%{Acct-Session-Time}", "authentication": "%{Acct-Authentic}", "input_octets": "%{%{Acct-Input-Octets64}:-%{Acct-Input-Octets}}", "output_octets": "%{%{Acct-Output-Octets64}:-%{Acct-Output-Octets}}", "called_station_id": "%{Called-Station-Id}", "calling_station_id": "%{Calling-Station-Id}", "terminate_cause": "%{Acct-Terminate-Cause}", "service_type": "%{Service-Type}", "framed_protocol": "%{Framed-Protocol}", "framed_ip_address": "%{Framed-IP-Address}"}'
         tls = ${..tls}
     }
 
@@ -266,14 +266,27 @@ all the organizations and can simply copy the configuration shown below.
         }
     }
 
-Please also ensure that ``acct_unique`` is present in the
-``pre-accounting`` section:
+Ensure that ``acct_unique`` and ``acct_counters64`` are present in the
+``pre-accounting`` section. The latter allows OpenWISP to receive complete
+traffic totals when sessions exceed 4 GiB:
 
 .. code-block:: ini
 
     preacct {
         # ...
         acct_unique
+        acct_counters64
+        # Keep absent counters blank so the last reported totals are preserved.
+        if (!&Acct-Input-Octets && !&Acct-Input-Gigawords) {
+            update request {
+                &Acct-Input-Octets64 !* ANY
+            }
+        }
+        if (!&Acct-Output-Octets && !&Acct-Output-Gigawords) {
+            update request {
+                &Acct-Output-Octets64 !* ANY
+            }
+        }
         # ...
     }
 

@@ -20,10 +20,10 @@ from openwisp_radius.tests.mixins import BaseTransactionTestCase
 # Discovery imports tests before filtering tags, but tasks require Monitoring models.
 MONITORING_INSTALLED = apps.is_installed("openwisp_radius.integrations.monitoring")
 if MONITORING_INSTALLED:
-    from openwisp_radius.integrations.monitoring.tasks import (
+    from openwisp_radius.integrations.monitoring.metrics.accounting import (
         RECONCILIATION_STATE_KEY,
-        reconcile_radius_traffic,
     )
+    from openwisp_radius.integrations.monitoring.tasks import reconcile_radius_traffic
 
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
@@ -185,3 +185,43 @@ class TestRebuildRadiusAccountingMetrics(
                 end=timezone.now().isoformat(),
                 stdout=StringIO(),
             )
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.management.commands."
+        "rebuild_radius_accounting_metrics.Metric.read"
+    )
+    def test_commit_end_boundary_with_existing_checkpoint(self, read):
+        read.return_value = [{"time": "2026-01-02T00:00:00+00:00"}]
+        with self.subTest("end before checkpoint"):
+            output = StringIO()
+            call_command(
+                "rebuild_radius_accounting_metrics",
+                commit=True,
+                end="2026-01-01T23:59:59+00:00",
+                stdout=output,
+            )
+            self.assertIn(
+                "Starting to rebuild 0 accounting metrics.", output.getvalue()
+            )
+
+        with self.subTest("end at checkpoint"):
+            with self.assertRaisesMessage(
+                CommandError, "--end must be before hourly baseline initialization."
+            ):
+                call_command(
+                    "rebuild_radius_accounting_metrics",
+                    commit=True,
+                    end="2026-01-02T00:00:00+00:00",
+                    stdout=StringIO(),
+                )
+
+        with self.subTest("end after checkpoint"):
+            with self.assertRaisesMessage(
+                CommandError, "--end must be before hourly baseline initialization."
+            ):
+                call_command(
+                    "rebuild_radius_accounting_metrics",
+                    commit=True,
+                    end="2026-01-02T00:00:01+00:00",
+                    stdout=StringIO(),
+                )

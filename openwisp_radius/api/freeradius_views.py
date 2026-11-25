@@ -347,9 +347,10 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             if counter_result is not None:
                 return counter_result
 
-        retention = app_settings.ACCOUNTING_RETENTION_DAYS
-        if retention:
-            maximum_timeout = app_settings.session_timeout_limit()
+        maximum_timeout = app_settings.session_timeout_limit(default=None)
+        if maximum_timeout is not None:
+            # Bound new session lengths to the retention period so old sessions
+            # can be closed and cleaned up without losing unobserved traffic.
             reply = data.get("Session-Timeout")
             timeout = reply.get("value") if isinstance(reply, dict) else reply
             try:

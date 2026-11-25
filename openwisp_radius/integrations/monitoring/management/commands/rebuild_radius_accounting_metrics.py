@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.db import timeseries_db
 from swapper import load_model
 
-from openwisp_radius.integrations.monitoring import tasks
+from openwisp_radius.integrations.monitoring.metrics import accounting
 from openwisp_radius.integrations.monitoring.utils import sha1_hash
 
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
@@ -55,13 +55,14 @@ class Command(BaseCommand):
         if options["commit"] and not options["end"]:
             raise CommandError(_("--end is required when writing legacy metrics."))
         if options["commit"]:
+            # Selecting only the baseline field excludes session-closure points,
+            # which do not have it.
             checkpoints = Metric(key="radius_acc", configuration="radius_acc").read(
                 fields=["baseline_input"],
                 tags={},
                 order="time",
                 limit=1,
                 precision=None,
-                where=[("baseline_input", ">=", -(2**63))],
             )
             if checkpoints and self._parse_datetime(
                 options["end"], "end"
@@ -101,7 +102,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting to rebuild {count} accounting metrics.")
         for session in queryset.iterator(chunk_size=chunk_size):
             self._delete_radius_accounting_metric(session)
-            tasks._write_radiusaccounting(
+            accounting.write_session(
                 username=session.username,
                 organization_id=str(session.organization_id),
                 input_octets=session.input_octets,
