@@ -143,14 +143,20 @@ next observation still reports the full 15 GB. A negative adjusted
 baseline is valid when deleted rows contain traffic not observed yet.
 
 Cleanup aggregates and deletes all eligible sessions in one transaction,
-then updates the baseline after commit. It assumes sessions older than
-retention no longer receive accounting updates, so it does not explicitly
-lock rows before aggregation. An update between aggregation and deletion
-can make the baseline adjustment inaccurate. Cleanup also submits a
-zero-traffic checkpoint for cache recovery. Run this command outside
-another database transaction so the shared coordination lock covers both
-commit and its callback. Before baseline initialization, cleanup does not
-create baselines.
+then updates the baseline after commit. Before deletion, it saves the
+prepared adjustment and one selected session ID in the shared cache. If
+the commit callback fails or does not run, the next reconciliation or
+cleanup checks whether that session still exists. If it does, deletion did
+not commit and the adjustment is discarded. Otherwise, the adjustment is
+replayed before further collection or cleanup.
+
+This assumes sessions older than retention no longer receive accounting
+updates, so it does not explicitly lock rows before aggregation. An update
+between aggregation and deletion can make the baseline adjustment
+inaccurate. Cleanup also submits a zero-traffic checkpoint for cache
+recovery. Run this command outside another database transaction so the
+shared coordination lock covers both commit and its callback. Before
+baseline initialization, cleanup does not create baselines.
 
 Baselines are keyed by accounting organization and normalized stored
 Called-Station-ID, independently of device registration and location. Only
@@ -171,11 +177,13 @@ Locally invalid payloads are rejected before submission. An uncertain
 submission is retried with its original timestamp, not as a new
 observation. Do not interpret this as an exactly-once delivery guarantee.
 
-Cache loss before a queued checkpoint persists can restore stale totals. A
-process crash between SQL commit and the cleanup callback can also leave
-stale recovery state. SQL, cache and TSDB changes are not atomic. Shared
-cache locks prevent ordinary overlap, not crash recovery; their lease is
-six hours, so operations must complete within that time.
+Cache loss before a queued checkpoint persists can restore stale totals.
+Losing the pending cleanup record before its adjusted checkpoint persists
+can also prevent recovery of a committed deletion. The cache must report
+write failures rather than silently ignore them. SQL, cache and TSDB
+changes are not atomic. Shared cache locks prevent ordinary overlap, not
+crash recovery; their lease is six hours, so operations must complete
+within that time.
 
 Each hourly SQL observation aggregates all retained accounting rows,
 including stopped sessions. Use full-width Octets/Gigawords counters from

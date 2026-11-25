@@ -1393,7 +1393,8 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_cleanup_rollback_does_not_adjust_baseline(self, batch_write):
         self._create_device()
         self._create_traffic_session(
-            stop_time=timezone.now() - timezone.timedelta(days=20)
+            start_time=timezone.now() - timezone.timedelta(days=30),
+            stop_time=timezone.now() - timezone.timedelta(days=20),
         )
         reconcile_radius_traffic(seed=True)
         saved = cache.get(RECONCILIATION_STATE_KEY)
@@ -1409,8 +1410,15 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             with self.assertRaisesMessage(DatabaseError, "rollback"):
                 call_command("delete_old_radacct", 10, stdout=StringIO())
         self.assertEqual(RadiusAccounting.objects.count(), 1)
-        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
+        pending_state = cache.get(RECONCILIATION_STATE_KEY)
+        self.assertEqual(pending_state["groups"], saved["groups"])
+        self.assertEqual(pending_state["queued"], None)
+        self.assertIn("cleanup", pending_state)
         batch_write.assert_not_called()
+        reconcile_radius_traffic()
+        self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
+        batch_write.assert_called_once()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
 
     @patch(f"{TASK_PATH}.Metric.batch_write")
     def test_cleanup_submission_failure_retains_adjustment_for_retry(self, batch_write):
@@ -1828,4 +1836,132 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
                 for point in call.args[0]
             ),
             1001 * 25,
+        )
+
+    @patch(f"{TASK_PATH}.Metric.batch_write")
+    def test_cleanup_cache_failure_before_deletion_preserves_rows(self, batch_write):
+        self._create_device()
+        session = self._create_traffic_session(
+            start_time=timezone.now() - timezone.timedelta(days=30),
+            stop_time=timezone.now() - timezone.timedelta(days=20),
+        )
+        reconcile_radius_traffic(seed=True)
+        saved = cache.get(RECONCILIATION_STATE_KEY)
+        batch_write.reset_mock()
+
+        with self.subTest("cache write raises before deletion"):
+            with patch(f"{TASK_PATH}.cache.set", side_effect=RuntimeError("offline")):
+                with self.assertRaisesMessage(RuntimeError, "offline"):
+                    call_command("delete_old_radacct", 10, stdout=StringIO())
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), True
+            )
+            self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
+            batch_write.assert_not_called()
+
+        with self.subTest("cache write reports failure before deletion"):
+            with patch(f"{TASK_PATH}.cache.set", return_value=False):
+                with self.assertRaisesMessage(
+                    RuntimeError, "Could not save RADIUS traffic state."
+                ):
+                    call_command("delete_old_radacct", 10, stdout=StringIO())
+            self.assertEqual(
+                RadiusAccounting.objects.filter(pk=session.pk).exists(), True
+            )
+            self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), saved)
+            batch_write.assert_not_called()
+
+    @patch(f"{TASK_PATH}.Metric.batch_write")
+    def test_cleanup_cache_failure_after_commit_recovers_pending_adjustment(
+        self, batch_write
+    ):
+        self._create_device()
+        expired_session = self._create_traffic_session(
+            unique_id="expired",
+            start_time=timezone.now() - timezone.timedelta(days=30),
+            input_octets=40,
+            output_octets=60,
+            stop_time=timezone.now() - timezone.timedelta(days=20),
+        )
+        retained_session = self._create_traffic_session(
+            unique_id="retained",
+            start_time=timezone.now() - timezone.timedelta(days=30),
+            input_octets=60,
+            output_octets=140,
+        )
+        reconcile_radius_traffic(seed=True)
+        RadiusAccounting.objects.filter(pk=retained_session.pk).update(
+            input_octets=75, output_octets=165
+        )
+        batch_write.reset_mock()
+        original_set = cache.set
+
+        def fail_after_deletion(key, value, **kwargs):
+            if (
+                key == RECONCILIATION_STATE_KEY
+                and not RadiusAccounting.objects.filter(pk=expired_session.pk).exists()
+            ):
+                raise RuntimeError("cache offline after commit")
+            return original_set(key, value, **kwargs)
+
+        with patch(f"{TASK_PATH}.cache.set", side_effect=fail_after_deletion):
+            with self.assertRaisesMessage(RuntimeError, "cache offline after commit"):
+                call_command("delete_old_radacct", 10, stdout=StringIO())
+        self.assertEqual(
+            RadiusAccounting.objects.filter(pk=expired_session.pk).exists(), False
+        )
+        pending_state = cache.get(RECONCILIATION_STATE_KEY)
+        group = (str(self.default_org.pk), self.TEST_MAC_ADDRESS)
+        self.assertEqual(pending_state["groups"][group], (100, 200))
+        self.assertEqual(pending_state["cleanup"]["session"], expired_session.pk)
+        self.assertEqual(pending_state["cleanup"]["groups"][group], (60, 140))
+        self.assertEqual(pending_state["queued"], None)
+        batch_write.assert_not_called()
+        checkpoint = pending_state["cleanup"]["points"][0][1]
+        reconcile_radius_traffic()
+        self.assertEqual(batch_write.call_count, 2)
+        self.assertEqual(batch_write.call_args_list[0].args[0][0][1], checkpoint)
+        observation = batch_write.call_args.args[0][0][1]
+        self.assertEqual(observation["value"], 15)
+        self.assertEqual(observation["extra_values"]["output_octets"], 25)
+        self.assertNotIn("cleanup", cache.get(RECONCILIATION_STATE_KEY))
+        batch_write.reset_mock()
+        reconcile_radius_traffic()
+        batch_write.assert_called_once()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 0)
+        self.assertEqual(
+            batch_write.call_args.args[0][0][1]["extra_values"]["output_octets"], 0
+        )
+
+    @patch(f"{TASK_PATH}.Metric.batch_write")
+    def test_cleanup_retry_recovers_when_commit_callback_did_not_run(self, batch_write):
+        self._create_device()
+        session = self._create_traffic_session(
+            start_time=timezone.now() - timezone.timedelta(days=30)
+        )
+        reconcile_radius_traffic(seed=True)
+        RadiusAccounting.objects.filter(pk=session.pk).update(
+            input_octets=125,
+            output_octets=230,
+            stop_time=timezone.now() - timezone.timedelta(days=20),
+        )
+        batch_write.reset_mock()
+        with patch(
+            "openwisp_radius.management.commands.base."
+            "delete_old_radacct.transaction.on_commit"
+        ):
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+        self.assertEqual(RadiusAccounting.objects.count(), 0)
+        pending_state = cache.get(RECONCILIATION_STATE_KEY)
+        self.assertEqual(pending_state["cleanup"]["session"], session.pk)
+        batch_write.assert_not_called()
+        call_command("delete_old_radacct", 10, stdout=StringIO())
+        batch_write.assert_called_once()
+        checkpoint = batch_write.call_args.args[0][0][1]
+        self.assertEqual(checkpoint, pending_state["cleanup"]["points"][0][1])
+        self.assertEqual(checkpoint["extra_values"]["baseline_input"], -25)
+        reconcile_radius_traffic()
+        self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
+        self.assertEqual(
+            batch_write.call_args.args[0][0][1]["extra_values"]["output_octets"], 30
         )

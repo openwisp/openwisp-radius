@@ -40,7 +40,7 @@ class BaseDeleteOldRadacctCommand(BaseCommand):
             with transaction.atomic(durable=bool(cleanup_preparers)):
                 # Sessions past retention (normally months or a year) are assumed
                 # to receive no more accounting updates. Aggregate and delete the
-                # queryset directly, without fetching IDs or explicit row locks.
+                # queryset directly, without loading all IDs or locking rows.
                 after_commit_callbacks = [
                     prepare_cleanup(queryset) for prepare_cleanup in cleanup_preparers
                 ]

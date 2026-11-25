@@ -387,6 +387,16 @@ RECONCILIATION_STATE_KEY = "openwisp_radius:traffic_reconciliation:state"
 def _load_traffic_state():
     state = cache.get(RECONCILIATION_STATE_KEY)
     if state is not None:
+        cleanup = state.get("cleanup")
+        if cleanup is not None:
+            # Cleanup deletes every selected row in one transaction. One saved
+            # row ID distinguishes a committed deletion from a rollback without
+            # caching all IDs. Old sessions must not change outside this path.
+            if RadiusAccounting.objects.filter(pk=cleanup["session"]).exists():
+                del state["cleanup"]
+                _save_traffic_state(state)
+            else:
+                _submit_cleanup_checkpoint(state, cleanup["groups"], cleanup["points"])
         return state
     # A checkpoint anywhere establishes that activation already happened.
     # Read errors must propagate rather than silently reseeding live traffic.
@@ -407,7 +417,8 @@ def _load_traffic_state():
 
 
 def _save_traffic_state(state):
-    cache.set(RECONCILIATION_STATE_KEY, state, timeout=None)
+    if cache.set(RECONCILIATION_STATE_KEY, state, timeout=None) is False:
+        raise RuntimeError(_("Could not save RADIUS traffic state."))
 
 
 def _submit_traffic(state, points):
@@ -542,6 +553,9 @@ def _cleanup_coordination(queryset):
         def prepare_cleanup(batch):
             if not state["active"]:
                 return lambda: None
+            session = batch.order_by("pk").values_list("pk", flat=True).first()
+            if session is None:
+                return lambda: None
             adjusted_totals = {}
             points = []
             for row in _accounting_totals(batch):
@@ -560,6 +574,14 @@ def _cleanup_coordination(queryset):
                 )
                 metric.write(**write_options, write=False)
                 points.append((metric, write_options))
+            # Save the prepared adjustment before SQL can discard its counters.
+            # Keep it separate from queued writes until deletion is committed.
+            state["cleanup"] = {
+                "session": session,
+                "groups": adjusted_totals,
+                "points": points,
+            }
+            _save_traffic_state(state)
             return partial(
                 _submit_cleanup_checkpoint,
                 state=state,
@@ -578,4 +600,5 @@ def _submit_cleanup_checkpoint(state, adjusted_totals, points):
     """Apply prepared baseline adjustments only after the SQL deletion commits."""
     # Negative baselines retain growth on rows deleted before observation.
     state["groups"].update(adjusted_totals)
+    state.pop("cleanup", None)
     _submit_traffic(state, points)
