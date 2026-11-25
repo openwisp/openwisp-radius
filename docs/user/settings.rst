@@ -156,6 +156,34 @@ using the batch add users feature using the prefix.
 
 The value should be the absolute path to the template of the PDF.
 
+.. _radius_accounting_retention_days:
+
+``OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``365``
+
+Number of days to keep closed RADIUS sessions. The
+:ref:`delete_old_radacct <radius_delete_old_radacct>` command and
+scheduled task remove sessions that ended before this period.
+
+For example, set it to ``90`` to keep closed sessions for 90 days:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS = 90
+
+Set it to ``None`` to disable the default cleanup and session timeout. An
+explicit retention argument overrides this setting. Move any retention
+argument from the scheduled task into this setting and remove it from the
+schedule.
+
+New sessions are limited to this duration unless a group, :ref:`usage
+counter <radius_counters>`, or server-side timeout sets a shorter limit.
+The NAS must enforce timeouts. Changes do not affect existing sessions.
+The timeout is capped at the RADIUS attribute maximum of ``4,294,967,295``
+seconds.
+
 ``OPENWISP_RADIUS_EXTRA_NAS_TYPES``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1142,31 +1170,3 @@ default value is translated in other languages. If the value is customized
 the translations will not work, so if you need this message to be
 translated in different languages you should either not change the default
 value or prepare the additional translations.
-
-.. _radius_accounting_retention_days:
-
-``OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Default**: ``365``
-
-Number of days to keep closed RADIUS sessions. The
-:ref:`delete_old_radacct <radius_delete_old_radacct>` command and scheduled
-task remove sessions that ended before this period.
-
-For example, set it to ``90`` to keep closed sessions for 90 days:
-
-.. code-block:: python
-
-    OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS = 90
-
-Set it to ``None`` to disable the default cleanup and session timeout.
-An explicit retention argument overrides this setting. Move any retention
-argument from the scheduled task into this setting and remove it from the
-schedule.
-
-New sessions are limited to this duration unless a group,
-:ref:`usage counter <radius_counters>`, or server-side timeout sets a shorter
-limit. The NAS must enforce timeouts. Changes do not affect existing sessions.
-The timeout is capped at the RADIUS attribute maximum of ``4,294,967,295``
-seconds.

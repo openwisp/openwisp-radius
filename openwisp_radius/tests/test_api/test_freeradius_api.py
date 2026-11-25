@@ -2163,8 +2163,9 @@ class TestTransactionFreeradiusApi(
         reply.save()
         response = self._authorize_user(auth_header=self.auth_header)
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("reply:Session-Timeout", response.data)
-        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 3600})
+        self.assertEqual(
+            response.data["reply:Session-Timeout"], {"op": "<=", "value": 3600}
+        )
 
     @mock.patch.object(app_settings, "COUNTERS", [])
     @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
@@ -2186,7 +2187,7 @@ class TestTransactionFreeradiusApi(
 
     @mock.patch.object(app_settings, "COUNTERS", [])
     @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
-    def test_retention_combines_equivalent_timeout_replies(self):
+    def test_retention_caps_equivalent_timeout_replies_independently(self):
         user = self._get_org_user().user
         group = user.radiususergroup_set.first().group
         expression = "%{expr:3600 - 60}"
@@ -2203,9 +2204,11 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data["Session-Timeout"],
-                {"op": "<=", "value": [expression, 1800]},
+                {"op": "<=", "value": [expression, 86400]},
             )
-            self.assertNotIn("reply:Session-Timeout", response.data)
+            self.assertEqual(
+                response.data["reply:Session-Timeout"], {"op": "<=", "value": 1800}
+            )
 
         with self.subTest("both dynamic replies are evaluated before retention"):
             qualified_expression = "%{expr:1800 - 60}"
@@ -2215,9 +2218,12 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data["Session-Timeout"],
-                {"op": "<=", "value": [expression, qualified_expression, 86400]},
+                {"op": "<=", "value": [expression, 86400]},
             )
-            self.assertNotIn("reply:Session-Timeout", response.data)
+            self.assertEqual(
+                response.data["reply:Session-Timeout"],
+                {"op": "<=", "value": [qualified_expression, 86400]},
+            )
 
         with self.subTest("two integer replies use the shorter timeout"):
             canonical_reply.value = "3600"
@@ -2227,9 +2233,11 @@ class TestTransactionFreeradiusApi(
             response = self._authorize_user(auth_header=self.auth_header)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
-                response.data["Session-Timeout"], {"op": "<=", "value": 1800}
+                response.data["Session-Timeout"], {"op": "<=", "value": 3600}
             )
-            self.assertNotIn("reply:Session-Timeout", response.data)
+            self.assertEqual(
+                response.data["reply:Session-Timeout"], {"op": "<=", "value": 1800}
+            )
 
 
 class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):

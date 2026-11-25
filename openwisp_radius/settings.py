@@ -30,20 +30,6 @@ RADIUS_API_BASEURL = get_settings_value("API_BASEURL", "/")
 RADIUS_API_URLCONF = get_settings_value("API_URLCONF", None)
 EDITABLE_ACCOUNTING = get_settings_value("EDITABLE_ACCOUNTING", False)
 ACCOUNTING_RETENTION_DAYS = get_settings_value("ACCOUNTING_RETENTION_DAYS", 365)
-
-
-def session_timeout_limit(*, default=2**32 - 1):
-    """Return the retention limit, or the caller's limit when retention is off.
-
-    Authorization uses None to omit the reply; validation still enforces the
-    RADIUS attribute maximum even when accounting retention is disabled.
-    """
-    maximum = 2**32 - 1
-    if ACCOUNTING_RETENTION_DAYS:
-        return min(maximum, ACCOUNTING_RETENTION_DAYS * 86400)
-    return default
-
-
 EDITABLE_POSTAUTH = get_settings_value("EDITABLE_POSTAUTH", False)
 GROUPCHECK_ADMIN = get_settings_value("GROUPCHECK_ADMIN", False)
 GROUPREPLY_ADMIN = get_settings_value("GROUPREPLY_ADMIN", False)
@@ -260,3 +246,15 @@ if not hasattr(settings, "OPENWISP_USERS_EXPORT_USERS_COMMAND_CONFIG"):
         ["registered_users"]
     )
 BATCH_ASYNC_THRESHOLD = get_settings_value("BATCH_ASYNC_THRESHOLD", 15)
+
+
+def session_timeout_limit(*, default=2**32 - 1):
+    """Return the retention limit, or the caller's limit when retention is off.
+
+    Authorization uses None to omit the reply; validation still enforces the
+    RADIUS attribute maximum even when accounting retention is disabled.
+    """
+    maximum = 2**32 - 1
+    if ACCOUNTING_RETENTION_DAYS:
+        return min(maximum, ACCOUNTING_RETENTION_DAYS * 86400)
+    return default
