@@ -263,7 +263,7 @@ def _traffic_delta(group, previous, current):
     return max(input_delta, 0), max(output_delta, 0)
 
 
-def _recover_baseline(organization_id, called_station_id):
+def _recover_baseline(organization_id, called_station_id, since=None):
     """Recover the group's latest checkpoint from InfluxDB.
 
     Session points share this measurement but have no baseline fields.
@@ -280,6 +280,7 @@ def _recover_baseline(organization_id, called_station_id):
         order="-time",
         limit=1,
         where=[("baseline_input", ">=", -(2**63))],
+        since=since,
     )
     if not points:
         return None
@@ -393,8 +394,18 @@ def reconcile(seed=False):
             # lost and the old checkpoint expires, the next run would seed
             # rather than count the first session's traffic.
             _submit_traffic(state, [_activation_point(timezone.now())])
+        retiring = state.get("retiring", {})
+        for group, timestamp in list(retiring.items()):
+            if group in totals:
+                del retiring[group]
+            elif _recover_baseline(*group, since=timestamp) == (0, 0):
+                # Queue acceptance is not persistence. Keep the cached zero
+                # until recovery can no longer return the old negative baseline.
+                state["groups"].pop(group, None)
+                del retiring[group]
         groups_to_reconcile = set(totals)
         groups_to_reconcile.update(state["groups"])
+        groups_to_reconcile.difference_update(retiring)
         groups_to_reconcile.discard(("__all__", ""))
         remaining_groups = iter(groups_to_reconcile)
         # Batch submissions to limit payload size and avoid a separate task
@@ -405,6 +416,7 @@ def reconcile(seed=False):
                 break
             points = []
             observed = {}
+            absent = {}
             for group in batch:
                 current = totals.get(group, (0, 0))
                 previous = state["groups"].get(group)
@@ -420,13 +432,15 @@ def reconcile(seed=False):
                 metric.write(**write_options, write=False)
                 observed[group] = current
                 points.append((metric, write_options))
-            state["groups"].update(observed)
-            _submit_traffic(state, points)
-            # The submitted zero baseline preserves any final cleanup growth.
-            # Absent groups need no more points until accounting rows reappear.
-            for group in batch:
                 if group not in totals:
-                    state["groups"].pop(group, None)
+                    absent[group] = write_options["time"]
+            state["groups"].update(observed)
+            retiring.update(absent)
+            if retiring:
+                state["retiring"] = retiring
+            _submit_traffic(state, points)
+        if not retiring:
+            state.pop("retiring", None)
         state["active"] = True
         _save_traffic_state(state)
         return True
