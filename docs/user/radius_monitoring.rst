@@ -50,6 +50,13 @@ This chart shows traffic from active and closed sessions. If a collection
 is missed, the next successful collection shows the accumulated traffic at
 that time, rather than in the periods when it occurred.
 
+Supported timeseries databases
+------------------------------
+
+The charts above are defined for InfluxDB 1.8 and InfluxDB 2.x and are
+selected automatically according to the ``TIMESERIES_DATABASE`` setting of
+the project: no chart specific configuration is needed.
+
 Enabling RADIUS metrics in Django project
 -----------------------------------------
 
