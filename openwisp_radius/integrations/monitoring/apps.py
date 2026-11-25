@@ -11,7 +11,7 @@ from openwisp_monitoring.monitoring.configuration import (
 )
 from swapper import load_model
 
-from openwisp_radius.signals import radius_accounting_closed
+from openwisp_radius.signals import radius_accounting_cleanup, radius_accounting_closed
 from openwisp_utils.admin_theme import register_dashboard_chart
 
 from .utils import (
@@ -122,6 +122,7 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
 
     def connect_signal_receivers(self):
         from .receivers import radius_accounting_closed_handler
+        from .tasks import coordinate_accounting_cleanup
 
         RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 
@@ -129,4 +130,9 @@ class OpenwispRadiusMonitoringConfig(AppConfig):
             radius_accounting_closed_handler,
             sender=RadiusAccounting,
             dispatch_uid="radius_accounting_closed_radius_acc_metric",
+        )
+        radius_accounting_cleanup.connect(
+            coordinate_accounting_cleanup,
+            sender=RadiusAccounting,
+            dispatch_uid="radius_accounting_cleanup_metrics",
         )

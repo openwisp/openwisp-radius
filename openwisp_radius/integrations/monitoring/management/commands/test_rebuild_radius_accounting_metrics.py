@@ -1,8 +1,11 @@
 from io import StringIO
+from unittest import skipUnless
 from unittest.mock import patch
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
-from django.core.management import call_command
+from django.core.cache import cache
+from django.core.management import CommandError, call_command
 from django.test import tag
 from django.utils import timezone
 from swapper import load_model
@@ -14,11 +17,20 @@ from openwisp_radius.integrations.monitoring.utils import sha1_hash
 from openwisp_radius.tests import _RADACCT
 from openwisp_radius.tests.mixins import BaseTransactionTestCase
 
+# Discovery imports tests before filtering tags, but tasks require Monitoring models.
+MONITORING_INSTALLED = apps.is_installed("openwisp_radius.integrations.monitoring")
+if MONITORING_INSTALLED:
+    from openwisp_radius.integrations.monitoring.tasks import (
+        RECONCILIATION_STATE_KEY,
+        reconcile_radius_traffic,
+    )
+
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 
 
 @tag("radius_monitoring", "rebuild_radius_accounting_metrics")
+@skipUnless(MONITORING_INSTALLED, "RADIUS Monitoring integration is not installed")
 class TestRebuildRadiusAccountingMetrics(
     CreateDeviceMonitoringMixin, BaseTransactionTestCase
 ):
@@ -92,7 +104,12 @@ class TestRebuildRadiusAccountingMetrics(
             called_station_id=device.mac_address.replace("-", ":").upper(),
         )
         out = StringIO()
-        call_command("rebuild_radius_accounting_metrics", commit=True, stdout=out)
+        call_command(
+            "rebuild_radius_accounting_metrics",
+            commit=True,
+            end=timezone.now().isoformat(),
+            stdout=out,
+        )
         output = out.getvalue()
         self.assertIn("Starting to rebuild 1 accounting metrics.", output)
         self.assertIn("Processed 1 of 1 accounting metrics.", output)
@@ -140,6 +157,7 @@ class TestRebuildRadiusAccountingMetrics(
         call_command(
             "rebuild_radius_accounting_metrics",
             commit=True,
+            end=timezone.now().isoformat(),
             stdout=out,
         )
         output = out.getvalue()
@@ -148,3 +166,22 @@ class TestRebuildRadiusAccountingMetrics(
         metric = self.metric_model.objects.get(configuration="radius_acc")
         points = metric.chart_set.get(configuration="radius_traffic").read()
         self.assertEqual(points["summary"], {"upload": 9, "download": 8})
+
+    def test_commit_requires_legacy_end_time(self):
+        with self.assertRaisesMessage(
+            CommandError, "--end is required when writing legacy metrics."
+        ):
+            call_command("rebuild_radius_accounting_metrics", commit=True)
+
+    def test_commit_cannot_rebuild_hourly_period(self):
+        cache.delete(RECONCILIATION_STATE_KEY)
+        reconcile_radius_traffic(seed=True)
+        with self.assertRaisesMessage(
+            CommandError, "--end must be before hourly baseline initialization."
+        ):
+            call_command(
+                "rebuild_radius_accounting_metrics",
+                commit=True,
+                end=timezone.now().isoformat(),
+                stdout=StringIO(),
+            )

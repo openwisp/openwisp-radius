@@ -1,10 +1,18 @@
 import logging
+from contextlib import contextmanager
+from functools import partial
+from itertools import islice
+from uuid import uuid4
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, F, Q
+from django.core.cache import cache
+from django.core.management import CommandError
+from django.db.models import Count, F, Q, Sum, Value
+from django.db.models.functions import Coalesce, Lower, Replace
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from swapper import load_model
 
 from . import settings as app_settings
@@ -20,6 +28,7 @@ DeviceLocation = load_model("geo", "Location")
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+RECONCILIATION_LOCK_KEY = "openwisp_radius:traffic_reconciliation:lock"
 
 
 def _get_user_signup_metric(organization_id, registration_method):
@@ -201,6 +210,27 @@ def post_save_radiusaccounting(
     called_station_id,
     time=None,
 ):
+    # Traffic is reported by reconciliation. Closure points only count users.
+    return _write_radiusaccounting(
+        username,
+        organization_id,
+        0,
+        0,
+        calling_station_id,
+        called_station_id,
+        time,
+    )
+
+
+def _write_radiusaccounting(
+    username,
+    organization_id,
+    input_octets,
+    output_octets,
+    calling_station_id,
+    called_station_id,
+    time=None,
+):
     registration_method = (
         RegisteredUser.objects.only("method")
         .filter(user__username=username, organization_id=organization_id)
@@ -217,13 +247,26 @@ def post_save_radiusaccounting(
     registration_method = clean_registration_method(registration_method)
     if registration_method is None:
         registration_method = "unspecified"
-    device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
     extra_tags = {
         "method": registration_method,
         "organization_id": organization_id,
         "calling_station_id": sha1_hash(calling_station_id),
         "called_station_id": called_station_id,
     }
+    metric = _accounting_metric(organization_id, called_station_id, extra_tags)
+    metric.write(
+        input_octets,
+        extra_values={
+            "output_octets": output_octets,
+            "username": sha1_hash(username),
+        },
+        time=time,
+        check=False,
+    )
+
+
+def _accounting_metric(organization_id, called_station_id, extra_tags):
+    device_lookup = Q(mac_address__iexact=called_station_id.replace("-", ":"))
     # Do not use organization_id for device lookup if shared accounting is enabled
     if not app_settings.SHARED_ACCOUNTING:
         device_lookup &= Q(organization_id=organization_id)
@@ -257,20 +300,282 @@ def post_save_radiusaccounting(
         content_type=content_type,
         extra_tags=extra_tags,
     )
-    metric.write(
-        input_octets,
-        extra_values={
-            "output_octets": output_octets,
-            "username": sha1_hash(username),
-        },
-        time=time,
-    )
     if not object_id:
         # Adding a chart requires all parameters of extra_tags to be present.
         # A chart cannot be created without object_id and content_type.
-        return
+        return metric
     if created:
         for configuration in metric.config_dict["charts"].keys():
             chart = Chart(metric=metric, configuration=configuration)
             chart.full_clean()
             chart.save()
+    return metric
+
+
+def _accounting_totals(queryset):
+    station = Lower(
+        Replace(Coalesce("called_station_id", Value("")), Value("-"), Value(":"))
+    )
+    return (
+        queryset.order_by()
+        .annotate(station=station)
+        .values("organization_id", "station")
+        .annotate(
+            input_total=Coalesce(Sum("input_octets"), 0),
+            output_total=Coalesce(Sum("output_octets"), 0),
+        )
+        .iterator()
+    )
+
+
+def _traffic_delta(group, previous, current):
+    previous_input, previous_output = previous
+    current_input, current_output = current
+    input_delta = current_input - previous_input
+    output_delta = current_output - previous_output
+    if input_delta < 0:
+        logger.warning(
+            "RADIUS accounting input counter decreased for group %s: %s to %s",
+            group,
+            previous_input,
+            current_input,
+        )
+    if output_delta < 0:
+        logger.warning(
+            "RADIUS accounting output counter decreased for group %s: %s to %s",
+            group,
+            previous_output,
+            current_output,
+        )
+    return max(input_delta, 0), max(output_delta, 0)
+
+
+def _recover_baseline(organization_id, station):
+    metric = Metric(key="radius_acc", configuration="radius_acc")
+    points = metric.read(
+        fields=["baseline_input", "baseline_output"],
+        tags={
+            "accounting_organization_id": str(organization_id),
+            "called_station_id": station.replace("\\", "\\\\").replace("'", "\\'"),
+        },
+        order="-time",
+        limit=1,
+        where=[("baseline_input", ">=", -(2**63))],
+    )
+    if not points:
+        return None
+    # A location change creates another series, so InfluxDB can return one
+    # latest point for each series even when the query uses LIMIT 1.
+    latest = max(points, key=lambda point: point["time"])
+    return latest["baseline_input"], latest["baseline_output"]
+
+
+@contextmanager
+def _reconciliation_lock():
+    token = str(uuid4())
+    acquired = cache.add(RECONCILIATION_LOCK_KEY, token, timeout=6 * 3600)
+    try:
+        yield acquired
+    finally:
+        if acquired and cache.get(RECONCILIATION_LOCK_KEY) == token:
+            cache.delete(RECONCILIATION_LOCK_KEY)
+
+
+RECONCILIATION_STATE_KEY = "openwisp_radius:traffic_reconciliation:state"
+
+
+def _load_traffic_state():
+    state = cache.get(RECONCILIATION_STATE_KEY)
+    if state is not None:
+        return state
+    # A checkpoint anywhere establishes that activation already happened.
+    # Read errors must propagate rather than silently reseeding live traffic.
+    metric = Metric(key="radius_acc", configuration="radius_acc")
+    checkpoints = metric.read(
+        fields=["baseline_input", "baseline_output"],
+        extra_fields=["accounting_organization_id", "called_station_id"],
+        tags={},
+        order="-time",
+        where=[("baseline_input", ">=", -(2**63))],
+    )
+    groups = {}
+    for point in checkpoints:
+        group = (point["accounting_organization_id"], point["called_station_id"] or "")
+        if group not in groups:
+            groups[group] = (point["baseline_input"], point["baseline_output"])
+    return {"active": bool(checkpoints), "groups": groups, "queued": None}
+
+
+def _save_traffic_state(state):
+    cache.set(RECONCILIATION_STATE_KEY, state, timeout=None)
+
+
+def _submit_traffic(state, points):
+    # Callers validate every point before changing observed totals or committing
+    # deletion. Preserve this prepared payload on an uncertain queue submission.
+    state["queued"] = points
+    _save_traffic_state(state)
+    _flush_traffic(state)
+
+
+def _flush_traffic(state):
+    if state["queued"] is not None:
+        Metric.batch_write(state["queued"])
+        state["queued"] = None
+        _save_traffic_state(state)
+
+
+def _traffic_point(group, total, delta, timestamp, check=True):
+    organization_id, station = group
+    input_total, output_total = total
+    input_delta, output_delta = delta
+    metric = _accounting_metric(
+        organization_id,
+        station,
+        {
+            "organization_id": organization_id,
+            "accounting_organization_id": organization_id,
+            "called_station_id": station,
+        },
+    )
+    return metric, {
+        "value": input_delta,
+        "extra_values": {
+            "output_octets": output_delta,
+            "baseline_input": input_total,
+            "baseline_output": output_total,
+        },
+        "time": timestamp,
+        "check": check,
+    }
+
+
+@shared_task
+def reconcile_radius_traffic(seed=False):
+    """Submit hourly observations, not per-session or per-update traffic."""
+    with _reconciliation_lock() as acquired:
+        if not acquired:
+            return False
+        state = _load_traffic_state()
+        # Exhaust the SQL observation before changing state. A failed query is
+        # not an empty accounting table.
+        totals = {
+            (str(row["organization_id"]), row["station"]): (
+                row["input_total"],
+                row["output_total"],
+            )
+            for row in _accounting_totals(RadiusAccounting.objects.all())
+        }
+        _flush_traffic(state)
+        initializing = not state["active"]
+        if seed and not initializing:
+            raise CommandError(_("Traffic baselines are already initialized."))
+        if initializing and not totals:
+            # An empty deployment still needs a recoverable activation checkpoint
+            # so groups created later start from zero, including after cache loss.
+            metric = Metric(
+                key="radius_acc",
+                configuration="radius_acc",
+                field_name="input_octets",
+                extra_tags={
+                    "accounting_organization_id": "__all__",
+                    "called_station_id": "",
+                },
+            )
+            metric.full_clean()
+            options = {
+                "value": 0,
+                "check": False,
+                "time": timezone.now(),
+                "extra_values": {
+                    "output_octets": 0,
+                    "baseline_input": 0,
+                    "baseline_output": 0,
+                },
+            }
+            metric.write(**options, write=False)
+            _submit_traffic(state, [(metric, options)])
+        groups_to_reconcile = set(totals)
+        groups_to_reconcile.update(state["groups"])
+        groups_to_reconcile.discard(("__all__", ""))
+        remaining_groups = iter(groups_to_reconcile)
+        # Bound prepared payloads and avoid queuing a Celery task or serializing
+        # the whole baseline map separately for every accounting group.
+        while True:
+            batch = list(islice(remaining_groups, 1000))
+            if not batch:
+                break
+            points = []
+            observed = {}
+            for group in batch:
+                current = totals.get(group, (0, 0))
+                previous = state["groups"].get(group)
+                if previous is None:
+                    previous = _recover_baseline(*group)
+                if previous is None:
+                    previous = current if initializing else (0, 0)
+                delta = _traffic_delta(group, previous, current)
+                metric, write_options = _traffic_point(
+                    group, current, delta, timezone.now(), check=not initializing
+                )
+                # No group in this batch advances if local validation fails.
+                metric.write(**write_options, write=False)
+                observed[group] = current
+                points.append((metric, write_options))
+            state["groups"].update(observed)
+            _submit_traffic(state, points)
+        state["active"] = True
+        _save_traffic_state(state)
+        return True
+
+
+@contextmanager
+def _cleanup_coordination(queryset):
+    with _reconciliation_lock() as acquired:
+        if not acquired:
+            raise CommandError(
+                _("RADIUS traffic reconciliation is running; retry cleanup.")
+            )
+        state = _load_traffic_state()
+        _flush_traffic(state)
+
+        def prepare_cleanup(batch):
+            if not state["active"]:
+                return lambda: None
+            adjusted_totals = {}
+            points = []
+            for row in _accounting_totals(batch):
+                group = (str(row["organization_id"]), row["station"])
+                baseline = state["groups"].get(group)
+                if baseline is None:
+                    baseline = _recover_baseline(*group) or (0, 0)
+                baseline_input, baseline_output = baseline
+                adjusted = (
+                    baseline_input - row["input_total"],
+                    baseline_output - row["output_total"],
+                )
+                adjusted_totals[group] = adjusted
+                metric, write_options = _traffic_point(
+                    group, adjusted, (0, 0), timezone.now(), check=False
+                )
+                metric.write(**write_options, write=False)
+                points.append((metric, write_options))
+            return partial(
+                _submit_cleanup_checkpoint,
+                state=state,
+                adjusted_totals=adjusted_totals,
+                points=points,
+            )
+
+        yield prepare_cleanup
+
+
+def coordinate_accounting_cleanup(sender, queryset, **kwargs):
+    return _cleanup_coordination(queryset)
+
+
+def _submit_cleanup_checkpoint(state, adjusted_totals, points):
+    """Apply prepared baseline adjustments only after the SQL deletion commits."""
+    # Negative baselines retain growth on rows deleted before observation.
+    state["groups"].update(adjusted_totals)
+    _submit_traffic(state, points)
