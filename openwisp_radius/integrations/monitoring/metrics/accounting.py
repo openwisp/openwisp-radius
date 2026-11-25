@@ -422,6 +422,11 @@ def reconcile(seed=False):
                 points.append((metric, write_options))
             state["groups"].update(observed)
             _submit_traffic(state, points)
+            # The submitted zero baseline preserves any final cleanup growth.
+            # Absent groups need no more points until accounting rows reappear.
+            for group in batch:
+                if group not in totals:
+                    state["groups"].pop(group, None)
         state["active"] = True
         _save_traffic_state(state)
         return True
