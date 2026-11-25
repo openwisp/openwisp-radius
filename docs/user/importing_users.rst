@@ -18,6 +18,11 @@ many features included in it such as:
 - Assign all users in a batch to a RADIUS group.
 - Store internal notes for a batch.
 
+.. note::
+
+    Rows whose email belongs to an existing user are rejected, and the
+    import fails.
+
 This operation can be performed via the admin interface, with a management
 command or via the REST API.
 

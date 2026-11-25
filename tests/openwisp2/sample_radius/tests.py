@@ -14,6 +14,9 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestAutoGroupnameDisabled as BaseTestAutoGroupnameDisabled,
 )
 from openwisp_radius.tests.test_api.test_freeradius_api import (
+    TestClientIpApi as BaseTestClientIpApi,
+)
+from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestFreeradiusApi as BaseTestFreeradiusApi,
 )
 from openwisp_radius.tests.test_api.test_freeradius_api import (
@@ -108,6 +111,10 @@ class TestAutoGroupname(BaseTestAutoGroupname):
 
 
 class TestAutoGroupnameDisabled(BaseTestAutoGroupnameDisabled):
+    pass
+
+
+class TestClientIpApi(BaseTestClientIpApi):
     pass
 
 
@@ -227,6 +234,7 @@ del BaseTestFreeradiusApi
 del BaseTestApiReject
 del BaseTestAutoGroupname
 del BaseTestAutoGroupnameDisabled
+del BaseTestClientIpApi
 del BaseTestApiUserToken
 del BaseTestApiValidateToken
 del BaseTestOgranizationRadiusSettings

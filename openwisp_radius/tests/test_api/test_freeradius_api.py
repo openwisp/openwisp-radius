@@ -2548,6 +2548,89 @@ class TestClientIpApi(TestClientIpApiMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data["detail"], test_fail_msg)
 
+    def test_forwarded_for_header_ignored(self):
+        allowed_ip = "192.0.2.10"
+        radsetting = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        radsetting.freeradius_allowed_hosts = allowed_ip
+        radsetting.save()
+        session = self._create_radius_accounting(
+            unique_id="75058e50",
+            session_id="35000006",
+            nas_ip_address="172.16.64.91",
+            username="tester",
+            called_station_id="AA-BB-CC-DD-EE-FF",
+        )
+        fail_msg = self.fail_msg.replace("127.0.0.1", "203.0.113.1")
+
+        with mock.patch(self.freeradius_hosts_path, [allowed_ip]):
+            with self.subTest("spoofed allowed address cannot authorize"):
+                response = self.client.post(
+                    reverse("radius:authorize"),
+                    self.params,
+                    REMOTE_ADDR="203.0.113.1",
+                    HTTP_X_FORWARDED_FOR=allowed_ip,
+                )
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.data["detail"], fail_msg)
+
+            with self.subTest("spoofed allowed address cannot send Accounting-On"):
+                response = self.client.post(
+                    reverse("radius:accounting"),
+                    {
+                        "status_type": "Accounting-On",
+                        "session_id": "c2bc87808f568e3c",
+                        "unique_id": "2d124bdc1d269430629970d5f0bb7113",
+                        "nas_ip_address": "192.168.0.4",
+                        "called_station_id": "AA-BB-CC-DD-EE-FF",
+                    },
+                    REMOTE_ADDR="203.0.113.1",
+                    HTTP_X_FORWARDED_FOR=allowed_ip,
+                )
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.data["detail"], fail_msg)
+                session.refresh_from_db()
+                self.assertIsNone(
+                    session.stop_time, "the open session was closed by the request"
+                )
+
+            with self.subTest("forwarded header does not replace allowed address"):
+                response = self.client.post(
+                    reverse("radius:authorize"),
+                    self.params,
+                    REMOTE_ADDR=allowed_ip,
+                    HTTP_X_FORWARDED_FOR="203.0.113.1",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+    def test_client_ip_validation(self):
+        radsetting = OrganizationRadiusSettings.objects.get(
+            organization=self._get_org()
+        )
+        radsetting.freeradius_allowed_hosts = "192.0.2.10"
+        radsetting.save()
+
+        with self.subTest("IPv4-mapped IPv6 address is accepted"):
+            response = self.client.post(
+                reverse("radius:authorize"),
+                self.params,
+                REMOTE_ADDR="::ffff:192.0.2.10",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        with self.subTest("empty address is rejected"):
+            response = self.client.post(
+                reverse("radius:authorize"), self.params, REMOTE_ADDR=""
+            )
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                response.data["detail"],
+                "Request rejected: Client IP address () is not a valid IP address.",
+            )
+
 
 class TestTransactionClientIpApi(
     TestClientIpApiMixin, ApiTokenMixin, BaseTransactionTestCase

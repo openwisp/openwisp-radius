@@ -131,5 +131,64 @@ class TestBaseCounter(TestCounterMixin, BaseTransactionTestCase):
         self.assertEqual(BaseMontlhyTrafficCounter.get_attribute_type(), "bytes")
         self.assertEqual(MaxInputOctetsCounter.get_attribute_type(), "bytes")
 
+    def test_consumption_and_reset_share_period(self):
+        class Counter(BaseDailyCounter):
+            counter_name = "SnapshotCounter"
+            sql = "SELECT 0"
+
+            def get_counter(self):
+                self.counter_calls += 1
+                return super().get_counter()
+
+            def consumed(self):
+                self.consumed_calls += 1
+                return self.get_counter() + 1
+
+        options = self._get_kwargs("Max-Daily-Session")
+        counter = Counter(**options)
+        counter.counter_calls = 0
+        counter.consumed_calls = 0
+
+        with self.subTest("boundary crossing and overridden methods"):
+            with (
+                patch.object(
+                    counter,
+                    "get_reset_timestamps",
+                    side_effect=[(100, 200), (200, 300)],
+                ) as get_reset,
+                patch.object(
+                    counter, "_get_counter", side_effect=lambda start, end: start
+                ) as query,
+            ):
+                self.assertEqual(
+                    counter.get_consumption_and_reset(),
+                    (101, 200),
+                    "Consumption and reset must refer to the same period.",
+                )
+                query.assert_called_once_with(100, 200)
+                self.assertEqual(get_reset.call_count, 1)
+                self.assertEqual(counter.consumed_calls, 1)
+                self.assertEqual(counter.counter_calls, 1)
+                self.assertEqual(counter.get_counter(), 200)
+                self.assertEqual(get_reset.call_count, 2)
+
+        with self.subTest("period is cleared when consumption raises"):
+            counter = Counter(**options)
+            counter.counter_calls = 0
+            with (
+                patch.object(
+                    counter,
+                    "get_reset_timestamps",
+                    side_effect=[(100, 200), (200, 300)],
+                ),
+                patch.object(counter, "consumed", side_effect=ValueError("invalid")),
+                patch.object(
+                    counter, "_get_counter", side_effect=lambda start, end: start
+                ),
+            ):
+                with self.assertRaises(ValueError):
+                    counter.get_consumption_and_reset()
+                self.assertEqual(counter.get_counter(), 200)
+
 
 del BaseTransactionTestCase

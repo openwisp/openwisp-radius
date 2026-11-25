@@ -30,9 +30,8 @@ class TestCSVUpload(FileMixin, BaseTestCase):
         user = batch.users.first()
         self.assertEqual(user.expiration_date, expiration_date)
 
-    def test_importing_users_override_expiration_date(self):
+    def test_import_rejects_existing_users(self):
         original_expiration_date = localdate() + timedelta(days=14)
-        batch_expiration_date = localdate() + timedelta(days=7)
         existing_user = self._create_user(
             username="rohith-existing",
             email="rohith@openwisp.com",
@@ -43,13 +42,23 @@ class TestCSVUpload(FileMixin, BaseTestCase):
             name="test-existing-user",
             strategy="csv",
             csvfile=self._get_csvfile(reader),
-            expiration_date=batch_expiration_date,
+            expiration_date=localdate() + timedelta(days=7),
         )
-        batch.add(reader)
+        with self.assertRaises(ValidationError) as context_manager:
+            batch.add(reader)
+        self.assertEqual(
+            context_manager.exception.message_dict["email"],
+            ["A user with this email address already exists."],
+        )
+        self.assertFalse(
+            batch.users.exists(), "the existing user was added to the batch"
+        )
         existing_user.refresh_from_db()
-        self.assertEqual(batch.users.count(), 1)
-        self.assertEqual(batch.users.first().pk, existing_user.pk)
-        self.assertEqual(existing_user.expiration_date, batch_expiration_date)
+        self.assertEqual(
+            existing_user.expiration_date,
+            original_expiration_date,
+            "the existing user got the expiration date of the batch",
+        )
 
     def test_generate_username_from_email(self):
         reader = [["", "cleartext$password", "rohith@openwisp.com", "Rohith", "ASRK"]]
@@ -136,33 +145,6 @@ class TestCSVUpload(FileMixin, BaseTestCase):
             RadiusUserGroup.objects.filter(
                 user=batch.users.first(), group=group
             ).exists()
-        )
-
-    def test_importing_existing_users_replaces_batch_organization_group(self):
-        existing_group = self._create_radius_group(name="existing")
-        group = self._create_radius_group(name="guests")
-        user = self._create_user(username="rohith", email="rohith@openwisp.com")
-        self._create_org_user(user=user)
-        self._create_radius_usergroup(user=user, group=existing_group)
-        organization = self._create_org(name="other organization", slug="other-org")
-        other_group = self._create_radius_group(
-            name="other-existing", organization=organization
-        )
-        self._create_org_user(user=user, organization=organization)
-        self._create_radius_usergroup(user=user, group=other_group)
-        reader = [["rohith", "cleartext$password", "rohith@openwisp.com", "", ""]]
-        batch = self._create_radius_batch(
-            name="test", strategy="csv", csvfile=self._get_csvfile(reader), group=group
-        )
-        batch.add(reader)
-        user_groups = RadiusUserGroup.objects.filter(
-            user=user, group__organization=batch.organization
-        )
-        self.assertEqual(
-            list(user_groups.values_list("group_id", flat=True)), [group.pk]
-        )
-        self.assertTrue(
-            RadiusUserGroup.objects.filter(user=user, group=other_group).exists()
         )
 
     def test_import_rejects_ambiguous_case_insensitive_email(self):

@@ -12,7 +12,6 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
-from ipware import get_client_ip
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import (
@@ -33,6 +32,7 @@ from ..counters.exceptions import MaxQuotaReached
 from ..signals import radius_accounting_success
 from ..utils import (
     execute_counter_checks,
+    get_client_ip,
     get_group_checks,
     get_group_replies,
     get_user_group,
@@ -101,12 +101,20 @@ class FreeradiusApiAuthentication(BaseAuthentication):
         return ip_list or app_settings.FREERADIUS_ALLOWED_HOSTS
 
     def _check_client_ip_and_return(self, request, uuid):
-        client_ip, _is_routable = get_client_ip(request)
+        client_ip = get_client_ip(request)
         ip_list = self._get_ip_list(uuid)
-
+        try:
+            client_address = ipaddress.ip_address(client_ip)
+        except ValueError:
+            raise AuthenticationFailed(
+                _(
+                    "Request rejected: Client IP address ({client_ip}) "
+                    "is not a valid IP address."
+                ).format(client_ip=client_ip)
+            )
         for ip in ip_list:
             try:
-                if ipaddress.ip_address(client_ip) in ipaddress.ip_network(ip):
+                if client_address in ipaddress.ip_network(ip):
                     return (AnonymousUser(), uuid)
             except ValueError:
                 invalid_addr_message = _(

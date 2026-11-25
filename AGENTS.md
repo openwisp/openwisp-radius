@@ -85,6 +85,7 @@ If instructions conflict, repository config and CI workflows win first, official
 
 - Watch for cross-tenant data leaks, permission bypasses, insecure credentials, unsafe redirects, unsafe file paths, token/session issues, and secrets.
 - Preserve validation around RADIUS credentials, accounting data, CSV imports, private storage, SAML/social login payloads, notification payloads, and URLs.
+- Never use PhoneToken.objects.create() as it can bypass policy and quota validation.
 
 ## Troubleshooting
 
