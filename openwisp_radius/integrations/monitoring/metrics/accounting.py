@@ -452,6 +452,11 @@ def coordinate_accounting_cleanup(sender, queryset, **kwargs):
 
 def _submit_cleanup_checkpoint(state, adjusted_totals, points):
     state["groups"].update(adjusted_totals)
+    # Rows can return and expire between observations. Their cleanup adjustment
+    # must be collected even if the previous zero checkpoint is already stored.
+    retiring = state.get("retiring", {})
+    for group in adjusted_totals:
+        retiring.pop(group, None)
     state.pop("cleanup", None)
     _submit_traffic(state, points)
 

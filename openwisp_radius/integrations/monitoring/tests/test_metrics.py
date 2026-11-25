@@ -2357,3 +2357,39 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             reconcile_radius_traffic()
         accounting_metric.assert_not_called()
         self.assertNotIn(group, cache.get(RECONCILIATION_STATE_KEY)["groups"])
+
+    def test_cleanup_of_returning_group_cancels_pending_retirement(self):
+        self._create_device()
+        session = self._create_traffic_session(start_time=timezone.now())
+        reconcile_radius_traffic(seed=True)
+        RadiusAccounting.objects.filter(pk=session.pk).update(
+            stop_time=timezone.now() - timezone.timedelta(days=20)
+        )
+        call_command("delete_old_radacct", 10, stdout=StringIO())
+        reconcile_radius_traffic()
+        group = (str(self.default_org.pk), self.TEST_MAC_ADDRESS)
+        self.assertEqual(_recover_baseline(*group), (0, 0))
+        returning_session = self._create_traffic_session(
+            unique_id="returning-session",
+            input_octets=10,
+            output_octets=15,
+            start_time=timezone.now(),
+        )
+        RadiusAccounting.objects.filter(pk=returning_session.pk).update(
+            stop_time=timezone.now() - timezone.timedelta(days=20)
+        )
+        with patch(f"{ACCOUNTING_PATH}.Metric.batch_write") as batch_write:
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+            self.assertEqual(
+                cache.get(RECONCILIATION_STATE_KEY)["groups"][group], (-10, -15)
+            )
+            batch_write.reset_mock()
+            reconcile_radius_traffic()
+        traffic_points = [
+            options
+            for metric, options in batch_write.call_args.args[0]
+            if metric.extra_tags["accounting_organization_id"] == group[0]
+        ]
+        self.assertEqual(len(traffic_points), 1)
+        self.assertEqual(traffic_points[0]["value"], 10)
+        self.assertEqual(traffic_points[0]["extra_values"]["output_octets"], 15)
