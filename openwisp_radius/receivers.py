@@ -109,6 +109,7 @@ def close_previous_radius_accounting_sessions(instance, created, **kwargs):
         unique_id=instance.unique_id
     ).filter(
         stop_time__isnull=True,
+        organization_id=instance.organization_id,
         calling_station_id=instance.calling_station_id,
         username=instance.username,
     )

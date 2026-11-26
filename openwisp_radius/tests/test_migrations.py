@@ -2,7 +2,7 @@ import importlib
 import json
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import swapper
 from django.apps.registry import apps
@@ -25,10 +25,11 @@ from ..migrations import (
     migrate_registered_users_multitenant_reverse,
     sanitize_station_ids,
 )
-from ..utils import load_model
+from ..utils import load_model, sanitize_mac_address
 from . import _RADACCT, CreateRadiusObjectsMixin
 from .mixins import BaseTestCase
 
+RadiusAccounting = load_model("RadiusAccounting")
 RegisteredUser = load_model("RegisteredUser")
 RadiusBatch = load_model("RadiusBatch")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -968,7 +969,9 @@ class TestSanitizeStationIdsMigration(BaseTestCase):
         session = rows[0][0]
         session.refresh_from_db()
         self.assertEqual(session.called_station_id, "aa-bb-cc-dd-ee-ff")
-        sanitize_station_ids(apps, MagicMock(connection=connection))
+        # the rows to convert span more than one batch
+        with patch("openwisp_radius.migrations.BATCH_SIZE", 2):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
         for session, post_auth, expected in rows:
             for obj in (session, post_auth):
                 obj.refresh_from_db()
@@ -980,3 +983,24 @@ class TestSanitizeStationIdsMigration(BaseTestCase):
             for session, post_auth, expected in rows:
                 session.refresh_from_db()
                 self.assertEqual(session.called_station_id, expected)
+
+    def test_sanitize_station_ids_concurrent_change(self):
+        session = self._create_radius_accounting(
+            **{**_RADACCT, "unique_id": "migration-concurrent"}
+        )
+        queryset = RadiusAccounting.objects.filter(pk=session.pk)
+        queryset.update(
+            called_station_id=Value("aa-bb-cc-dd-ee-ff", output_field=CharField())
+        )
+
+        def change_after_read(value):
+            queryset.update(called_station_id="11:22:33:44:55:66")
+            return sanitize_mac_address(value)
+
+        with patch(
+            "openwisp_radius.migrations.sanitize_mac_address",
+            side_effect=change_after_read,
+        ):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
+        session.refresh_from_db()
+        self.assertEqual(session.called_station_id, "11:22:33:44:55:66")

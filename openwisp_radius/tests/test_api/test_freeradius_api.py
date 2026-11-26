@@ -1618,6 +1618,73 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         other_session.refresh_from_db()
         self.assertIsNone(other_session.stop_time)
 
+    @freeze_time(START_DATE)
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
+    def test_accounting_closes_only_own_organization_sessions(self, *args):
+        org2 = self._create_org(name="org2", slug="org2")
+        settings, _ = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )
+        org2_header = f"Bearer {org2.pk} {settings.token}"
+
+        with self.subTest("new session"):
+            options = self.acct_post_data
+            options.update(
+                unique_id="new-session-org1",
+                calling_station_id="AA:BB:CC:00:00:01",
+                stop_time=None,
+            )
+            session = self._create_radius_accounting(**options)
+            data = self.acct_post_data
+            data.update(
+                unique_id="new-session-org2",
+                status_type="Start",
+                calling_station_id="aa-bb-cc-00-00-01",
+            )
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(self._get_accounting_params(**data)),
+                HTTP_AUTHORIZATION=org2_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 201)
+            session.refresh_from_db()
+            self.assertIsNone(session.stop_time, "closed by another organization")
+
+        with self.subTest("Accounting-On"):
+            options = self.acct_post_data
+            options.update(
+                unique_id="nas-boot-org1",
+                called_station_id="AA:BB:CC:00:00:02",
+                calling_station_id="AA:BB:CC:00:00:03",
+                stop_time=None,
+            )
+            session = self._create_radius_accounting(**options)
+            options.update(
+                unique_id="nas-boot-org2",
+                organization=org2,
+                called_station_id="aa-bb-cc-00-00-02",
+                calling_station_id="AA:BB:CC:00:00:04",
+            )
+            org2_session = self._create_radius_accounting(**options)
+            data = self.acct_post_data
+            data.update(
+                unique_id="nas-boot-packet",
+                status_type="Accounting-On",
+                called_station_id="AABB.CC00.0002",
+            )
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(self._get_accounting_params(**data)),
+                HTTP_AUTHORIZATION=org2_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+            session.refresh_from_db()
+            org2_session.refresh_from_db()
+            self.assertIsNone(session.stop_time, "closed by another organization")
+            self.assertEqual(org2_session.terminate_cause, "NAS-Reboot")
+
 
 class TestTransactionFreeradiusApi(
     AcctMixin,

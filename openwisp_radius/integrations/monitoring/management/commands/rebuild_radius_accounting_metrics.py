@@ -6,6 +6,7 @@ from swapper import load_model
 
 from openwisp_radius.integrations.monitoring import tasks
 from openwisp_radius.integrations.monitoring.utils import sha1_hash
+from openwisp_radius.utils import MAC_ADDRESS_PATTERN, sanitize_mac_address
 
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
 
@@ -104,19 +105,40 @@ class Command(BaseCommand):
         return parsed
 
     def _delete_radius_accounting_metric(self, session):
+        calling_station_ids = self._get_station_id_formats(session.calling_station_id)
         tags = {
-            "organization_id": str(session.organization_id),
-            "calling_station_id": sha1_hash(session.calling_station_id),
-            "called_station_id": session.called_station_id,
+            "organization_id": [session.organization_id],
+            "calling_station_id": map(sha1_hash, calling_station_ids),
+            "called_station_id": self._get_station_id_formats(
+                session.called_station_id
+            ),
         }
         where = " AND ".join(
-            f"\"{key}\" = '{self._escape_tag_value(value)}'"
-            for key, value in tags.items()
+            "({})".format(
+                " OR ".join(
+                    f"\"{key}\" = '{self._escape_tag_value(value)}'" for value in values
+                )
+            )
+            for key, values in tags.items()
         )
         timeseries_db.query(
             "DELETE FROM radius_acc "
             f"WHERE time = '{session.stop_time.isoformat()}' AND {where}"
         )
+
+    def _get_station_id_formats(self, station_id):
+        """
+        Returns the values a point may have been tagged with, which can
+        predate the normalization of MAC addresses.
+        """
+        if not station_id or not MAC_ADDRESS_PATTERN.fullmatch(station_id):
+            return [station_id]
+        mac = sanitize_mac_address(station_id)
+        dotted = "{}{}.{}{}.{}{}".format(*mac.split(":"))
+        formats = (mac, mac.replace(":", "-"), dotted)
+        # shortcut: mixed case values are not matched, add them
+        # if a NAS is found which sends them
+        return {station_id, *formats, *(value.lower() for value in formats)}
 
     def _escape_tag_value(self, value):
         return str(value).replace("'", r"\'")

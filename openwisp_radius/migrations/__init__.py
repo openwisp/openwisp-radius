@@ -1,10 +1,21 @@
 import uuid
+from collections import defaultdict
 
 import swapper
 from django.conf import settings
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Permission
-from django.db.models import Case, Exists, IntegerField, OuterRef, Prefetch, Value, When
+from django.db.models import (
+    Case,
+    CharField,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Prefetch,
+    Value,
+    When,
+)
 
 from ..utils import create_default_groups, sanitize_mac_address
 
@@ -40,21 +51,33 @@ def sanitize_station_ids(apps, schema_editor):
         model = get_swapped_model(apps, "openwisp_radius", model_name)
         manager = model.objects.using(db_alias)
         for field in ("called_station_id", "calling_station_id"):
-            queryset = (
+            rows = (
                 manager.exclude(**{f"{field}__isnull": True})
                 .exclude(**{field: ""})
-                .only("pk", field)
+                .values_list("pk", field)
+                .order_by()
+                .iterator(chunk_size=BATCH_SIZE)
             )
-            for batch in _batched_iterator(queryset.iterator(chunk_size=BATCH_SIZE)):
-                changed = []
-                for obj in batch:
-                    value = sanitize_mac_address(getattr(obj, field))
-                    if value != getattr(obj, field):
-                        setattr(obj, field, value)
-                        changed.append(obj)
-                # historical models do not call pre_save(), so values
-                # are sanitized above instead of relying on MacAddressField
-                manager.bulk_update(changed, [field])
+            for batch in _batched_iterator(rows, BATCH_SIZE):
+                pks_by_value = defaultdict(list)
+                for pk, value in batch:
+                    pks_by_value[value].append(pk)
+                changed, cases = [], []
+                for old, pks in pks_by_value.items():
+                    new = sanitize_mac_address(old)
+                    if new == old:
+                        continue
+                    changed.extend(pks)
+                    # Value() stops MacAddressField from normalizing the old value
+                    lookup = {field: Value(old, output_field=CharField())}
+                    cases.append(When(pk__in=pks, then=Value(new), **lookup))
+                if not changed:
+                    continue
+                # bulk_update() would overwrite values changed after being read,
+                # primary keys avoid scanning the unindexed station IDs
+                manager.filter(pk__in=changed).update(
+                    **{field: Case(*cases, default=F(field), output_field=CharField())}
+                )
 
 
 def _registered_user_extra_kwargs(registered_user, extra_fields=()):

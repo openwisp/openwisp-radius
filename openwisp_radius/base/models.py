@@ -649,12 +649,18 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.save()
 
     @classmethod
-    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id, organization_id=None):
         """
         Called during RADIUS Accounting-On.
+
+        ``organization_id`` is ``None`` only for requests without a token, which
+        are accepted only from the globally allowed FreeRADIUS hosts.
         """
         if not called_station_id:
             return 0
+        lookup = {"called_station_id": called_station_id, "stop_time__isnull": True}
+        if organization_id:
+            lookup["organization_id"] = organization_id
         stop_time = now()
         closed_count = 0
         batch_size = 1000
@@ -663,10 +669,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             with transaction.atomic():
                 closed_sessions = list(
                     cls.objects.select_for_update()
-                    .filter(
-                        called_station_id=called_station_id,
-                        stop_time__isnull=True,
-                    )
+                    .filter(**lookup)
                     .only(
                         "unique_id",
                         "username",
