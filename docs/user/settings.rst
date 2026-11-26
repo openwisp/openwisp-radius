@@ -178,15 +178,10 @@ explicit retention argument overrides this setting. Move any retention
 argument from the scheduled task into this setting and remove it from the
 schedule.
 
-New sessions are limited to this duration unless a group, :ref:`usage
-counter <radius_counters>`, or server-side timeout sets a shorter limit.
-Install and call the :ref:`FreeRADIUS timeout normalization policy
-<radius_session_timeout_policy>` after all reply-producing policies so the
-final response contains one timeout equal to their minimum. The REST
-``<=`` operator alone can leave duplicate attributes in FreeRADIUS 3. The
-NAS must enforce timeouts. Changes do not affect existing sessions. The
-timeout is capped at the RADIUS attribute maximum of ``4,294,967,295``
-seconds.
+OpenWISP includes this duration as a session timeout ceiling in new
+authorization replies. The NAS must enforce timeouts. Changes do not
+affect existing sessions. The timeout is capped at the RADIUS attribute
+maximum of ``4,294,967,295`` seconds.
 
 Before lowering retention, run the database checks with the proposed
 setting against each deployment database:

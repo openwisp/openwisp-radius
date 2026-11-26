@@ -1,2 +1,0 @@
-# Load packaged attribute definitions, not deployment or TLS configuration.
-$INCLUDE /usr/share/freeradius/dictionary
