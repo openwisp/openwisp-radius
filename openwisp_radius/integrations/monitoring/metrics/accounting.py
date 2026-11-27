@@ -4,7 +4,7 @@ import logging
 from contextlib import contextmanager
 from functools import partial
 from itertools import islice
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from swapper import load_model
 
+from .... import settings as radius_settings
 from .. import settings as app_settings
 from ..utils import clean_registration_method, sha1_hash
 
@@ -23,6 +24,7 @@ Chart = load_model("monitoring", "Chart")
 RegisteredUser = load_model("openwisp_radius", "RegisteredUser")
 Device = load_model("config", "Device")
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
+Organization = load_model("openwisp_users", "Organization")
 
 logger = logging.getLogger(__name__)
 RECONCILIATION_LOCK_KEY = "openwisp_radius:traffic_reconciliation:lock"
@@ -394,29 +396,16 @@ def reconcile(seed=False):
             # lost and the old checkpoint expires, the next run would seed
             # rather than count the first session's traffic.
             _submit_traffic(state, [_activation_point(timezone.now())])
-        retiring = state.get("retiring", {})
-        for group, timestamp in list(retiring.items()):
-            if group in totals:
-                del retiring[group]
-                continue
-            try:
-                persisted = _recover_baseline(*group, since=timestamp)
-            except Exception:
-                logger.warning(
-                    "Could not read RADIUS traffic checkpoint for group %s; "
-                    "deferring collection.",
-                    group,
-                    exc_info=True,
-                )
-                continue
-            if persisted == (0, 0):
-                # Queue acceptance is not persistence. Keep the cached zero
-                # until recovery can no longer return the old negative baseline.
-                state["groups"].pop(group, None)
-                del retiring[group]
+        pending_final_checkpoints = state.get("pending_final_checkpoints", {})
+        _drop_inactive_baselines(pending_final_checkpoints, state["groups"], totals)
+        # Current SQL groups report growth. Cached groups may still need a
+        # final update after cleanup deletes their last row.
         groups_to_reconcile = set(totals)
         groups_to_reconcile.update(state["groups"])
-        groups_to_reconcile.difference_update(retiring)
+        # Configuration also identifies empty gateways after cache loss.
+        gateways = _gateway_groups()
+        groups_to_reconcile.update(gateways)
+        groups_to_reconcile.difference_update(pending_final_checkpoints)
         groups_to_reconcile.discard(("__all__", ""))
         remaining_groups = iter(groups_to_reconcile)
         # Batch submissions to limit payload size and avoid a separate task
@@ -425,51 +414,134 @@ def reconcile(seed=False):
             batch = list(islice(remaining_groups, 1000))
             if not batch:
                 break
-            points = []
-            observed = {}
-            absent = {}
-            for group in batch:
-                current = totals.get(group, (0, 0))
-                previous = state["groups"].get(group)
-                if previous is None:
-                    try:
-                        previous = _recover_baseline(*group)
-                    except Exception:
-                        # Activating after a skipped seed would later count
-                        # that group's retained history as newly discovered.
-                        if initializing:
-                            raise
-                        logger.warning(
-                            "Could not read RADIUS traffic checkpoint for group %s; "
-                            "deferring collection.",
-                            group,
-                            exc_info=True,
-                        )
-                        continue
-                if previous is None:
-                    previous = current if initializing else (0, 0)
-                delta = _traffic_delta(group, previous, current)
-                metric, write_options = _traffic_point(
-                    group, current, delta, timezone.now(), check=not initializing
-                )
-                # Validate every point before advancing any baseline in the batch.
-                metric.write(**write_options, write=False)
-                observed[group] = current
-                points.append((metric, write_options))
-                if group not in totals:
-                    absent[group] = write_options["time"]
+            points, observed, final_checkpoints = _prepare_traffic_batch(
+                batch, totals, state["groups"], gateways, initializing
+            )
             if not points:
                 continue
             state["groups"].update(observed)
-            retiring.update(absent)
-            if retiring:
-                state["retiring"] = retiring
+            pending_final_checkpoints.update(final_checkpoints)
+            if pending_final_checkpoints:
+                state["pending_final_checkpoints"] = pending_final_checkpoints
             _submit_traffic(state, points)
-        if not retiring:
-            state.pop("retiring", None)
+        if not pending_final_checkpoints:
+            state.pop("pending_final_checkpoints", None)
         state["active"] = True
         _save_traffic_state(state)
         return True
+
+
+def _drop_inactive_baselines(
+    pending_final_checkpoints, cached_baselines, current_totals
+):
+    """Drop an inactive group's cached baseline only after its reset is stored."""
+    for group, submitted_at in list(pending_final_checkpoints.items()):
+        if group in current_totals:
+            del pending_final_checkpoints[group]
+            continue
+        try:
+            persisted = _recover_baseline(*group, since=submitted_at)
+        except Exception:
+            logger.warning(
+                "Could not read RADIUS traffic checkpoint for group %s; "
+                "deferring collection.",
+                group,
+                exc_info=True,
+            )
+            continue
+        if persisted == (0, 0):
+            # Queue acceptance is not persistence. Keep the cached zero
+            # until recovery can no longer return the old negative baseline.
+            cached_baselines.pop(group, None)
+            del pending_final_checkpoints[group]
+
+
+def _prepare_traffic_batch(batch, totals, baselines, gateways, initializing):
+    """Build traffic points from the change since each group's last checkpoint.
+
+    Validate every point before updating the cache so a failed validation
+    cannot mark traffic as reported when the batch was never submitted.
+    """
+    points = []
+    observed = {}
+    final_checkpoints = {}
+    for group in batch:
+        current = totals.get(group, (0, 0))
+        previous = baselines.get(group)
+        if previous is None:
+            try:
+                previous = _recover_baseline(*group)
+            except Exception:
+                # A skipped seed would later count retained history as new.
+                if initializing:
+                    raise
+                logger.warning(
+                    "Could not read RADIUS traffic checkpoint for group %s; "
+                    "deferring collection.",
+                    group,
+                    exc_info=True,
+                )
+                continue
+        is_gateway = group in gateways
+        is_absent = group not in totals
+        # Configuration can identify an empty gateway that has no baseline
+        # left to reconcile. Do not write a checkpoint just for that.
+        if is_gateway and is_absent and group not in baselines:
+            if previous in (None, (0, 0)):
+                continue
+        if previous is None:
+            previous = current if initializing else (0, 0)
+        baseline = current
+        if is_gateway:
+            # Keep bytes already counted before conversion in the baseline.
+            # Only new traffic on this gateway can offset the overcount,
+            # and it cannot correct earlier daily bars. Counter resets
+            # look like conversion and can suppress legitimate traffic.
+            baseline = tuple(map(max, previous, current))
+        delta = _traffic_delta(group, previous, baseline)
+        metric, write_options = _traffic_point(
+            group, baseline, delta, timezone.now(), check=not initializing
+        )
+        metric.write(**write_options, write=False)
+        observed[group] = baseline
+        points.append((metric, write_options))
+        if is_absent and (not is_gateway or baseline == (0, 0)):
+            final_checkpoints[group] = write_options["time"]
+    return points, observed, final_checkpoints
+
+
+def _gateway_groups():
+    """Resolve configured gateway IDs to the same group keys used by SQL.
+
+    When the last session moves to an AP and the cache is lost, SQL no longer
+    lists the gateway. Configuration lets us find its checkpoint anyway so
+    later traffic can still offset the bytes counted twice.
+    """
+    groups = set()
+    by_slug = {}
+    for organization, config in radius_settings.CALLED_STATION_IDS.items():
+        station_ids = config.get("unconverted_ids", ())
+        if not station_ids:
+            continue
+        try:
+            organization_id = str(UUID(organization))
+        except ValueError:
+            by_slug[organization] = station_ids
+        else:
+            groups.update(
+                (organization_id, station_id.lower().replace("-", ":"))
+                for station_id in station_ids
+            )
+    if by_slug:
+        organizations = Organization.objects.filter(slug__in=by_slug).values_list(
+            "slug", "pk"
+        )
+        for slug, organization_id in organizations.iterator():
+            groups.update(
+                (str(organization_id), station_id.lower().replace("-", ":"))
+                for station_id in by_slug[slug]
+            )
+    return groups
 
 
 def coordinate_accounting_cleanup(sender, queryset, **kwargs):
@@ -480,9 +552,9 @@ def _submit_cleanup_checkpoint(state, adjusted_totals, points):
     state["groups"].update(adjusted_totals)
     # Rows can return and expire between observations. Their cleanup adjustment
     # must be collected even if the previous zero checkpoint is already stored.
-    retiring = state.get("retiring", {})
+    pending_final_checkpoints = state.get("pending_final_checkpoints", {})
     for group in adjusted_totals:
-        retiring.pop(group, None)
+        pending_final_checkpoints.pop(group, None)
     state.pop("cleanup", None)
     _submit_traffic(state, points)
 

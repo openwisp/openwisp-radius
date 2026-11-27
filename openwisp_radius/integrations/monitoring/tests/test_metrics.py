@@ -2405,32 +2405,34 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             input_octets=125, output_octets=230, start_time=timezone.now()
         )
         active_group = (str(self.default_org.pk), active_device.mac_address)
-        retiring_group = (str(self.default_org.pk), "aa:bb:cc:dd:ee:ff")
+        inactive_group = (str(self.default_org.pk), "aa:bb:cc:dd:ee:ff")
         submitted_at = timezone.now()
         cache.set(
             RECONCILIATION_STATE_KEY,
             {
                 "active": True,
-                "groups": {active_group: (100, 200), retiring_group: (0, 0)},
-                "retiring": {retiring_group: submitted_at},
+                "groups": {active_group: (100, 200), inactive_group: (0, 0)},
+                "pending_final_checkpoints": {inactive_group: submitted_at},
                 "queued": None,
             },
             timeout=None,
         )
         reconcile_radius_traffic()
-        recover.assert_called_once_with(*retiring_group, since=submitted_at)
+        recover.assert_called_once_with(*inactive_group, since=submitted_at)
         warning.assert_called_once_with(
             "Could not read RADIUS traffic checkpoint for group %s; "
             "deferring collection.",
-            retiring_group,
+            inactive_group,
             exc_info=True,
         )
         batch_write.assert_called_once()
         self.assertEqual(batch_write.call_args.args[0][0][1]["value"], 25)
         state = cache.get(RECONCILIATION_STATE_KEY)
         self.assertEqual(state["groups"][active_group], (125, 230))
-        self.assertEqual(state["groups"][retiring_group], (0, 0))
-        self.assertEqual(state["retiring"], {retiring_group: submitted_at})
+        self.assertEqual(state["groups"][inactive_group], (0, 0))
+        self.assertEqual(
+            state["pending_final_checkpoints"], {inactive_group: submitted_at}
+        )
 
     @patch(f"{ACCOUNTING_PATH}.logger.warning")
     @patch(f"{ACCOUNTING_PATH}.Metric.batch_write")
@@ -2504,3 +2506,114 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         self.assertEqual(cache.get(RECONCILIATION_STATE_KEY), initial_state)
         batch_write.assert_not_called()
         warning.assert_not_called()
+
+    def test_gateway_traffic_catches_up_after_conversion_and_cache_loss(self):
+        gateway = self._create_device(name="gateway", mac_address="00:22:33:44:55:aa")
+        access_point = self._create_device()
+        gateway_id = gateway.mac_address.replace(":", "-").upper()
+        gateway_group = (str(gateway.organization_id), gateway.mac_address.lower())
+        with patch(
+            "openwisp_radius.settings.CALLED_STATION_IDS",
+            {gateway.organization.slug: {"unconverted_ids": [gateway_id]}},
+        ):
+            # Before conversion, the general chart has already counted this
+            # session against the gateway.
+            reconcile_radius_traffic(seed=True)
+            session = self._create_traffic_session(
+                called_station_id=gateway_id,
+                start_time=timezone.now(),
+                input_octets=10**9,
+                output_octets=2 * 10**9,
+            )
+            reconcile_radius_traffic()
+            create_general_metrics(None, None)
+            general_chart = self.chart_model.objects.get(
+                configuration="gen_rad_traffic"
+            )
+            self.assertEqual(
+                general_chart.read()["summary"], {"download": 1, "upload": 2}
+            )
+            # Conversion moves the gateway's only session to the AP. The AP
+            # gets the full session total, temporarily inflating the general chart.
+            RadiusAccounting.objects.filter(pk=session.pk).update(
+                called_station_id=access_point.mac_address,
+                input_octets=15 * 10**8,
+                output_octets=3 * 10**9,
+            )
+            reconcile_radius_traffic()
+            access_point_chart = self.chart_model.objects.get(
+                configuration="radius_traffic", metric__object_id=str(access_point.pk)
+            )
+            self.assertEqual(
+                access_point_chart.read()["summary"], {"download": 1.5, "upload": 3}
+            )
+            self.assertEqual(
+                general_chart.read()["summary"], {"download": 2.5, "upload": 5}
+            )
+            # With no gateway rows left in SQL, configuration must identify
+            # the gateway so reconciliation can recover its stored baseline.
+            cache.delete(RECONCILIATION_STATE_KEY)
+            reconcile_radius_traffic()
+            self.assertEqual(
+                cache.get(RECONCILIATION_STATE_KEY)["groups"].get(gateway_group),
+                (10**9, 2 * 10**9),
+            )
+            # Upload crosses its baseline first. Report only the excess and
+            # keep suppressing download until it reaches its own baseline.
+            next_session = self._create_traffic_session(
+                unique_id="next-gateway-session",
+                start_time=timezone.now(),
+                called_station_id=gateway_id,
+                input_octets=75 * 10**7,
+                output_octets=225 * 10**7,
+            )
+            reconcile_radius_traffic()
+            summary = general_chart.read()["summary"]
+            self.assertEqual(summary["download"], 2.5)
+            self.assertEqual(summary["upload"], 5.25)
+            # Both counters are now above their baselines. The general chart
+            # matches the AP and new gateway totals without changing the AP chart.
+            RadiusAccounting.objects.filter(pk=next_session.pk).update(
+                input_octets=125 * 10**7,
+                output_octets=25 * 10**8,
+            )
+            reconcile_radius_traffic()
+            summary = general_chart.read()["summary"]
+            self.assertEqual(summary["download"], 2.75)
+            self.assertEqual(summary["upload"], 5.5)
+            self.assertEqual(
+                access_point_chart.read()["summary"], {"download": 1.5, "upload": 3}
+            )
+
+    def test_gateway_cleanup_preserves_remaining_catch_up(self):
+        gateway = self._create_device(name="gateway", mac_address="00:22:33:44:55:aa")
+        access_point = self._create_device()
+        organization_id = str(gateway.organization_id)
+        gateway_group = (organization_id, gateway.mac_address.lower())
+        with patch(
+            "openwisp_radius.settings.CALLED_STATION_IDS",
+            {organization_id: {"unconverted_ids": [gateway.mac_address]}},
+        ):
+            reconcile_radius_traffic(seed=True)
+            session = self._create_traffic_session(
+                called_station_id=gateway.mac_address, start_time=timezone.now()
+            )
+            reconcile_radius_traffic()
+            RadiusAccounting.objects.filter(pk=session.pk).update(
+                called_station_id=access_point.mac_address
+            )
+            reconcile_radius_traffic()
+            expired_session = self._create_traffic_session(
+                unique_id="expired-gateway-session",
+                start_time=timezone.now() - timezone.timedelta(days=21),
+                called_station_id=gateway.mac_address,
+                input_octets=40,
+                output_octets=80,
+            )
+            RadiusAccounting.objects.filter(pk=expired_session.pk).update(
+                stop_time=timezone.now() - timezone.timedelta(days=20)
+            )
+            call_command("delete_old_radacct", 10, stdout=StringIO())
+            self.assertEqual(_recover_baseline(*gateway_group), (60, 120))
+            reconcile_radius_traffic()
+            self.assertEqual(_recover_baseline(*gateway_group), (60, 120))
