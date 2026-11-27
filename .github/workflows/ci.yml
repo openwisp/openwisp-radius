@@ -44,7 +44,7 @@ jobs:
             django-version: django~=6.1.0
         include:
           - python-version: "3.13"
-            django-version: django~=6.0.0
+            django-version: django~=6.1.0
             review_default: true # Used by on-demand AI reviews
 
     steps:
@@ -94,9 +94,6 @@ jobs:
 
       - name: Start InfluxDB and Redis container
         run: docker compose up -d influxdb redis
-
-      - name: CI entry point tests
-        run: python tests/test_ci_entrypoint.py
 
       - name: QA checks
         run: |

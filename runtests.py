@@ -21,7 +21,12 @@ def run_focused_tests(arguments):
 
     sample_modules = ("openwisp2.sample_radius.tests", "openwisp2.sample_users.tests")
     pattern = compile_test_label_pattern(
-        module_roots=("openwisp_radius.tests",),
+        module_roots=(
+            "openwisp_radius.tests",
+            "openwisp_radius.tests.test_api",
+            "openwisp_radius.tests.test_counters",
+            "openwisp_radius.tests.test_saml",
+        ),
         exact_modules=(*sample_modules, "openwisp2.integrations.tests"),
         allow_subpackages=True,
     )
