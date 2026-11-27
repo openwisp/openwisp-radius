@@ -1539,6 +1539,41 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         other_session.refresh_from_db()
         self.assertIsNone(other_session.stop_time)
 
+    @freeze_time(START_DATE)
+    def test_accounting_stop_stores_maximum_session_time(self):
+        session = self._create_radius_accounting(**self._acct_initial_data)
+        data = self.acct_post_data
+        data.update(status_type="Stop", session_time="4294967295")
+        response = self.post_json(self._get_accounting_params(**data))
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.session_time, 4_294_967_295)
+
+    @freeze_time(START_DATE)
+    @mock.patch("logging.Logger.warn")
+    def test_accounting_rejects_out_of_range_session_time(self, mocked_logger):
+        session = self._create_radius_accounting(**self._acct_initial_data)
+        data = self.acct_post_data
+        data["status_type"] = "Interim-Update"
+
+        with self.subTest("Below zero"):
+            response = self.post_json(
+                self._get_accounting_params(**dict(data, session_time="-1"))
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.data["session_time"][0].code, "min_value")
+            session.refresh_from_db()
+            self.assertEqual(session.session_time, 0)
+
+        with self.subTest("Above the RADIUS maximum"):
+            response = self.post_json(
+                self._get_accounting_params(**dict(data, session_time="4294967296"))
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.data["session_time"][0].code, "max_value")
+            session.refresh_from_db()
+            self.assertEqual(session.session_time, 0)
+
 
 class TestTransactionFreeradiusApi(
     AcctMixin,

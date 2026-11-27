@@ -218,7 +218,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "session_time",
-                    models.PositiveIntegerField(
+                    models.PositiveBigIntegerField(
                         blank=True,
                         db_column="acctsessiontime",
                         null=True,
