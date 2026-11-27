@@ -29,6 +29,7 @@ from .mixins import BaseTestCase
 
 RegisteredUser = load_model("RegisteredUser")
 RadiusBatch = load_model("RadiusBatch")
+RadiusAccounting = load_model("RadiusAccounting")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
 
 
@@ -90,6 +91,18 @@ class TestMigrationGraph(TestCase):
         self.assertEqual(
             second_squash.replaces,
             [(app_label, name) for name in expected_second_replacements],
+        )
+
+    def test_accounting_session_time_column_is_bigint(self):
+        with connection.cursor() as cursor:
+            columns = connection.introspection.get_table_description(
+                cursor, RadiusAccounting._meta.db_table
+            )
+        column = next(column for column in columns if column.name == "acctsessiontime")
+        # SQLite can store the maximum RADIUS value even in an integer column.
+        self.assertIn(
+            connection.introspection.get_field_type(column.type_code, column),
+            ("BigIntegerField", "PositiveBigIntegerField"),
         )
 
 
