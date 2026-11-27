@@ -551,17 +551,3 @@ use ``get_urls(api_views, social_views, None)`` to get saml_views from
 For more information about django views, please refer to the `views
 section in the django documentation
 <https://docs.djangoproject.com/en/5.2/topics/http/views/>`_.
-
-Upgrading a custom accounting model
------------------------------------
-
-If your app swaps ``RadiusAccounting``, its migrations own the accounting
-table. OpenWISP RADIUS does not widen that table when you upgrade. On
-PostgreSQL, a column still using ``integer`` cannot store valid RADIUS
-session times above 2,147,483,647 seconds.
-
-Make sure the custom model's ``session_time`` field is a
-``PositiveBigIntegerField``. If you override the field, keep its existing
-options, including ``db_column="acctsessiontime"``. Run ``./manage.py
-makemigrations <app_label>`` for your custom app, check that the new
-migration alters ``session_time``, then run ``./manage.py migrate``.
