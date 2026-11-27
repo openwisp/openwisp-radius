@@ -26,6 +26,7 @@ def run_focused_tests(arguments):
             "openwisp_radius.tests.test_api",
             "openwisp_radius.tests.test_counters",
             "openwisp_radius.tests.test_saml",
+            "openwisp_radius.integrations.monitoring.tests",
         ),
         exact_modules=(*sample_modules, "openwisp2.integrations.tests"),
         allow_subpackages=True,
@@ -43,6 +44,11 @@ def run_focused_tests(arguments):
             )
         if sample_labels:
             os.environ["SAMPLE_APP"] = "1"
+        if any(
+            label.group("module").startswith("openwisp_radius.integrations.monitoring.")
+            for label in labels
+        ):
+            os.environ["MONITORING_INTEGRATION"] = "1"
         sys.argv[1:] = ["test", *(label.group(0) for label in labels), *flags]
         django.setup()
         validate_test_labels(labels)
