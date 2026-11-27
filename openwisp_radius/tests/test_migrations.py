@@ -92,6 +92,19 @@ class TestMigrationGraph(TestCase):
             [(app_label, name) for name in expected_second_replacements],
         )
 
+    def test_accounting_session_time_column_is_bigint(self):
+        model = load_model("RadiusAccounting")
+        with connection.cursor() as cursor:
+            columns = connection.introspection.get_table_description(
+                cursor, model._meta.db_table
+            )
+        column = next(column for column in columns if column.name == "acctsessiontime")
+        # SQLite can store the maximum RADIUS value even in an integer column.
+        self.assertIn(
+            connection.introspection.get_field_type(column.type_code, column),
+            ("BigIntegerField", "PositiveBigIntegerField"),
+        )
+
 
 class TestMigrationRegisteredUserMultitenancy(BaseTestCase):
     def _get_app_label(self):
