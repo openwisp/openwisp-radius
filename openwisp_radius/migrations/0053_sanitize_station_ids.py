@@ -13,7 +13,7 @@ def _field(**kwargs):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("openwisp_radius", "0051_remove_privileged_users_from_batches"),
+        ("openwisp_radius", "0052_alter_radiusaccounting_session_time"),
     ]
 
     operations = [

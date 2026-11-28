@@ -1684,6 +1684,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             org2_session.refresh_from_db()
             self.assertIsNone(session.stop_time, "closed by another organization")
             self.assertEqual(org2_session.terminate_cause, "NAS-Reboot")
+
+    @freeze_time(START_DATE)
     def test_accounting_stop_stores_maximum_session_time(self):
         session = self._create_radius_accounting(**self._acct_initial_data)
         data = self.acct_post_data

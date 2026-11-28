@@ -8,6 +8,7 @@ from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
@@ -189,14 +190,37 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
     def test_convert_called_station_id_matches_config_in_any_format(self, mocked_task):
         RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
         RadiusAppConfig.connect_signals()
-        RadiusAccounting.objects.create(
-            unique_id="receiver-normalize",
-            session_id="receiver-normalize",
-            nas_ip_address="192.168.182.3",
-            organization=self._get_org(),
-            called_station_id="aa:aa:aa:aa:aa:0a",
-        )
-        mocked_task.delay.assert_called_once_with("receiver-normalize")
+        options = {
+            "nas_ip_address": "192.168.182.3",
+            "organization": self._get_org(),
+            "called_station_id": "aa:aa:aa:aa:aa:0a",
+        }
+
+        with self.subTest("Dispatched after commit"):
+            with self.captureOnCommitCallbacks(execute=True):
+                RadiusAccounting.objects.create(
+                    unique_id="receiver-normalize",
+                    session_id="receiver-normalize",
+                    **options,
+                )
+                mocked_task.delay.assert_not_called()
+            mocked_task.delay.assert_called_once_with("receiver-normalize")
+
+        with self.subTest("Not dispatched on rollback"):
+            mocked_task.reset_mock()
+            with (
+                self.captureOnCommitCallbacks(execute=True) as callbacks,
+                self.assertRaises(RuntimeError),
+                transaction.atomic(),
+            ):
+                RadiusAccounting.objects.create(
+                    unique_id="receiver-rollback",
+                    session_id="receiver-rollback",
+                    **options,
+                )
+                raise RuntimeError
+            self.assertEqual(callbacks, [])
+            mocked_task.delay.assert_not_called()
 
     def _run_convert_called_station_id_tests(self):
         """
@@ -239,14 +263,15 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             self.assertEqual(radiusaccounting.called_station_id, "EE:EE:EE:EE:EE:EE")
 
         with self.subTest("Ideal condition"):
-            with self._get_openvpn_status_mock():
+            with (
+                self._get_openvpn_status_mock(),
+                self.captureOnCommitCallbacks(execute=True),
+            ):
                 options = radiusaccounting_options.copy()
                 options["unique_id"] = "114"
                 radiusaccounting = self._create_radius_accounting(**options)
-                radiusaccounting.refresh_from_db()
-                self.assertEqual(
-                    radiusaccounting.called_station_id, "CC:CC:CC:CC:CC:0C"
-                )
+            radiusaccounting.refresh_from_db()
+            self.assertEqual(radiusaccounting.called_station_id, "CC:CC:CC:CC:CC:0C")
 
     def test_multiple_accounting_sessions(self):
         radiusaccounting_options = _RADACCT.copy()

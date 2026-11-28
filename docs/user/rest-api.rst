@@ -429,9 +429,9 @@ is_open            If stop_time is null
     Existing rows are converted by a database migration.
 
     Open sessions closed automatically, because of an ``Accounting-On``
-    packet or a new session of the same user and device, are limited to
-    the organization of the request. ``Accounting-On`` packets sent
-    without a token by the globally allowed hosts affect all
+    packet or a new session of the same user and calling station ID, are
+    limited to the organization of the request. ``Accounting-On`` packets
+    sent without a token by the globally allowed hosts affect all
     organizations.
 
 .. _radius_user_api_endpoints:

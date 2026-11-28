@@ -77,7 +77,9 @@ class Command(BaseCommand):
             return
         chunk_size = options["chunk_size"]
         self.stdout.write(f"Starting to rebuild {count} accounting metrics.")
-        for processed, session in enumerate(queryset.iterator(chunk_size=chunk_size)):
+        for processed, session in enumerate(
+            queryset.iterator(chunk_size=chunk_size), start=1
+        ):
             self._delete_radius_accounting_metric(session)
             tasks.post_save_radiusaccounting(
                 username=session.username,

@@ -97,7 +97,8 @@ def convert_radius_called_station_id(instance, created, **kwargs):
         sanitize_mac_address(value) for value in unconverted_ids
     ]:
         return
-    tasks.convert_called_station_id.delay(instance.unique_id)
+    unique_id = instance.unique_id
+    transaction.on_commit(lambda: tasks.convert_called_station_id.delay(unique_id))
 
 
 def close_previous_radius_accounting_sessions(instance, created, **kwargs):
