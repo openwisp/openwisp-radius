@@ -22,6 +22,9 @@ from openwisp_radius.tests.test_api.test_freeradius_api import (
 from openwisp_radius.tests.test_api.test_freeradius_api import (
     TestOgranizationRadiusSettings as BaseTestOgranizationRadiusSettings,
 )
+from openwisp_radius.tests.test_api.test_freeradius_api import (
+    TestTransactionFreeradiusApi as BaseTestTransactionFreeradiusApi,
+)
 from openwisp_radius.tests.test_api.test_phone_verification import (
     TestIsSmsVerificationEnabled as BaseTestIsSmsVerificationEnabled,
 )
@@ -43,6 +46,7 @@ from openwisp_radius.tests.test_batch_add_users import (
 from openwisp_radius.tests.test_batch_add_users import (
     TestTransactionBatch as BaseTestTransactionBatch,
 )
+from openwisp_radius.tests.test_checks import TestChecks as BaseTestChecks
 from openwisp_radius.tests.test_commands import TestCommands as BaseTestCommands
 from openwisp_radius.tests.test_models import TestNas as BaseTestNas
 from openwisp_radius.tests.test_models import (
@@ -227,6 +231,14 @@ class TestPhoneTokenOrganizationPopulateResolution(
     pass
 
 
+class TestTransactionFreeradiusApi(BaseTestTransactionFreeradiusApi):
+    pass
+
+
+class TestChecks(BaseTestChecks):
+    pass
+
+
 del BaseTestAdmin
 del BaseTestApi
 del BaseTestBatch
@@ -261,3 +273,5 @@ del BaseTestAssertionConsumerServiceView
 del BaseTestLoginView
 del base_migration_tests
 del BatchSerializer
+del BaseTestTransactionFreeradiusApi
+del BaseTestChecks

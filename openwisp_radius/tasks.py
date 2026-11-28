@@ -21,8 +21,11 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def delete_old_radacct(number_of_days=365):
-    management.call_command("delete_old_radacct", number_of_days)
+def delete_old_radacct(number_of_days=None):
+    if number_of_days is None:
+        management.call_command("delete_old_radacct")
+    else:
+        management.call_command("delete_old_radacct", number_of_days)
 
 
 @shared_task

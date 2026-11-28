@@ -347,6 +347,7 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             if counter_result is not None:
                 return counter_result
 
+        self._limit_session_timeout(data)
         return data, self.accept_status
 
     def _check_simultaneous_use(
@@ -471,6 +472,27 @@ class AuthorizeView(GenericAPIView, IDVerificationHelper):
             token.can_auth = False
             token.save()
         return True
+
+    def _limit_session_timeout(self, data):
+        """Apply the accounting retention ceiling to timeout replies in place.
+
+        The NAS must enforce the returned timeout. Leave replies unchanged
+        when accounting retention is disabled.
+        """
+        maximum_timeout = app_settings.session_timeout_limit(default=None)
+        if maximum_timeout is not None:
+            data.setdefault("Session-Timeout", maximum_timeout)
+            for name in ("Session-Timeout", "reply:Session-Timeout"):
+                if name not in data:
+                    continue
+                reply = data[name]
+                timeout = reply.get("value") if isinstance(reply, dict) else reply
+                try:
+                    timeout = min(int(timeout), maximum_timeout)
+                except (TypeError, ValueError):
+                    # Let FreeRADIUS evaluate legacy expressions before capping.
+                    timeout = [timeout, maximum_timeout]
+                data[name] = {"op": "<=", "value": timeout}
 
 
 authorize = AuthorizeView.as_view()

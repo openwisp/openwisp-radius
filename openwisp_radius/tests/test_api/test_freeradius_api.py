@@ -41,7 +41,7 @@ START_DATE = "2019-04-20T22:14:09+01:00"
 _AUTH_TYPE_ACCEPT_RESPONSE = {
     "control:Auth-Type": "Accept",
     "CoovaChilli-Max-Total-Octets": 3000000000,
-    "Session-Timeout": 10800,
+    "Session-Timeout": {"op": "<=", "value": 10800},
 }
 _AUTH_TYPE_REJECT_RESPONSE = {"control:Auth-Type": "Reject"}
 _BASE_COUNTER_CHECK = "openwisp_radius.counters.base.BaseCounter.check"
@@ -190,7 +190,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 password=radius_token.key, auth_header=self.auth_header
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+            self.assertEqual(
+                response.data,
+                {
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": {
+                        "op": "<=",
+                        "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    },
+                },
+            )
 
     @mock.patch("openwisp_users.settings.USER_PASSWORD_EXPIRATION", 30)
     def test_authorize_radius_token_after_password_login_expired(self):
@@ -273,7 +282,16 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             )
             response = self._authorize_user(auth_header=self.auth_header)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, {"control:Auth-Type": "Accept"})
+            self.assertEqual(
+                response.data,
+                {
+                    "control:Auth-Type": "Accept",
+                    "Session-Timeout": {
+                        "op": "<=",
+                        "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+                    },
+                },
+            )
 
         with self.subTest("other-organization record does not pass authorization"):
             RegisteredUser.objects.filter(user=user).delete()
@@ -1601,7 +1619,7 @@ class TestTransactionFreeradiusApi(
         expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
         expected.update(
             {
-                "Session-Timeout": {"op": "=", "value": "3600"},
+                "Session-Timeout": {"op": "<=", "value": 3600},
                 "Idle-Timeout": {"op": "=", "value": "500"},
             }
         )
@@ -1626,7 +1644,7 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected["Session-Timeout"] = 1200
+                expected["Session-Timeout"] = {"op": "<=", "value": 1200}
                 expected["CoovaChilli-Max-Total-Octets"] = 1200
                 self.assertEqual(response.data, expected)
 
@@ -1637,7 +1655,7 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(mocked_check.call_count, 2)
                 self.assertEqual(response.status_code, 200)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected["Session-Timeout"] = {"op": "=", "value": "3600"}
+                expected["Session-Timeout"] = {"op": "<=", "value": 3600}
                 self.assertEqual(response.data, expected)
 
         with self.subTest("Counters disabled"):
@@ -1647,7 +1665,7 @@ class TestTransactionFreeradiusApi(
                 self.assertEqual(response.status_code, 200)
                 expected = {
                     "control:Auth-Type": "Accept",
-                    "Session-Timeout": {"op": "=", "value": "3600"},
+                    "Session-Timeout": {"op": "<=", "value": 3600},
                 }
                 self.assertEqual(response.data, expected)
 
@@ -1664,7 +1682,7 @@ class TestTransactionFreeradiusApi(
             self.assertEqual(mocked_check.call_count, 2)
             self.assertEqual(response.status_code, 200)
             expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-            expected["Session-Timeout"] = 10800
+            expected["Session-Timeout"] = {"op": "<=", "value": 10800}
             expected["CoovaChilli-Max-Total-Octets"] = 3000000000
             self.assertEqual(response.data, expected)
         reply.value = original_reply_value
@@ -1676,7 +1694,7 @@ class TestTransactionFreeradiusApi(
                 response = self._authorize_user(auth_header=self.auth_header)
                 self.assertEqual(mocked_check.call_count, 2)
                 expected = _AUTH_TYPE_ACCEPT_RESPONSE.copy()
-                expected["Session-Timeout"] = {"op": "=", "value": "3600"}
+                expected["Session-Timeout"] = {"op": "<=", "value": 3600}
                 del expected["CoovaChilli-Max-Total-Octets"]
                 self.assertEqual(response.data, expected)
 
@@ -1698,7 +1716,13 @@ class TestTransactionFreeradiusApi(
     @capture_stderr()
     def test_authorize_counters_exception_handling(self):
         self._get_org_user()
-        truncated_accept_response = {"control:Auth-Type": "Accept"}
+        truncated_accept_response = {
+            "control:Auth-Type": "Accept",
+            "Session-Timeout": {
+                "op": "<=",
+                "value": app_settings.ACCOUNTING_RETENTION_DAYS * 86400,
+            },
+        }
 
         with self.subTest("SkipCheck"):
             with mock.patch(_BASE_COUNTER_CHECK) as mocked_check:
@@ -2127,6 +2151,120 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(rad_token, second_rad_token)
 
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    def test_authorize_limits_session_to_retention(self):
+        self._get_org_user()
+
+        with self.subTest("configured retention sets the default timeout"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1):
+                response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"], {"op": "<=", "value": 86400}
+            )
+
+        with self.subTest("indefinite retention adds no default timeout"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
+                response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("Session-Timeout", response.data)
+
+        with self.subTest("large retention is capped at the RADIUS attribute maximum"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 100000):
+                response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"], {"op": "<=", "value": 2**32 - 1}
+            )
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_caps_qualified_group_timeout(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        reply = RadiusGroupReply(
+            group=group, attribute="reply:Session-Timeout", op="=", value="3600"
+        )
+        reply.full_clean()
+        reply.save()
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["reply:Session-Timeout"], {"op": "<=", "value": 3600}
+        )
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_preserves_legacy_dynamic_timeout_for_freeradius(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        expression = "%{expr:3600 - 60}"
+        # Existing policies may predate the integer-only model validation.
+        RadiusGroupReply.objects.create(
+            group=group, attribute="Session-Timeout", op="=", value=expression
+        )
+        response = self._authorize_user(auth_header=self.auth_header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["Session-Timeout"],
+            {"op": "<=", "value": [expression, 86400]},
+        )
+        self.assertNotIn("reply:Session-Timeout", response.data)
+
+    @mock.patch.object(app_settings, "COUNTERS", [])
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
+    def test_retention_caps_equivalent_timeout_replies_independently(self):
+        user = self._get_org_user().user
+        group = user.radiususergroup_set.first().group
+        expression = "%{expr:3600 - 60}"
+        # These rows represent policies saved before integer-only validation.
+        canonical_reply = RadiusGroupReply.objects.create(
+            group=group, attribute="Session-Timeout", op="=", value=expression
+        )
+        qualified_reply = RadiusGroupReply.objects.create(
+            group=group, attribute="reply:Session-Timeout", op="<=", value="1800"
+        )
+
+        with self.subTest("qualified integer remains a shorter ceiling"):
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"],
+                {"op": "<=", "value": [expression, 86400]},
+            )
+            self.assertEqual(
+                response.data["reply:Session-Timeout"], {"op": "<=", "value": 1800}
+            )
+
+        with self.subTest("both dynamic replies are evaluated before retention"):
+            qualified_expression = "%{expr:1800 - 60}"
+            qualified_reply.value = qualified_expression
+            qualified_reply.save(update_fields=["value"])
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"],
+                {"op": "<=", "value": [expression, 86400]},
+            )
+            self.assertEqual(
+                response.data["reply:Session-Timeout"],
+                {"op": "<=", "value": [qualified_expression, 86400]},
+            )
+
+        with self.subTest("two integer replies use the shorter timeout"):
+            canonical_reply.value = "3600"
+            canonical_reply.save(update_fields=["value"])
+            qualified_reply.value = "1800"
+            qualified_reply.save(update_fields=["value"])
+            response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"], {"op": "<=", "value": 3600}
+            )
+            self.assertEqual(
+                response.data["reply:Session-Timeout"], {"op": "<=", "value": 1800}
+            )
+
 
 class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
     _test_email = "test@openwisp.org"
@@ -2169,7 +2307,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
                 response.data,
                 {
                     "control:Auth-Type": "Accept",
-                    "Session-Timeout": 10539,
+                    "Session-Timeout": {"op": "<=", "value": 10539},
                     "CoovaChilli-Max-Total-Octets": 1487813647,
                 },
             )
@@ -2266,7 +2404,7 @@ class TestMacAddressRoaming(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
             response.data,
             {
                 "control:Auth-Type": "Accept",
-                "Session-Timeout": 10800,
+                "Session-Timeout": {"op": "<=", "value": 10800},
                 "CoovaChilli-Max-Total-Octets": 3000000000,
             },
         )

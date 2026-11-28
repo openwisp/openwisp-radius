@@ -95,7 +95,12 @@ RADIUS_METRICS = {
         "name": "{name}",
         "key": "radius_acc",
         "field_name": "input_octets",
-        "related_fields": ["output_octets", "username"],
+        "related_fields": [
+            "output_octets",
+            "username",
+            "baseline_input",
+            "baseline_output",
+        ],
         "charts": {
             "radius_traffic": {
                 "type": "stackedbar+lines",

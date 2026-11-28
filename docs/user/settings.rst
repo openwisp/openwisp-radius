@@ -156,6 +156,49 @@ using the batch add users feature using the prefix.
 
 The value should be the absolute path to the template of the PDF.
 
+.. _radius_accounting_retention_days:
+
+``OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Default**: ``365``
+
+Number of days to keep closed RADIUS sessions. The
+:ref:`delete_old_radacct <radius_delete_old_radacct>` command and
+scheduled task remove sessions that ended before this period.
+
+For example, set it to ``90`` to keep closed sessions for 90 days:
+
+.. code-block:: python
+
+    OPENWISP_RADIUS_ACCOUNTING_RETENTION_DAYS = 90
+
+Set it to ``None`` to disable the default cleanup and session timeout. An
+explicit retention argument overrides this setting. Move any retention
+argument from the scheduled task into this setting and remove it from the
+schedule.
+
+OpenWISP includes this duration as a session timeout ceiling in new
+authorization replies. The NAS must enforce timeouts. Changes do not
+affect existing sessions. The timeout is capped at the RADIUS attribute
+maximum of ``4,294,967,295`` seconds.
+
+Before lowering retention, run the database checks with the proposed
+setting against each deployment database:
+
+.. code-block:: shell
+
+    ./manage.py check --database default
+
+Replace ``default`` with the database alias used by the deployment.
+``openwisp_radius.E001`` reports saved group ``Session-Timeout`` and
+``reply:Session-Timeout`` values outside the allowed range, from zero to
+the retention limit (capped at the RADIUS attribute maximum). It also
+rejects non-integer values, including legacy expressions. Each error
+identifies the organization, group, database, and conflicting value.
+Shorten the group timeout or retain the previous retention setting before
+applying the change.
+
 ``OPENWISP_RADIUS_EXTRA_NAS_TYPES``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

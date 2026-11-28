@@ -14,20 +14,27 @@ Example usage:
 In this page we list the management commands currently available in
 **openwisp-radius**.
 
+.. _radius_delete_old_radacct:
+
 ``delete_old_radacct``
 ----------------------
 
-This command deletes RADIUS accounting sessions older than ``<days>``.
+This command deletes closed RADIUS accounting sessions older than the
+configured :ref:`radius_accounting_retention_days`.
 
 .. code-block:: shell
 
-    ./manage.py delete_old_radacct <days>
+    ./manage.py delete_old_radacct
 
-For example:
+To override the configured retention period for one run, pass the number
+of days:
 
 .. code-block:: shell
 
     ./manage.py delete_old_radacct 365
+
+The override does not change the session duration limit. To keep cleanup
+and session limits consistent, configure the retention setting instead.
 
 ``delete_old_postauth``
 -----------------------

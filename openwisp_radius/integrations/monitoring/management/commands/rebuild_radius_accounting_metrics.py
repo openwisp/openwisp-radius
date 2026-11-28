@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.translation import gettext_lazy as _
 from openwisp_monitoring.db import timeseries_db
 from swapper import load_model
 
-from openwisp_radius.integrations.monitoring import tasks
+from openwisp_radius.integrations.monitoring.metrics import accounting
 from openwisp_radius.integrations.monitoring.utils import sha1_hash
 
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
@@ -48,6 +49,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # Rebuilding newer sessions would duplicate hourly traffic. The operator
+        # supplies the cutover boundary because it is not stored by this command.
+        if options["commit"] and not options["end"]:
+            raise CommandError(_("--end is required when writing legacy metrics."))
+        if options["commit"]:
+            accounting.validate_legacy_rebuild_end(
+                self._parse_datetime(options["end"], "end")
+            )
         queryset = RadiusAccounting.objects.filter(
             stop_time__isnull=False,
             terminate_cause="NAS-Reboot",
@@ -80,7 +89,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting to rebuild {count} accounting metrics.")
         for session in queryset.iterator(chunk_size=chunk_size):
             self._delete_radius_accounting_metric(session)
-            tasks.post_save_radiusaccounting(
+            accounting.write_session(
                 username=session.username,
                 organization_id=str(session.organization_id),
                 input_octets=session.input_octets,

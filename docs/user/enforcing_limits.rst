@@ -65,6 +65,10 @@ implemented in the authorize API endpoint of OpenWISP RADIUS.
 
 The default counters available are described below.
 
+By default, session duration is also limited by
+:ref:`radius_accounting_retention_days`, even when no usage counter
+applies. Set it to ``None`` to disable this default limit.
+
 ``DailyCounter``
 ~~~~~~~~~~~~~~~~
 
