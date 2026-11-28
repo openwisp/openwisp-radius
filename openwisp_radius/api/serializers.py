@@ -43,6 +43,7 @@ from ..utils import (
     get_organization_radius_settings,
     get_user_group,
     load_model,
+    sanitize_mac_address,
 )
 from .utils import ErrorDictMixin, IDVerificationHelper
 
@@ -270,7 +271,10 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         username = validated_data.get("username", "")
         calling_station_id = validated_data.get("calling_station_id", "")
-        if app_settings.API_ACCOUNTING_AUTO_GROUP and username != calling_station_id:
+        if (
+            app_settings.API_ACCOUNTING_AUTO_GROUP
+            and sanitize_mac_address(username) != calling_station_id
+        ):
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
@@ -288,6 +292,12 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 validated_data.update(groupname=groupname)
         return super().create(validated_data)
 
+    def validate_called_station_id(self, value):
+        return sanitize_mac_address(value)
+
+    def validate_calling_station_id(self, value):
+        return sanitize_mac_address(value)
+
     def update(self, instance, acct_data, *args, **kwargs):
         acct_data = self._check_called_station_id(instance, acct_data)
         return super().update(instance, acct_data, *args, **kwargs)
@@ -299,7 +309,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
         do not overwrite it back to unconverted ID during interim updates
         """
         ids = app_settings.CALLED_STATION_IDS
-        if not ids or instance.called_station_id == acct_data["called_station_id"]:
+        if not ids or sanitize_mac_address(
+            instance.called_station_id
+        ) == sanitize_mac_address(acct_data["called_station_id"]):
             return acct_data
         try:
             organization = acct_data["organization"]
@@ -313,7 +325,9 @@ class RadiusAccountingSerializer(serializers.ModelSerializer):
                 unconverted_ids = ids.get(str(organization.id), {}).get(
                     "unconverted_ids", []
                 ) + ids.get(organization.slug, {}).get("unconverted_ids", [])
-                if acct_data["called_station_id"] in unconverted_ids:
+                if acct_data["called_station_id"] in [
+                    sanitize_mac_address(value) for value in unconverted_ids
+                ]:
                     acct_data["called_station_id"] = instance.called_station_id
         except Exception:
             logger.exception("Got exception in _check_called_station_id")

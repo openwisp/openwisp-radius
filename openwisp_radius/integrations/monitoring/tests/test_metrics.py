@@ -262,7 +262,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             input_octets=radius_options["input_octets"],
             output_octets=radius_options["output_octets"],
             calling_station_id=radius_options["calling_station_id"],
-            called_station_id=radius_options["called_station_id"],
+            called_station_id="AA:BB:CC:DD:EE:FF",
             time=session.stop_time,
         )
         mocked_delay.reset_mock()
@@ -271,6 +271,37 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         )
         self.assertEqual(closed_count, 0)
         mocked_delay.assert_not_called()
+
+    @patch(
+        "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
+    )
+    def test_station_id_formats_write_same_metric_tags(self, mocked_delay):
+        """
+        The same NAS and client must produce the same metric tags
+        no matter which MAC address format is sent in the accounting packet.
+        """
+        formats = (
+            ("aa-bb-cc-dd-ee-ff", "11-22-33-44-55-66"),
+            ("AABB.CCDD.EEFF", "1122.3344.5566"),
+            ("aa:bb:cc:dd:ee:ff", "11:22:33:44:55:66"),
+        )
+        for index, (called, calling) in enumerate(formats):
+            with self.subTest(called_station_id=called):
+                mocked_delay.reset_mock()
+                radius_options = _RADACCT.copy()
+                radius_options.update(
+                    {
+                        "unique_id": f"station-id-format-{index}",
+                        "called_station_id": called,
+                        "calling_station_id": calling,
+                        "stop_time": timezone.now(),
+                    }
+                )
+                self._create_radius_accounting(**radius_options)
+                mocked_delay.assert_called_once()
+                kwargs = mocked_delay.call_args.kwargs
+                self.assertEqual(kwargs["called_station_id"], "AA:BB:CC:DD:EE:FF")
+                self.assertEqual(kwargs["calling_station_id"], "11:22:33:44:55:66")
 
     @patch(
         "openwisp_radius.integrations.monitoring.tasks.post_save_radiusaccounting.delay"
@@ -311,7 +342,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             input_octets=radius_options["input_octets"],
             output_octets=radius_options["output_octets"],
             calling_station_id=radius_options["calling_station_id"],
-            called_station_id=radius_options["called_station_id"],
+            called_station_id="AA:BB:CC:DD:EE:FF",
             time=session.stop_time,
         )
 
@@ -342,7 +373,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             input_octets=radius_options["input_octets"],
             output_octets=radius_options["output_octets"],
             calling_station_id=radius_options["calling_station_id"],
-            called_station_id=radius_options["called_station_id"],
+            called_station_id="AA:BB:CC:DD:EE:FF",
             time=stop_time,
         )
 

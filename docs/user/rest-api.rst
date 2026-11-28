@@ -418,6 +418,22 @@ stop_time          Stop time (less or equal to)
 is_open            If stop_time is null
 ================== ================================
 
+.. note::
+
+    When ``called_station_id`` or ``calling_station_id`` is a valid MAC
+    address (colon, hyphen or dot separated), it is stored and returned in
+    uppercase colon-separated format (``AA:BB:CC:DD:EE:FF``), regardless
+    of the format sent by the NAS. Other values, such as
+    ``AA:BB:CC:DD:EE:FF:hostname`` or IP addresses, are preserved
+    unchanged. The filters accept any of the supported MAC formats.
+    Existing rows are converted by a database migration.
+
+    Open sessions closed automatically, because of an ``Accounting-On``
+    packet or a new session of the same user and calling station ID, are
+    limited to the organization of the request. ``Accounting-On`` packets
+    sent without a token by the globally allowed hosts affect all
+    organizations.
+
 .. _radius_user_api_endpoints:
 
 User API Endpoints

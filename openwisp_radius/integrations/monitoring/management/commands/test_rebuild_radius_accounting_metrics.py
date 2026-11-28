@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.test import tag
 from django.utils import timezone
+from openwisp_monitoring.db import timeseries_db
 from swapper import load_model
 
 from openwisp_radius.integrations.monitoring.tests.mixins import (
@@ -56,6 +57,43 @@ class TestRebuildRadiusAccountingMetrics(
         )
         session.refresh_from_db()
         return session
+
+    @patch("logging.Logger.warning")
+    def test_rebuild_radius_accounting_metrics_legacy_mac_formats(self, *args):
+        # fails to import when the monitoring apps are not installed
+        from openwisp_radius.integrations.monitoring.tasks import (
+            post_save_radiusaccounting,
+        )
+
+        session = self._create_closed_accounting_without_metric(
+            called_station_id="AA:BB:CC:DD:EE:FF",
+            calling_station_id="AA:BB:CC:00:11:22",
+        )
+        legacy_formats = (
+            ("aa-bb-cc-dd-ee-ff", "aa-bb-cc-00-11-22"),
+            ("AA-BB-CC-DD-EE-FF", "AA-BB-CC-00-11-22"),
+            ("aa:bb:cc:dd:ee:ff", "aa:bb:cc:00:11:22"),
+            ("aabb.ccdd.eeff", "aabb.cc00.1122"),
+            ("AABB.CCDD.EEFF", "AABB.CC00.1122"),
+        )
+        for called_station_id, calling_station_id in legacy_formats:
+            post_save_radiusaccounting(
+                username=session.username,
+                organization_id=str(session.organization_id),
+                input_octets=session.input_octets,
+                output_octets=session.output_octets,
+                calling_station_id=calling_station_id,
+                called_station_id=called_station_id,
+                time=session.stop_time,
+            )
+        query = "SELECT * FROM radius_acc"
+        self.assertEqual(len(timeseries_db.get_list_query(query)), len(legacy_formats))
+        call_command(
+            "rebuild_radius_accounting_metrics", commit=True, stdout=StringIO()
+        )
+        points = timeseries_db.get_list_query(query)
+        self.assertEqual(len(points), 1, "points in legacy formats were not deleted")
+        self.assertEqual(points[0]["called_station_id"], session.called_station_id)
 
     def test_rebuild_radius_accounting_metrics_dry_run(self):
         user = self._create_user()

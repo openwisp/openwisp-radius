@@ -3,6 +3,7 @@ import ipaddress
 import logging
 import math
 import os
+import re
 from datetime import timedelta
 from io import BytesIO, StringIO
 
@@ -16,6 +17,7 @@ from django.template.loader import get_template
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from netaddr import EUI, mac_unix_expanded
 from rest_framework.exceptions import APIException
 from sendsms.message import SmsMessage as BaseSmsMessage
 from sendsms.signals import sms_post_send
@@ -34,6 +36,24 @@ logger = logging.getLogger(__name__)
 
 def load_model(model):
     return swapper.load_model("openwisp_radius", model)
+
+
+MAC_ADDRESS_PATTERN = re.compile(
+    # the backreference rejects mixed separators like AA:BB-CC:DD-EE:FF
+    r"[0-9a-f]{2}([:-])(?:[0-9a-f]{2}\1){4}[0-9a-f]{2}"
+    r"|(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}",
+    re.IGNORECASE,
+)
+
+
+def sanitize_mac_address(value):
+    """
+    Returns MAC addresses as ``AA:BB:CC:DD:EE:FF``. Any other value is
+    returned unchanged because station IDs are not always MAC addresses.
+    """
+    if not isinstance(value, str) or not MAC_ADDRESS_PATTERN.fullmatch(value):
+        return value
+    return str(EUI(value, dialect=mac_unix_expanded)).upper()
 
 
 def get_client_ip(request):

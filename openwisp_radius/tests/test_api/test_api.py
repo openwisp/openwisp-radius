@@ -1346,7 +1346,7 @@ class TestApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item["output_octets"], data2["output_octets"])
         self.assertEqual(item["input_octets"], data2["input_octets"])
         self.assertEqual(item["nas_ip_address"], "172.16.64.91")
-        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
+        self.assertEqual(item["calling_station_id"], "5C:7D:C1:72:A7:3B")
         self.assertIsNone(item["stop_time"])
         response = self.client.get(
             f"{url}?page_size=1&page=2",
@@ -2545,48 +2545,56 @@ class TestTransactionApi(AcctMixin, ApiTokenMixin, BaseTransactionTestCase):
         with self.subTest("Test superuser can view all sessions"):
             admin = self._create_admin()
             self.client.force_login(admin)
-            response = self.client.get(path)
+            # session, user, pagination count and page
+            with self.assertNumQueries(4):
+                response = self.client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data), 3)
             self.assertEqual(response.data[0]["unique_id"], data3["unique_id"])
             self.assertEqual(response.data[1]["unique_id"], data2["unique_id"])
             self.assertEqual(response.data[2]["unique_id"], data1["unique_id"])
 
-        with self.subTest("Test filtering with called_station_id"):
-            response = self.client.get(path, {"called_station_id": "AA-BB-CC-DD-EE-FF"})
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.data), 2)
-            self.assertEqual(response.data[0]["called_station_id"], "AA-BB-CC-DD-EE-FF")
-            self.assertEqual(response.data[1]["called_station_id"], "AA:BB:CC:DD:EE:FF")
+        # ra1 and ra2 are saved with the same MAC addresses
+        # in different formats, data3 has other values
+        for field, mac_formats in (
+            (
+                "called_station_id",
+                ("aa:bb:cc:dd:ee:ff", "AA-BB-CC-DD-EE-FF", "AABB.CCDD.EEFF"),
+            ),
+            (
+                "calling_station_id",
+                ("11:22:33:44:55:66", "11-22-33-44-55-66", "1122.3344.5566"),
+            ),
+        ):
+            for value in mac_formats:
+                with self.subTest(f"Test filtering with {field}", value=value):
+                    response = self.client.get(path, {field: value})
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(
+                        {item["unique_id"] for item in response.data},
+                        {data1["unique_id"], data2["unique_id"]},
+                    )
+            with self.subTest(f"Test filtering with {field} (no match)"):
+                response = self.client.get(path, {field: "FF:FF:FF:FF:FF:FF"})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, [])
 
-            response = self.client.get(path, {"called_station_id": "AA:BB:CC:DD:EE:FF"})
+        with self.subTest("Test filtering with a called_station_id which is not a MAC"):
+            response = self.client.get(
+                path, {"called_station_id": data3["called_station_id"]}
+            )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.data), 2)
-            self.assertEqual(response.data[0]["called_station_id"], "AA-BB-CC-DD-EE-FF")
-            self.assertEqual(response.data[1]["called_station_id"], "AA:BB:CC:DD:EE:FF")
+            self.assertEqual(
+                [item["unique_id"] for item in response.data], [data3["unique_id"]]
+            )
 
-        with self.subTest("Test filtering with calling_station_id"):
+        with self.subTest("Test filtering with a non-MAC value is case-insensitive"):
             response = self.client.get(
-                path, {"calling_station_id": "11-22-33-44-55-66"}
+                path, {"called_station_id": data3["called_station_id"].swapcase()}
             )
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.data), 2)
             self.assertEqual(
-                response.data[0]["calling_station_id"], "11-22-33-44-55-66"
-            )
-            self.assertEqual(
-                response.data[1]["calling_station_id"], "11:22:33:44:55:66"
-            )
-            response = self.client.get(
-                path, {"calling_station_id": "11:22:33:44:55:66"}
-            )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.data), 2)
-            self.assertEqual(
-                response.data[0]["calling_station_id"], "11-22-33-44-55-66"
-            )
-            self.assertEqual(
-                response.data[1]["calling_station_id"], "11:22:33:44:55:66"
+                [item["unique_id"] for item in response.data], [data3["unique_id"]]
             )
 
 

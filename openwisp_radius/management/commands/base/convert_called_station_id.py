@@ -152,7 +152,7 @@ class BaseConvertCalledStationIdCommand(BaseCommand):
                         str(EUI(radius_session.calling_station_id, dialect=mac_unix))
                     ].common_name
                     mac_address = RE_VIRTUAL_ADDR_MAC.search(common_name)[0]
-                    radius_session.called_station_id = mac_address.replace(":", "-")
+                    radius_session.called_station_id = mac_address
                 except KeyError:
                     logger.warning(
                         "Failed to find routing information for "

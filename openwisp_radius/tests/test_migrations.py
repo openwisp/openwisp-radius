@@ -1,14 +1,17 @@
 import importlib
 import json
+import sqlite3
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest import skipUnless
+from unittest.mock import MagicMock, patch
 
 import swapper
 from django.apps.registry import apps
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
+from django.db.models import CharField, Value
 from django.db.models.signals import post_delete
 from django.test import TestCase
 from django.utils import timezone
@@ -22,11 +25,14 @@ from ..migrations import (
     _filter_valid_registered_users,
     _get_first_valid_membership_organization_id,
     migrate_registered_users_multitenant_reverse,
+    sanitize_station_ids,
 )
-from ..utils import load_model
-from . import CreateRadiusObjectsMixin
+from ..utils import load_model, sanitize_mac_address
+from . import _RADACCT, CreateRadiusObjectsMixin
 from .mixins import BaseTestCase
 
+RadiusAccounting = load_model("RadiusAccounting")
+RadiusPostAuth = load_model("RadiusPostAuth")
 RegisteredUser = load_model("RegisteredUser")
 RadiusBatch = load_model("RadiusBatch")
 RadiusAccounting = load_model("RadiusAccounting")
@@ -946,3 +952,95 @@ class TestMigrationRemovePrivilegedUsersFromBatches(CreateRadiusObjectsMixin, Te
         with self.subTest("nothing is logged when there is nothing to remove"):
             with self.assertNoLogs(self.migration_path, level="WARNING"):
                 migration_module.remove_privileged_users_from_batches(apps, MagicMock())
+
+
+class TestSanitizeStationIdsMigration(BaseTestCase):
+    def test_sanitize_station_ids(self):
+        legacy_values = (
+            ("aa-bb-cc-dd-ee-ff", "AA:BB:CC:DD:EE:FF"),
+            ("aabb.ccdd.eeff", "AA:BB:CC:DD:EE:FF"),
+            ("aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"),
+            ("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"),
+            ("00-27-22-F3-FA-F1:hostname", "00-27-22-F3-FA-F1:hostname"),
+            ("123456789012", "123456789012"),
+            ("", ""),
+            (None, None),
+        )
+        rows = []
+        for index, (legacy, expected) in enumerate(legacy_values):
+            session = self._create_radius_accounting(
+                **{**_RADACCT, "unique_id": f"migration-{index}"},
+            )
+            post_auth = self._create_radius_postauth(
+                username=f"user-{index}", reply="Access-Accept"
+            )
+            # a plain CharField skips MacAddressField preparation, which
+            # simulates rows saved before the MAC addresses were normalized
+            raw = Value(legacy, output_field=CharField())
+            for obj in (session, post_auth):
+                type(obj).objects.filter(pk=obj.pk).update(
+                    called_station_id=raw, calling_station_id=raw
+                )
+            rows.append((session, post_auth, expected))
+        session = rows[0][0]
+        session.refresh_from_db()
+        self.assertEqual(session.called_station_id, "aa-bb-cc-dd-ee-ff")
+        # the rows to convert span more than one batch
+        with patch("openwisp_radius.migrations.BATCH_SIZE", 2):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
+        for session, post_auth, expected in rows:
+            for obj in (session, post_auth):
+                obj.refresh_from_db()
+                for field in ("called_station_id", "calling_station_id"):
+                    with self.subTest(model=type(obj).__name__, field=field):
+                        self.assertEqual(getattr(obj, field), expected)
+        with self.subTest("second run does not change anything"):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
+            for session, post_auth, expected in rows:
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, expected)
+
+    def test_sanitize_station_ids_concurrent_change(self):
+        session = self._create_radius_accounting(
+            **{**_RADACCT, "unique_id": "migration-concurrent"}
+        )
+        queryset = RadiusAccounting.objects.filter(pk=session.pk)
+        queryset.update(
+            called_station_id=Value("aa-bb-cc-dd-ee-ff", output_field=CharField())
+        )
+
+        def change_after_read(value):
+            queryset.update(called_station_id="11:22:33:44:55:66")
+            return sanitize_mac_address(value)
+
+        with patch(
+            "openwisp_radius.migrations.sanitize_mac_address",
+            side_effect=change_after_read,
+        ):
+            sanitize_station_ids(apps, MagicMock(connection=connection))
+        session.refresh_from_db()
+        self.assertEqual(session.called_station_id, "11:22:33:44:55:66")
+
+    @skipUnless(connection.vendor == "sqlite", "lowers the SQLite variable limit")
+    def test_sanitize_station_ids_query_parameter_limit(self):
+        connection.ensure_connection()
+        limit = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
+        # the default of SQLite versions older than 3.32
+        previous = connection.connection.setlimit(limit, 999)
+        self.addCleanup(connection.connection.setlimit, limit, previous)
+        macs = [f"aa-bb-cc-dd-{i // 256:02x}-{i % 256:02x}" for i in range(1000)]
+        RadiusPostAuth.objects.bulk_create(
+            RadiusPostAuth(
+                username="tester",
+                reply="Access-Accept",
+                organization=self.default_org,
+                calling_station_id=Value(mac, output_field=CharField()),
+            )
+            for mac in macs
+        )
+        queryset = RadiusPostAuth.objects.values_list("calling_station_id", flat=True)
+        self.assertEqual(set(queryset), set(macs))
+        sanitize_station_ids(apps, MagicMock(connection=connection))
+        self.assertEqual(
+            set(queryset.all()), {mac.upper().replace("-", ":") for mac in macs}
+        )

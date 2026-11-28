@@ -17,7 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation.trans_real import get_language_from_request
 from django.views.decorators.csrf import csrf_exempt
 from django_filters import rest_framework as filters
-from django_filters.rest_framework import CharFilter, DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
@@ -73,6 +73,7 @@ from ..utils import (
     get_client_ip,
     get_organization_radius_settings,
     load_model,
+    sanitize_mac_address,
 )
 from . import freeradius_views
 from .freeradius_views import AccountingFilter, AccountingViewPagination
@@ -1065,26 +1066,12 @@ update_registered_user_registration_method = UpdateRegisteredUserMethodView.as_v
 
 
 class RadiusAccountingFilter(AccountingFilter):
-    called_station_id = CharFilter(
-        field_name="called_station_id", method="filter_mac_address"
-    )
-    calling_station_id = CharFilter(
-        field_name="calling_station_id", method="filter_mac_address"
-    )
+    called_station_id = filters.CharFilter(method="filter_station_id")
+    calling_station_id = filters.CharFilter(method="filter_station_id")
 
-    def filter_mac_address(self, queryset, name, value):
-        """
-        The input MAC address in any of these two formats:
-            - AA-BB-CC-DD-EE-FF (quadrants separated by hyphen)
-            - AA:BB:CC:DD:EE:FF (quadrants separated by colon)
-        The below lookup ensures that the filtering is
-        case-insensitive and works across different formats.
-        """
-        lookup = f"{name}__iexact"
-        return queryset.filter(
-            Q(**{lookup: value.replace(":", "-")})
-            | Q(**{lookup: value.replace("-", ":")})
-        )
+    def filter_station_id(self, queryset, name, value):
+        # iexact skips MacAddressField.to_python(), so MACs are sanitized here
+        return queryset.filter(**{f"{name}__iexact": sanitize_mac_address(value)})
 
 
 @method_decorator(

@@ -8,6 +8,7 @@ from django.apps.registry import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.urls import reverse
 from django.utils import timezone
@@ -105,6 +106,122 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
         radiusaccounting.framed_ipv6_prefix = "invalid ipv6_prefix"
         self.assertRaises(ValidationError, radiusaccounting.full_clean)
 
+    def test_station_ids_normalization(self):
+        # Use objects.create() so full_clean() is not what normalizes the value.
+        for field in ("called_station_id", "calling_station_id"):
+            with self.subTest("RadiusAccounting", field=field):
+                session = RadiusAccounting.objects.create(
+                    unique_id=f"normalization-{field}",
+                    session_id=f"normalization-{field}",
+                    nas_ip_address="192.168.182.3",
+                    organization=self.default_org,
+                    **{field: "aa-bb-cc-dd-ee-ff"},
+                )
+                self.assertEqual(getattr(session, field), "AA:BB:CC:DD:EE:FF")
+                session.refresh_from_db()
+                self.assertEqual(getattr(session, field), "AA:BB:CC:DD:EE:FF")
+                setattr(session, field, "AABB.CCDD.EEFF")
+                session.save()
+                session.refresh_from_db()
+                self.assertEqual(getattr(session, field), "AA:BB:CC:DD:EE:FF")
+            with self.subTest("RadiusPostAuth", field=field):
+                post_auth = RadiusPostAuth.objects.create(
+                    username="tester",
+                    reply="Access-Accept",
+                    organization=self.default_org,
+                    **{field: "aa-bb-cc-dd-ee-ff"},
+                )
+                post_auth.refresh_from_db()
+                self.assertEqual(getattr(post_auth, field), "AA:BB:CC:DD:EE:FF")
+
+    def test_close_stale_sessions_on_nas_boot_any_called_station_id_format(self):
+        for index, value in enumerate(
+            ("aa-bb-cc-dd-ee-ff", "AABB.CCDD.EEFF", "AA:BB:CC:DD:EE:FF")
+        ):
+            with self.subTest(value=value):
+                options = _RADACCT.copy()
+                options.update(
+                    unique_id=f"nas-boot-{index}",
+                    organization=self.default_org,
+                    called_station_id="AA-BB-CC-DD-EE-FF",
+                )
+                self._create_radius_accounting(**options)
+                closed = RadiusAccounting._close_stale_sessions_on_nas_boot(
+                    called_station_id=value
+                )
+                self.assertEqual(closed, 1)
+
+    def test_called_station_id_preserves_non_macs(self):
+        for index, value in enumerate(("00-27-22-F3-FA-F1:hostname", "192.168.1.1")):
+            with self.subTest(value=value):
+                options = _RADACCT.copy()
+                options.update(
+                    {
+                        "unique_id": f"preserve-{index}",
+                        "called_station_id": value,
+                    }
+                )
+                session = self._create_radius_accounting(**options)
+                session.refresh_from_db()
+                self.assertEqual(session.called_station_id, value)
+
+    def test_called_station_id_closed_signal_normalized(self):
+        # objects.create() proves pre_save() normalizes the instance before signals.
+        with (
+            catch_signal(radius_accounting_closed) as handler,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            RadiusAccounting.objects.create(
+                unique_id="closed-normalization",
+                session_id="closed-normalization",
+                nas_ip_address="192.168.182.3",
+                organization=self.default_org,
+                called_station_id="aa-bb-cc-dd-ee-ff",
+                stop_time=timezone.now(),
+            )
+        self.assertEqual(
+            handler.call_args.kwargs["instance"].called_station_id,
+            "AA:BB:CC:DD:EE:FF",
+        )
+
+    @mock.patch.object(app_settings, "CONVERT_CALLED_STATION_ON_CREATE", True)
+    @mock.patch.object(app_settings, "CALLED_STATION_IDS", _CALLED_STATION_IDS)
+    @mock.patch("openwisp_radius.tasks.convert_called_station_id")
+    def test_convert_called_station_id_matches_config_in_any_format(self, mocked_task):
+        RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
+        RadiusAppConfig.connect_signals()
+        options = {
+            "nas_ip_address": "192.168.182.3",
+            "organization": self._get_org(),
+            "called_station_id": "aa:aa:aa:aa:aa:0a",
+        }
+
+        with self.subTest("Dispatched after commit"):
+            with self.captureOnCommitCallbacks(execute=True):
+                RadiusAccounting.objects.create(
+                    unique_id="receiver-normalize",
+                    session_id="receiver-normalize",
+                    **options,
+                )
+                mocked_task.delay.assert_not_called()
+            mocked_task.delay.assert_called_once_with("receiver-normalize")
+
+        with self.subTest("Not dispatched on rollback"):
+            mocked_task.reset_mock()
+            with (
+                self.captureOnCommitCallbacks(execute=True) as callbacks,
+                self.assertRaises(RuntimeError),
+                transaction.atomic(),
+            ):
+                RadiusAccounting.objects.create(
+                    unique_id="receiver-rollback",
+                    session_id="receiver-rollback",
+                    **options,
+                )
+                raise RuntimeError
+            self.assertEqual(callbacks, [])
+            mocked_task.delay.assert_not_called()
+
     def _run_convert_called_station_id_tests(self):
         """
         Reused by other tests below.
@@ -124,7 +241,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options["unique_id"] = "113"
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "AA-AA-AA-AA-AA-0A")
+            self.assertEqual(radiusaccounting.called_station_id, "AA:AA:AA:AA:AA:0A")
 
         RadiusAppConfig = apps.get_app_config(RadiusAccounting._meta.app_label)
         RadiusAppConfig.connect_signals()
@@ -135,7 +252,7 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options["organization"] = self._create_org(name="new-org")
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "AA-AA-AA-AA-AA-0A")
+            self.assertEqual(radiusaccounting.called_station_id, "AA:AA:AA:AA:AA:0A")
 
         with self.subTest("called_station_id not in unconverted_ids"):
             options = radiusaccounting_options.copy()
@@ -143,17 +260,18 @@ class TestRadiusAccounting(FileMixin, BaseTestCase):
             options["unique_id"] = "112"
             radiusaccounting = self._create_radius_accounting(**options)
             radiusaccounting.refresh_from_db()
-            self.assertEqual(radiusaccounting.called_station_id, "EE-EE-EE-EE-EE-EE")
+            self.assertEqual(radiusaccounting.called_station_id, "EE:EE:EE:EE:EE:EE")
 
         with self.subTest("Ideal condition"):
-            with self._get_openvpn_status_mock():
+            with (
+                self._get_openvpn_status_mock(),
+                self.captureOnCommitCallbacks(execute=True),
+            ):
                 options = radiusaccounting_options.copy()
                 options["unique_id"] = "114"
                 radiusaccounting = self._create_radius_accounting(**options)
-                radiusaccounting.refresh_from_db()
-                self.assertEqual(
-                    radiusaccounting.called_station_id, "CC-CC-CC-CC-CC-0C"
-                )
+            radiusaccounting.refresh_from_db()
+            self.assertEqual(radiusaccounting.called_station_id, "CC:CC:CC:CC:CC:0C")
 
     def test_multiple_accounting_sessions(self):
         radiusaccounting_options = _RADACCT.copy()
@@ -1262,10 +1380,13 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
 
         mocked_coa.reset_mock()
         with self.subTest("Counter.check() raises Exception"):
-            with mock.patch(
-                "openwisp_radius.counters.base.BaseCounter.check",
-                side_effect=Exception("Test exception"),
-            ), mock.patch("logging.Logger.exception") as mocked_exception:
+            with (
+                mock.patch(
+                    "openwisp_radius.counters.base.BaseCounter.check",
+                    side_effect=Exception("Test exception"),
+                ),
+                mock.patch("logging.Logger.exception") as mocked_exception,
+            ):
                 perform_change_of_authorization(
                     user_id=user.id,
                     old_group_id=power_user_group.id,
@@ -1284,15 +1405,18 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
 
         mocked_coa.reset_mock()
         with self.subTest("Counter.check() raises MaxQuotaReached"):
-            with mock.patch(
-                "openwisp_radius.counters.base.BaseCounter.check",
-                side_effect=MaxQuotaReached(
-                    message="MaxQuotaReached",
-                    level="info",
-                    logger=logging,
-                    reply_message="reply MaxQuotaReached",
+            with (
+                mock.patch(
+                    "openwisp_radius.counters.base.BaseCounter.check",
+                    side_effect=MaxQuotaReached(
+                        message="MaxQuotaReached",
+                        level="info",
+                        logger=logging,
+                        reply_message="reply MaxQuotaReached",
+                    ),
                 ),
-            ), mock.patch("logging.Logger.exception") as mocked_exception:
+                mock.patch("logging.Logger.exception") as mocked_exception,
+            ):
                 perform_change_of_authorization(
                     user_id=user.id,
                     old_group_id=power_user_group.id,
@@ -1309,9 +1433,13 @@ class TestChangeOfAuthorization(BaseTransactionTestCase):
         mocked_coa.reset_mock()
         mocked_disconnect.reset_mock()
         with self.subTest("RADIUS Attribute absent from CHECK_ATTRIBUTE_COUNTERS_MAP"):
-            with mock.patch(
-                "openwisp_radius.tasks.app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP", {}
-            ), mock.patch("logging.Logger.exception") as mocked_exception:
+            with (
+                mock.patch(
+                    "openwisp_radius.tasks.app_settings.CHECK_ATTRIBUTE_COUNTERS_MAP",
+                    {},
+                ),
+                mock.patch("logging.Logger.exception") as mocked_exception,
+            ):
                 perform_change_of_authorization(
                     user_id=user.id,
                     old_group_id=power_user_group.id,

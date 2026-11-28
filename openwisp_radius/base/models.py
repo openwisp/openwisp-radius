@@ -63,6 +63,7 @@ from ..utils import (
     prefix_generate_users,
     validate_csvfile,
 )
+from .fields import MacAddressField
 from .validators import (
     ipv6_network_validator,
     is_mobile_phone_number,
@@ -458,7 +459,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         null=True,
         blank=True,
     )
-    called_station_id = models.CharField(
+    called_station_id = MacAddressField(
         verbose_name=_("called station ID"),
         max_length=253,
         db_column="calledstationid",
@@ -466,7 +467,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
         blank=True,
         null=True,
     )
-    calling_station_id = models.CharField(
+    calling_station_id = MacAddressField(
         verbose_name=_("calling station ID"),
         max_length=253,
         db_column="callingstationid",
@@ -648,12 +649,18 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             session.save()
 
     @classmethod
-    def _close_stale_sessions_on_nas_boot(cls, called_station_id):
+    def _close_stale_sessions_on_nas_boot(cls, called_station_id, organization_id=None):
         """
         Called during RADIUS Accounting-On.
+
+        ``organization_id`` is ``None`` only for requests without a token, which
+        are accepted only from the globally allowed FreeRADIUS hosts.
         """
         if not called_station_id:
             return 0
+        lookup = {"called_station_id": called_station_id, "stop_time__isnull": True}
+        if organization_id:
+            lookup["organization_id"] = organization_id
         stop_time = now()
         closed_count = 0
         batch_size = 1000
@@ -662,10 +669,7 @@ class AbstractRadiusAccounting(OrgMixin, models.Model):
             with transaction.atomic():
                 closed_sessions = list(
                     cls.objects.select_for_update()
-                    .filter(
-                        called_station_id=called_station_id,
-                        stop_time__isnull=True,
-                    )
+                    .filter(**lookup)
                     .only(
                         "unique_id",
                         "username",
@@ -933,14 +937,14 @@ class AbstractRadiusPostAuth(OrgMixin, UUIDModel):
         verbose_name=_("password"), max_length=64, db_column="pass", blank=True
     )
     reply = models.CharField(verbose_name=_("reply"), max_length=32)
-    called_station_id = models.CharField(
+    called_station_id = MacAddressField(
         verbose_name=_("called station ID"),
         max_length=253,
         db_column="calledstationid",
         blank=True,
         null=True,
     )
-    calling_station_id = models.CharField(
+    calling_station_id = MacAddressField(
         verbose_name=_("calling station ID"),
         max_length=253,
         db_column="callingstationid",

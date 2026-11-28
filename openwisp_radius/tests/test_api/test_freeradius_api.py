@@ -23,6 +23,7 @@ from ...counters.exceptions import MaxQuotaReached, SkipCheck
 from ...signals import radius_accounting_success
 from ...utils import load_model
 from ...utils import logger as utils_logger
+from ...utils import sanitize_mac_address
 from ..mixins import ApiTokenMixin, BaseTestCase, BaseTransactionTestCase
 
 User = get_user_model()
@@ -581,6 +582,8 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
                 continue
             ra_value = getattr(ra, key)
             data_value = data[key]
+            if key in ("called_station_id", "calling_station_id"):
+                data_value = sanitize_mac_address(data_value)
             _type = type(ra_value)
             if _type != type(data_value):
                 data_value = _type(data_value)
@@ -614,6 +617,82 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(RadiusAccounting.objects.count(), 1)
         ra.refresh_from_db()
         self.assertAcctData(ra, data)
+
+    @freeze_time(START_DATE)
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
+    def test_accounting_called_station_id_normalized(self, send_login_email):
+        data = self.acct_post_data
+        data.update(
+            {
+                "unique_id": "normalize-api-1",
+                "status_type": "Start",
+                "called_station_id": "aa-bb-cc-dd-ee-ff",
+            }
+        )
+        with catch_signal(radius_accounting_success) as handler:
+            response = self.post_json(self._get_accounting_params(**data))
+        self.assertEqual(response.status_code, 201)
+        session = RadiusAccounting.objects.get(unique_id="normalize-api-1")
+        self.assertEqual(session.called_station_id, "AA:BB:CC:DD:EE:FF")
+        self.assertEqual(
+            handler.mock_calls[0].kwargs["accounting_data"]["called_station_id"],
+            "AA:BB:CC:DD:EE:FF",
+        )
+
+    @freeze_time(START_DATE)
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
+    def test_accounting_called_station_id_preserved_with_suffix(self, send_login_email):
+        data = self.acct_post_data
+        data.update(
+            {
+                "unique_id": "normalize-api-suffix",
+                "status_type": "Start",
+                "called_station_id": "00-27-22-F3-FA-F1:hostname",
+            }
+        )
+        response = self.post_json(self._get_accounting_params(**data))
+        self.assertEqual(response.status_code, 201)
+        session = RadiusAccounting.objects.get(unique_id="normalize-api-suffix")
+        self.assertEqual(session.called_station_id, "00-27-22-F3-FA-F1:hostname")
+
+    @freeze_time(START_DATE)
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
+    def test_accounting_station_ids_across_session(self, send_login_email):
+        unique_id = "station-ids-session"
+        expected = {
+            "called_station_id": "AA:BB:CC:DD:EE:FF",
+            "calling_station_id": "11:22:33:44:55:66",
+        }
+        # the NAS may send different formats during the same session
+        formats = (
+            ("Start", "aa-bb-cc-dd-ee-ff", "11-22-33-44-55-66"),
+            ("Interim-Update", "AABB.CCDD.EEFF", "1122.3344.5566"),
+            ("Stop", "aa:bb:cc:dd:ee:ff", "11:22:33:44:55:66"),
+        )
+        for status_type, called, calling in formats:
+            with self.subTest(status_type=status_type):
+                data = self.acct_post_data
+                data.update(
+                    {
+                        "unique_id": unique_id,
+                        "status_type": status_type,
+                        "called_station_id": called,
+                        "calling_station_id": calling,
+                    }
+                )
+                response = self.post_json(self._get_accounting_params(**data))
+                self.assertIn(response.status_code, (200, 201))
+                self.assertEqual(RadiusAccounting.objects.count(), 1)
+                session = RadiusAccounting.objects.get(unique_id=unique_id)
+                for field, value in expected.items():
+                    self.assertEqual(getattr(session, field), value, field)
+        with self.subTest("list API returns normalized values"):
+            response = self.client.get(
+                self._acct_url, HTTP_AUTHORIZATION=self.auth_header
+            )
+            self.assertEqual(response.status_code, 200)
+            for field, value in expected.items():
+                self.assertEqual(response.data[0][field], value, field)
 
     @freeze_time(START_DATE)
     @capture_any_output()
@@ -849,7 +928,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
-            self.assertEqual(ra.called_station_id, "00-00-11-11-22-22")
+            self.assertEqual(ra.called_station_id, "00:00:11:11:22:22")
 
         with self.subTest("should overwrite if different called station ID"):
             ra.called_station_id = "00-00-11-11-22-22"
@@ -866,7 +945,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
             self.assertIsNone(response.data)
             self.assertEqual(RadiusAccounting.objects.count(), 1)
             ra.refresh_from_db()
-            self.assertEqual(ra.called_station_id, "00-00-22-22-33-33")
+            self.assertEqual(ra.called_station_id, "00:00:22:22:33:33")
 
     @freeze_time(START_DATE)
     @capture_any_output()
@@ -1179,7 +1258,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(item["output_octets"], data3["output_octets"])
         self.assertEqual(item["input_octets"], data3["input_octets"])
         self.assertEqual(item["nas_ip_address"], "172.16.64.91")
-        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
+        self.assertEqual(item["calling_station_id"], "5C:7D:C1:72:A7:3B")
         response = self.client.get(
             f"{self._acct_url}?page_size=1&page=2",
             HTTP_AUTHORIZATION=self.auth_header,
@@ -1199,7 +1278,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
         self.assertEqual(item["username"], "admin")
-        self.assertEqual(item["calling_station_id"], "5c:7d:c1:72:a7:3b")
+        self.assertEqual(item["calling_station_id"], "5C:7D:C1:72:A7:3B")
         self.assertEqual(item["output_octets"], data1["output_octets"])
         self.assertEqual(item["input_octets"], data1["input_octets"])
 
@@ -1233,7 +1312,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item["called_station_id"], "E0-CA-40-EE-D1-0D")
+        self.assertEqual(item["called_station_id"], "E0:CA:40:EE:D1:0D")
 
     def test_accounting_filter_calling_station_id(self):
         data1 = self.acct_post_data
@@ -1249,7 +1328,7 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.status_code, 200)
         item = response.data[0]
-        self.assertEqual(item["calling_station_id"], "4c:8d:c2:80:a7:4c")
+        self.assertEqual(item["calling_station_id"], "4C:8D:C2:80:A7:4C")
 
     @freeze_time(START_DATE)
     def test_accounting_filter_start_time(self):
@@ -1540,6 +1619,73 @@ class TestFreeradiusApi(AcctMixin, ApiTokenMixin, BaseTestCase):
         self.assertIsNone(other_session.stop_time)
 
     @freeze_time(START_DATE)
+    @mock.patch("openwisp_radius.receivers.send_login_email.delay")
+    def test_accounting_closes_only_own_organization_sessions(self, *args):
+        org2 = self._create_org(name="org2", slug="org2")
+        settings, _ = OrganizationRadiusSettings.objects.get_or_create(
+            organization=org2
+        )
+        org2_header = f"Bearer {org2.pk} {settings.token}"
+
+        with self.subTest("new session"):
+            options = self.acct_post_data
+            options.update(
+                unique_id="new-session-org1",
+                calling_station_id="AA:BB:CC:00:00:01",
+                stop_time=None,
+            )
+            session = self._create_radius_accounting(**options)
+            data = self.acct_post_data
+            data.update(
+                unique_id="new-session-org2",
+                status_type="Start",
+                calling_station_id="aa-bb-cc-00-00-01",
+            )
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(self._get_accounting_params(**data)),
+                HTTP_AUTHORIZATION=org2_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 201)
+            session.refresh_from_db()
+            self.assertIsNone(session.stop_time, "closed by another organization")
+
+        with self.subTest("Accounting-On"):
+            options = self.acct_post_data
+            options.update(
+                unique_id="nas-boot-org1",
+                called_station_id="AA:BB:CC:00:00:02",
+                calling_station_id="AA:BB:CC:00:00:03",
+                stop_time=None,
+            )
+            session = self._create_radius_accounting(**options)
+            options.update(
+                unique_id="nas-boot-org2",
+                organization=org2,
+                called_station_id="aa-bb-cc-00-00-02",
+                calling_station_id="AA:BB:CC:00:00:04",
+            )
+            org2_session = self._create_radius_accounting(**options)
+            data = self.acct_post_data
+            data.update(
+                unique_id="nas-boot-packet",
+                status_type="Accounting-On",
+                called_station_id="AABB.CC00.0002",
+            )
+            response = self.client.post(
+                self._acct_url,
+                data=json.dumps(self._get_accounting_params(**data)),
+                HTTP_AUTHORIZATION=org2_header,
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+            session.refresh_from_db()
+            org2_session.refresh_from_db()
+            self.assertIsNone(session.stop_time, "closed by another organization")
+            self.assertEqual(org2_session.terminate_cause, "NAS-Reboot")
+
+    @freeze_time(START_DATE)
     def test_accounting_stop_stores_maximum_session_time(self):
         session = self._create_radius_accounting(**self._acct_initial_data)
         data = self.acct_post_data
@@ -1809,6 +1955,17 @@ class TestTransactionFreeradiusApi(
                 extra_payload={
                     "called_station_id": self.acct_post_data["called_station_id"],
                     "calling_station_id": self.acct_post_data["calling_station_id"],
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["control:Auth-Type"], "Accept")
+
+        with self.subTest("Same device reauth with differently formatted MAC"):
+            response = self._authorize_user(
+                auth_header=self.auth_header,
+                extra_payload={
+                    "called_station_id": self.acct_post_data["called_station_id"],
+                    "calling_station_id": "5C7D.C172.A73B",
                 },
             )
             self.assertEqual(response.status_code, 200)

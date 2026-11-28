@@ -323,6 +323,11 @@ It should contain configuration in following format:
         }
     }
 
+The entries in ``unconverted_ids`` can be written in any of the MAC
+formats accepted for ``Called-Station-Id`` (colon, hyphen or dot
+separated); they are normalized before being compared with the stored
+value.
+
 ``OPENWISP_RADIUS_CONVERT_CALLED_STATION_ON_CREATE``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

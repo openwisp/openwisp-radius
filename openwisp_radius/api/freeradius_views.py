@@ -566,7 +566,7 @@ class AccountingView(ListCreateAPIView):
         """
         called_station_id = data.get("called_station_id")
         closed_count = RadiusAccounting._close_stale_sessions_on_nas_boot(
-            called_station_id=called_station_id
+            called_station_id=called_station_id, organization_id=self.request.auth
         )
         if closed_count:
             logger.info(
