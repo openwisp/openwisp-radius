@@ -28,7 +28,11 @@ def run_focused_tests(arguments):
             "openwisp_radius.tests.test_saml",
             "openwisp_radius.integrations.monitoring.tests",
         ),
-        exact_modules=(*sample_modules, "openwisp2.integrations.tests"),
+        exact_modules=(
+            *sample_modules,
+            "openwisp2.integrations.tests",
+            "openwisp_radius.integrations.monitoring.tests",
+        ),
         allow_subpackages=True,
     )
     try:
