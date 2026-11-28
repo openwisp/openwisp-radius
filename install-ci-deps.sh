@@ -14,6 +14,9 @@ fi
 if [ "${CI_SYSTEM_DEPS_ONLY:-0}" = 1 ]; then
     exit 0
 fi
+if [ "${CI_SYSTEM_DEPS_READY:-0}" = 1 ]; then
+    npm install --global --ignore-scripts --prefix "$HOME/.local" prettier
+fi
 
 python -m pip install -U pip wheel setuptools
 python -m pip install -U -r requirements-test.txt
