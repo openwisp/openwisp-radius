@@ -186,10 +186,7 @@ class TestRebuildRadiusAccountingMetrics(
                 stdout=StringIO(),
             )
 
-    @patch(
-        "openwisp_radius.integrations.monitoring.management.commands."
-        "rebuild_radius_accounting_metrics.Metric.read"
-    )
+    @patch("openwisp_radius.integrations.monitoring.metrics.accounting.Metric.read")
     def test_commit_end_boundary_with_existing_checkpoint(self, read):
         read.return_value = [{"time": "2026-01-02T00:00:00+00:00"}]
         with self.subTest("end before checkpoint"):

@@ -1824,9 +1824,14 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
     def test_reconciliation_processes_groups_beyond_first_batch(
         self, recover, batch_write
     ):
-        metric = self.metric_model(
-            key="radius_acc", configuration="radius_acc", field_name="input_octets"
-        )
+        def build_metric(organization_id, called_station_id, tags):
+            return self.metric_model(
+                key="radius_acc",
+                configuration="radius_acc",
+                field_name="input_octets",
+                extra_tags=tags,
+            )
+
         # SQL aggregation and device lookup have separate coverage. Synthetic
         # groups make the batching boundary independent of device setup cost.
         rows = [
@@ -1839,7 +1844,9 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
             for group_number in range(1001)
         ]
         with patch(f"{ACCOUNTING_PATH}._accounting_totals", return_value=iter(rows)):
-            with patch(f"{ACCOUNTING_PATH}.accounting_metric", return_value=metric):
+            with patch(
+                f"{ACCOUNTING_PATH}.accounting_metric", side_effect=build_metric
+            ):
                 reconcile_radius_traffic(seed=True)
         self.assertEqual(
             [len(call.args[0]) for call in batch_write.call_args_list], [1000, 1]
@@ -1850,10 +1857,20 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         with patch(
             f"{ACCOUNTING_PATH}._accounting_totals", return_value=iter(current_rows)
         ):
-            with patch(f"{ACCOUNTING_PATH}.accounting_metric", return_value=metric):
+            with patch(
+                f"{ACCOUNTING_PATH}.accounting_metric", side_effect=build_metric
+            ):
                 reconcile_radius_traffic()
         self.assertEqual(
             [len(call.args[0]) for call in batch_write.call_args_list], [1000, 1]
+        )
+        self.assertCountEqual(
+            [
+                metric.extra_tags["called_station_id"]
+                for call in batch_write.call_args_list
+                for metric, options in call.args[0]
+            ],
+            [row["clean_called_station_id"] for row in rows],
         )
         self.assertEqual(
             sum(
@@ -2007,16 +2024,18 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
     @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
-    def test_registration_schedule_collects_traffic(self, registrations, reconcile):
+    def test_registration_task_does_not_reconcile_traffic(
+        self, registrations, reconcile
+    ):
         from ..tasks import write_user_registration_metrics
 
         write_user_registration_metrics()
         registrations.assert_called_once_with()
-        reconcile.assert_called_once_with()
+        reconcile.assert_not_called()
 
     @patch("openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic")
     @patch("openwisp_radius.integrations.monitoring.metrics.registration.collect")
-    def test_registration_failure_still_collects_traffic(
+    def test_registration_failure_does_not_reconcile_traffic(
         self, registrations, reconcile
     ):
         from ..tasks import write_user_registration_metrics
@@ -2025,7 +2044,7 @@ class TestMetrics(CreateDeviceMonitoringMixin, BaseTransactionTestCase):
         with self.assertRaisesMessage(RuntimeError, "Registration metrics unavailable"):
             write_user_registration_metrics()
         registrations.assert_called_once_with()
-        reconcile.assert_called_once_with()
+        reconcile.assert_not_called()
 
     def test_cutover_preserves_unique_users_and_reports_only_new_growth_afterward(self):
         device = self._create_device()

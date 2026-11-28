@@ -2151,40 +2151,31 @@ class TestTransactionFreeradiusApi(
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(rad_token, second_rad_token)
 
+    @mock.patch.object(app_settings, "COUNTERS", [])
     def test_authorize_limits_session_to_retention(self):
         self._get_org_user()
-        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1):
-            with mock.patch.object(app_settings, "COUNTERS", []):
-                response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
 
-    def test_authorize_without_retention_has_no_default_timeout(self):
-        self._get_org_user()
-        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
-            with mock.patch.object(app_settings, "COUNTERS", []):
+        with self.subTest("configured retention sets the default timeout"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1):
                 response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("Session-Timeout", response.data)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"], {"op": "<=", "value": 86400}
+            )
 
-    def test_authorize_caps_timeout_at_radius_attribute_maximum(self):
-        self._get_org_user()
-        with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 100000):
-            with mock.patch.object(app_settings, "COUNTERS", []):
+        with self.subTest("indefinite retention adds no default timeout"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
                 response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.data["Session-Timeout"], {"op": "<=", "value": 2**32 - 1}
-        )
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("Session-Timeout", response.data)
 
-    @mock.patch.object(app_settings, "COUNTERS", [])
-    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)
-    def test_retention_default_preserves_shorter_freeradius_policy(self):
-        self._get_org_user()
-        response = self._authorize_user(auth_header=self.auth_header)
-        self.assertEqual(response.status_code, 200)
-        # Return the ceiling with an operator rather than a scalar assignment.
-        self.assertEqual(response.data["Session-Timeout"], {"op": "<=", "value": 86400})
+        with self.subTest("large retention is capped at the RADIUS attribute maximum"):
+            with mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 100000):
+                response = self._authorize_user(auth_header=self.auth_header)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data["Session-Timeout"], {"op": "<=", "value": 2**32 - 1}
+            )
 
     @mock.patch.object(app_settings, "COUNTERS", [])
     @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 1)

@@ -403,3 +403,22 @@ class TestTasks(FileMixin, BaseTestCase):
         tasks.delete_inactive_users.delay()
         self.assertEqual(User.objects.filter(id__in=[admin.id, user1.id]).count(), 2)
         self.assertEqual(User.objects.filter(id__in=[user2.id, user3.id]).count(), 0)
+
+    @capture_stdout()
+    @mock.patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5)
+    def test_delete_old_radacct_without_argument_uses_configured_retention(
+        self, output
+    ):
+        options = _RADACCT.copy()
+        options.update(
+            unique_id="scheduled-cleanup",
+            start_time=now() - timedelta(days=11),
+            stop_time=now() - timedelta(days=10),
+        )
+        session = self._create_radius_accounting(**options)
+        result = tasks.delete_old_radacct.delay()
+        self.assertEqual(result.successful(), True)
+        self.assertEqual(
+            output.getvalue().strip(), "Deleted sessions older than 5 days"
+        )
+        self.assertEqual(RadiusAccounting.objects.filter(pk=session.pk).exists(), False)

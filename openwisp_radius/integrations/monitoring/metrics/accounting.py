@@ -12,6 +12,7 @@ from django.core.management import CommandError
 from django.db.models import Q, Sum, Value
 from django.db.models.functions import Coalesce, Lower, Replace
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
 from swapper import load_model
 
@@ -557,6 +558,27 @@ def _submit_cleanup_checkpoint(state, adjusted_totals, points):
         pending_final_checkpoints.pop(group, None)
     state.pop("cleanup", None)
     _submit_traffic(state, points)
+
+
+def validate_legacy_rebuild_end(end):
+    """Reject rebuilds that overlap readable hourly reconciliation history.
+
+    The operator must still supply a pre-cutover end if no checkpoint is readable.
+    """
+    # Session-closure points lack this field and are not cutover markers.
+    checkpoints = Metric(key="radius_acc", configuration="radius_acc").read(
+        fields=["baseline_input"], tags={}, order="time", limit=1, precision=None
+    )
+    if not checkpoints:
+        return
+    checkpoint = checkpoints[0]["time"]
+    checkpoint_time = parse_datetime(checkpoint)
+    if checkpoint_time is None:
+        raise CommandError(f"Invalid --checkpoint datetime: {checkpoint}")
+    if timezone.is_naive(checkpoint_time):
+        checkpoint_time = timezone.make_aware(checkpoint_time)
+    if end >= checkpoint_time:
+        raise CommandError(_("--end must be before hourly baseline initialization."))
 
 
 def initialize_traffic(queryset):

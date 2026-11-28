@@ -7,13 +7,7 @@ from .metrics import accounting, registration
 
 @shared_task
 def write_user_registration_metrics():
-    """Collect registrations and traffic using the existing deployment schedule."""
-    try:
-        registration.collect()
-    finally:
-        # A registration failure must not suppress this period's traffic
-        # observation. Keep the existing task name so deployments need no new job.
-        reconcile_radius_traffic()
+    registration.collect()
 
 
 @shared_task

@@ -792,9 +792,9 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             radius_acc.refresh_from_db()
             self.assertEqual(radius_acc.called_station_id, "CC-CC-CC-CC-CC-0C")
 
-    @capture_any_output()
+    @capture_stdout()
     @freeze_time(_TEST_DATE)
-    def test_delete_old_radacct_uses_shared_retention(self):
+    def test_delete_old_radacct_uses_shared_retention(self, stdout):
         with self.subTest("configured retention deletes older sessions"):
             options = _RADACCT.copy()
             options.update(
@@ -803,11 +803,14 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             session = self._create_radius_accounting(**options)
             with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
                 call_command("delete_old_radacct")
+            self.assertEqual(stdout.getvalue(), "Deleted sessions older than 5 days\n")
             self.assertEqual(
                 RadiusAccounting.objects.filter(pk=session.pk).exists(), False
             )
 
         with self.subTest("indefinite retention keeps closed sessions"):
+            stdout.seek(0)
+            stdout.truncate()
             options = _RADACCT.copy()
             options.update(
                 unique_id="retention-indefinite", stop_time=now() - timedelta(days=10)
@@ -815,11 +818,14 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             session = self._create_radius_accounting(**options)
             with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", None):
                 call_command("delete_old_radacct")
+            self.assertEqual(stdout.getvalue(), "")
             self.assertEqual(
                 RadiusAccounting.objects.filter(pk=session.pk).exists(), True
             )
 
         with self.subTest("explicit cleanup argument overrides configured retention"):
+            stdout.seek(0)
+            stdout.truncate()
             options = _RADACCT.copy()
             options.update(
                 unique_id="retention-override", stop_time=now() - timedelta(days=10)
@@ -827,6 +833,7 @@ class TestCommands(FileMixin, CallCommandMixin, BaseTestCase):
             session = self._create_radius_accounting(**options)
             with patch.object(app_settings, "ACCOUNTING_RETENTION_DAYS", 5):
                 call_command("delete_old_radacct", 30)
+            self.assertEqual(stdout.getvalue(), "Deleted sessions older than 30 days\n")
             self.assertEqual(
                 RadiusAccounting.objects.filter(pk=session.pk).exists(), True
             )

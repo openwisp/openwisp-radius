@@ -9,7 +9,6 @@ from openwisp_radius.integrations.monitoring.metrics import accounting
 from openwisp_radius.integrations.monitoring.utils import sha1_hash
 
 RadiusAccounting = load_model("openwisp_radius", "RadiusAccounting")
-Metric = load_model("monitoring", "Metric")
 
 
 class Command(BaseCommand):
@@ -55,21 +54,9 @@ class Command(BaseCommand):
         if options["commit"] and not options["end"]:
             raise CommandError(_("--end is required when writing legacy metrics."))
         if options["commit"]:
-            # Selecting only the baseline field excludes session-closure points,
-            # which do not have it.
-            checkpoints = Metric(key="radius_acc", configuration="radius_acc").read(
-                fields=["baseline_input"],
-                tags={},
-                order="time",
-                limit=1,
-                precision=None,
+            accounting.validate_legacy_rebuild_end(
+                self._parse_datetime(options["end"], "end")
             )
-            if checkpoints and self._parse_datetime(
-                options["end"], "end"
-            ) >= self._parse_datetime(checkpoints[0]["time"], "checkpoint"):
-                raise CommandError(
-                    _("--end must be before hourly baseline initialization.")
-                )
         queryset = RadiusAccounting.objects.filter(
             stop_time__isnull=False,
             terminate_cause="NAS-Reboot",

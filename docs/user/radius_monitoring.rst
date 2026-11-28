@@ -75,6 +75,7 @@ Django project's settings as following:
             "reconcile_radius_traffic": {
                 "task": "openwisp_radius.integrations.monitoring.tasks.reconcile_radius_traffic",
                 "schedule": timedelta(hours=1),
+                "relative": True,
             },
         }
     )
@@ -95,10 +96,10 @@ Django project's settings as following:
     come after that app in the ``INSTALLED_APPS``. Otherwise, the
     registration method would not appear in the chart.
 
-``write_user_registration_metrics`` collects registrations and then
-attempts traffic reconciliation, even if registration collection fails.
-The separate ``reconcile_radius_traffic`` schedule also triggers traffic
-reconciliation at its configured interval.
+Traffic reconciliation runs on its own hourly schedule. Add the
+``reconcile_radius_traffic`` entry even if you already schedule
+``write_user_registration_metrics``. Disabling registration metrics or a
+failed registration write does not stop traffic updates.
 
 Use a shared Django cache accessible to every worker and management
 command. A process-local cache is not suitable for production.
