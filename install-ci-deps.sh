@@ -7,7 +7,9 @@ if [ "${CI_SYSTEM_DEPS_READY:-0}" != 1 ]; then
     sudo apt-get -qq -y install xmlsec1 gettext libharfbuzz-subset0 sqlite3 \
         fping gdal-bin libproj-dev libgeos-dev libspatialite-dev spatialite-bin \
         libsqlite3-mod-spatialite
-    sudo npm install -g prettier
+    if [ "${CI_SYSTEM_DEPS_ONLY:-0}" != 1 ]; then
+        sudo npm install -g prettier
+    fi
 fi
 if [ "${CI_SYSTEM_DEPS_ONLY:-0}" = 1 ]; then
     exit 0
