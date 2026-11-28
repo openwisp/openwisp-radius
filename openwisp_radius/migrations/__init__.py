@@ -47,6 +47,9 @@ def _flush_bulk_create(model, objects, batch_size=BATCH_SIZE):
 
 def sanitize_station_ids(apps, schema_editor):
     db_alias = schema_editor.connection.alias
+    # the update uses up to 4 query parameters per row,
+    # SQLite versions older than 3.32 allow 999
+    batch_size = min(BATCH_SIZE, 999 // 4)
     for model_name in ("RadiusAccounting", "RadiusPostAuth"):
         model = get_swapped_model(apps, "openwisp_radius", model_name)
         manager = model.objects.using(db_alias)
@@ -56,9 +59,9 @@ def sanitize_station_ids(apps, schema_editor):
                 .exclude(**{field: ""})
                 .values_list("pk", field)
                 .order_by()
-                .iterator(chunk_size=BATCH_SIZE)
+                .iterator(chunk_size=batch_size)
             )
-            for batch in _batched_iterator(rows, BATCH_SIZE):
+            for batch in _batched_iterator(rows, batch_size):
                 pks_by_value = defaultdict(list)
                 for pk, value in batch:
                     pks_by_value[value].append(pk)

@@ -37,8 +37,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--end",
             help=(
-                "Only process sessions with stop_time lower than or equal "
-                "to this date."
+                "Only process sessions with stop_time lower than or equal to this date."
             ),
         )
         parser.add_argument(
@@ -76,10 +75,9 @@ class Command(BaseCommand):
         if not options["commit"]:
             self.stdout.write(f"Dry run: {count} closed sessions would be processed.")
             return
-        processed = 0
         chunk_size = options["chunk_size"]
         self.stdout.write(f"Starting to rebuild {count} accounting metrics.")
-        for session in queryset.iterator(chunk_size=chunk_size):
+        for processed, session in enumerate(queryset.iterator(chunk_size=chunk_size)):
             self._delete_radius_accounting_metric(session)
             tasks.post_save_radiusaccounting(
                 username=session.username,
@@ -90,7 +88,6 @@ class Command(BaseCommand):
                 called_station_id=session.called_station_id,
                 time=session.stop_time,
             )
-            processed += 1
             if processed % chunk_size == 0 or processed == count:
                 self.stdout.write(
                     f"Processed {processed} of {count} accounting metrics."
@@ -136,8 +133,8 @@ class Command(BaseCommand):
         mac = sanitize_mac_address(station_id)
         dotted = "{}{}.{}{}.{}{}".format(*mac.split(":"))
         formats = (mac, mac.replace(":", "-"), dotted)
-        # shortcut: mixed case values are not matched, add them
-        # if a NAS is found which sends them
+        # shortcut: mixed case legacy tags are not matched, the migration
+        # overwrites the original casing and calling station IDs are hashed
         return {station_id, *formats, *(value.lower() for value in formats)}
 
     def _escape_tag_value(self, value):

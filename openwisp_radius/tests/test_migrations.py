@@ -1,7 +1,9 @@
 import importlib
 import json
+import sqlite3
 import uuid
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 import swapper
@@ -30,6 +32,7 @@ from . import _RADACCT, CreateRadiusObjectsMixin
 from .mixins import BaseTestCase
 
 RadiusAccounting = load_model("RadiusAccounting")
+RadiusPostAuth = load_model("RadiusPostAuth")
 RegisteredUser = load_model("RegisteredUser")
 RadiusBatch = load_model("RadiusBatch")
 OrganizationUser = swapper.load_model("openwisp_users", "OrganizationUser")
@@ -1004,3 +1007,27 @@ class TestSanitizeStationIdsMigration(BaseTestCase):
             sanitize_station_ids(apps, MagicMock(connection=connection))
         session.refresh_from_db()
         self.assertEqual(session.called_station_id, "11:22:33:44:55:66")
+
+    @skipUnless(connection.vendor == "sqlite", "lowers the SQLite variable limit")
+    def test_sanitize_station_ids_query_parameter_limit(self):
+        connection.ensure_connection()
+        limit = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
+        # the default of SQLite versions older than 3.32
+        previous = connection.connection.setlimit(limit, 999)
+        self.addCleanup(connection.connection.setlimit, limit, previous)
+        macs = [f"aa-bb-cc-dd-{i // 256:02x}-{i % 256:02x}" for i in range(1000)]
+        RadiusPostAuth.objects.bulk_create(
+            RadiusPostAuth(
+                username="tester",
+                reply="Access-Accept",
+                organization=self.default_org,
+                calling_station_id=Value(mac, output_field=CharField()),
+            )
+            for mac in macs
+        )
+        queryset = RadiusPostAuth.objects.values_list("calling_station_id", flat=True)
+        self.assertEqual(set(queryset), set(macs))
+        sanitize_station_ids(apps, MagicMock(connection=connection))
+        self.assertEqual(
+            set(queryset.all()), {mac.upper().replace("-", ":") for mac in macs}
+        )
